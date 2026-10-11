@@ -18,7 +18,9 @@ Responder a César en español, directo y práctico.
 | `/tarjeta/` | Tarjeta digital de César (destino de sus tarjetas NFC) |
 | `/johara/` | Portal de Johara De Leija, Directora General de OCV Tabasco (clienta) |
 | `/ra/ocv-johara/` | RA sobre la tarjeta impresa de Johara |
+| `/proyectos/<nombre>/` | Experiencias de Vórtice VR que se abren desde la portada: `observatorio`, `orbita`, `deletreo-lsm`, `steal-a-pinata` (archivos de César, publicados tal cual; a `orbita` solo se le agregó el encabezado HTML) |
 | `/assets/` | Logos e íconos compartidos |
+| `/assets/proyectos/` | Imágenes de las tarjetas de la portada (capturas con Chrome headless; la del juego es su portada original) |
 | `_clientes/`, `_plantillas/`, `tools/` | Fuentes para generar tarjetas de clientes (no se publican: `.assetsignore`) |
 
 Las tarjetas NFC y QR de clientes apuntan a `https://vorticevr.mx/<cliente>/` (`t.vorticevr.mx` sigue funcionando como alias, pero no se usa en tarjetas nuevas: un subdominio nuevo puede tardar en reconocerse en algunas redes). **Nunca cambiar ni borrar una ruta ya impresa en tarjetas.**
@@ -28,6 +30,12 @@ Las tarjetas NFC y QR de clientes apuntan a `https://vorticevr.mx/<cliente>/` (`
 - Logo de Vórtice VR: solo en su morado original o en blanco; no recolorearlo (los efectos alrededor sí pueden ser de otro color).
 - No inventar proyectos ni datos de clientes en la página principal: solo lo que César haya confirmado.
 - Commits con autor `Claude <noreply@anthropic.com>`.
+
+## Portada (`/index.html`)
+- Estética de los propios proyectos: fondo `#05020b`, morados `#8b3fd6`/`#d2b8ff`, dorado `#ffbe55`; Chakra Petch + IBM Plex Sans/Mono.
+- Hero: three.js 0.160 (import map). ~14k partículas (8k en celular) giran en un vórtice y forman el isotipo, muestreado de `assets/icono.png` con su morado original (`#6b279b`); un tercio sigue orbitando. El cursor las empuja, un clic las dispersa y el scroll las devuelve al vórtice. Solo renderiza con el hero visible. Si no hay WebGL se muestra `icono.png`.
+- Efectos sin librerías: revelado al hacer scroll, inclinación de tarjetas, botones magnéticos, cursor propio (solo mouse). Con "reducir movimiento" todo queda quieto.
+- La sección Nosotros solo usa datos confirmados (desde 2016, Villahermosa, director, áreas); César la va a completar.
 
 ## Realidad aumentada (`/ra/ocv-johara/`)
 - MindAR 1.2.5 + three.js 0.160 desde jsDelivr (import map).
