@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="icon" href="../assets/icono.png">
+<style>[hidden]{display:none!important}img{max-width:100%}html,body{margin:0}html{background:#f3f0f7}@media (prefers-color-scheme:dark){html{background:#0f0a18}}</style>
+<title>Vórtice VR · Tarjeta</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;700&display=swap">
+<style>
+/* Layout: one centered card, logo on a white plate, three big tap targets below. Built for a phone held after tapping an NFC card. */
+:root{
+  --bg:#f3f0f7; --surface:#ffffff; --fg:#1d1430; --muted:#6a5f7e;
+  --accent:#6a2c91; --accent-fg:#ffffff; --line:#e3dcee; --glow:rgba(106,44,145,.18);
+  --plate:#ffffff;
+  --display:"Unbounded",system-ui,sans-serif; --body:"Manrope",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f0a18; --surface:#1a1226; --fg:#f1ecf8; --muted:#a899bd; --accent:#9b5fd0; --accent-fg:#ffffff; --line:#2b2140; --glow:rgba(155,95,208,.25); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f0a18; --surface:#1a1226; --fg:#f1ecf8; --muted:#a899bd; --accent:#9b5fd0; --accent-fg:#ffffff; --line:#2b2140; --glow:rgba(155,95,208,.25); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);padding-inline:16px;padding-block:24px;min-height:100%;
+  background-image:radial-gradient(circle at 50% 0%,var(--glow),transparent 60%)}
+.card{max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.plate{background:var(--plate);border-radius:20px;padding:28px 24px;display:flex;justify-content:center;box-shadow:0 20px 50px -20px var(--glow)}
+.plate img{width:100%;max-width:320px;height:auto;display:block}
+.intro{text-align:center;display:flex;flex-direction:column;gap:6px}
+.intro h1{font-family:var(--display);font-weight:700;font-size:1.05rem;margin:0;letter-spacing:.02em;text-wrap:balance}
+.intro p{margin:0;color:var(--muted);font-size:.95rem;line-height:1.5}
+.tags{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:4px}
+.tags span{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+.actions{display:flex;flex-direction:column;gap:10px}
+.btn{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:14px;background:var(--surface);border:1px solid var(--line);color:var(--fg);text-decoration:none;min-width:0}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent}
+.btn .ico{width:40px;height:40px;flex:none;border-radius:10px;display:grid;place-items:center;background:var(--line)}
+.btn.primary .ico{background:rgba(255,255,255,.18)}
+.btn .ico svg{width:22px;height:22px;fill:currentColor}
+.btn .txt{display:flex;flex-direction:column;min-width:0;flex:1}
+.btn .lbl{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;opacity:.75}
+.btn .val{font-weight:700;font-size:1rem;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.copy{flex:none;font:inherit;font-size:.78rem;font-weight:700;background:transparent;border:1px solid currentColor;color:inherit;border-radius:8px;padding:6px 10px;cursor:pointer;opacity:.85}
+.copy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.where{text-align:center;color:var(--muted);font-size:.85rem;line-height:1.5}
+.where b{color:var(--fg);font-weight:700}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:.85rem;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%)}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+
+<main class="card">
+  <div class="plate"><img src="../assets/logo-vorticevr.png" alt="Vórtice VR"></div>
+  <div class="intro">
+    <h1>Experiencias inmersivas que la gente recuerda</h1>
+    <p>Estudio en Villahermosa, Tabasco, desde 2016. Realidad aumentada, realidad virtual, realidad mixta e inteligencia artificial aplicada a educación, cultura y marcas.</p>
+    <div class="tags"><span>RA</span><span>RV</span><span>RM</span><span>IA</span><span>Meta Quest</span><span>WebAR</span></div>
+  </div>
+  <div class="actions">
+    <a class="btn primary" href="https://wa.me/529983448207?text=Hola%2C%20vi%20su%20tarjeta%20de%20V%C3%B3rtice%20VR" target="_blank" rel="noopener">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 2.9 2.9 0 0 0-.9 2.2 5 5 0 0 0 1 2.6 11.4 11.4 0 0 0 4.4 3.9c1.6.7 2.3.8 3.1.6a2.6 2.6 0 0 0 1.7-1.2 2.1 2.1 0 0 0 .2-1.2c-.1-.1-.3-.2-.5-.3z"/></svg></span>
+      <span class="txt"><span class="lbl">WhatsApp</span><span class="val">998 344 8207</span></span>
+      <button class="copy" type="button" data-copy="+52 998 344 8207" aria-label="Copiar número">Copiar</button>
+    </a>
+    <a class="btn" href="https://instagram.com/vorticevr" target="_blank" rel="noopener">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M7.8 2h8.4A5.8 5.8 0 0 1 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8A5.8 5.8 0 0 1 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2zm-.2 2A3.6 3.6 0 0 0 4 7.6v8.8A3.6 3.6 0 0 0 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6A3.6 3.6 0 0 0 16.4 4H7.6zm9.7 1.5a1.3 1.3 0 1 1 0 2.5 1.3 1.3 0 0 1 0-2.5zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg></span>
+      <span class="txt"><span class="lbl">Instagram · TikTok · Facebook</span><span class="val">@vorticevr</span></span>
+    </a>
+    <a class="btn" href="mailto:vorticevr@gmail.com">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 2v.5l8 5 8-5V6H4zm16 3l-8 5-8-5v9h16V9z"/></svg></span>
+      <span class="txt"><span class="lbl">Correo</span><span class="val">vorticevr@gmail.com</span></span>
+      <button class="copy" type="button" data-copy="vorticevr@gmail.com" aria-label="Copiar correo">Copiar</button>
+    </a>
+    <a class="btn" href="../"><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm7.9 9h-3a15.6 15.6 0 0 0-1.3-5.5A8 8 0 0 1 19.9 11zM12 4c.9 1.1 1.8 3.6 2 7h-4c.2-3.4 1.1-5.9 2-7zM4.1 13h3c.1 2 .6 3.9 1.3 5.5A8 8 0 0 1 4.1 13zm3-2h-3a8 8 0 0 1 4.3-5.5A15.6 15.6 0 0 0 7.1 11zM12 20c-.9-1.1-1.8-3.6-2-7h4c-.2 3.4-1.1 5.9-2 7zm3.6-1.5c.7-1.6 1.2-3.5 1.3-5.5h3a8 8 0 0 1-4.3 5.5z"/></svg></span><span class="txt"><span class="lbl">Sitio web</span><span class="val">Proyectos y servicios</span></span></a>
+  </div>
+  <p class="where"><b>Mtro. César Adrián García Martínez</b><br>Director General · Villahermosa, Tabasco, México</p>
+</main>
+<div class="toast" id="toast" role="status">Copiado</div>
+<script>
+(function(){
+  var toast=document.getElementById('toast'),t;
+  function show(msg){toast.textContent=msg;toast.classList.add('on');clearTimeout(t);t=setTimeout(function(){toast.classList.remove('on')},1600)}
+  document.querySelectorAll('.copy').forEach(function(b){
+    b.addEventListener('click',function(e){
+      e.preventDefault();e.stopPropagation();
+      var v=b.getAttribute('data-copy');
+      var p=navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(v):Promise.reject();
+      p.then(function(){show('Copiado: '+v)}).catch(function(){
+        var r=document.createRange();r.selectNodeContents(b.parentNode.querySelector('.val'));var s=getSelection();s.removeAllRanges();s.addRange(r);show('Selecciona y copia');
+      });
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

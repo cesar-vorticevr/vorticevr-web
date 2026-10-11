@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Vórtice VR · Realidad aumentada, virtual e IA</title>
+<meta name="description" content="Estudio de realidad aumentada, realidad virtual, realidad mixta e inteligencia artificial aplicada. Villahermosa, Tabasco, desde 2016.">
+<meta property="og:title" content="Vórtice VR">
+<meta property="og:description" content="Experiencias inmersivas: realidad aumentada, realidad virtual e IA aplicada. Villahermosa, Tabasco.">
+<meta property="og:image" content="assets/logo-vorticevr.png">
+<link rel="icon" href="assets/icono.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;700&display=swap">
+<style>
+/* Dark stage, purple light. One hero line, then services, projects, contact. */
+:root{
+  --bg:#0e0a16; --surface:#17112a; --line:#2a2142; --fg:#f2eef9; --muted:#a69cbc;
+  --accent:#8a3fc0; --accent-soft:#b88ae0; --glow:rgba(138,63,192,.35);
+  --display:"Unbounded",system-ui,sans-serif; --body:"Manrope",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:20px}
+header.top{position:sticky;top:0;z-index:5;background:rgba(14,10,22,.82);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:14px}
+header.top img{height:28px;width:auto;display:block}
+header.top nav{display:flex;gap:18px;font-size:.88rem;font-weight:600}
+header.top nav a{text-decoration:none;color:var(--muted)}
+header.top nav a:hover,header.top nav a:focus-visible{color:var(--fg)}
+@media (max-width:560px){header.top nav a:not(.cta-mini){display:none}}
+.cta-mini{background:var(--accent);color:#fff!important;padding:7px 14px;border-radius:999px}
+
+.hero{position:relative;overflow:hidden;padding-block:88px 72px}
+.hero::before{content:"";position:absolute;inset:-30% -10% auto auto;width:720px;height:720px;max-width:100%;background:radial-gradient(circle,var(--glow),transparent 62%);pointer-events:none}
+.hero .wrap{position:relative;display:flex;flex-direction:column;gap:22px}
+.eyebrow{font-size:.75rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-soft);font-weight:700}
+.hero h1{font-family:var(--display);font-weight:700;font-size:clamp(2rem,6vw,3.6rem);line-height:1.08;margin:0;max-width:16ch;text-wrap:balance}
+.hero h1 em{font-style:normal;color:var(--accent-soft)}
+.hero p{margin:0;max-width:56ch;color:var(--muted);font-size:1.08rem}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:14px 22px;border-radius:999px;font-weight:700;text-decoration:none;font-size:.95rem}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.ghost{border:1.5px solid var(--line);color:var(--fg)}
+.btn:focus-visible{outline:2px solid var(--accent-soft);outline-offset:3px}
+.btn svg{width:18px;height:18px;fill:currentColor}
+
+section{padding-block:64px;border-top:1px solid var(--line)}
+section h2{font-family:var(--display);font-weight:500;font-size:clamp(1.4rem,3.5vw,2rem);margin:0 0 28px;text-wrap:balance}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px}
+.svc{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.svc .tag{font-family:var(--display);font-size:.8rem;color:var(--accent-soft);letter-spacing:.06em}
+.svc h3{margin:0;font-size:1.08rem}
+.svc p{margin:0;color:var(--muted);font-size:.95rem}
+
+.projects{display:flex;flex-direction:column}
+.proj{display:grid;grid-template-columns:140px 1fr;gap:20px;padding-block:20px;border-bottom:1px solid var(--line)}
+.proj:first-child{border-top:1px solid var(--line)}
+.proj .kind{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-soft);font-weight:700;padding-top:4px}
+.proj h3{margin:0 0 4px;font-size:1.1rem}
+.proj p{margin:0;color:var(--muted);max-width:62ch}
+@media (max-width:560px){.proj{grid-template-columns:1fr;gap:6px}}
+
+.contact{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:16px}
+.contact a,.contact div{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;text-decoration:none;display:flex;flex-direction:column;gap:4px;min-width:0}
+.contact .lbl{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.contact .val{font-weight:700;font-size:1.05rem;overflow-wrap:anywhere}
+.contact a:focus-visible{outline:2px solid var(--accent-soft);outline-offset:2px}
+footer{padding-block:36px;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line)}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a href="./" aria-label="Vórtice VR, inicio"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
+  <nav><a href="#servicios">Servicios</a><a href="#proyectos">Proyectos</a><a class="cta-mini" href="#contacto">Contacto</a></nav>
+</div></header>
+
+<main>
+  <div class="hero"><div class="wrap">
+    <span class="eyebrow">Villahermosa, Tabasco · desde 2016</span>
+    <h1>Experiencias que se <em>viven</em>, no solo se ven.</h1>
+    <p>Somos un estudio de realidad aumentada, realidad virtual, realidad mixta e inteligencia artificial aplicada. Diseñamos experiencias para educación, cultura, turismo y marcas, y las llevamos del concepto a algo que la gente usa con su celular o con un visor.</p>
+    <div class="actions">
+      <a class="btn primary" href="https://wa.me/529983448207?text=Hola%2C%20quiero%20platicar%20de%20un%20proyecto%20con%20V%C3%B3rtice%20VR" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>Platiquemos tu proyecto</a>
+      <a class="btn ghost" href="#proyectos">Ver proyectos</a>
+    </div>
+  </div></div>
+
+  <section id="servicios"><div class="wrap">
+    <h2>Lo que hacemos</h2>
+    <div class="grid">
+      <article class="svc"><span class="tag">RA</span><h3>Realidad aumentada</h3><p>Murales, libros, tarjetas y espacios que cobran vida con la cámara del celular, directo en el navegador y sin descargar apps.</p></article>
+      <article class="svc"><span class="tag">RV</span><h3>Realidad virtual</h3><p>Experiencias inmersivas para visores Meta Quest: recorridos, simulaciones y retos educativos.</p></article>
+      <article class="svc"><span class="tag">IA</span><h3>Inteligencia artificial aplicada</h3><p>Aplicaciones web con IA para educación, cultura y negocio, pensadas para usarse desde cualquier dispositivo.</p></article>
+      <article class="svc"><span class="tag">Talleres</span><h3>Capacitación</h3><p>Formación a docentes y equipos para crear y usar experiencias inmersivas en el aula y en sus proyectos.</p></article>
+    </div>
+  </div></section>
+
+  <section id="proyectos"><div class="wrap">
+    <h2>Proyectos</h2>
+    <div class="projects">
+      <article class="proj"><span class="kind">RA · Arte urbano</span><div><h3>Murales con realidad aumentada en Comalcalco</h3><p>Murales que se animan al apuntarles con el celular, uniendo arte público y tecnología.</p></div></article>
+      <article class="proj"><span class="kind">RV · Educación</span><div><h3>Planetas en Órbita</h3><p>Experiencia para Meta Quest 3 y 3S: un reto de un minuto para armar el sistema solar.</p></div></article>
+      <article class="proj"><span class="kind">RA · Festival</span><div><h3>Festival MOVART</h3><p>Experiencias de realidad aumentada en el navegador para el público del festival.</p></div></article>
+      <article class="proj"><span class="kind">NFC · RA</span><div><h3>Tarjetas de presentación inteligentes</h3><p>Tarjetas con NFC y código QR que abren un portal de contacto y una experiencia en realidad aumentada sobre la propia tarjeta. <a href="tarjeta/">Ver la tarjeta de Vórtice VR</a>.</p></div></article>
+    </div>
+  </div></section>
+
+  <section id="contacto"><div class="wrap">
+    <h2>Contacto</h2>
+    <div class="contact">
+      <a href="https://wa.me/529983448207" target="_blank" rel="noopener"><span class="lbl">WhatsApp</span><span class="val">998 344 8207</span></a>
+      <a href="mailto:vorticevr@gmail.com"><span class="lbl">Correo</span><span class="val">vorticevr@gmail.com</span></a>
+      <a href="https://instagram.com/vorticevr" target="_blank" rel="noopener"><span class="lbl">Redes</span><span class="val">@vorticevr</span></a>
+    </div>
+  </div></section>
+</main>
+
+<footer><div class="wrap"><span>© Vórtice VR · Villahermosa, Tabasco, México</span><span>Mtro. César Adrián García Martínez, Director General</span></div></footer>
+</body>
+</html>

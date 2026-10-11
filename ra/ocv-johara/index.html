@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>OCV Tabasco · Realidad Aumentada</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;800&display=swap">
+<style>
+:root{--bg:#f3eee6;--fg:#1f1f1f;--muted:#5e5651;--wine:#8a1538;--line:#dccfbf;--white:#fff;--font:"Montserrat",system-ui,sans-serif}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%;background:#000;font-family:var(--font);color:var(--fg);overflow:hidden}
+#ar{position:fixed;inset:0}
+#intro{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px 20px calc(24px + env(safe-area-inset-bottom,0px));text-align:center}
+#intro img.logo{width:150px;height:auto}
+#intro h1{margin:0;font-size:1.25rem;font-weight:800;text-wrap:balance}
+#intro p{margin:0;max-width:34ch;color:var(--muted);font-weight:500;line-height:1.5;font-size:.95rem}
+#intro img.card{width:220px;max-width:70%;border-radius:8px;box-shadow:0 10px 30px -12px rgba(0,0,0,.35)}
+#start{font:inherit;font-weight:800;font-size:1rem;background:var(--wine);color:var(--white);border:0;border-radius:999px;padding:15px 28px;cursor:pointer}
+#start:focus-visible{outline:3px solid var(--fg);outline-offset:3px}
+#err{color:var(--wine);font-weight:600;font-size:.88rem;max-width:34ch}
+#hint{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:10;background:rgba(0,0,0,.62);color:#fff;padding:10px 16px;border-radius:999px;font-size:.85rem;font-weight:600;white-space:nowrap;transition:opacity .3s}
+#hint.off{opacity:0}
+#back{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));left:14px;z-index:10;background:rgba(0,0,0,.55);color:#fff;text-decoration:none;font-size:.82rem;font-weight:600;padding:8px 14px;border-radius:999px}
+.mindar-ui-overlay{display:none!important}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+  "mindar-image-three":"https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+}}
+</script>
+</head>
+<body>
+<div id="ar"></div>
+<div id="intro">
+  <img class="logo" src="ocv-logo.png" alt="Oficina de Convenciones y Visitantes de Tabasco">
+  <h1>Realidad aumentada</h1>
+  <p>Activa la cámara y apunta al lado de la tarjeta que tiene el código QR.</p>
+  <img class="card" src="tarjeta.jpg" alt="Lado de la tarjeta con el código QR">
+  <button id="start" type="button">Activar cámara</button>
+  <div id="err" hidden></div>
+</div>
+<div id="hint" hidden>Apunta al lado del código QR</div>
+<a id="back" href="../../johara/" hidden>← Volver</a>
+
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MindARThree } from "mindar-image-three";
+// Inner backing for the jícara: a surface that hugs the scanned wall from just outside it and is drawn only
+// from the inside (BackSide). Where the scan has the wall, the wall wins; where it has holes, this fills them.
+function addLiner(THREE, model){
+  let mesh=null; model.traverse(o=>{ if(o.isMesh && !mesh && o.material.name!=="relleno") mesh=o; });
+  if(!mesh) return;
+  const p=mesh.geometry.attributes.position, n=p.count;
+  let minY=Infinity,maxY=-Infinity; for(let i=0;i<n;i++){const y=p.getY(i); if(y<minY)minY=y; if(y>maxY)maxY=y;}
+  let cx=0,cz=0,cn=0; for(let i=0;i<n;i++){ if(p.getY(i)<minY+0.015){cx+=p.getX(i);cz+=p.getZ(i);cn++;} } cx/=cn; cz/=cn;
+  const YB=30, AB=56, h=(maxY-minY)/YB, R=[...Array(YB)].map(()=>new Array(AB).fill(0));
+  for(let i=0;i<n;i++){
+    const dx=p.getX(i)-cx, dz=p.getZ(i)-cz, y=Math.min(YB-1,Math.floor((p.getY(i)-minY)/h));
+    const a=Math.floor(((Math.atan2(dz,dx)+Math.PI)/(2*Math.PI))*AB)%AB, r=Math.hypot(dx,dz);
+    if(r>R[y][a]) R[y][a]=r;
+  }
+  for(let y=0;y<YB;y++){ // fill empty cells from neighbours
+    const row=R[y], mx=Math.max(...row);
+    for(let a=0;a<AB;a++) if(row[a]<mx*0.6){ let s=0,c=0; for(let d=-3;d<=3;d++){const v=row[(a+d+AB)%AB]; if(v>=mx*0.6){s+=v;c++;}} row[a]=c?s/c:mx; }
+  }
+  const TOP=YB-2, pos=[], idx=[];
+  for(let y=0;y<TOP;y++) for(let a=0;a<=AB;a++){
+    const ang=((a%AB)+0.5)/AB*2*Math.PI-Math.PI, r=R[y][a%AB]*1.012;
+    pos.push(cx+Math.cos(ang)*r, minY+(y+0.5)*h, cz+Math.sin(ang)*r);
+  }
+  const W=AB+1;
+  for(let y=0;y<TOP-1;y++) for(let a=0;a<AB;a++){ const i=y*W+a; idx.push(i,i+W,i+1, i+1,i+W,i+W+1); }
+  const g=new THREE.BufferGeometry(); g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx); g.computeVertexNormals();
+  const liner=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:0x2d1c0a,roughness:0.9,side:THREE.BackSide}));
+  mesh.parent.add(liner);
+}
+
+const $ = id => document.getElementById(id);
+const intro=$("intro"), hint=$("hint"), back=$("back"), err=$("err"), startBtn=$("start");
+
+async function start(){
+  startBtn.disabled=true; startBtn.textContent="Cargando…"; err.hidden=true;
+  try{
+    const mind=new MindARThree({container:$("ar"),imageTargetSrc:"targets.mind",uiLoading:"no",uiScanning:"no",uiError:"no",filterMinCF:0.0001,filterBeta:0.001});
+    const {renderer,scene,camera}=mind;
+    renderer.outputColorSpace=THREE.SRGBColorSpace;
+    scene.add(new THREE.HemisphereLight(0xffffff,0x6b4a2b,1.4));
+    const sun=new THREE.DirectionalLight(0xffffff,1.6); sun.position.set(0.5,1,1.5); scene.add(sun);
+
+    const anchor=mind.addAnchor(0);
+    // Target plane: width 1, height ~0.571. QR sits on the left third.
+    const QR=new THREE.Vector3(-0.32,0.0,0);
+
+    // Jícara: stands on the QR and turns slowly on its own axis.
+    const spin=new THREE.Group(); spin.position.copy(QR); spin.position.z=0.02;
+    const stand=new THREE.Group(); stand.rotation.x=Math.PI/2; spin.add(stand);
+    anchor.group.add(spin);
+    const gltf=await new GLTFLoader().loadAsync("jicara.glb");
+    const model=gltf.scene;
+    model.traverse(o=>{ if(o.isMesh){ if(!o.geometry.attributes.normal) o.geometry.computeVertexNormals(); o.material.side=THREE.DoubleSide; o.material.needsUpdate=true; }});
+    addLiner(THREE,model);
+    const box=new THREE.Box3().setFromObject(model), size=box.getSize(new THREE.Vector3()), c=box.getCenter(new THREE.Vector3());
+    model.position.set(-c.x,-box.min.y,-c.z);
+    const s=0.30/Math.max(size.x,size.z); const holder=new THREE.Group(); holder.scale.setScalar(s); holder.add(model); stand.add(holder);
+
+    // Soft shadow disc under the jícara
+    const sh=new THREE.Mesh(new THREE.CircleGeometry(0.15,48),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.22,depthWrite:false}));
+    sh.position.set(QR.x,QR.y,0.004); anchor.group.add(sh);
+
+    // OCV logo floating over the right side of the card
+    const tex=await new THREE.TextureLoader().loadAsync("ocv-logo.png"); tex.colorSpace=THREE.SRGBColorSpace;
+    const lw=0.42, lh=lw*tex.image.height/tex.image.width;
+    // 3D logo: stacked layers give it real thickness; back layers are darker so the edge reads as a solid side.
+    const logo=new THREE.Group(); const LAYERS=18, DEPTH=0.035, geo=new THREE.PlaneGeometry(lw,lh);
+    for(let i=0;i<LAYERS;i++){
+      const k=i/(LAYERS-1), front=i===0, backFace=i===LAYERS-1;
+      const shade=front||backFace?1:0.55-0.15*k;
+      const m=new THREE.MeshBasicMaterial({map:tex,alphaTest:0.5,side:THREE.DoubleSide,color:new THREE.Color(shade,shade,shade)});
+      const layer=new THREE.Mesh(geo,m); layer.position.z=-k*DEPTH; logo.add(layer);
+    }
+    const logoG=new THREE.Group(); logoG.position.set(0.2,0.22,0.16); logoG.rotation.x=Math.PI/2; logoG.add(logo); anchor.group.add(logoG);
+
+    let found=false;
+    anchor.onTargetFound=()=>{found=true; hint.classList.add("off");};
+    anchor.onTargetLost=()=>{found=false; hint.classList.remove("off");};
+
+    await mind.start();
+    intro.hidden=true; hint.hidden=false; back.hidden=false;
+    const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const clock=new THREE.Clock(); let appear=0;
+    renderer.setAnimationLoop(()=>{
+      const dt=clock.getDelta(), t=clock.elapsedTime;
+      appear = found ? Math.min(1,appear+dt*2.2) : 0;
+      const e=1-Math.pow(1-appear,3);
+      spin.scale.setScalar(Math.max(.001,e));
+      if(!reduce) spin.rotation.z += dt*0.6;                // slow turn on its own axis
+      logoG.position.z = 0.16 + (reduce?0:Math.sin(t*1.4)*0.015);
+      logo.rotation.y = reduce?0.35:Math.sin(t*0.7)*0.6;
+      logoG.scale.setScalar(Math.max(.001,e));
+      renderer.render(scene,camera);
+    });
+  }catch(e){
+    console.error(e);
+    startBtn.disabled=false; startBtn.textContent="Intentar de nuevo";
+    err.hidden=false;
+    err.textContent = (e && (e.name==="NotAllowedError"||/Permission/i.test(e.message||"")))
+      ? "No se dio permiso a la cámara. Actívalo en los ajustes del navegador y vuelve a intentar."
+      : "No se pudo iniciar la cámara. Abre este enlace en Chrome o Safari (no dentro de Instagram o WhatsApp).";
+  }
+}
+startBtn.addEventListener("click",start);
+</script>
+</body>
+</html>
