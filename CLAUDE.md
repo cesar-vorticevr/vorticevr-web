@@ -9,6 +9,7 @@ Responder a César en español, directo y práctico.
 - Dominios conectados al Worker `vorticevr-web`: `vorticevr.mx`, `www.vorticevr.mx`, `t.vorticevr.mx`.
 - DNS en Cloudflare; el dominio está registrado en GoDaddy. Ya no se usa Wix.
 - Rutas siempre relativas (funcionan en cualquier dominio o subdominio).
+- `worker.js`: Worker mínimo que solo corre en `/ra/*` (`run_worker_first`). Los static assets ignoran las peticiones `Range` y el iPhone las necesita para reproducir `<video>`; el Worker responde 206 para videos y deja pasar todo lo demás. Los videos nuevos deben ir bajo `/ra/` (o ampliar `run_worker_first`).
 
 ## Estructura
 | Ruta | Qué es |
