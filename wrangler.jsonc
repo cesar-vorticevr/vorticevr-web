@@ -12,6 +12,10 @@
   "main": "worker.js",
   // Needed by `wrangler preview`, which Cloudflare runs for non-production branches (rama preview).
   "previews": {},
+  // Keep the preview URLs on (<branch>-vorticevr-web.lad-cesargarcia.workers.dev) and the production
+  // workers.dev URL off; without these keys every production deploy switched the previews off.
+  "workers_dev": false,
+  "preview_urls": true,
   "assets": {
     "directory": "./",
     "binding": "ASSETS",
