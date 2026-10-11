@@ -2,6 +2,12 @@
   // Sitio estático de Vórtice VR servido con Cloudflare Workers (static assets).
   "name": "vorticevr-web",
   "compatibility_date": "2026-09-01",
+  // Dominios propios conectados al Worker (Cloudflare crea los registros DNS).
+  "routes": [
+    { "pattern": "vorticevr.mx", "custom_domain": true },
+    { "pattern": "www.vorticevr.mx", "custom_domain": true },
+    { "pattern": "t.vorticevr.mx", "custom_domain": true }
+  ],
   "assets": {
     "directory": "./",
     "html_handling": "auto-trailing-slash",
