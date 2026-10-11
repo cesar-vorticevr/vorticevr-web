@@ -8,6 +8,8 @@
     { "pattern": "www.vorticevr.mx", "custom_domain": true },
     { "pattern": "t.vorticevr.mx", "custom_domain": true }
   ],
+  // Needed by `wrangler preview`, which Cloudflare runs for non-production branches (rama preview).
+  "previews": {},
   "assets": {
     "directory": "./",
     "html_handling": "auto-trailing-slash",
