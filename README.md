@@ -1,6 +1,6 @@
 # vorticevr-web
 
-Sitio de Vórtice VR, publicado con GitHub Pages.
+Sitio de Vórtice VR, publicado en Cloudflare Workers (static assets) con cada push a `main`. Dominios: vorticevr.mx, www.vorticevr.mx y t.vorticevr.mx (tarjetas NFC/QR de clientes).
 
 | Ruta | Qué es |
 |---|---|
@@ -11,7 +11,9 @@ Sitio de Vórtice VR, publicado con GitHub Pages.
 | `/assets/` | Logos e íconos compartidos |
 
 Cada página es HTML estático, sin build. Para agregar contenido nuevo se crea una carpeta con su `index.html`.
-Las rutas son relativas para que funcionen igual en `cesar-vorticevr.github.io/vorticevr-web/` y en un dominio propio.
+Las rutas son relativas para que funcionen igual en cualquier dominio o subdominio.
+
+Tarjetas de clientes nuevos: se generan desde `_clientes/<slug>/cliente.json` con `tools/generar-cliente.mjs` (ver CLAUDE.md).
 
 Notas de la RA (`/ra/ocv-johara/`):
 - `targets.mind` se generó desde el lado del QR de la tarjeta impresa; si cambia ese diseño hay que regenerarlo.
