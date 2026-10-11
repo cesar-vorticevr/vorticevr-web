@@ -62,3 +62,9 @@ Detalles:
 - Posiciones de la RA en unidades del target: la tarjeta mide 1 de ancho y está centrada en 0,0 (x a la derecha, y hacia arriba, z hacia la cámara). `modelo.tamano` es el ancho del modelo; `modelo.forro` agrega la capa interior (para escaneos con huecos). `logo` en SVG con colores planos se extruye en 3D (paths con `data-part="t"` quedan delgados); en PNG/WebP es un plano.
 - `compilar-target.mjs` levanta un servidor local, abre Chrome headless con `--use-angle=swiftshader` y usa `Compiler` de `mind-ar@1.2.5/dist/mindar-image.prod.js` por DevTools Protocol. Si no encuentra el navegador: variable `CHROME_PATH`. También acepta `node tools/compilar-target.mjs <imagen> <salida.mind>`.
 - Para probar la RA sin cámara: en una copia generada con `--salida`, apuntar `mindar-image-three` del import map a un stub que exponga `renderer/scene/camera/addAnchor/start`.
+
+## Probar antes de publicar
+`main` = producción (vorticevr.mx). **No hacer push a `main` sin que César lo apruebe.** Los cambios a la página van primero a la rama `preview`.
+1. Local: `node tools/servidor-local.mjs` → http://localhost:8080 (también muestra la IP para abrirlo desde el celular en el mismo wifi). La cámara de la RA en el celular requiere https: para eso usar la versión preview.
+2. Preview en internet: commit y push a la rama `preview`. Cloudflare sube una versión de prueba (no toca producción) y la URL aparece en el check "Workers Builds" del commit en GitHub.
+3. Cuando César apruebe: `git switch main && git merge --ff-only preview && git push` (eso publica). Subir `main` y `preview` en pushes separados, no al mismo tiempo.
