@@ -1,0 +1,10 @@
+{
+  // Sitio estático de Vórtice VR servido con Cloudflare Workers (static assets).
+  "name": "vorticevr-web",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  }
+}
