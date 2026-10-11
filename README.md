@@ -1,6 +1,6 @@
 # vorticevr-web
 
-Sitio de Vórtice VR, publicado en Cloudflare Workers (static assets) con cada push a `main`. Dominios: vorticevr.mx, www.vorticevr.mx y t.vorticevr.mx (tarjetas NFC/QR de clientes).
+Sitio de Vórtice VR, publicado en Cloudflare Workers (static assets) con cada push a `main`. Dominios: vorticevr.mx, www.vorticevr.mx y t.vorticevr.mx (alias; las tarjetas de clientes usan vorticevr.mx/<cliente>/).
 
 | Ruta | Qué es |
 |---|---|

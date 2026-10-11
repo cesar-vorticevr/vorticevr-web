@@ -165,5 +165,5 @@ if (c.ra) {
   writePage(path.join(outRoot, "ra", r.slug), render(raTpl, raCtx), [...new Set(raFiles)]);
 }
 
-const base = outRoot === ROOT ? "https://t.vorticevr.mx" : outRoot;
+const base = outRoot === ROOT ? "https://vorticevr.mx" : outRoot;
 console.log(`\nLink para la tarjeta NFC/QR: ${base}/${c.slug}/`);

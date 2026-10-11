@@ -1,5 +1,5 @@
 {
-  "_instrucciones": "Copia esta carpeta a _clientes/<slug>/ (slug = la ruta de la tarjeta: t.vorticevr.mx/<slug>/), pon ahí las imágenes y llena los campos. Borra los campos que el cliente no tenga (todo es opcional salvo slug y nombre). Las claves que empiezan con _ son comentarios. Ver CLAUDE.md › Tarjetas de clientes.",
+  "_instrucciones": "Copia esta carpeta a _clientes/<slug>/ (slug = la ruta de la tarjeta: vorticevr.mx/<slug>/), pon ahí las imágenes y llena los campos. Borra los campos que el cliente no tenga (todo es opcional salvo slug y nombre). Las claves que empiezan con _ son comentarios. Ver CLAUDE.md › Tarjetas de clientes.",
 
   "slug": "nombre-cliente",
 

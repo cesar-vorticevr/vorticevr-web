@@ -20,7 +20,7 @@ Responder a César en español, directo y práctico.
 | `/assets/` | Logos e íconos compartidos |
 | `_clientes/`, `_plantillas/`, `tools/` | Fuentes para generar tarjetas de clientes (no se publican: `.assetsignore`) |
 
-Las tarjetas NFC y QR de clientes apuntan a `t.vorticevr.mx/<cliente>/`. **Nunca cambiar ni borrar una ruta ya impresa en tarjetas.**
+Las tarjetas NFC y QR de clientes apuntan a `https://vorticevr.mx/<cliente>/` (`t.vorticevr.mx` sigue funcionando como alias, pero no se usa en tarjetas nuevas: un subdominio nuevo puede tardar en reconocerse en algunas redes). **Nunca cambiar ni borrar una ruta ya impresa en tarjetas.**
 
 ## Reglas
 - Páginas de clientes: `<meta name="robots" content="noindex">` y sin enlaces desde la página principal, salvo que César diga que el cliente autorizó mostrarlo.
@@ -50,11 +50,11 @@ Cada cliente nuevo se genera desde datos; no se copia ni se edita HTML a mano.
 | `tools/compilar-target.mjs` | Compila `targets.mind` desde la imagen de la tarjeta |
 
 Pasos para un cliente nuevo (Node 22+ y Chrome o Edge instalados; no hay `npm install`):
-1. Copiar `_clientes/_plantilla/` a `_clientes/<slug>/`, poner las imágenes y llenar `cliente.json`. `slug` = ruta de la tarjeta (`t.vorticevr.mx/<slug>/`), en minúsculas y con guiones.
+1. Copiar `_clientes/_plantilla/` a `_clientes/<slug>/`, poner las imágenes y llenar `cliente.json`. `slug` = ruta de la tarjeta (`vorticevr.mx/<slug>/`), en minúsculas y con guiones.
 2. `node tools/compilar-target.mjs <slug>` → escribe `_clientes/<slug>/targets.mind` desde `ra.imagen_target` (el diseño de la cara que se reconoce, 1000 px de ancho o más; avisa si es más chica).
 3. Revisar sin publicar: `node tools/generar-cliente.mjs <slug> --salida <carpeta-temporal>` y abrirla con un servidor local.
 4. `node tools/generar-cliente.mjs <slug>` → escribe en la raíz del sitio. Commit y push a `main`.
-5. Link para grabar en la tarjeta NFC/QR: `https://t.vorticevr.mx/<slug>/`.
+5. Link para grabar en la tarjeta NFC/QR: `https://vorticevr.mx/<slug>/`.
 
 Detalles:
 - El generador no sobrescribe un `index.html` que no tenga su marca (`Generado con tools/generar-cliente.mjs`) salvo con `--forzar`. Para cambiar un cliente generado: editar su JSON y volver a generar.
