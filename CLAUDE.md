@@ -31,8 +31,10 @@ Las tarjetas NFC y QR de clientes apuntan a `https://vorticevr.mx/<cliente>/` (`
 ## Realidad aumentada (`/ra/ocv-johara/`)
 - MindAR 1.2.5 + three.js 0.160 desde jsDelivr (import map).
 - `targets.mind`: image target compilado desde la cara del QR de la tarjeta impresa (1050×600). Si cambia el diseño impreso, hay que regenerarlo con `tools/compilar-target.mjs` (ver abajo).
-- `jicara.glb`: modelo con texturas a 1024 px y los huecos del escaneo rellenados. La función `addLiner()` agrega una capa interior para que no se vea a través del modelo.
-- `ocv-logo.svg`: logo de OCV vectorizado por color; se extruye en 3D con `SVGLoader` y colores planos (`MeshBasicMaterial`).
+- `video.mp4`: video promocional de OCV (960×540, H.264 sin audio, ~10 MB; sacado de https://www.youtube.com/watch?v=XXbLnNzroYY y comprimido con ffmpeg). Se reproduce como `VideoTexture` del mismo `<video id="vid">` sobre la tarjeta; si se pierde el tracking, ese mismo elemento se muestra en pantalla (`#vbox`) sin reiniciar, con botón de pantalla completa (nativa; si el navegador no la permite, la página la simula). Al volver a detectar la tarjeta regresa a ella, salvo que esté en pantalla completa.
+- `ocv-logo.svg`: logo de OCV vectorizado por color; se extruye en 3D con `SVGLoader` y colores planos (`MeshBasicMaterial`), acostado paralelo a la tarjeta arriba de su borde superior, sobre una placa blanca para que se lea el texto.
+- El botón "← Datos de contacto" (a `/johara/`) está visible siempre, también antes de activar la cámara.
+- La jícara (`jicara.glb`) se quitó en octubre de 2026; sigue en `_clientes/johara/modelo.glb` como ejemplo de la plantilla.
 - Captura de foto y video: compone el video de la cámara y el canvas WebGL justo después de cada render. Para guardar se usa Web Share (en iPhone: "Guardar imagen/video") o descarga.
 - Para probar sin cámara: reemplazar `mindar-image-three` por un stub que exponga `renderer/scene/camera/addAnchor/start`.
 
