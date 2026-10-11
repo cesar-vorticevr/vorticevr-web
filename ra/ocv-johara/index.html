@@ -20,10 +20,39 @@ html,body{margin:0;height:100%;background:#000;font-family:var(--font);color:var
 #start{font:inherit;font-weight:800;font-size:1rem;background:var(--wine);color:var(--white);border:0;border-radius:999px;padding:15px 28px;cursor:pointer}
 #start:focus-visible{outline:3px solid var(--fg);outline-offset:3px}
 #err{color:var(--wine);font-weight:600;font-size:.88rem;max-width:34ch}
-#hint{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:10;background:rgba(0,0,0,.62);color:#fff;padding:10px 16px;border-radius:999px;font-size:.85rem;font-weight:600;white-space:nowrap;transition:opacity .3s}
+#hint{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:10;background:rgba(0,0,0,.62);color:#fff;padding:10px 16px;border-radius:999px;font-size:.85rem;font-weight:600;white-space:nowrap;transition:opacity .3s}
 #hint.off{opacity:0}
 #back{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));left:14px;z-index:10;background:rgba(0,0,0,.55);color:#fff;text-decoration:none;font-size:.82rem;font-weight:600;padding:8px 14px;border-radius:999px}
 .mindar-ui-overlay{display:none!important}
+#guide{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;pointer-events:none;transition:opacity .35s}
+#guide.off{opacity:0}
+#guide .frame{position:relative;width:min(78vw,420px);aspect-ratio:1050/600;border-radius:10px;overflow:hidden;box-shadow:0 0 0 2px rgba(255,255,255,.9),0 0 0 9999px rgba(0,0,0,.28)}
+#guide .frame img{width:100%;height:100%;display:block;opacity:.42}
+#guide .frame::before,#guide .frame::after{content:"";position:absolute;inset:-2px;border:3px solid #fff;border-radius:12px;clip-path:polygon(0 0,18% 0,18% 6px,6px 6px,6px 22%,0 22%,0 78%,6px 78%,6px calc(100% - 6px),18% calc(100% - 6px),18% 100%,82% 100%,82% calc(100% - 6px),calc(100% - 6px) calc(100% - 6px),calc(100% - 6px) 78%,100% 78%,100% 22%,calc(100% - 6px) 22%,calc(100% - 6px) 6px,82% 6px,82% 0,100% 0,100% 100%,0 100%)}
+#guide .frame::after{display:none}
+#guide p{margin:0;background:rgba(0,0,0,.62);color:#fff;padding:9px 16px;border-radius:999px;font-size:.85rem;font-weight:600;text-align:center}
+#controls{position:fixed;left:0;right:0;bottom:0;z-index:12;display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 16px calc(22px + env(safe-area-inset-bottom,0px))}
+#modes{display:flex;gap:4px;background:rgba(0,0,0,.5);border-radius:999px;padding:4px}
+#modes button{font:inherit;font-size:.8rem;font-weight:700;color:#fff;background:transparent;border:0;border-radius:999px;padding:7px 16px;cursor:pointer}
+#modes button[aria-pressed="true"]{background:#fff;color:#111}
+#shutter{width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,.25);padding:0;cursor:pointer;display:grid;place-items:center}
+#shutter span{width:54px;height:54px;border-radius:50%;background:#fff;transition:all .2s}
+#shutter.video span{background:#e5243b}
+#shutter.rec span{width:26px;height:26px;border-radius:6px;background:#e5243b}
+#shutter:focus-visible,#modes button:focus-visible{outline:3px solid #fff;outline-offset:3px}
+#timer{color:#fff;font-weight:800;font-size:.85rem;background:#e5243b;padding:4px 10px;border-radius:999px;font-variant-numeric:tabular-nums}
+#flash{position:fixed;inset:0;z-index:30;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
+#flash.on{opacity:.85;transition:none}
+#sheet{position:fixed;inset:0;z-index:40;background:rgba(10,8,12,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(20px + env(safe-area-inset-bottom,0px))}
+#sheet .media{max-width:100%;max-height:62vh;border-radius:14px;overflow:hidden;background:#000;display:flex}
+#sheet img,#sheet video{max-width:100%;max-height:62vh;display:block}
+#sheet .row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+#sheet .act{font:inherit;font-weight:800;font-size:.95rem;border:0;border-radius:999px;padding:13px 22px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+#sheet .act.primary{background:var(--wine);color:#fff}
+#sheet .act.ghost{background:rgba(255,255,255,.12);color:#fff}
+#sheet .act:focus-visible{outline:3px solid #fff;outline-offset:3px}
+#sheet small{color:rgba(255,255,255,.7);font-size:.78rem;text-align:center;max-width:36ch;line-height:1.4}
+
 </style>
 <script type="importmap">
 {"imports":{
@@ -38,17 +67,34 @@ html,body{margin:0;height:100%;background:#000;font-family:var(--font);color:var
 <div id="intro">
   <img class="logo" src="ocv-logo.png" alt="Oficina de Convenciones y Visitantes de Tabasco">
   <h1>Realidad aumentada</h1>
-  <p>Activa la cámara y apunta al lado de la tarjeta que tiene el código QR.</p>
+  <p>Activa la cámara y encuadra completa esta cara de la tarjeta, la que tiene el código QR.</p>
   <img class="card" src="tarjeta.jpg" alt="Lado de la tarjeta con el código QR">
   <button id="start" type="button">Activar cámara</button>
   <div id="err" hidden></div>
 </div>
-<div id="hint" hidden>Apunta al lado del código QR</div>
+<div id="guide" hidden><div class="frame"><img src="tarjeta.jpg" alt=""></div><p>Encuadra esta cara de la tarjeta</p></div>
+<div id="hint" hidden>Mantén la tarjeta dentro de la pantalla</div>
+<div id="controls" hidden>
+  <span id="timer" hidden>0:00</span>
+  <button id="shutter" type="button" aria-label="Tomar foto"><span></span></button>
+  <div id="modes" role="group" aria-label="Modo de captura"><button type="button" data-mode="photo" aria-pressed="true">Foto</button><button type="button" data-mode="video" aria-pressed="false">Video</button></div>
+</div>
+<div id="flash"></div>
+<div id="sheet" hidden>
+  <div class="media" id="media"></div>
+  <div class="row">
+    <button class="act primary" id="share" type="button">Guardar o compartir</button>
+    <a class="act ghost" id="download" href="#" download>Descargar</a>
+    <button class="act ghost" id="close" type="button">Cerrar</button>
+  </div>
+  <small id="saveHint">En iPhone toca “Guardar o compartir” y elige “Guardar imagen” o “Guardar video” para que quede en tu galería.</small>
+</div>
 <a id="back" href="../../johara/" hidden>← Volver</a>
 
 <script type="module">
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { SVGLoader } from "three/addons/loaders/SVGLoader.js";
 import { MindARThree } from "mindar-image-three";
 // Inner backing for the jícara: a surface that hugs the scanned wall from just outside it and is drawn only
 // from the inside (BackSide). Where the scan has the wall, the wall wins; where it has holes, this fills them.
@@ -80,8 +126,85 @@ function addLiner(THREE, model){
   mesh.parent.add(liner);
 }
 
+// ---- Photo / video capture: composite the camera image and the 3D layer exactly as shown on screen ----
+function setupCapture(mind){
+  const container=$("ar"), shutter=$("shutter"), timer=$("timer"), flash=$("flash"), sheet=$("sheet"), media=$("media");
+  const shareBtn=$("share"), dl=$("download"), closeBtn=$("close");
+  const out=document.createElement("canvas"), ctx=out.getContext("2d");
+  let mode="photo", wantPhoto=false, recorder=null, chunks=[], recStart=0, tick=null, lastBlob=null, lastUrl=null, lastName="";
+  const MAX_SEC=30;
+
+  document.querySelectorAll("#modes button").forEach(b=>b.addEventListener("click",()=>{
+    if(recorder) return;
+    mode=b.dataset.mode;
+    document.querySelectorAll("#modes button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+    shutter.classList.toggle("video",mode==="video");
+    shutter.setAttribute("aria-label",mode==="video"?"Grabar video":"Tomar foto");
+  }));
+
+  function size(){
+    const r=container.getBoundingClientRect(), dpr=Math.min(window.devicePixelRatio||1,2);
+    let w=Math.round(r.width*dpr), h=Math.round(r.height*dpr);
+    const maxSide=1920, f=Math.min(1,maxSide/Math.max(w,h)); w=Math.round(w*f)&~1; h=Math.round(h*f)&~1;
+    if(out.width!==w||out.height!==h){ out.width=w; out.height=h; }
+    return {r,sx:w/r.width,sy:h/r.height};
+  }
+  function compose(){
+    const {r,sx,sy}=size(); const video=container.querySelector("video"), gl=mind.renderer.domElement;
+    ctx.fillStyle="#000"; ctx.fillRect(0,0,out.width,out.height);
+    for(const el of [video,gl]){ if(!el) continue; const b=el.getBoundingClientRect();
+      ctx.drawImage(el,(b.left-r.left)*sx,(b.top-r.top)*sy,b.width*sx,b.height*sy); }
+  }
+  function afterRender(){
+    if(wantPhoto){ wantPhoto=false; compose(); out.toBlob(b=>show(b,"image"),"image/jpeg",.92); }
+    else if(recorder) compose();
+  }
+  function pickType(){
+    for(const t of ["video/mp4;codecs=avc1","video/mp4","video/webm;codecs=vp9","video/webm"]) if(window.MediaRecorder&&MediaRecorder.isTypeSupported(t)) return t;
+    return "";
+  }
+  function startRec(){
+    const type=pickType(); if(!window.MediaRecorder||!out.captureStream){ alertSheet("Tu navegador no permite grabar video aquí. Usa la opción de foto."); return; }
+    compose(); const stream=out.captureStream(30);
+    recorder=new MediaRecorder(stream,type?{mimeType:type,videoBitsPerSecond:6e6}:undefined); chunks=[];
+    recorder.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
+    recorder.onstop=()=>{ const t=recorder.mimeType||type||"video/webm"; recorder=null; show(new Blob(chunks,{type:t}),"video"); };
+    recorder.start(250); recStart=performance.now(); shutter.classList.add("rec"); shutter.setAttribute("aria-label","Detener grabación"); timer.hidden=false;
+    tick=setInterval(()=>{ const s=Math.floor((performance.now()-recStart)/1000); timer.textContent=`0:${String(s).padStart(2,"0")}`; if(s>=MAX_SEC) stopRec(); },250);
+  }
+  function stopRec(){ clearInterval(tick); timer.hidden=true; timer.textContent="0:00"; shutter.classList.remove("rec"); shutter.setAttribute("aria-label","Grabar video"); if(recorder&&recorder.state!=="inactive") recorder.stop(); }
+
+  shutter.addEventListener("click",()=>{
+    if(mode==="photo"){ flash.classList.add("on"); requestAnimationFrame(()=>requestAnimationFrame(()=>flash.classList.remove("on"))); wantPhoto=true; }
+    else if(recorder) stopRec(); else startRec();
+  });
+
+  function stamp(){ const d=new Date(),p=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; }
+  function show(blob,kind){
+    if(!blob||!blob.size){ alertSheet("No se pudo guardar la captura. Intenta de nuevo."); return; }
+    if(lastUrl) URL.revokeObjectURL(lastUrl);
+    lastBlob=blob; lastUrl=URL.createObjectURL(blob);
+    const ext=kind==="image"?"jpg":(blob.type.includes("mp4")?"mp4":"webm");
+    lastName=`OCV-Tabasco-RA-${stamp()}.${ext}`;
+    media.replaceChildren();
+    const el=document.createElement(kind==="image"?"img":"video"); el.src=lastUrl;
+    if(kind==="video"){ el.controls=true; el.playsInline=true; el.autoplay=true; el.muted=true; el.loop=true; } else el.alt="Tu foto en realidad aumentada";
+    media.appendChild(el);
+    dl.href=lastUrl; dl.download=lastName;
+    const file=new File([blob],lastName,{type:blob.type});
+    const canShare=!!(navigator.canShare&&navigator.canShare({files:[file]}));
+    shareBtn.hidden=!canShare; dl.hidden=false;
+    $("saveHint").hidden=!canShare;
+    shareBtn.onclick=async()=>{ try{ await navigator.share({files:[file],title:"OCV Tabasco · Realidad aumentada"}); }catch(e){} };
+    sheet.hidden=false;
+  }
+  function alertSheet(msg){ media.replaceChildren(Object.assign(document.createElement("p"),{textContent:msg,style:"color:#fff;padding:20px;margin:0;max-width:30ch;text-align:center"})); shareBtn.hidden=true; dl.hidden=true; $("saveHint").hidden=true; sheet.hidden=false; }
+  closeBtn.addEventListener("click",()=>{ sheet.hidden=true; media.replaceChildren(); });
+  return {afterRender};
+}
+
 const $ = id => document.getElementById(id);
-const intro=$("intro"), hint=$("hint"), back=$("back"), err=$("err"), startBtn=$("start");
+const intro=$("intro"), hint=$("hint"), back=$("back"), err=$("err"), startBtn=$("start"), guide=$("guide"), controls=$("controls");
 
 async function start(){
   startBtn.disabled=true; startBtn.textContent="Cargando…"; err.hidden=true;
@@ -112,25 +235,53 @@ async function start(){
     const sh=new THREE.Mesh(new THREE.CircleGeometry(0.15,48),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.22,depthWrite:false}));
     sh.position.set(QR.x,QR.y,0.004); anchor.group.add(sh);
 
-    // OCV logo floating over the right side of the card
-    const tex=await new THREE.TextureLoader().loadAsync("ocv-logo.png"); tex.colorSpace=THREE.SRGBColorSpace;
-    const lw=0.42, lh=lw*tex.image.height/tex.image.width;
-    // 3D logo: stacked layers give it real thickness; back layers are darker so the edge reads as a solid side.
-    const logo=new THREE.Group(); const LAYERS=18, DEPTH=0.035, geo=new THREE.PlaneGeometry(lw,lh);
-    for(let i=0;i<LAYERS;i++){
-      const k=i/(LAYERS-1), front=i===0, backFace=i===LAYERS-1;
-      const shade=front||backFace?1:0.55-0.15*k;
-      const m=new THREE.MeshBasicMaterial({map:tex,alphaTest:0.5,side:THREE.DoubleSide,color:new THREE.Color(shade,shade,shade)});
-      const layer=new THREE.Mesh(geo,m); layer.position.z=-k*DEPTH; logo.add(layer);
+    // OCV logo in real 3D: the logo traced into flat-color vector shapes, each one extruded.
+    const svg=await new SVGLoader().loadAsync("ocv-logo.svg");
+    const logo=new THREE.Group(), LW=0.42, vb=svg.xml.viewBox.baseVal, k=LW/vb.width;
+    for(const path of svg.paths){
+      const col=new THREE.Color(path.color), isText=path.userData.node.getAttribute("data-part")==="t";
+      const depth=(isText?18:46);
+      const geo=new THREE.ExtrudeGeometry(SVGLoader.createShapes(path),{depth,bevelEnabled:!isText,bevelThickness:5,bevelSize:3,bevelSegments:2,curveSegments:4});
+      const front=new THREE.MeshBasicMaterial({color:col}); // flat brand color, unaffected by lighting
+      const side=new THREE.MeshBasicMaterial({color:col.clone().multiplyScalar(.68)});
+      const mesh=new THREE.Mesh(geo,[front,side]); logo.add(mesh);
     }
-    const logoG=new THREE.Group(); logoG.position.set(0.2,0.22,0.16); logoG.rotation.x=Math.PI/2; logoG.add(logo); anchor.group.add(logoG);
+    logo.scale.set(k,-k,k); logo.position.set(-LW/2, (vb.height*k)/2, 0); // SVG y points down
+    const logoTurn=new THREE.Group(); logoTurn.add(logo);
+    const logoG=new THREE.Group(); logoG.position.set(0.2,0.22,0.16); logoG.rotation.x=Math.PI/2; logoG.add(logoTurn); anchor.group.add(logoG);
+
+    // Subtle sparkles: a few warm points drifting up around the jícara and the logo, each twinkling on its own.
+    const N=46, sp=new Float32Array(N*3), ph=new Float32Array(N), sz=new Float32Array(N);
+    for(let i=0;i<N;i++){
+      const nearLogo=i%3===0, r=Math.random();
+      sp[i*3]  = nearLogo ? 0.2+(Math.random()-.5)*0.5 : QR.x+(Math.random()-.5)*0.34;
+      sp[i*3+1]= nearLogo ? 0.22+(Math.random()-.5)*0.12 : QR.y+(Math.random()-.5)*0.34;
+      sp[i*3+2]= nearLogo ? 0.05+Math.random()*0.28 : 0.02+Math.random()*0.32;
+      ph[i]=Math.random()*Math.PI*2; sz[i]=8+r*12;
+    }
+    const sg=new THREE.BufferGeometry();
+    sg.setAttribute("position",new THREE.BufferAttribute(sp,3)); sg.setAttribute("phase",new THREE.BufferAttribute(ph,1)); sg.setAttribute("size",new THREE.BufferAttribute(sz,1));
+    const sparkMat=new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+      uniforms:{t:{value:0},o:{value:0}},
+      vertexShader:`attribute float phase; attribute float size; uniform float t; varying float a;
+        void main(){ vec3 p=position; p.z+=mod(t*0.03+phase*0.05,0.12);
+          a=pow(max(0.,sin(t*1.6+phase*3.0)),3.0);
+          vec4 mv=modelViewMatrix*vec4(p,1.); gl_PointSize=size*a*(1.0/-mv.z); gl_Position=projectionMatrix*mv; }`,
+      fragmentShader:`uniform float o; varying float a;
+        void main(){ vec2 d=gl_PointCoord-.5; float r=length(d);
+          float core=smoothstep(.5,0.,r); float cross=max(smoothstep(.06,0.,abs(d.x))*smoothstep(.5,0.,abs(d.y)),smoothstep(.06,0.,abs(d.y))*smoothstep(.5,0.,abs(d.x)));
+          float v=(core*core+cross*.8)*a*o; gl_FragColor=vec4(vec3(1.,.9,.65)*v,v); }`
+    });
+    const sparks=new THREE.Points(sg,sparkMat); anchor.group.add(sparks);
 
     let found=false;
-    anchor.onTargetFound=()=>{found=true; hint.classList.add("off");};
-    anchor.onTargetLost=()=>{found=false; hint.classList.remove("off");};
+    anchor.onTargetFound=()=>{found=true; hint.classList.add("off"); guide.classList.add("off");};
+    anchor.onTargetLost=()=>{found=false; guide.classList.remove("off");};
 
+    const capture=setupCapture(mind);
     await mind.start();
-    intro.hidden=true; hint.hidden=false; back.hidden=false;
+    intro.hidden=true; guide.hidden=false; back.hidden=false; controls.hidden=false;
     const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
     const clock=new THREE.Clock(); let appear=0;
     renderer.setAnimationLoop(()=>{
@@ -140,9 +291,11 @@ async function start(){
       spin.scale.setScalar(Math.max(.001,e));
       if(!reduce) spin.rotation.z += dt*0.6;                // slow turn on its own axis
       logoG.position.z = 0.16 + (reduce?0:Math.sin(t*1.4)*0.015);
-      logo.rotation.y = reduce?0.35:Math.sin(t*0.7)*0.6;
+      logoTurn.rotation.y = reduce?0.35:Math.sin(t*0.7)*0.6;
       logoG.scale.setScalar(Math.max(.001,e));
+      sparkMat.uniforms.t.value=t; sparkMat.uniforms.o.value=reduce?0:e;
       renderer.render(scene,camera);
+      capture.afterRender();
     });
   }catch(e){
     console.error(e);
