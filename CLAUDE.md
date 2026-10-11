@@ -71,5 +71,5 @@ Detalles:
 ## Probar antes de publicar
 `main` = producción (vorticevr.mx). **No hacer push a `main` sin que César lo apruebe.** Los cambios a la página van primero a la rama `preview`.
 1. Local: `node tools/servidor-local.mjs` → http://localhost:8080 (también muestra la IP para abrirlo desde el celular en el mismo wifi). La cámara de la RA en el celular requiere https: para eso usar la versión preview.
-2. Preview en internet: commit y push a la rama `preview`. Cloudflare sube una versión de prueba (no toca producción) y la URL aparece en el check "Workers Builds" del commit en GitHub.
+2. Preview en internet: commit y push a la rama `preview`. Cloudflare sube una versión de prueba (no toca producción) en **https://preview-vorticevr-web.lad-cesargarcia.workers.dev/** (patrón `<rama>-vorticevr-web.lad-cesargarcia.workers.dev`; Cloudflare le pone `X-Robots-Tag: noindex`). Requiere el bloque `"previews": {}` en `wrangler.jsonc`.
 3. Cuando César apruebe: `git switch main && git merge --ff-only preview && git push` (eso publica). Subir `main` y `preview` en pushes separados, no al mismo tiempo.
