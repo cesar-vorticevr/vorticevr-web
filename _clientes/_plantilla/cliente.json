@@ -1,0 +1,75 @@
+{
+  "_instrucciones": "Copia esta carpeta a _clientes/<slug>/ (slug = la ruta de la tarjeta: t.vorticevr.mx/<slug>/), pon ahí las imágenes y llena los campos. Borra los campos que el cliente no tenga (todo es opcional salvo slug y nombre). Las claves que empiezan con _ son comentarios. Ver CLAUDE.md › Tarjetas de clientes.",
+
+  "slug": "nombre-cliente",
+
+  "nombre": "Nombre Apellido",
+  "cargo": "Cargo",
+  "organizacion": "Empresa u organización",
+
+  "telefono": "+52 993 000 0000",
+  "_telefono_etiqueta": "Opcional: cambia la etiqueta 'Celular' (por ejemplo 'Oficina').",
+  "whatsapp": "+52 993 000 0000",
+  "correo": "correo@ejemplo.com",
+  "web": "https://www.ejemplo.com/",
+  "_redes": "tipo: facebook, instagram, linkedin, youtube, tiktok, x (cualquier otro usa un ícono de enlace y pide 'etiqueta').",
+  "redes": [
+    { "tipo": "facebook", "url": "https://www.facebook.com/usuario", "texto": "usuario" },
+    { "tipo": "instagram", "url": "https://www.instagram.com/usuario", "texto": "@usuario" }
+  ],
+  "direccion": {
+    "etiqueta": "Oficina",
+    "texto": "Calle y número, colonia, C.P., ciudad, estado",
+    "_mapa": "Opcional: texto de búsqueda para Google Maps si el de arriba no lo encuentra bien."
+  },
+
+  "_banda": "Opcional: franja de color con un mensaje. 'html' admite enlaces; si no, usa 'texto'.",
+  "banda": {
+    "titulo": "Lema o frase corta",
+    "texto": "Una o dos líneas sobre lo que hace la organización."
+  },
+  "_pie": "Opcional: logos institucionales al final.",
+  "pie": {
+    "imagen": "pie.webp",
+    "alt": "Nombres de los logos",
+    "texto": "Razón social o leyenda"
+  },
+
+  "_colores": "Tomados del diseño impreso. acento = botones e íconos; acento_oscuro = fondo del botón de RA y la banda.",
+  "colores": {
+    "fondo": "#f5f2ed",
+    "texto": "#1f1f1f",
+    "suave": "#5e5651",
+    "acento": "#5b2a86",
+    "acento_oscuro": "#3f1d5e",
+    "linea": "#ddd5ca"
+  },
+  "_fuente": "Nombre exacto de una fuente de Google Fonts (con pesos 500, 600 y 800). Quítala para usar la del sistema.",
+  "fuente": "Montserrat",
+  "_imagenes": "logo = marca junto al nombre (~200 px, PNG/WebP transparente). franja = tira horizontal repetible del diseño impreso (~22 px de alto visible, se repite en X). textura = patrón para el fondo del botón de RA y la banda. Todas opcionales.",
+  "imagenes": {
+    "logo": "logo.webp",
+    "franja": "franja.webp",
+    "textura": "textura.webp"
+  },
+
+  "_ra": "Quita todo el bloque 'ra' si el cliente no lleva realidad aumentada.",
+  "ra": {
+    "slug": "marca-nombre",
+    "titulo": "Marca · Realidad aumentada",
+    "archivo": "Marca-RA",
+    "logo_intro": "logo-ra.png",
+    "logo_intro_alt": "Nombre de la marca",
+    "imagen_target": "tarjeta-alta.png",
+    "_imagen_target": "Diseño de la cara que se reconoce, a 1000 px de ancho o más. Solo se usa para compilar targets.mind; no se publica.",
+    "tarjeta": "tarjeta.jpg",
+    "_tarjeta": "La misma cara en ligero (~420 px de ancho) para la pantalla de inicio y la guía.",
+    "tarjeta_alt": "Cara de la tarjeta con el código QR",
+    "instruccion": "esta cara de la tarjeta, la que tiene el código QR",
+    "_modelo": "Coordenadas sobre la tarjeta: ancho = 1, centro = 0,0; x a la derecha, y hacia arriba. tamano = ancho del modelo en esas unidades. forro = capa interior para escaneos con huecos (vasijas, jícaras).",
+    "modelo": { "archivo": "modelo.glb", "x": -0.32, "y": 0, "tamano": 0.30, "forro": false },
+    "_logo": "SVG con colores planos = logo extruido en 3D (paths con data-part=\"t\" quedan delgados, para textos). PNG/WebP = logo plano flotando. z = altura sobre la tarjeta.",
+    "logo": { "archivo": "logo-ra.svg", "x": 0.2, "y": 0.22, "z": 0.16, "ancho": 0.42 },
+    "destellos": true
+  }
+}

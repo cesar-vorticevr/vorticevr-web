@@ -1,0 +1,63 @@
+{
+  "slug": "johara",
+  "protegido": true,
+  "_nota": "Cliente de referencia. Sus páginas publicadas (/johara/ y /ra/ocv-johara/) se hicieron a mano antes de la plantilla y ya están impresas: el generador nunca las sobrescribe. Sirve de ejemplo completo y para probar la plantilla con --salida.",
+
+  "nombre": "Johara De Leija Hernández",
+  "cargo": "Directora General",
+  "organizacion": "Fideicomiso para la Promoción Turística del Estado de Tabasco · Oficina de Convenciones y Visitantes de Tabasco",
+
+  "telefono": "+52 933 168 5350",
+  "whatsapp": "+52 933 168 5350",
+  "correo": "Joharadeleija@tabasco.gob.mx",
+  "web": "https://www.ocvtabasco.com/",
+  "redes": [
+    { "tipo": "facebook", "url": "https://www.facebook.com/Ocvtabasco", "texto": "Ocvtabasco" },
+    { "tipo": "instagram", "url": "https://www.instagram.com/ocvtabasco_oficial", "texto": "@ocvtabasco_oficial" }
+  ],
+  "direccion": {
+    "etiqueta": "Oficina",
+    "texto": "Av. Paseo Tabasco #1504, Centro Administrativo de Gobierno, Col. Tabasco 2000, C.P. 86035, Villahermosa, Tabasco",
+    "mapa": "Av. Paseo Tabasco 1504, Centro Administrativo de Gobierno, Tabasco 2000, 86035 Villahermosa, Tabasco"
+  },
+
+  "banda": {
+    "titulo": "Tabasco, ¡el Edén, tienes que vivirlo!",
+    "html": "Congresos, convenciones, viajes de incentivo y eventos en Tabasco. Conoce la oferta en <a href=\"https://www.ocvtabasco.com/\" target=\"_blank\" rel=\"noopener\">ocvtabasco.com</a>."
+  },
+  "pie": {
+    "imagen": "pie.webp",
+    "alt": "Gobierno de Tabasco · Secretaría de Turismo y Desarrollo Económico · Tabasco, el Edén · OCV Tabasco",
+    "texto": "Fideicomiso para la Promoción Turística del Estado de Tabasco"
+  },
+
+  "colores": {
+    "fondo": "#f3eee6",
+    "texto": "#1f1f1f",
+    "suave": "#5e5651",
+    "acento": "#8a1538",
+    "acento_oscuro": "#6e0f2c",
+    "linea": "#dccfbf"
+  },
+  "fuente": "Montserrat",
+  "imagenes": {
+    "logo": "logo.webp",
+    "franja": "franja.webp",
+    "textura": "textura.webp"
+  },
+
+  "ra": {
+    "slug": "ocv-johara",
+    "titulo": "OCV Tabasco · Realidad aumentada",
+    "archivo": "OCV-Tabasco-RA",
+    "logo_intro": "logo-ra.png",
+    "logo_intro_alt": "Oficina de Convenciones y Visitantes de Tabasco",
+    "tarjeta": "tarjeta.jpg",
+    "_imagen_target": "El targets.mind de Johara se compiló del diseño a 1050×600, que no está en el repo; por eso aquí se usa el ya publicado.",
+    "tarjeta_alt": "Lado de la tarjeta con el código QR",
+    "instruccion": "esta cara de la tarjeta, la que tiene el código QR",
+    "modelo": { "archivo": "modelo.glb", "x": -0.32, "y": 0, "tamano": 0.30, "forro": true },
+    "logo": { "archivo": "logo-ra.svg", "x": 0.2, "y": 0.22, "z": 0.16, "ancho": 0.42 },
+    "destellos": true
+  }
+}

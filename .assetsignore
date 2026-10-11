@@ -4,3 +4,7 @@ wrangler.jsonc
 .assetsignore
 .nojekyll
 CLAUDE.md
+_clientes
+_plantillas
+tools
+node_modules
