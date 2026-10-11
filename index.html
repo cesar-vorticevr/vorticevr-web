@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Vórtice VR · Realidad aumentada, virtual e IA</title>
-<meta name="description" content="Estudio de realidad aumentada, realidad virtual, realidad mixta e inteligencia artificial aplicada. Villahermosa, Tabasco, desde 2016. Prueba nuestras experiencias en tu navegador.">
+<meta name="description" content="Estudio de realidad aumentada, realidad virtual, realidad mixta e inteligencia artificial aplicada. Desde 2016. Prueba nuestras experiencias en tu navegador.">
 <meta property="og:title" content="Vórtice VR">
-<meta property="og:description" content="Experiencias inmersivas: realidad aumentada, realidad virtual e IA aplicada. Villahermosa, Tabasco.">
+<meta property="og:description" content="Experiencias inmersivas: realidad aumentada, realidad virtual e IA aplicada.">
 <meta property="og:image" content="assets/proyectos/observatorio.webp">
 <meta name="theme-color" content="#05020b">
 <link rel="icon" href="assets/icono.png">
@@ -52,6 +52,9 @@ header.top nav a{text-decoration:none;color:var(--mute);transition:color .2s}
 header.top nav a:hover{color:var(--ink)}
 .pill{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;border:1px solid var(--line2);background:rgba(139,63,214,.18);color:var(--ink)!important}
 @media (max-width:760px){header.top nav a:not(.pill){display:none}}
+.lang{font:600 .78rem var(--fm);letter-spacing:.12em;min-width:46px;height:38px;padding:0 12px;border-radius:999px;border:1px solid var(--line2);background:transparent;color:var(--ink);cursor:pointer;transition:background .3s,border-color .3s}
+.lang:hover{border-color:var(--lav);background:rgba(139,63,214,.25)}
+header.top nav{gap:clamp(10px,2vw,22px)}
 
 /* hero */
 .hero{position:relative;height:100svh;min-height:600px;overflow:hidden}
@@ -222,9 +225,10 @@ footer img{height:22px;width:auto}
 <div id="cur"></div><div id="cur2"></div>
 
 <header class="top" id="top"><div class="wrap">
-  <a class="brand" href="./" aria-label="Vórtice VR, inicio"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
-  <nav aria-label="Secciones">
-    <a href="#experiencias">Experiencias</a><a href="#servicios">Servicios</a><a href="#nosotros">Nosotros</a><a class="pill mag" href="#contacto">Platiquemos</a>
+  <a class="brand" href="./" aria-label="Vórtice VR, inicio" data-en-aria="Vórtice VR, home"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
+  <nav aria-label="Secciones" data-en-aria="Sections">
+    <a href="#experiencias" data-en="Experiences">Experiencias</a><a href="#servicios" data-en="Services">Servicios</a><a href="#nosotros" data-en="About">Nosotros</a><a class="pill mag" href="#contacto" data-en="Let’s talk">Platiquemos</a>
+    <button class="lang mag" id="lang" type="button" aria-label="Ver en inglés" data-en-aria="Ver en español"><span data-en="ES">EN</span></button>
   </nav>
 </div></header>
 
@@ -234,73 +238,73 @@ footer img{height:22px;width:auto}
     <img class="fallback" id="fallback" src="assets/icono.png" alt="" hidden>
     <div class="glow"></div>
     <div class="hud" aria-hidden="true"><i class="a"></i><i class="b"></i><i class="c"></i><i class="d"></i>
-      <div class="tel mono">Villahermosa · 17.99° N<br>RA · RV · RM · IA<br><b id="ptxt">Mueve el cursor sobre el vórtice</b></div>
+      <div class="tel mono"><span data-en="Immersive studio">Estudio inmersivo</span><br><span data-en="AR · VR · MR · AI">RA · RV · RM · IA</span><br><b id="ptxt" data-en="Move the cursor over the vortex">Mueve el cursor sobre el vórtice</b></div>
     </div>
     <div class="content"><div class="wrap">
-      <span class="kick fade" style="transition-delay:.1s">Villahermosa, Tabasco · desde 2016</span>
-      <h1 id="h1">Experiencias que se <span class="nw"><em>viven</em>,</span> no solo se ven.</h1>
-      <p class="fade" style="transition-delay:.7s">Somos un estudio de realidad aumentada, realidad virtual, realidad mixta e inteligencia artificial aplicada. Diseñamos experiencias para educación, cultura, turismo y marcas, y las llevamos del concepto a algo que la gente usa con su celular o con un visor.</p>
+      <span class="kick fade" style="transition-delay:.1s" data-en="Since 2016">Desde 2016</span>
+      <h1 id="h1" data-en="Experiences you &lt;span class=&quot;nw&quot;&gt;&lt;em&gt;live&lt;/em&gt;,&lt;/span&gt; not just watch.">Experiencias que se <span class="nw"><em>viven</em>,</span> no solo se ven.</h1>
+      <p class="fade" style="transition-delay:.7s" data-en="We are a studio for augmented reality, virtual reality, mixed reality and applied artificial intelligence. We design experiences for education, culture, tourism and brands, and take them from concept to something people use with their phone or a headset.">Somos un estudio de realidad aumentada, realidad virtual, realidad mixta e inteligencia artificial aplicada. Diseñamos experiencias para educación, cultura, turismo y marcas, y las llevamos del concepto a algo que la gente usa con su celular o con un visor.</p>
       <div class="actions fade" style="transition-delay:.9s">
-        <a class="btn primary mag" href="#experiencias">Pruébalo ahora ↓</a>
-        <a class="btn mag" href="https://wa.me/529983448207?text=Hola%2C%20quiero%20platicar%20de%20un%20proyecto%20con%20V%C3%B3rtice%20VR" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>Platiquemos</a>
+        <a class="btn primary mag" href="#experiencias" data-en="Try it now ↓">Pruébalo ahora ↓</a>
+        <a class="btn mag" href="https://wa.me/529983448207?text=Hola%2C%20quiero%20platicar%20de%20un%20proyecto%20con%20V%C3%B3rtice%20VR" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg><span data-en="Let’s talk">Platiquemos</span></a>
       </div>
     </div></div>
     <div class="scrollhint mono" aria-hidden="true"><span>Scroll</span><i></i></div>
   </div>
 
   <div class="marquee" aria-hidden="true"><div class="track">
-    <span>Realidad aumentada</span><span>Realidad virtual</span><span><b>✦</b> Realidad mixta</span><span>Inteligencia artificial</span><span>Educación</span><span>Cultura</span><span><b>✦</b> Turismo</span><span>Videojuegos</span>
-    <span>Realidad aumentada</span><span>Realidad virtual</span><span><b>✦</b> Realidad mixta</span><span>Inteligencia artificial</span><span>Educación</span><span>Cultura</span><span><b>✦</b> Turismo</span><span>Videojuegos</span>
+    <span data-en="Augmented reality">Realidad aumentada</span><span data-en="Virtual reality">Realidad virtual</span><span data-en="&lt;b&gt;✦&lt;/b&gt; Mixed reality"><b>✦</b> Realidad mixta</span><span data-en="Artificial intelligence">Inteligencia artificial</span><span data-en="Education">Educación</span><span data-en="Culture">Cultura</span><span data-en="&lt;b&gt;✦&lt;/b&gt; Tourism"><b>✦</b> Turismo</span><span data-en="Video games">Videojuegos</span>
+    <span data-en="Augmented reality">Realidad aumentada</span><span data-en="Virtual reality">Realidad virtual</span><span data-en="&lt;b&gt;✦&lt;/b&gt; Mixed reality"><b>✦</b> Realidad mixta</span><span data-en="Artificial intelligence">Inteligencia artificial</span><span data-en="Education">Educación</span><span data-en="Culture">Cultura</span><span data-en="&lt;b&gt;✦&lt;/b&gt; Tourism"><b>✦</b> Turismo</span><span data-en="Video games">Videojuegos</span>
   </div></div>
 
   <section id="experiencias"><div class="wrap">
     <div class="shead reveal">
-      <span class="kick">Pruébalo ahora</span>
-      <h2>No te lo contamos: ábrelo y juega.</h2>
-      <p>Experiencias reales hechas por Vórtice VR. Funcionan en el navegador, sin descargar nada.</p>
+      <span class="kick" data-en="Try it now">Pruébalo ahora</span>
+      <h2 data-en="Don’t take our word for it: open it and play.">No te lo contamos: ábrelo y juega.</h2>
+      <p data-en="Real experiences made by Vórtice VR. They run in the browser, nothing to download.">Experiencias reales hechas por Vórtice VR. Funcionan en el navegador, sin descargar nada.</p>
     </div>
     <div class="xgrid">
       <article class="xcard wide reveal">
         <a class="xin" href="proyectos/observatorio/">
-          <div class="xmedia"><span class="xnum">01</span><img src="assets/proyectos/observatorio.webp" alt="Observatorio Orbital: sistema solar en 3D con panel de bitácora" loading="lazy"></div>
+          <div class="xmedia"><span class="xnum">01</span><img src="assets/proyectos/observatorio.webp" alt="Observatorio Orbital: sistema solar en 3D con panel de bitácora" data-en-alt="Orbital Observatory: 3D solar system with a mission log panel" loading="lazy"></div>
           <div class="xbody">
-            <div class="chips"><span class="chip">3D interactivo</span><span class="chip">Educación</span><span class="chip sun">Astronomía</span></div>
-            <h3>Observatorio Orbital</h3>
-            <p>Un laboratorio espacial en 3D: el sistema solar, el día y la noche, las estaciones, la Luna y los eclipses, las eras, los trazos de los planetas y la astronomía de mayas y mexicas. Con fichas técnicas y un astronauta que te guía.</p>
-            <div class="xgo"><span>Abrir laboratorio</span><span class="arr">→</span></div>
+            <div class="chips"><span class="chip" data-en="Interactive 3D">3D interactivo</span><span class="chip" data-en="Education">Educación</span><span class="chip sun" data-en="Astronomy">Astronomía</span></div>
+            <h3 data-en="Orbital Observatory">Observatorio Orbital</h3>
+            <p data-en="A 3D space lab: the solar system, day and night, the seasons, the Moon and eclipses, the ages, planetary patterns and the astronomy of the Maya and the Mexica. With fact sheets and an astronaut who guides you.">Un laboratorio espacial en 3D: el sistema solar, el día y la noche, las estaciones, la Luna y los eclipses, las eras, los trazos de los planetas y la astronomía de mayas y mexicas. Con fichas técnicas y un astronauta que te guía.</p>
+            <div class="xgo"><span data-en="Open the lab &lt;small&gt;· in Spanish&lt;/small&gt;">Abrir laboratorio</span><span class="arr">→</span></div>
           </div>
         </a>
       </article>
       <article class="xcard reveal">
         <a class="xin" href="proyectos/orbita/">
-          <div class="xmedia"><span class="xnum">02</span><img src="assets/proyectos/orbita.webp" alt="Órbita en tu mesa: el Sol y la Tierra sobre una plataforma holográfica" loading="lazy"></div>
+          <div class="xmedia"><span class="xnum">02</span><img src="assets/proyectos/orbita.webp" alt="Órbita en tu mesa: el Sol y la Tierra sobre una plataforma holográfica" data-en-alt="Orbit on your table: the Sun and the Earth on a holographic platform" loading="lazy"></div>
           <div class="xbody">
-            <div class="chips"><span class="chip">Realidad aumentada</span><span class="chip">WebXR</span><span class="chip sun">Educación</span></div>
-            <h3>Órbita en tu mesa</h3>
-            <p>Coloca el Sol, la Tierra y la Luna sobre cualquier superficie y descubre en realidad aumentada el día y la noche, las fases, las estaciones y los eclipses.</p>
-            <div class="xgo"><span>Abrir experiencia <small>· RA en Android, 3D en cualquier equipo</small></span><span class="arr">→</span></div>
+            <div class="chips"><span class="chip" data-en="Augmented reality">Realidad aumentada</span><span class="chip">WebXR</span><span class="chip sun" data-en="Education">Educación</span></div>
+            <h3 data-en="Orbit on your table">Órbita en tu mesa</h3>
+            <p data-en="Place the Sun, the Earth and the Moon on any surface and explore day and night, moon phases, seasons and eclipses in augmented reality.">Coloca el Sol, la Tierra y la Luna sobre cualquier superficie y descubre en realidad aumentada el día y la noche, las fases, las estaciones y los eclipses.</p>
+            <div class="xgo"><span data-en="Open experience &lt;small&gt;· AR on Android, 3D on any device · in Spanish&lt;/small&gt;">Abrir experiencia <small>· RA en Android, 3D en cualquier equipo</small></span><span class="arr">→</span></div>
           </div>
         </a>
       </article>
       <article class="xcard reveal">
         <a class="xin" href="proyectos/deletreo-lsm/">
-          <div class="xmedia"><span class="xnum">03</span><img src="assets/proyectos/deletreo-lsm.webp" alt="Deletreo LSM: práctica del alfabeto manual con la cámara" loading="lazy"></div>
+          <div class="xmedia"><span class="xnum">03</span><img src="assets/proyectos/deletreo-lsm.webp" alt="Deletreo LSM: práctica del alfabeto manual con la cámara" data-en-alt="LSM Fingerspelling: practicing the manual alphabet with the camera" loading="lazy"></div>
           <div class="xbody">
-            <div class="chips"><span class="chip">Inteligencia artificial</span><span class="chip">Visión por computadora</span><span class="chip sun">Inclusión</span></div>
-            <h3>Deletreo LSM</h3>
-            <p>Aprende el alfabeto manual de la Lengua de Señas Mexicana con la cámara: la IA reconoce tu mano y te dice qué ajustar. Todo se procesa en tu equipo, sin enviar video.</p>
-            <div class="xgo"><span>Abrir experiencia <small>· con cámara, en computadora</small></span><span class="arr">→</span></div>
+            <div class="chips"><span class="chip" data-en="Artificial intelligence">Inteligencia artificial</span><span class="chip" data-en="Computer vision">Visión por computadora</span><span class="chip sun" data-en="Inclusion">Inclusión</span></div>
+            <h3 data-en="LSM Fingerspelling">Deletreo LSM</h3>
+            <p data-en="Learn the manual alphabet of Mexican Sign Language (LSM) with your camera: the AI recognizes your hand and tells you what to adjust. Everything runs on your device; no video is sent.">Aprende el alfabeto manual de la Lengua de Señas Mexicana con la cámara: la IA reconoce tu mano y te dice qué ajustar. Todo se procesa en tu equipo, sin enviar video.</p>
+            <div class="xgo"><span data-en="Open experience &lt;small&gt;· camera, on a computer · in Spanish&lt;/small&gt;">Abrir experiencia <small>· con cámara, en computadora</small></span><span class="arr">→</span></div>
           </div>
         </a>
       </article>
       <article class="xcard wide split reveal">
         <a class="xin" href="proyectos/steal-a-pinata/">
-          <div class="xmedia"><span class="xnum">04</span><img src="assets/proyectos/steal-a-pinata.webp" alt="Portada de Steal a Piñata: piñatas, papel picado y una catrina" loading="lazy"></div>
+          <div class="xmedia"><span class="xnum">04</span><img src="assets/proyectos/steal-a-pinata.webp" alt="Portada de Steal a Piñata: piñatas, papel picado y una catrina" data-en-alt="Steal a Piñata cover art: piñatas, papel picado and a catrina" loading="lazy"></div>
           <div class="xbody">
-            <div class="chips"><span class="chip">Videojuego</span><span class="chip">3D</span><span class="chip sun">Prototipo para Roblox</span></div>
+            <div class="chips"><span class="chip" data-en="Video game">Videojuego</span><span class="chip">3D</span><span class="chip sun" data-en="Roblox prototype">Prototipo para Roblox</span></div>
             <h3>Steal a Piñata</h3>
-            <p>Prototipo jugable de un videojuego diseñado para Roblox: compra piñatas vivas del desfile, cobra sus dulces, protege tu base y roba las de los bots. Con Catrina, Alebrije, Quetzal y hasta un Xolo espectral.</p>
-            <div class="xgo"><span>Jugar <small>· teclado o pantalla táctil</small></span><span class="arr">→</span></div>
+            <p data-en="A playable prototype of a video game designed for Roblox: buy living piñatas from the parade, collect their candy, protect your base and steal the bots’ piñatas. Featuring a Catrina, an Alebrije, a Quetzal and even a spectral Xolo.">Prototipo jugable de un videojuego diseñado para Roblox: compra piñatas vivas del desfile, cobra sus dulces, protege tu base y roba las de los bots. Con Catrina, Alebrije, Quetzal y hasta un Xolo espectral.</p>
+            <div class="xgo"><span data-en="Play &lt;small&gt;· keyboard or touch screen · in Spanish&lt;/small&gt;">Jugar <small>· teclado o pantalla táctil</small></span><span class="arr">→</span></div>
           </div>
         </a>
       </article>
@@ -308,58 +312,58 @@ footer img{height:22px;width:auto}
   </div></section>
 
   <section id="servicios"><div class="wrap">
-    <div class="shead reveal"><span class="kick">Lo que hacemos</span><h2>Tecnología inmersiva con propósito.</h2></div>
+    <div class="shead reveal"><span class="kick" data-en="What we do">Lo que hacemos</span><h2 data-en="Immersive technology with a purpose.">Tecnología inmersiva con propósito.</h2></div>
     <div class="sgrid">
-      <article class="svc reveal"><span class="tag">RA</span><h3>Realidad aumentada</h3><p>Murales, libros, tarjetas y espacios que cobran vida con la cámara del celular, directo en el navegador y sin descargar apps.</p></article>
-      <article class="svc reveal"><span class="tag">RV</span><h3>Realidad virtual</h3><p>Experiencias inmersivas para visores Meta Quest: recorridos, simulaciones y retos educativos.</p></article>
-      <article class="svc reveal"><span class="tag">IA</span><h3>Inteligencia artificial aplicada</h3><p>Aplicaciones web con IA para educación, cultura y negocio, pensadas para usarse desde cualquier dispositivo.</p></article>
-      <article class="svc reveal"><span class="tag">+</span><h3>Capacitación</h3><p>Formación a docentes y equipos para crear y usar experiencias inmersivas en el aula y en sus proyectos.</p></article>
+      <article class="svc reveal"><span class="tag" data-en="AR">RA</span><h3 data-en="Augmented reality">Realidad aumentada</h3><p data-en="Murals, books, cards and spaces that come alive through a phone camera, right in the browser, no apps to download.">Murales, libros, tarjetas y espacios que cobran vida con la cámara del celular, directo en el navegador y sin descargar apps.</p></article>
+      <article class="svc reveal"><span class="tag" data-en="VR">RV</span><h3 data-en="Virtual reality">Realidad virtual</h3><p data-en="Immersive experiences for Meta Quest headsets: tours, simulations and educational challenges.">Experiencias inmersivas para visores Meta Quest: recorridos, simulaciones y retos educativos.</p></article>
+      <article class="svc reveal"><span class="tag" data-en="AI">IA</span><h3 data-en="Applied artificial intelligence">Inteligencia artificial aplicada</h3><p data-en="AI-powered web apps for education, culture and business, built to run on any device.">Aplicaciones web con IA para educación, cultura y negocio, pensadas para usarse desde cualquier dispositivo.</p></article>
+      <article class="svc reveal"><span class="tag">+</span><h3 data-en="Training">Capacitación</h3><p data-en="Training for teachers and teams to create and use immersive experiences in the classroom and in their projects.">Formación a docentes y equipos para crear y usar experiencias inmersivas en el aula y en sus proyectos.</p></article>
     </div>
   </div></section>
 
   <section id="proyectos"><div class="wrap">
-    <div class="shead reveal"><span class="kick">Más proyectos</span><h2>En la calle, en el aula, en tu mano.</h2></div>
+    <div class="shead reveal"><span class="kick" data-en="More projects">Más proyectos</span><h2 data-en="On the street, in the classroom, in your hand.">En la calle, en el aula, en tu mano.</h2></div>
     <div class="plist">
-      <article class="prow reveal"><span class="n">05</span><span class="kind">RA · Arte urbano</span><div><h3>Murales con realidad aumentada en Comalcalco</h3><p>Murales que se animan al apuntarles con el celular, uniendo arte público y tecnología.</p></div></article>
-      <article class="prow reveal"><span class="n">06</span><span class="kind">RV · Educación</span><div><h3>Planetas en Órbita</h3><p>Experiencia para Meta Quest 3 y 3S: un reto de un minuto para armar el sistema solar.</p></div></article>
-      <article class="prow reveal"><span class="n">07</span><span class="kind">RA · Festival</span><div><h3>Festival MOVART</h3><p>Experiencias de realidad aumentada en el navegador para el público del festival.</p></div></article>
-      <article class="prow reveal"><span class="n">08</span><span class="kind">NFC · RA</span><div><h3>Tarjetas de presentación inteligentes</h3><p>Tarjetas con NFC y código QR que abren un portal de contacto y una experiencia en realidad aumentada sobre la propia tarjeta. <a href="tarjeta/">Ver la tarjeta de Vórtice VR</a>.</p></div></article>
+      <article class="prow reveal"><span class="n">05</span><span class="kind" data-en="AR · Street art">RA · Arte urbano</span><div><h3 data-en="Augmented reality murals in Comalcalco">Murales con realidad aumentada en Comalcalco</h3><p data-en="Murals that come to life when you point your phone at them, bringing public art and technology together.">Murales que se animan al apuntarles con el celular, uniendo arte público y tecnología.</p></div></article>
+      <article class="prow reveal"><span class="n">06</span><span class="kind" data-en="VR · Education">RV · Educación</span><div><h3 data-en="Planets in Orbit">Planetas en Órbita</h3><p data-en="An experience for Meta Quest 3 and 3S: a one-minute challenge to build the solar system.">Experiencia para Meta Quest 3 y 3S: un reto de un minuto para armar el sistema solar.</p></div></article>
+      <article class="prow reveal"><span class="n">07</span><span class="kind" data-en="AR · Festival">RA · Festival</span><div><h3 data-en="MOVART Festival">Festival MOVART</h3><p data-en="Browser-based augmented reality experiences for the festival audience.">Experiencias de realidad aumentada en el navegador para el público del festival.</p></div></article>
+      <article class="prow reveal"><span class="n">08</span><span class="kind" data-en="NFC · AR">NFC · RA</span><div><h3 data-en="Smart business cards">Tarjetas de presentación inteligentes</h3><p data-en="Cards with NFC and a QR code that open a contact portal and an augmented reality experience on the card itself. &lt;a href=&quot;tarjeta/&quot;&gt;See the Vórtice VR card&lt;/a&gt;.">Tarjetas con NFC y código QR que abren un portal de contacto y una experiencia en realidad aumentada sobre la propia tarjeta. <a href="tarjeta/">Ver la tarjeta de Vórtice VR</a>.</p></div></article>
     </div>
   </div></section>
 
   <section id="nosotros"><div class="wrap">
-    <div class="shead reveal"><span class="kick">Nosotros</span><h2>Un estudio tabasqueño que construye lo que imagina.</h2></div>
+    <div class="shead reveal"><span class="kick" data-en="About us">Nosotros</span><h2 data-en="A studio that builds what it imagines.">Un estudio que construye lo que imagina.</h2></div>
     <div class="about">
       <div class="reveal">
-        <p class="big">Desde 2016 creamos tecnología inmersiva en Villahermosa para que la gente <em>aprenda, descubra y se emocione</em>.</p>
-        <p>Hacemos realidad aumentada, realidad virtual, realidad mixta e inteligencia artificial para educación, cultura, turismo y marcas. Concebimos, diseñamos y programamos cada experiencia: desde la idea hasta que alguien la usa con su celular o con un visor.</p>
-        <p>Nos gusta que la tecnología no estorbe: que baste un link, un código QR o una tarjeta para entrar a la experiencia.</p>
-        <div class="sign"><img src="assets/icono.png" alt=""><div><b>Mtro. César Adrián García Martínez</b><span>Director General de Vórtice VR</span></div></div>
+        <p class="big" data-en="Since 2016 we have been creating immersive technology so people can &lt;em&gt;learn, discover and be moved&lt;/em&gt;.">Desde 2016 creamos tecnología inmersiva para que la gente <em>aprenda, descubra y se emocione</em>.</p>
+        <p data-en="We make augmented reality, virtual reality, mixed reality and artificial intelligence for education, culture, tourism and brands. We conceive, design and code every experience ourselves: from the idea to the moment someone uses it on their phone or a headset.">Hacemos realidad aumentada, realidad virtual, realidad mixta e inteligencia artificial para educación, cultura, turismo y marcas. Concebimos, diseñamos y programamos cada experiencia: desde la idea hasta que alguien la usa con su celular o con un visor.</p>
+        <p data-en="We like technology that gets out of the way: a link, a QR code or a card should be all it takes to step into the experience.">Nos gusta que la tecnología no estorbe: que baste un link, un código QR o una tarjeta para entrar a la experiencia.</p>
+        <div class="sign"><img src="assets/icono.png" alt=""><div><b data-en="César Adrián García Martínez, M.A.">Mtro. César Adrián García Martínez</b><span data-en="CEO, Vórtice VR">Director General de Vórtice VR</span></div></div>
       </div>
       <div class="principles">
-        <div class="pr reveal"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><div><h3>Directo en el navegador</h3><p>Nuestras experiencias web se abren con un link o un QR, sin instalar apps.</p></div></div>
-        <div class="pr reveal"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M7 10.5V16c0 1.5 2.2 3 5 3s5-1.5 5-3v-5.5"/></svg></span><div><h3>Para aprender</h3><p>La educación está en el centro: del sistema solar a la Lengua de Señas Mexicana.</p></div></div>
-        <div class="pr reveal"><span class="ic"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><div><h3>Privacidad primero</h3><p>Cuando usamos la cámara y la IA, procesamos en el equipo del usuario siempre que se puede.</p></div></div>
-        <div class="pr reveal"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span><div><h3>Hecho en Tabasco</h3><p>Con identidad propia: nuestras raíces aparecen en lo que creamos.</p></div></div>
+        <div class="pr reveal"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><div><h3 data-en="Right in the browser">Directo en el navegador</h3><p data-en="Our web experiences open with a link or a QR code, no apps to install.">Nuestras experiencias web se abren con un link o un QR, sin instalar apps.</p></div></div>
+        <div class="pr reveal"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M7 10.5V16c0 1.5 2.2 3 5 3s5-1.5 5-3v-5.5"/></svg></span><div><h3 data-en="Made for learning">Para aprender</h3><p data-en="Education is at the core: from the solar system to Mexican Sign Language.">La educación está en el centro: del sistema solar a la Lengua de Señas Mexicana.</p></div></div>
+        <div class="pr reveal"><span class="ic"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><div><h3 data-en="Privacy first">Privacidad primero</h3><p data-en="When we use the camera and AI, we process on the user’s device whenever possible.">Cuando usamos la cámara y la IA, procesamos en el equipo del usuario siempre que se puede.</p></div></div>
+        <div class="pr reveal"><span class="ic"><svg viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span><div><h3 data-en="No borders">Sin fronteras</h3><p data-en="Our experiences travel with a link: they work anywhere in the world.">Nuestras experiencias viajan con un link: funcionan en cualquier lugar del mundo.</p></div></div>
       </div>
     </div>
   </div></section>
 
   <section class="cta" id="contacto">
-    <span class="kick reveal">Contacto</span>
-    <h2 class="reveal">¿Qué experiencia quieres <em>crear</em>?</h2>
+    <span class="kick reveal" data-en="Contact">Contacto</span>
+    <h2 class="reveal" data-en="What experience do you want to &lt;em&gt;create&lt;/em&gt;?">¿Qué experiencia quieres <em>crear</em>?</h2>
     <div class="actions reveal">
-      <a class="btn sun mag" href="https://wa.me/529983448207?text=Hola%2C%20quiero%20platicar%20de%20un%20proyecto%20con%20V%C3%B3rtice%20VR" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>Escríbenos por WhatsApp</a>
+      <a class="btn sun mag" href="https://wa.me/529983448207?text=Hola%2C%20quiero%20platicar%20de%20un%20proyecto%20con%20V%C3%B3rtice%20VR" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg><span data-en="Message us on WhatsApp">Escríbenos por WhatsApp</span></a>
     </div>
     <div class="cgrid reveal">
-      <a href="https://wa.me/529983448207" target="_blank" rel="noopener"><span class="lbl">WhatsApp</span><span class="val">998 344 8207</span></a>
-      <a href="mailto:vorticevr@gmail.com"><span class="lbl">Correo</span><span class="val">vorticevr@gmail.com</span></a>
+      <a href="https://wa.me/529983448207" target="_blank" rel="noopener"><span class="lbl">WhatsApp</span><span class="val">+52 998 344 8207</span></a>
+      <a href="mailto:vorticevr@gmail.com"><span class="lbl" data-en="Email">Correo</span><span class="val">vorticevr@gmail.com</span></a>
       <a href="https://instagram.com/vorticevr" target="_blank" rel="noopener"><span class="lbl">Instagram</span><span class="val">@vorticevr</span></a>
     </div>
   </section>
 </main>
 
-<footer><div class="wrap"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span>© Vórtice VR · Villahermosa, Tabasco, México</span><span>Mtro. César Adrián García Martínez, Director General</span></div></footer>
+<footer><div class="wrap"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span>© Vórtice VR</span><span data-en="César Adrián García Martínez, M.A., CEO">Mtro. César Adrián García Martínez, Director General</span></div></footer>
 
 <script>
 // ---- UI effects (no dependencies) ----
@@ -367,14 +371,35 @@ footer img{height:22px;width:auto}
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fine=matchMedia('(pointer: fine)').matches;
 
+  // ---- Spanish / English. Every translatable element carries its English in data-en (HTML allowed);
+  // the Spanish original is remembered from the page. Choice: ?lang=, saved choice, else the browser language.
+  const T=[...document.querySelectorAll("[data-en]")]; T.forEach(e=>e.dataset.es=e.innerHTML);
+  const A=[...document.querySelectorAll("[data-en-aria]")]; A.forEach(e=>e.dataset.esAria=e.getAttribute("aria-label")||"");
+  const I=[...document.querySelectorAll("[data-en-alt]")]; I.forEach(e=>e.dataset.esAlt=e.alt);
+  const META={es:{t:document.title,d:document.querySelector("meta[name=description]").content},
+    en:{t:"Vórtice VR · Augmented reality, virtual reality and AI",d:"A studio for augmented reality, virtual reality, mixed reality and applied artificial intelligence, since 2016. Try our experiences in your browser."}};
+  let lang="es";
+  function setLang(l,first){ lang=l; const en=l==="en"; document.documentElement.lang=l;
+    T.forEach(e=>e.innerHTML=en?e.dataset.en:e.dataset.es);
+    A.forEach(e=>e.setAttribute("aria-label",en?e.dataset.enAria:e.dataset.esAria));
+    I.forEach(e=>e.alt=en?e.dataset.enAlt:e.dataset.esAlt);
+    document.title=META[l].t; document.querySelector("meta[name=description]").content=META[l].d;
+    split(h1); h1.querySelectorAll(".word>span").forEach((s,i)=>s.style.transitionDelay=first?(.15+i*.07)+"s":"0s");
+    if(!first){ try{localStorage.setItem("vvr-lang",l)}catch(e){} const u=new URL(location); u.searchParams.set("lang",l); history.replaceState(null,"",u); }
+  }
+  window.vvrLang=()=>lang;
+
   // headline split into words for the rise-in
   const h1=document.getElementById('h1');
   const split=n=>{ if(n.nodeType===3){ const f=document.createDocumentFragment();
       n.textContent.split(/(\s+)/).forEach(t=>{ if(!t) return; if(/^\s+$/.test(t)){f.appendChild(document.createTextNode(t));return;}
         const w=document.createElement('span');w.className='word';const i=document.createElement('span');i.textContent=t;w.appendChild(i);f.appendChild(w);});
       n.replaceWith(f);} else [...n.childNodes].forEach(split); };
-  split(h1);
-  h1.querySelectorAll('.word>span').forEach((s,i)=>s.style.transitionDelay=(.15+i*.07)+'s');
+  let saved=null; try{saved=localStorage.getItem("vvr-lang")}catch(e){}
+  const q=new URLSearchParams(location.search).get("lang");
+  const nav=(navigator.languages&&navigator.languages[0])||navigator.language||"es";
+  setLang(q==="en"||q==="es"?q:saved||(/^es/i.test(nav)?"es":"en"),true);
+  document.getElementById("lang").addEventListener("click",()=>setLang(lang==="en"?"es":"en"));
   requestAnimationFrame(()=>requestAnimationFrame(()=>document.body.classList.add('ready')));
 
   // reveal on scroll
@@ -504,7 +529,7 @@ async function init(){
   const ptxt=document.getElementById("ptxt");
   hero.addEventListener("pointermove",e=>{ const r=canvas.getBoundingClientRect(); ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);
     ray.setFromCamera(ndc,camera); if(ray.ray.intersectPlane(plane,hit)){ hit.sub(group.position); U.uMouse.value.set(hit.x,hit.y); pushT=1; }
-    tx=ndc.x; ty=ndc.y; if(ptxt) ptxt.textContent="Toca el vórtice para dispersarlo"; },{passive:true});
+    tx=ndc.x; ty=ndc.y; if(ptxt) ptxt.textContent=(window.vvrLang&&vvrLang()==="en")?"Click the vortex to scatter it":"Toca el vórtice para dispersarlo"; },{passive:true});
   hero.addEventListener("pointerleave",()=>{ pushT=0; tx=ty=0; });
   let burstT=0;
   hero.addEventListener("click",e=>{ if(e.target.closest("a,button")) return; burstT=1; });
