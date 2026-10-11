@@ -8,10 +8,14 @@
     { "pattern": "www.vorticevr.mx", "custom_domain": true },
     { "pattern": "t.vorticevr.mx", "custom_domain": true }
   ],
+  // Small Worker in front of /ra/* only: answers Range requests for videos (iPhone needs them).
+  "main": "worker.js",
   // Needed by `wrangler preview`, which Cloudflare runs for non-production branches (rama preview).
   "previews": {},
   "assets": {
     "directory": "./",
+    "binding": "ASSETS",
+    "run_worker_first": ["/ra/*"],
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "none"
   }

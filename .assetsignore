@@ -8,3 +8,6 @@ _clientes
 _plantillas
 tools
 node_modules
+worker.js
+.claude
+.wrangler
