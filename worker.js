@@ -2,14 +2,14 @@
 //  - Sitio estático: pasa directo a los assets; a los videos les responde peticiones Range (el iPhone las necesita).
 //  - Plataforma de RA (vorticevr.mx/crear/):
 //      nombre.vorticevr.mx  y  /e/nombre/   → visor /x/
-//      /api/*                                 → código por correo, publicar, consultar
+//      /api/*                                 → cuentas (registro, sesión), publicar, consultar
 //      /m/<slug>/<video|target|image>         → archivos de la experiencia en R2 (con Range)
 //    Requiere bindings DB (D1) y MEDIA (R2); secretos RESEND_API_KEY y SESSION_SECRET.
 //    Sin bindings, el sitio funciona igual y la API responde 503.
 
 const ROOT_DEFAULT = "vorticevr.mx";
 const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear","create","ra","x","e","m","preview","app","apps","static","assets","cdn","dev","test","staging","beta","demo","vorticevr","vortice","soporte","support","help","ayuda","blog","shop","tienda","login","cuenta","account","johara","tarjeta","proyectos","status","docs"]);
-const LIMITS = { videoBytes: 25 * 1024 * 1024, imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, days: 30, codeMinutes: 10, codeTries: 5 };
+const LIMITS = { videoBytes: 25 * 1024 * 1024, imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, days: 30, codeMinutes: 10, codeTries: 5, sessionDays: 30, perAccount: 1 };
 const VIDEO = /\.(mp4|m4v|webm|mov)$/i;
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])$/;
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i;
@@ -52,7 +52,9 @@ export default {
       await deleteMedia(env, r.slug);
       await env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(r.slug).run();
     }
-    await env.DB.prepare("DELETE FROM codes WHERE expires < ?").bind(Date.now() - 864e5).run();
+    await env.DB.prepare("DELETE FROM otp WHERE expires < ?").bind(Date.now() - 864e5).run();
+    await env.DB.prepare("DELETE FROM sessions WHERE expires < ?").bind(Date.now()).run();
+    await env.DB.prepare("DELETE FROM users WHERE verified = 0 AND created < ?").bind(Date.now() - 7 * 864e5).run();
     await env.DB.prepare("DELETE FROM ratelimit WHERE reset < ?").bind(Date.now()).run();
   },
 };
@@ -153,51 +155,95 @@ async function api(request, env, ctx, url) {
 
   if (path === "/api/slug" && M === "GET") return json(await slugStatus(env, (url.searchParams.get("s") || "").toLowerCase(), null));
 
-  if (path === "/api/code" && M === "POST") {
-    const { email } = await request.json().catch(() => ({}));
-    const em = normEmail(email);
+  // ---- accounts: register → confirm email once → log in with password (session 30 days) ----
+  if (path === "/api/register" && M === "POST") {
+    const b = await request.json().catch(() => ({}));
+    const em = normEmail(b.email), name = String(b.name || "").trim().slice(0, 60), pw = String(b.password || "");
+    if (!name) return json({ error: "Escribe tu nombre." }, 400);
     if (!em) return json({ error: "Escribe un correo válido." }, 400);
-    if (!(await limit(env, "ip:" + ip, 12, 3600e3))) return json({ error: "Demasiados intentos. Espera un rato." }, 429);
-    if (!(await limit(env, "mail:" + em, 1, 55e3))) return json({ error: "Ya te enviamos un código. Espera un minuto para pedir otro." }, 429);
-    const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0");
-    await env.DB.prepare("INSERT INTO codes (email, hash, expires, tries) VALUES (?, ?, ?, 0) ON CONFLICT(email) DO UPDATE SET hash = excluded.hash, expires = excluded.expires, tries = 0")
-      .bind(em, await hashCode(env, em, code), Date.now() + LIMITS.codeMinutes * 60e3).run();
-    if (env.DEV_CODES === "1") return json({ ok: true, dev_code: code });
-    const sent = await sendMail(env, em, "Tu código de Vórtice VR: " + code, codeMail(code));
-    if (!sent) return json({ error: "No pudimos enviar el correo. Intenta más tarde." }, 502);
-    return json({ ok: true });
+    if (pw.length < 8) return json({ error: "La contraseña debe tener al menos 8 caracteres." }, 400);
+    if (!(await limit(env, "reg:" + ip, 8, 3600e3))) return json({ error: "Demasiados intentos. Espera un rato." }, 429);
+    const user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(em).first();
+    if (user && user.verified) return json({ error: "Ya existe una cuenta con ese correo. Inicia sesión." }, 409);
+    const hash = await hashPassword(pw);
+    if (user) await env.DB.prepare("UPDATE users SET name = ?, pass = ? WHERE id = ?").bind(name, hash, user.id).run();
+    else await env.DB.prepare("INSERT INTO users (email, name, pass, verified, created) VALUES (?, ?, ?, 0, ?)").bind(em, name, hash, Date.now()).run();
+    return codeResponse(await sendCode(env, em, "verify"));
   }
 
   if (path === "/api/verify" && M === "POST") {
-    const { email, code } = await request.json().catch(() => ({}));
-    const em = normEmail(email);
-    if (!em || !/^\d{6}$/.test(String(code || ""))) return json({ error: "Código incorrecto." }, 400);
-    const row = await env.DB.prepare("SELECT * FROM codes WHERE email = ?").bind(em).first();
-    if (!row || row.expires < Date.now()) return json({ error: "El código expiró. Pide uno nuevo." }, 400);
-    if (row.tries >= LIMITS.codeTries) return json({ error: "Demasiados intentos. Pide un código nuevo." }, 429);
-    if (row.hash !== (await hashCode(env, em, String(code)))) {
-      await env.DB.prepare("UPDATE codes SET tries = tries + 1 WHERE email = ?").bind(em).run();
-      return json({ error: "Código incorrecto." }, 400);
-    }
-    await env.DB.prepare("DELETE FROM codes WHERE email = ?").bind(em).run();
-    const token = await sign(env, { e: em, x: Date.now() + 24 * 3600e3 });
-    const exp = await env.DB.prepare("SELECT * FROM experiences WHERE email = ?").bind(em).first();
-    return json({ token, email: em, experience: exp && exp.expires > Date.now() ? ownerExp(exp, request, env) : null });
+    const b = await request.json().catch(() => ({}));
+    const em = normEmail(b.email);
+    const bad = await checkCode(env, em, "verify", b.code);
+    if (bad) return bad;
+    const user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(em).first();
+    if (!user) return json({ error: "No encontramos esa cuenta. Regístrate de nuevo." }, 404);
+    await env.DB.prepare("UPDATE users SET verified = 1 WHERE id = ?").bind(user.id).run();
+    return json(await sessionFor(env, request, { ...user, verified: 1 }));
+  }
+
+  if (path === "/api/login" && M === "POST") {
+    const b = await request.json().catch(() => ({}));
+    const em = normEmail(b.email), pw = String(b.password || "");
+    if (!em || !pw) return json({ error: "Escribe tu correo y tu contraseña." }, 400);
+    if (!(await limit(env, "login:" + ip, 20, 900e3)) || !(await limit(env, "loginmail:" + em, 8, 900e3))) return json({ error: "Demasiados intentos. Espera 15 minutos." }, 429);
+    const user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(em).first();
+    if (!user || !(await verifyPassword(pw, user.pass))) return json({ error: "Correo o contraseña incorrectos." }, 401);
+    if (!user.verified) { const r = await sendCode(env, em, "verify"); return r.error && r.status !== 429 ? codeResponse(r) : json({ ok: true, needCode: true, dev_code: r.dev_code }); } // 429 = a code was just sent
+    return json(await sessionFor(env, request, user));
+  }
+
+  if (path === "/api/forgot" && M === "POST") {
+    const b = await request.json().catch(() => ({}));
+    const em = normEmail(b.email);
+    if (!em) return json({ error: "Escribe un correo válido." }, 400);
+    const user = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(em).first();
+    if (!user) return json({ ok: true }); // same answer whether or not the account exists
+    return codeResponse(await sendCode(env, em, "reset"));
+  }
+
+  if (path === "/api/reset" && M === "POST") {
+    const b = await request.json().catch(() => ({}));
+    const em = normEmail(b.email), pw = String(b.password || "");
+    if (pw.length < 8) return json({ error: "La contraseña debe tener al menos 8 caracteres." }, 400);
+    const bad = await checkCode(env, em, "reset", b.code);
+    if (bad) return bad;
+    const user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(em).first();
+    if (!user) return json({ error: "No encontramos esa cuenta." }, 404);
+    await env.DB.prepare("UPDATE users SET pass = ?, verified = 1 WHERE id = ?").bind(await hashPassword(pw), user.id).run();
+    await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user.id).run();   // log out everywhere else
+    return json(await sessionFor(env, request, { ...user, verified: 1 }));
   }
 
   // ---- signed-in ----
-  const who = await auth(request, env);
-  if (path === "/api/me" && M === "GET") {
-    if (!who) return json({ error: "Inicia sesión de nuevo." }, 401);
-    const exp = await env.DB.prepare("SELECT * FROM experiences WHERE email = ?").bind(who).first();
-    return json({ email: who, experience: exp && exp.expires > Date.now() ? ownerExp(exp, request, env) : null });
-  }
-  if (path === "/api/me" && M === "DELETE") {
-    if (!who) return json({ error: "Inicia sesión de nuevo." }, 401);
-    const exp = await env.DB.prepare("SELECT slug FROM experiences WHERE email = ?").bind(who).first();
-    if (exp) { await deleteMedia(env, exp.slug); await env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(exp.slug).run(); }
+  const me = await auth(request, env);
+  const who = me && me.email;
+  if (path === "/api/logout" && M === "POST") {
+    const t = bearer(request); if (t) await env.DB.prepare("DELETE FROM sessions WHERE token = ?").bind(await sha256hex(t)).run();
     return json({ ok: true });
   }
+  if (path === "/api/me" && M === "GET") {
+    if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
+    return json(await account(env, request, me));
+  }
+  if (path === "/api/password" && M === "POST") {
+    if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
+    const b = await request.json().catch(() => ({}));
+    if (String(b.password || "").length < 8) return json({ error: "La nueva contraseña debe tener al menos 8 caracteres." }, 400);
+    const user = await env.DB.prepare("SELECT pass FROM users WHERE id = ?").bind(me.id).first();
+    if (!(await verifyPassword(String(b.current || ""), user.pass))) return json({ error: "Tu contraseña actual no es correcta." }, 401);
+    await env.DB.prepare("UPDATE users SET pass = ? WHERE id = ?").bind(await hashPassword(String(b.password)), me.id).run();
+    return json({ ok: true });
+  }
+  m = path.match(/^\/api\/experience\/([a-z0-9-]+)$/);
+  if (m && M === "DELETE") {
+    if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
+    const exp = await env.DB.prepare("SELECT slug FROM experiences WHERE slug = ? AND email = ?").bind(m[1], who).first();
+    if (!exp) return json({ error: "No encontramos esa experiencia en tu cuenta." }, 404);
+    await deleteMedia(env, exp.slug); await env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(exp.slug).run();
+    return json({ ok: true });
+  }
+
   if (path === "/api/publish" && M === "POST") {
     if (!who) return json({ error: "Inicia sesión de nuevo." }, 401);
     if (!(await limit(env, "pub:" + who, 10, 3600e3))) return json({ error: "Demasiadas publicaciones seguidas. Espera un rato." }, 429);
@@ -292,6 +338,10 @@ async function schema(env) {
     env.DB.prepare("CREATE TABLE IF NOT EXISTS experiences (slug TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, title TEXT, data TEXT, created INTEGER, updated INTEGER, expires INTEGER, views INTEGER DEFAULT 0)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS codes (email TEXT PRIMARY KEY, hash TEXT, expires INTEGER, tries INTEGER DEFAULT 0)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS ratelimit (k TEXT PRIMARY KEY, n INTEGER, reset INTEGER)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE NOT NULL, name TEXT, pass TEXT, verified INTEGER DEFAULT 0, created INTEGER)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires INTEGER, created INTEGER)"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS sessions_user ON sessions (user_id)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS otp (email TEXT NOT NULL, purpose TEXT NOT NULL, hash TEXT, expires INTEGER, tries INTEGER DEFAULT 0, PRIMARY KEY (email, purpose))"),
   ]);
   schemaReady = true;
 }
@@ -311,13 +361,74 @@ async function hmac(env, data) {
   return b64url(await crypto.subtle.sign("HMAC", key, enc.encode(data)));
 }
 const hashCode = (env, email, code) => hmac(env, `code:${email}:${code}`);
-async function sign(env, obj) { const p = b64url(enc.encode(JSON.stringify(obj))); return `${p}.${await hmac(env, p)}`; }
-async function auth(request, env) {
-  const t = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  const [p, s] = t.split(".");
-  if (!p || !s || s !== (await hmac(env, p))) return null;
-  try { const o = JSON.parse(new TextDecoder().decode(unb64url(p))); return o.x > Date.now() ? o.e : null; } catch { return null; }
+
+// ---------- accounts: passwords, sessions, one-time codes ----------
+// PBKDF2-SHA256. 16,000 iterations ≈ 8 ms in a Worker (the free plan allows ~10 ms of CPU per request).
+// The count is stored with each hash, so it can be raised later (paid plan) and old hashes keep working.
+const PBKDF2_ITER = 16000;
+async function pbkdf2(pw, salt, iterations) {
+  const key = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveBits"]);
+  return crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations }, key, 256);
 }
+async function hashPassword(pw) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  return ["pbkdf2", PBKDF2_ITER, b64(salt), b64(await pbkdf2(pw, salt, PBKDF2_ITER))].join("$");
+}
+async function verifyPassword(pw, stored) {
+  const [kind, it, s, h] = String(stored || "").split("$");
+  if (kind !== "pbkdf2" || !h) return false;
+  const got = b64(await pbkdf2(pw, Uint8Array.from(atob(s), c => c.charCodeAt(0)), Number(it)));
+  let diff = got.length ^ h.length;
+  for (let i = 0; i < Math.min(got.length, h.length); i++) diff |= got.charCodeAt(i) ^ h.charCodeAt(i);
+  return diff === 0;
+}
+async function sha256hex(s) {
+  return [...new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(s)))].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+const bearer = request => (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
+// sessions: random token for the browser, only its hash in the database
+async function sessionFor(env, request, user) {
+  const raw = b64url(crypto.getRandomValues(new Uint8Array(32)));
+  await env.DB.prepare("INSERT INTO sessions (token, user_id, expires, created) VALUES (?, ?, ?, ?)")
+    .bind(await sha256hex(raw), user.id, Date.now() + LIMITS.sessionDays * 864e5, Date.now()).run();
+  return { token: raw, ...(await account(env, request, user)) };
+}
+async function auth(request, env) {
+  const t = bearer(request);
+  if (!t) return null;
+  const row = await env.DB.prepare("SELECT u.id, u.email, u.name, u.verified, s.expires FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?").bind(await sha256hex(t)).first();
+  return row && row.expires > Date.now() && row.verified ? row : null;
+}
+async function account(env, request, user) {
+  const { results } = await env.DB.prepare("SELECT * FROM experiences WHERE email = ? AND expires > ? ORDER BY created DESC").bind(user.email, Date.now()).all();
+  return { user: { name: user.name, email: user.email }, experiences: results.map(r => ownerExp(r, request, env)), limit: LIMITS.perAccount };
+}
+// one-time codes by email: confirm the account once, or reset the password
+async function sendCode(env, em, purpose) {
+  if (!(await limit(env, `code:${purpose}:${em}`, 1, 55e3))) return { error: "Ya te enviamos un código. Espera un minuto para pedir otro.", status: 429 };
+  if (!(await limit(env, `codeday:${em}`, 10, 864e5))) return { error: "Demasiados códigos hoy para este correo. Intenta mañana.", status: 429 };
+  const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0");
+  await env.DB.prepare("INSERT INTO otp (email, purpose, hash, expires, tries) VALUES (?, ?, ?, ?, 0) ON CONFLICT(email, purpose) DO UPDATE SET hash = excluded.hash, expires = excluded.expires, tries = 0")
+    .bind(em, purpose, await hashCode(env, em, purpose + code), Date.now() + LIMITS.codeMinutes * 60e3).run();
+  if (env.DEV_CODES === "1") return { ok: true, dev_code: code };
+  const subject = purpose === "reset" ? `Código para cambiar tu contraseña: ${code}` : `Confirma tu cuenta de Vórtice VR: ${code}`;
+  if (!(await sendMail(env, em, subject, codeMail(code, purpose)))) return { error: "No pudimos enviar el correo. Intenta más tarde.", status: 502 };
+  return { ok: true };
+}
+function codeResponse(r) { const { status, ...rest } = r; return json(rest, status || 200); }
+async function checkCode(env, em, purpose, code) {
+  if (!em || !/^\d{6}$/.test(String(code || ""))) return json({ error: "Código incorrecto." }, 400);
+  const row = await env.DB.prepare("SELECT * FROM otp WHERE email = ? AND purpose = ?").bind(em, purpose).first();
+  if (!row || row.expires < Date.now()) return json({ error: "El código expiró. Pide uno nuevo." }, 400);
+  if (row.tries >= LIMITS.codeTries) return json({ error: "Demasiados intentos. Pide un código nuevo." }, 429);
+  if (row.hash !== (await hashCode(env, em, purpose + String(code)))) {
+    await env.DB.prepare("UPDATE otp SET tries = tries + 1 WHERE email = ? AND purpose = ?").bind(em, purpose).run();
+    return json({ error: "Código incorrecto." }, 400);
+  }
+  await env.DB.prepare("DELETE FROM otp WHERE email = ? AND purpose = ?").bind(em, purpose).run();
+  return null;
+}
+
 function b64url(buf) { return b64(buf).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
 function b64(buf) { const u = new Uint8Array(buf); let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); }
 function unb64url(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); const b = atob(s + "=".repeat((4 - s.length % 4) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); }
@@ -336,12 +447,12 @@ async function sendMail(env, to, subject, html, attachments) {
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const shell = body => `<div style="font-family:Arial,sans-serif;background:#0d0620;color:#f2ecff;padding:28px;border-radius:14px;max-width:520px;margin:auto">
 <div style="font-weight:700;letter-spacing:.2em;color:#d2b8ff;font-size:13px">VÓRTICE VR</div>${body}
-<p style="color:#a99bcb;font-size:12px;margin-top:28px">Recibiste este correo porque lo pediste en vorticevr.mx/crear. Si no fuiste tú, ignóralo.</p></div>`;
-const codeMail = code => shell(`<h1 style="font-size:20px">Tu código para crear tu experiencia</h1>
+<p style="color:#a99bcb;font-size:12px;margin-top:28px">Recibiste este correo por tu cuenta en vorticevr.mx. Si no fuiste tú, ignóralo.</p></div>`;
+const codeMail = (code, purpose) => shell(`<h1 style="font-size:20px">${purpose === "reset" ? "Tu código para cambiar tu contraseña" : "Confirma tu cuenta de Vórtice VR"}</h1>
 <p style="font-size:34px;font-weight:700;letter-spacing:.3em;color:#ffbe55;margin:18px 0">${code}</p><p>Vence en ${LIMITS.codeMinutes} minutos.</p>`);
 const linkMail = e => shell(`<h1 style="font-size:20px">¡Tu experiencia de realidad aumentada está lista!</h1>
 <p><b>${esc(e.title)}</b></p><p>Comparte este link (o el código QR adjunto):</p>
 <p><a href="${esc(e.url)}" style="color:#ffbe55;font-size:20px;font-weight:700">${esc(e.url.replace(/^https:\/\//, "").replace(/\/$/, ""))}</a></p>
 <p>Ábrelo en el celular, toca <b>Activar cámara</b> y apunta a tu imagen.</p>
-<p>Para editarla o borrarla entra a <a href="https://vorticevr.mx/crear/" style="color:#d2b8ff">vorticevr.mx/crear</a>, toca <b>Mi experiencia</b> y escribe este correo.</p>
+<p>Para editarla o borrarla entra a tu cuenta en <a href="https://vorticevr.mx/cuenta/" style="color:#d2b8ff">vorticevr.mx/cuenta</a>.</p>
 <p style="color:#a99bcb">Disponible hasta el ${new Date(e.expires).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}.</p>`);

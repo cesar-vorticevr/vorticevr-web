@@ -99,7 +99,7 @@ header .acts{display:flex;align-items:center;gap:14px}
 </style>
 </head>
 <body>
-<header><a href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><button class="mybtn" id="myBtn" type="button">Mi experiencia</button><a class="back" href="../">← Sitio</a></div></header>
+<header><a href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a class="mybtn" href="../cuenta/" style="text-decoration:none">Mi cuenta</a><a class="back" href="../">← Sitio</a></div></header>
 <main class="wrap">
   <div class="hero">
     <span class="kick">Gratis · prueba de 30 días</span>
@@ -109,28 +109,10 @@ header .acts{display:flex;align-items:center;gap:14px}
 
   <div class="grid">
     <div>
-      <section class="result" id="panel" hidden>
-        <p class="msg ok" id="pFresh" hidden style="margin:0 0 12px">¡Listo! Tu experiencia está publicada. También te la enviamos por correo.</p>
-        <div class="phead"><img id="pThumb" alt="Tu imagen"><div><span class="kick">Mi experiencia</span><h2 id="pTitle"></h2><p class="note" id="pWho" style="margin:0"></p></div></div>
-        <div class="link"><code id="resUrl"></code><button class="btn" id="copy" type="button">Copiar link</button><a class="btn primary" id="open" target="_blank" rel="noopener">Abrir</a></div>
-        <div class="stats"><div><b id="pViews">0</b><span>veces abierta</span></div><div><b id="pDays">30</b><span>días restantes</span></div><div><b id="pUntil">—</b><span>disponible hasta</span></div></div>
-        <canvas id="qr" width="1024" height="1180" aria-label="Código QR de tu experiencia"></canvas>
-        <div class="row"><button class="btn sun" id="dlqr" type="button">Descargar código QR</button><button class="btn" id="pEdit" type="button">Editar</button><button class="btn danger" id="pDel" type="button">Borrar</button><button class="btn" id="pOut" type="button">Cerrar sesión</button></div>
-      </section>
-
-      <section class="step" id="login" hidden>
-        <h2>Entrar a mi experiencia</h2>
-        <p class="hint">Escribe el correo con el que la creaste y te mandamos un código. No necesitas contraseña.</p>
-        <label class="f" for="lEmail">Correo</label>
-        <input type="email" id="lEmail" autocomplete="email" placeholder="tu@correo.com">
-        <div class="row"><button class="btn primary" id="lSend" type="button">Enviarme el código</button></div>
-        <div id="lCodeBox" hidden>
-          <label class="f" for="lCode">Código de 6 dígitos</label>
-          <input type="text" id="lCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000">
-          <div class="row"><button class="btn primary" id="lVerify" type="button">Entrar</button></div>
-        </div>
-        <div class="msg" id="mLogin"></div>
-        <p class="note" style="margin-top:14px">¿Todavía no tienes una? <a href="#" id="lNew">Crea tu experiencia</a></p>
+      <section class="step" id="full" hidden>
+        <h2>Ya tienes tu experiencia</h2>
+        <p class="hint">Tu plan de prueba incluye una experiencia a la vez. Puedes editarla o borrarla desde tu cuenta para crear otra.</p>
+        <div class="row"><a class="btn primary" id="fullEdit" href="#">Editar mi experiencia</a><a class="btn" href="../cuenta/">Ir a mi cuenta</a></div>
       </section>
 
       <section class="step" id="s1">
@@ -169,30 +151,13 @@ header .acts{display:flex;align-items:center;gap:14px}
         <div class="soc" id="soc"></div>
       </section>
 
-      <section class="step" id="s5">
-        <h2><span class="n" id="n5">5</span>Tu correo</h2>
-        <p class="hint">Te mandamos un código para confirmar que es tuyo y ahí mismo te llegará el link. Una experiencia por correo.</p>
-        <div id="mailA">
-          <label class="f" for="email">Correo</label>
-          <input type="email" id="email" autocomplete="email" placeholder="tu@correo.com">
-          <div class="row"><button class="btn" id="sendCode" type="button">Enviarme el código</button></div>
-          <div id="codeBox" hidden>
-            <label class="f" for="code">Código de 6 dígitos</label>
-            <input type="text" id="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000">
-            <div class="row"><button class="btn" id="verify" type="button">Confirmar</button></div>
-          </div>
-        </div>
-        <div id="mailB" hidden><p class="msg ok" id="who"></p><button class="btn" id="logout" type="button">Usar otro correo</button></div>
-        <div class="msg" id="mMail"></div>
-        <div class="mine" id="mine" hidden></div>
-      </section>
-
       <section class="step" id="s6">
-        <h2><span class="n" id="n6">6</span>Publicar</h2>
+        <h2><span class="n" id="n6">5</span>Publicar</h2>
+        <div class="mine" id="mine" hidden style="margin:0 0 12px"></div>
         <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
         <button class="btn primary" id="publish" type="button" disabled>Publicar mi experiencia</button>
         <div class="bar" id="bPub" hidden><i></i></div><div class="msg" id="mPub"></div>
-        <p class="legal">Al publicar confirmas que tienes derecho a usar la imagen y el video. Vórtice VR puede retirar contenido inapropiado. Tu correo solo se usa para esta experiencia y para avisarte de ella. La experiencia se borra a los 30 días.</p>
+        <p class="legal">Al publicar confirmas que tienes derecho a usar la imagen y el video. Vórtice VR puede retirar contenido inapropiado. La experiencia se borra a los 30 días; puedes editarla o borrarla desde tu cuenta.</p>
       </section>
     </div>
 
@@ -209,9 +174,10 @@ header .acts{display:flex;align-items:center;gap:14px}
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="../assets/plataforma.js"></script>
 <script type="module">
 const $=id=>document.getElementById(id);
-const API=new URLSearchParams(location.search).get("api")||"..";      // the API lives on the same site
+const API=VVR.api;      // the API lives on the same site
 const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
 $("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
 const MAX_VIDEO=25*1024*1024, MAX_SEC=30.5, IMG_MAX=1000;
@@ -304,27 +270,11 @@ function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false;
   slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`)).json(); slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
 const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
 
-// ---------- step 5: email ----------
-const SAVE="vvr-crear";
-function saveSession(){ try{ localStorage.setItem(SAVE,JSON.stringify({token:S.token,email:S.email,t:Date.now()})); }catch(e){} }
-async function call(path,opt={}){ const h=opt.headers||{}; if(S.token) h.Authorization="Bearer "+S.token; const r=await fetch(`${API}/api/${path}`,{...opt,headers:h}); let j={}; try{ j=await r.json(); }catch(e){} if(!r.ok) throw new Error(j.error||"Algo salió mal. Intenta de nuevo."); return j; }
-$("sendCode").addEventListener("click",async()=>{ const m=$("mMail"); m.className="msg"; m.textContent="Enviando…"; $("sendCode").disabled=true;
-  try{ const r=await call("code",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("email").value})});
-    $("codeBox").hidden=false; $("code").focus(); m.className="msg ok"; m.textContent=r.dev_code?`Modo de prueba: tu código es ${r.dev_code}`:"Te enviamos un código. Revisa también la carpeta de spam."; }
-  catch(e){ m.className="msg bad"; m.textContent=e.message; } setTimeout(()=>$("sendCode").disabled=false,5000); });
-$("verify").addEventListener("click",async()=>{ const m=$("mMail"); m.className="msg"; m.textContent="Confirmando…";
-  try{ const r=await call("verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("email").value,code:$("code").value.trim()})});
-    S.token=r.token; S.email=r.email; saveSession(); m.textContent=""; signedIn(r.experience); }
-  catch(e){ m.className="msg bad"; m.textContent=e.message; } });
-$("code").addEventListener("keydown",e=>{ if(e.key==="Enter") $("verify").click(); });
-$("logout").addEventListener("click",()=>{ S.token=S.email=S.mine=null; try{localStorage.removeItem(SAVE)}catch(e){} location.reload(); return; $("mailA").hidden=false; $("mailB").hidden=true; $("mine").hidden=true; $("codeBox").hidden=true; $("n5").classList.remove("done"); check(); });
-function signedIn(exp){
-  $("mailA").hidden=true; $("mailB").hidden=false; $("who").textContent="Correo confirmado: "+S.email; $("n5").classList.add("done");
+// ---------- account: this page needs a signed-in session (see /cuenta/) ----------
+function editing(exp){
   S.mine=exp||null; const mine=$("mine");
-  if(exp){ mine.hidden=false;
-    mine.innerHTML=`Estás editando tu experiencia <b>${exp.title.replace(/</g,"&lt;")}</b>. Al publicar se actualiza (sigue disponible hasta el ${new Date(exp.expires).toLocaleDateString("es-MX")}).`;
-    prefill(exp);
-  } else mine.hidden=true;
+  if(exp){ mine.hidden=false; mine.innerHTML=`Estás editando <b>${exp.title.replace(/</g,"&lt;")}</b>. Al publicar se actualiza (sigue disponible hasta el ${new Date(exp.expires).toLocaleDateString("es-MX")}).`; prefill(exp); }
+  else mine.hidden=true;
   check();
 }
 function prefill(exp){
@@ -343,8 +293,8 @@ function check(){
   const ok=imgOk&&vidOk&&$("title").value.trim()&&slugOk&&S.token&&!S.compiling;
   $("n4").classList.toggle("done",!!($("title").value.trim()&&slugOk));
   $("publish").disabled=!ok;
-  $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)} y te lo mandaremos a ${S.email}.`:
-    S.compiling?"Estamos preparando tu imagen…":!imgOk?"Falta tu imagen.":!vidOk?"Falta tu video.":!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Confirma tu correo.";
+  $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link a ${S.email}.`:
+    S.compiling?"Estamos preparando tu imagen…":!imgOk?"Falta tu imagen.":!vidOk?"Falta tu video.":!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
 }
 $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Subiendo…"; bar.hidden=false; $("publish").disabled=true;
@@ -353,64 +303,31 @@ $("publish").addEventListener("click",async()=>{
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
   if(S.imgBlob&&S.target){ fd.append("image",S.imgBlob,"image.jpg"); fd.append("target",S.target,"target.mind"); }
   if(S.video) fd.append("video",S.video,S.video.name);
-  drawQR(linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug), meta.slug);
-  const qrBlob=await new Promise(r=>$("qr").toBlob(r,"image/png")); fd.append("qr",qrBlob,"qr.png");
+  const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc, linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/");
+  const qrBlob=await new Promise(r=>qrc.toBlob(r,"image/png")); fd.append("qr",qrBlob,"qr.png");
   const xhr=new XMLHttpRequest(); xhr.open("POST",`${API}/api/publish`); xhr.setRequestHeader("Authorization","Bearer "+S.token);
   xhr.upload.onprogress=e=>{ if(e.lengthComputable) bar.firstElementChild.style.width=(e.loaded/e.total*100)+"%"; };
   xhr.onload=()=>{ bar.hidden=true; let j={}; try{ j=JSON.parse(xhr.responseText); }catch(e){}
-    if(xhr.status!==200){ m.className="msg bad"; m.textContent=j.error||"No se pudo publicar."; $("publish").disabled=false; if(xhr.status===401) $("logout").click(); return; }
-    m.textContent=""; S.mine=j.experience; showPanel(j.experience,true); };
+    if(xhr.status!==200){ m.className="msg bad"; m.textContent=j.error||"No se pudo publicar."; $("publish").disabled=false; if(xhr.status===401){ VVR.clearSession(); location.href="../cuenta/?siguiente=crear"; } return; }
+    m.textContent="¡Publicada! Abriendo tu cuenta…"; location.href="../cuenta/?publicada="+encodeURIComponent(j.experience.slug); };
   xhr.onerror=()=>{ bar.hidden=true; m.className="msg bad"; m.textContent="Se cortó la conexión. Intenta de nuevo."; $("publish").disabled=false; };
   xhr.send(fd);
 });
 
-// ---------- views: editor (steps) · login · panel ----------
-const steps=()=>document.querySelectorAll(".step:not(#login)");
-function showEditor(){ $("panel").hidden=true; $("login").hidden=true; steps().forEach(x=>x.hidden=false); document.querySelector(".hero").hidden=false; }
-function showLogin(){ $("panel").hidden=true; steps().forEach(x=>x.hidden=true); $("login").hidden=false; document.querySelector(".hero").hidden=true; $("lEmail").focus(); }
-$("myBtn").addEventListener("click",()=>{ if(S.token&&S.mine) showPanel(S.mine); else if(S.token){ showEditor(); $("s1").scrollIntoView({behavior:"smooth"}); } else showLogin(); });
-$("lNew").addEventListener("click",e=>{ e.preventDefault(); showEditor(); });
-$("lSend").addEventListener("click",async()=>{ const m=$("mLogin"); m.className="msg"; m.textContent="Enviando…"; $("lSend").disabled=true;
-  try{ const r=await call("code",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("lEmail").value})});
-    $("lCodeBox").hidden=false; $("lCode").focus(); m.className="msg ok"; m.textContent=r.dev_code?`Modo de prueba: tu código es ${r.dev_code}`:"Te enviamos un código. Revisa también la carpeta de spam."; }
-  catch(e){ m.className="msg bad"; m.textContent=e.message; } setTimeout(()=>$("lSend").disabled=false,5000); });
-$("lVerify").addEventListener("click",async()=>{ const m=$("mLogin"); m.className="msg"; m.textContent="Confirmando…";
-  try{ const r=await call("verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("lEmail").value,code:$("lCode").value.trim()})});
-    S.token=r.token; S.email=r.email; saveSession(); m.textContent=""; $("email").value=r.email; signedIn(r.experience);
-    if(r.experience) showPanel(r.experience); else { showEditor(); $("mMail").className="msg ok"; $("mMail").textContent="Todavía no tienes una experiencia. Créala aquí."; } }
-  catch(e){ m.className="msg bad"; m.textContent=e.message; } });
-$("lCode").addEventListener("keydown",e=>{ if(e.key==="Enter") $("lVerify").click(); });
-
-// ---------- panel: link + QR ----------
-let icon=null;
-function drawQR(url,slug){
-  const qr=qrcode(0,"H"); qr.addData(url); qr.make(); const n=qr.getModuleCount();
-  const cv=$("qr"), x=cv.getContext("2d"), W=1024, M=80, cell=Math.floor((W-2*M)/n), off=Math.floor((W-cell*n)/2);
-  x.fillStyle="#fff"; x.fillRect(0,0,cv.width,cv.height); x.fillStyle="#1b0a36";
-  for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(qr.isDark(r,c)) x.fillRect(off+c*cell,off+r*cell,cell,cell);
-  if(icon&&icon.complete){ const s=cell*n*.2, p=(W-s)/2; x.fillStyle="#fff"; x.beginPath(); x.roundRect?x.roundRect(p-14,p-14,s+28,s+28,24):x.rect(p-14,p-14,s+28,s+28); x.fill(); x.drawImage(icon,p,p,s,s); }
-  x.fillStyle="#1b0a36"; x.font="600 46px 'Chakra Petch', sans-serif"; x.textAlign="center"; x.fillText(url.replace(/^https?:\/\//,"").replace(/\/$/,""),W/2,W+70);
-  x.fillStyle="#6b279b"; x.font="500 30px 'IBM Plex Sans', sans-serif"; x.fillText("Escanea y apunta tu cámara a la imagen",W/2,W+122);
-}
-icon=new Image(); icon.src="../assets/icono.png";
-function showPanel(exp,fresh){
-  S.mine=exp; drawQR(exp.url,exp.slug);
-  $("pFresh").hidden=!fresh; $("pTitle").textContent=exp.title; $("pWho").textContent=S.email||"";
-  $("pThumb").src=`${API}/m/${exp.slug}/image?v=${exp.updated||exp.created||""}`;
-  $("resUrl").textContent=exp.url.replace(/^https?:\/\//,"").replace(/\/$/,""); $("open").href=exp.url;
-  $("pViews").textContent=(exp.views||0).toLocaleString("es-MX");
-  $("pDays").textContent=Math.max(0,Math.ceil((exp.expires-Date.now())/864e5));
-  $("pUntil").textContent=new Date(exp.expires).toLocaleDateString("es-MX",{day:"numeric",month:"short"});
-  $("panel").hidden=false; $("login").hidden=true; steps().forEach(x=>x.hidden=true); document.querySelector(".hero").hidden=true; scrollTo({top:0,behavior:"smooth"});
-  $("copy").onclick=async()=>{ try{ await navigator.clipboard.writeText(exp.url); $("copy").textContent="¡Copiado!"; setTimeout(()=>$("copy").textContent="Copiar link",1600); }catch(e){ prompt("Copia tu link:",exp.url); } };
-  $("dlqr").onclick=()=>$("qr").toBlob(b=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download=`QR-${exp.slug}.png`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); },"image/png");
-  $("pEdit").onclick=()=>{ showEditor(); signedIn(S.mine); $("s1").scrollIntoView({behavior:"smooth"}); };
-  $("pDel").onclick=async()=>{ if(!confirm("¿Borrar tu experiencia? El link y el QR dejarán de funcionar.")) return; try{ await call("me",{method:"DELETE"}); location.reload(); }catch(e){ alert(e.message); } };
-  $("pOut").onclick=()=>{ try{localStorage.removeItem(SAVE)}catch(e){} location.reload(); };
-}
-
-// ---------- session ----------
-(async()=>{ try{ const s=JSON.parse(localStorage.getItem(SAVE)||"null"); if(s&&s.token&&Date.now()-s.t<20*3600e3){ S.token=s.token; S.email=s.email; const r=await call("me"); signedIn(r.experience); if(r.experience) showPanel(r.experience); } }catch(e){ S.token=null; } check(); updatePreview(); })();
+// ---------- start: require an account, load the experience to edit ----------
+(async()=>{
+  const ed=new URLSearchParams(location.search).get("editar");
+  const toLogin=()=>location.replace("../cuenta/?siguiente=crear"+(ed?"&editar="+encodeURIComponent(ed):""));
+  const sess=VVR.session(); if(!sess){ toLogin(); return; }
+  S.token=sess.token; S.email=sess.user&&sess.user.email;
+  try{
+    const r=await VVR.call("me"); S.email=r.user.email;
+    const exp=ed?r.experiences.find(x=>x.slug===ed):null;
+    if(exp) editing(exp);
+    else if(r.experiences.length>=r.limit){ document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); $("full").hidden=false; $("fullEdit").href="?editar="+encodeURIComponent(r.experiences[0].slug); document.querySelector(".side").hidden=true; }
+  }catch(e){ if(e.status===401){ toLogin(); return; } }
+  check(); updatePreview();
+})();
 </script>
 </body>
 </html>
