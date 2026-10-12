@@ -51,7 +51,21 @@ header.top nav{display:flex;align-items:center;gap:22px;font-family:var(--fd);fo
 header.top nav a{text-decoration:none;color:var(--mute);transition:color .2s}
 header.top nav a:hover{color:var(--ink)}
 .pill{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;border:1px solid var(--line2);background:rgba(139,63,214,.18);color:var(--ink)!important}
-@media (max-width:760px){header.top nav a:not(.pill){display:none}}
+@media (max-width:760px){header.top nav a:not(.pill){display:none}header.top nav a.pill.talk{display:none}}
+@media (max-width:480px){.hero .actions .btn:not(.primary):not(.sun){display:none}}
+.pill.sun{background:linear-gradient(135deg,#ffd27f,#ff9f3a);border-color:var(--sun);color:#1a0d00!important}
+/* create-your-own section */
+.mk{position:relative;overflow:hidden}
+.mk::before{content:"";position:absolute;right:-200px;top:-120px;width:700px;height:700px;max-width:120vw;background:radial-gradient(circle,rgba(255,190,85,.14),transparent 62%);pointer-events:none}
+.mkgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:34px}
+@media (max-width:820px){.mkgrid{grid-template-columns:minmax(0,1fr)}}
+.mkstep{position:relative;padding:24px 22px;border-radius:16px;border:1px solid var(--line);background:linear-gradient(170deg,rgba(40,16,74,.5),rgba(12,5,26,.6))}
+.mkstep .num{font-family:var(--fd);font-weight:700;font-size:3rem;line-height:1;color:transparent;-webkit-text-stroke:1px var(--sun);display:block;margin-bottom:10px}
+.mkstep h3{margin:0 0 6px;font-family:var(--fd);font-size:1.2rem}
+.mkstep p{margin:0;color:var(--mute);font-size:.95rem}
+.mkcta{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.mkcta small{color:var(--mute);font-size:.9rem}
+.mkcta small a{color:var(--lav)}
 .lang{font:600 .78rem var(--fm);letter-spacing:.12em;min-width:46px;height:38px;padding:0 12px;border-radius:999px;border:1px solid var(--line2);background:transparent;color:var(--ink);cursor:pointer;transition:background .3s,border-color .3s}
 .lang:hover{border-color:var(--lav);background:rgba(139,63,214,.25)}
 header.top nav{gap:clamp(10px,2vw,22px)}
@@ -227,7 +241,7 @@ footer img{height:22px;width:auto}
 <header class="top" id="top"><div class="wrap">
   <a class="brand" href="./" aria-label="Vórtice VR, inicio" data-en-aria="Vórtice VR, home"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
   <nav aria-label="Secciones" data-en-aria="Sections">
-    <a href="#experiencias" data-en="Experiences">Experiencias</a><a href="#servicios" data-en="Services">Servicios</a><a href="#nosotros" data-en="About">Nosotros</a><a class="pill mag" href="#contacto" data-en="Let’s talk">Platiquemos</a>
+    <a href="#experiencias" data-en="Experiences">Experiencias</a><a href="#servicios" data-en="Services">Servicios</a><a href="#nosotros" data-en="About">Nosotros</a><a class="pill sun mag" href="cuenta/?siguiente=crear#registro" data-en="Create AR">Crea tu RA</a><a class="pill talk mag" href="#contacto" data-en="Let’s talk">Platiquemos</a>
     <button class="lang mag" id="lang" type="button" aria-label="Ver en inglés" data-en-aria="Ver en español"><span data-en="ES">EN</span></button>
   </nav>
 </div></header>
@@ -246,6 +260,7 @@ footer img{height:22px;width:auto}
       <p class="fade" style="transition-delay:.7s" data-en="We are a studio for augmented reality, virtual reality, mixed reality and applied artificial intelligence. We design experiences for education, culture, tourism and brands, and take them from concept to something people use with their phone or a headset.">Somos un estudio de realidad aumentada, realidad virtual, realidad mixta e inteligencia artificial aplicada. Diseñamos experiencias para educación, cultura, turismo y marcas, y las llevamos del concepto a algo que la gente usa con su celular o con un visor.</p>
       <div class="actions fade" style="transition-delay:.9s">
         <a class="btn primary mag" href="#experiencias" data-en="Try it now ↓">Pruébalo ahora ↓</a>
+        <a class="btn sun mag" href="#crea" data-en="Create your AR for free">Crea tu RA gratis</a>
         <a class="btn mag" href="https://wa.me/529983448207?text=Hola%2C%20quiero%20platicar%20de%20un%20proyecto%20con%20V%C3%B3rtice%20VR" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg><span data-en="Let’s talk">Platiquemos</span></a>
       </div>
     </div></div>
@@ -308,6 +323,24 @@ footer img{height:22px;width:auto}
           </div>
         </a>
       </article>
+    </div>
+  </div></section>
+
+  <section id="crea" class="mk"><div class="wrap">
+    <div class="shead reveal">
+      <span class="kick" data-en="New · free">Nuevo · gratis</span>
+      <h2 data-en="Create your own augmented reality.">Crea tu propia realidad aumentada.</h2>
+      <p data-en="Make your image come alive: point a phone at it and your video appears on top. No apps, no code. Share it with a link and a QR code.">Haz que tu imagen cobre vida: apuntas el celular y tu video aparece encima. Sin apps ni programación. La compartes con un link y un código QR.</p>
+    </div>
+    <div class="mkgrid">
+      <div class="mkstep reveal"><span class="num">1</span><h3 data-en="Create your account">Crea tu cuenta</h3><p data-en="With your name, email and a password. You confirm your email once.">Con tu nombre, correo y una contraseña. Confirmas tu correo una sola vez.</p></div>
+      <div class="mkstep reveal"><span class="num">2</span><h3 data-en="Upload your image and video">Sube tu imagen y tu video</h3><p data-en="A poster, a card, a cover… and a video of up to 30 seconds. You see the preview and adjust how it fits.">Un póster, una tarjeta, una portada… y un video de hasta 30 segundos. Ves la vista previa y ajustas cómo se acomoda.</p></div>
+      <div class="mkstep reveal"><span class="num">3</span><h3 data-en="Share your link and QR">Comparte tu link y tu QR</h3><p data-en="You get your own link, yourname.vorticevr.mx, and a QR to print. Add your WhatsApp and social networks.">Recibes tu link propio, tunombre.vorticevr.mx, y un QR para imprimir. Agrega tu WhatsApp y tus redes.</p></div>
+    </div>
+    <div class="mkcta reveal">
+      <a class="btn sun mag" href="cuenta/?siguiente=crear#registro" data-en="Create free account">Crear cuenta gratis</a>
+      <a class="btn mag" href="cuenta/" data-en="I already have an account">Ya tengo cuenta</a>
+      <small data-en="Free trial: 1 experience, active for 30 days.">Prueba gratis: 1 experiencia, activa por 30 días.</small>
     </div>
   </div></section>
 
