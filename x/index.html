@@ -93,6 +93,17 @@ button{font:inherit;color:inherit;cursor:pointer}
 .act.ghost{background:rgba(255,255,255,.12);color:#fff}
 #sheet small{color:rgba(255,255,255,.7);font-size:.78rem;text-align:center;max-width:36ch;line-height:1.4}
 
+/* "Creado con Vórtice VR" screen before the experience (Gratis and Básico plans; Pro and Escuela open without it) */
+#splash{position:fixed;inset:0;z-index:65;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px 22px calc(28px + env(safe-area-inset-bottom,0px));text-align:center;
+  background:radial-gradient(70% 45% at 50% 38%,rgba(139,63,214,.45),transparent 70%),#05020b;transition:opacity .4s}
+#splash.out{opacity:0;pointer-events:none}
+#splash .iso{width:min(42vw,170px);height:auto;filter:drop-shadow(0 0 28px rgba(139,63,214,.85));animation:spin 14s linear infinite}
+#splash .by{font-size:.85rem;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);margin-top:10px}
+#splash .logo{height:30px;width:auto}
+#splash .big{margin-top:22px;min-width:220px}
+#splash .made{margin-top:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#splash .iso{animation:none}#splash{transition:none}}
 /* message screens (expired / not found) */
 #msg{position:fixed;inset:0;z-index:45;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;background:radial-gradient(90% 60% at 50% 30%,#22104a,#05020b 70%)}
 #msg h1{font-family:var(--fd);margin:0;font-size:1.8rem}
@@ -122,6 +133,13 @@ button{font:inherit;color:inherit;cursor:pointer}
   <div class="made">Hecho con Vórtice VR · <a href="https://vorticevr.mx/cuenta/?siguiente=crear#registro">Crea la tuya gratis</a></div>
 </div>
 
+<div id="splash" hidden>
+  <img class="iso" src="/assets/icono.png" alt="">
+  <span class="by">Experiencia creada con</span>
+  <img class="logo" src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR">
+  <button class="big" id="splashGo" type="button">Continuar</button>
+  <div class="made">¿Quieres una para tu negocio? <a href="https://vorticevr.mx/cuenta/?siguiente=crear#registro">Crea la tuya gratis</a></div>
+</div>
 <div id="msg" hidden><h1 id="msgT"></h1><p id="msgP"></p><a class="big" href="https://vorticevr.mx/cuenta/?siguiente=crear#registro">Crea tu experiencia</a></div>
 
 <div id="guide" hidden><div class="frame"><img id="guideImg" alt=""></div><p>Apunta la cámara a esta imagen</p></div>
@@ -195,9 +213,12 @@ async function load(){
   if(r.status===410){ const j=await r.json().catch(()=>({})); if(j.paused) message("Esta experiencia está pausada","Su creador puede reactivarla desde su cuenta."); else message("Esta experiencia ya terminó","Las experiencias de prueba duran 30 días."); return; }
   if(!r.ok){ message("Experiencia no encontrada","Revisa que el link esté completo."); return; }
   CFG=await r.json(); CFG.base=base;
+  // free plans open with the Vórtice VR screen; paid plans (Pro, Escuela) without any Vórtice VR branding
+  if(CFG.brand){ $("splash").hidden=false; $("splashGo").focus(); }
+  else { $("brand").hidden=true; document.querySelector("#intro .made").hidden=true; }
   const m=`${base}/m/${CFG.slug}/`;
   CFG.media={video:m+"video",target:m+"target",image:m+"image"};
-  document.title=`${CFG.title||"Realidad aumentada"} · Vórtice VR`;
+  document.title=(CFG.title||"Realidad aumentada")+(CFG.brand?" · Vórtice VR":"");
   $("title").textContent=CFG.title||"Realidad aumentada";
   $("thumb").src=CFG.media.image; $("thumb").hidden=false; $("guideImg").src=CFG.media.image;
   vid.src=CFG.media.video;
@@ -208,6 +229,8 @@ async function load(){
   startBtn.disabled=false;
   libsP=libs().catch(e=>{ console.error(e); libsP=null; });
 }
+
+$("splashGo").addEventListener("click",()=>{ const s=$("splash"); s.classList.add("out"); setTimeout(()=>{ s.hidden=true; },400); startBtn.focus(); });
 
 // ---- video controls ----
 const I_PLAY='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>', I_PAUSE='<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';

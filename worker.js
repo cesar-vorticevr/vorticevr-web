@@ -10,14 +10,15 @@
 const ROOT_DEFAULT = "vorticevr.mx";
 const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear","create","ra","x","e","m","preview","app","apps","static","assets","cdn","dev","test","staging","beta","demo","vorticevr","vortice","soporte","support","help","ayuda","blog","shop","tienda","login","cuenta","account","johara","tarjeta","proyectos","status","docs"]);
 const LIMITS = { imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, codeMinutes: 10, codeTries: 5, sessionDays: 30, pausedDays: 30 };
-// Plans. exp = active experiences; days = how long each one lasts (0 = while the plan is active).
+// Plans. exp = active experiences; days = how long each one lasts (0 = while the plan is active);
+// brand = the viewer opens with the "Creado con Vórtice VR" screen. Video: limited by size only, not duration.
 // Paid plans are activated by an admin in /admin/ (escuela always; basico/pro until Stripe is connected).
 // Videos stay ≤ 50 MB: the Worker reads the whole upload in memory (128 MB).
 const PLANS = {
-  gratis:  { name: "Gratis",  exp: 1,    days: 30, videoMB: 25, videoSec: 30,  price: 0 },
-  basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 50, videoSec: 60,  price: 199 },
-  pro:     { name: "Pro",     exp: 50,   days: 0,  videoMB: 50, videoSec: 120, price: 499 },
-  escuela: { name: "Escuela", exp: 1000, days: 0,  videoMB: 50, videoSec: 120, price: 1500 },
+  gratis:  { name: "Gratis",  exp: 1,    days: 30, videoMB: 25, brand: true,  price: 0 },
+  basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 25, brand: true,  price: 199 },
+  pro:     { name: "Pro",     exp: 50,   days: 0,  videoMB: 50, brand: false, price: 499 },
+  escuela: { name: "Escuela", exp: 1000, days: 0,  videoMB: 50, brand: false, price: 1500 },
 };
 const FAR = 253402300799000; // expires of an experience on a paid plan: "while the plan is active" (year 9999)
 const ADMINS_DEFAULT = "lad.cesargarcia@gmail.com";
@@ -161,12 +162,12 @@ async function api(request, env, ctx, url) {
   // public: one experience's settings
   let m = path.match(/^\/api\/exp\/([a-z0-9-]+)$/);
   if (m && M === "GET") {
-    const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(m[1]).first();
+    const row = await env.DB.prepare("SELECT e.*, u.plan, u.plan_until FROM experiences e LEFT JOIN users u ON u.email = e.email WHERE e.slug = ?").bind(m[1]).first();
     if (!row) return json({ error: "No existe" }, 404);
     if (row.expires < Date.now()) return json({ error: "Expiró" }, 410);
     if (row.paused) return json({ error: "Pausada", paused: true }, 410);
     ctx.waitUntil(env.DB.prepare("UPDATE experiences SET views = views + 1 WHERE slug = ?").bind(row.slug).run());
-    return json(publicExp(row), 200, { "Cache-Control": "no-store" });
+    return json({ ...publicExp(row), brand: planOf(row).brand }, 200, { "Cache-Control": "no-store" });
   }
 
   if (path === "/api/slug" && M === "GET") return json(await slugStatus(env, (url.searchParams.get("s") || "").toLowerCase(), null));
@@ -578,6 +579,6 @@ const linkMail = e => shell(`<h1 style="font-size:20px">¡Tu experiencia de real
 <p style="color:#a99bcb">${e.forever ? "Disponible mientras tu plan esté activo." : `Disponible hasta el ${fecha(e.expires)}.`}</p>`);
 const fecha = t => new Date(t).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
 const planMail = (user, plan, until) => shell(`<h1 style="font-size:20px">¡Tu plan ${PLANS[plan].name} está activo!</h1>
-<p>Hola ${esc(user.name || "")}, ya puedes tener hasta <b>${expCount(PLANS[plan].exp)}</b> activas al mismo tiempo, con videos de hasta ${PLANS[plan].videoSec / 60 >= 1 ? PLANS[plan].videoSec / 60 + " min" : PLANS[plan].videoSec + " s"} y ${PLANS[plan].videoMB} MB, sin fecha de vencimiento mientras tu plan esté vigente.</p>
+<p>Hola ${esc(user.name || "")}, ya puedes tener hasta <b>${expCount(PLANS[plan].exp)}</b> activas al mismo tiempo, con videos de hasta ${PLANS[plan].videoMB} MB, sin fecha de vencimiento mientras tu plan esté vigente${PLANS[plan].brand ? "" : " y sin la pantalla de Vórtice VR al abrirlas"}.</p>
 ${until ? `<p>Pagado hasta el <b>${fecha(until)}</b>.</p>` : ""}
 <p>Entra a <a href="https://vorticevr.mx/cuenta/" style="color:#ffbe55;font-weight:700">vorticevr.mx/cuenta</a> para crear tus experiencias.</p>`);

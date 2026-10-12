@@ -124,7 +124,7 @@ header .acts{display:flex;align-items:center;gap:14px}
 
       <section class="step" id="s2">
         <h2><span class="n" id="n2">2</span>Tu video</h2>
-        <p class="hint" id="vidHint">Máximo 30 segundos y 25 MB. MP4 funciona en todos los celulares.</p>
+        <p class="hint" id="vidHint">Hasta 25 MB. MP4 funciona en todos los celulares.</p>
         <label class="drop" id="dVid"><input type="file" id="fVid" accept="video/mp4,video/webm,video/quicktime"><video class="thumb" id="tVid" muted playsinline hidden></video><span><b id="lVid">Elegir video</b><small>MP4, WebM o MOV</small></span></label>
         <div class="msg" id="mVid"></div>
       </section>
@@ -180,9 +180,8 @@ const $=id=>document.getElementById(id);
 const API=VVR.api;      // the API lives on the same site
 const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
 $("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
-let MAX_MB=25, MAX_SEC=30;   // from the account's plan (see start)
+let MAX_MB=25;   // from the account's plan (see start); the video is limited by size, not duration
 const IMG_MAX=1000;
-const durTxt=s=>s>=60?`${s/60} ${s===60?"minuto":"minutos"}`:`${s} segundos`;
 
 const S={img:null,imgBlob:null,imgW:0,imgH:0,target:null,compiling:false,video:null,vidW:0,vidH:0,fit:"width",token:null,email:null,mine:null,keepImg:false,keepVid:false};
 
@@ -228,7 +227,6 @@ function onVideo(file){
   const url=URL.createObjectURL(file), v=document.createElement("video"); v.muted=true; v.preload="metadata"; v.src=url;
   v.onloadedmetadata=()=>{
     if(!v.videoWidth){ m.className="msg bad"; m.textContent="Este navegador no puede reproducir ese formato. Expórtalo como MP4 (H.264)."; return; }
-    if(v.duration>MAX_SEC+.5){ m.className="msg bad"; m.textContent=`El video dura ${Math.round(v.duration)} s. El máximo es ${durTxt(MAX_SEC)}; recórtalo antes de subirlo.`; return; }
     S.video=file; S.vidW=v.videoWidth; S.vidH=v.videoHeight; S.keepVid=false;
     $("tVid").src=url; $("tVid").hidden=false; $("pVid").src=url; $("pVid").play().catch(()=>{}); $("lVid").textContent=file.name;
     m.className="msg ok"; m.textContent=`Video listo · ${Math.round(v.duration)} s · ${(file.size/1048576).toFixed(1)} MB`; $("n2").classList.add("done");
@@ -324,9 +322,9 @@ $("publish").addEventListener("click",async()=>{
   S.token=sess.token; S.email=sess.user&&sess.user.email;
   try{
     const r=await VVR.call("me"); S.email=r.user.email;
-    const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1,days:30,videoMB:25,videoSec:30};
-    MAX_MB=P.videoMB; MAX_SEC=P.videoSec;
-    $("vidHint").textContent=`Máximo ${durTxt(P.videoSec)} y ${P.videoMB} MB. MP4 funciona en todos los celulares.`;
+    const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1,days:30,videoMB:25};
+    MAX_MB=P.videoMB;
+    $("vidHint").textContent=`Hasta ${P.videoMB} MB. MP4 funciona en todos los celulares.`;
     if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name} · hasta ${P.exp.toLocaleString("es-MX")} experiencias`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
     const active=r.experiences.filter(x=>!x.paused);
     const exp=ed?r.experiences.find(x=>x.slug===ed):null;
