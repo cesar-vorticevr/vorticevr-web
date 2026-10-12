@@ -22,7 +22,15 @@
   // Worker in front of every request: Range for videos, nombre.vorticevr.mx experiences, /api and /m (AR platform).
   "main": "worker.js",
   // Needed by `wrangler preview`, which Cloudflare runs for non-production branches (rama preview).
-  "previews": {},
+  "previews": {
+    // previews do not inherit bindings: same D1 and R2 as production
+    "d1_databases": [
+      { "binding": "DB", "database_name": "vorticevr-ar", "database_id": "63213a79-38da-4f83-82a9-fe3bdef5e77e" }
+    ],
+    "r2_buckets": [
+      { "binding": "MEDIA", "bucket_name": "vorticevr-ar" }
+    ]
+  },
   // Keep the preview URLs on (<branch>-vorticevr-web.lad-cesargarcia.workers.dev) and the production
   // workers.dev URL off; without these keys every production deploy switched the previews off.
   "workers_dev": false,
