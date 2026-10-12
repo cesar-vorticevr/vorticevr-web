@@ -155,8 +155,11 @@ button{font:inherit;color:inherit;cursor:pointer}
 </div>
 
 <script type="module">
-import * as THREE from "three";
-import { MindARThree } from "mindar-image-three";
+// The 3D/AR libraries load when the camera starts (and are warmed up in the background), so the page shows
+// its title and image right away even if a browser is slow or strict with third-party scripts.
+let THREE=null, MindARThree=null;
+const libs=()=>Promise.all([import("three"),import("mindar-image-three")]).then(([t,m])=>{ THREE=t; MindARThree=m.MindARThree; });
+let libsP=null;
 
 const $=id=>document.getElementById(id);
 const vid=$("vid"), vbox=$("vbox"), guide=$("guide"), startBtn=$("start");
@@ -187,7 +190,7 @@ function socialHref(k,v){ if(k==="whatsapp") return "https://wa.me/"+String(v).r
 async function load(){
   if(!slug){ message("Experiencia no encontrada","Revisa que el link esté completo."); return; }
   const base=new URLSearchParams(location.search).get("api")||"";
-  let r; try{ r=await fetch(`${base}/api/exp/${encodeURIComponent(slug)}`); }catch(e){ message("Sin conexión","Revisa tu internet y vuelve a abrir el link."); return; }
+  let r; try{ r=await fetch(`${base}/api/exp/${encodeURIComponent(slug)}`,{signal:AbortSignal.timeout?AbortSignal.timeout(15000):undefined}); }catch(e){ message("Sin conexión","Revisa tu internet y vuelve a abrir el link."); return; }
   if(r.status===410){ message("Esta experiencia ya terminó","Las experiencias de prueba duran 30 días."); return; }
   if(!r.ok){ message("Experiencia no encontrada","Revisa que el link esté completo."); return; }
   CFG=await r.json(); CFG.base=base;
@@ -202,6 +205,7 @@ async function load(){
     const a=document.createElement("a"); a.href=socialHref(k,v); a.target="_blank"; a.rel="noopener"; a.setAttribute("aria-label",LABEL[k]);
     a.innerHTML=`<svg viewBox="0 0 24 24">${ICONS[k]}</svg>`; soc.appendChild(a); }
   startBtn.disabled=false;
+  libsP=libs().catch(e=>{ console.error(e); libsP=null; });
 }
 
 // ---- video controls ----
@@ -278,6 +282,9 @@ function setupAudio(){ try{ const AC=window.AudioContext||window.webkitAudioCont
 async function start(){
   vid.muted=false; vid.play().then(()=>vid.pause()).catch(()=>{}); setupAudio();       // unlock sound inside the tap (iOS)
   startBtn.disabled=true; startBtn.textContent="Cargando…"; $("err").hidden=true;
+  try{ await (libsP||libs()); if(!THREE||!MindARThree) throw 0; }
+  catch(e){ startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false;
+    $("err").textContent="No se pudo cargar la realidad aumentada. Revisa tu conexión; si estás en navegación privada, ábrelo en una pestaña normal."; return; }
   try{
     const mind=new MindARThree({container:$("ar"),imageTargetSrc:CFG.media.target,uiLoading:"no",uiScanning:"no",uiError:"no",filterMinCF:0.0001,filterBeta:0.001});
     const {renderer,scene,camera}=mind; renderer.outputColorSpace=THREE.SRGBColorSpace;
