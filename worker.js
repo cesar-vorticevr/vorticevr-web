@@ -9,7 +9,18 @@
 
 const ROOT_DEFAULT = "vorticevr.mx";
 const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear","create","ra","x","e","m","preview","app","apps","static","assets","cdn","dev","test","staging","beta","demo","vorticevr","vortice","soporte","support","help","ayuda","blog","shop","tienda","login","cuenta","account","johara","tarjeta","proyectos","status","docs"]);
-const LIMITS = { videoBytes: 25 * 1024 * 1024, imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, days: 30, codeMinutes: 10, codeTries: 5, sessionDays: 30, perAccount: 1 };
+const LIMITS = { imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, codeMinutes: 10, codeTries: 5, sessionDays: 30, pausedDays: 30 };
+// Plans. exp = active experiences; days = how long each one lasts (0 = while the plan is active).
+// Paid plans are activated by an admin in /admin/ (escuela always; basico/pro until Stripe is connected).
+// Videos stay ≤ 50 MB: the Worker reads the whole upload in memory (128 MB).
+const PLANS = {
+  gratis:  { name: "Gratis",  exp: 1,    days: 30, videoMB: 25, videoSec: 30,  price: 0 },
+  basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 50, videoSec: 60,  price: 199 },
+  pro:     { name: "Pro",     exp: 50,   days: 0,  videoMB: 50, videoSec: 120, price: 499 },
+  escuela: { name: "Escuela", exp: 1000, days: 0,  videoMB: 50, videoSec: 120, price: 1500 },
+};
+const FAR = 253402300799000; // expires of an experience on a paid plan: "while the plan is active" (year 9999)
+const ADMINS_DEFAULT = "lad.cesargarcia@gmail.com";
 const VIDEO = /\.(mp4|m4v|webm|mov)$/i;
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])$/;
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i;
@@ -47,11 +58,15 @@ export default {
   async scheduled(event, env, ctx) {
     if (!env.DB || !env.MEDIA) return;
     await schema(env);
-    const { results } = await env.DB.prepare("SELECT slug FROM experiences WHERE expires < ?").bind(Date.now()).all();
-    for (const r of results) {
-      await deleteMedia(env, r.slug);
-      await env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(r.slug).run();
-    }
+    // paid plans whose "paid until" date passed go back to free (extra experiences are paused 30 days, then deleted)
+    const { results: lapsed } = await env.DB.prepare("SELECT * FROM users WHERE plan != 'gratis' AND plan_until IS NOT NULL AND plan_until < ? LIMIT 20").bind(Date.now()).all();
+    for (const u of lapsed) await applyPlan(env, u, "gratis", null, u.plan_note);
+    // expired experiences: files in bulk (one R2 call per 1000 keys), then the rows
+    const now = Date.now();
+    const { results } = await env.DB.prepare("SELECT slug FROM experiences WHERE expires < ? LIMIT 2000").bind(now).all();
+    const keys = results.flatMap(r => ["video", "target", "image", "qr"].map(k => `exp/${r.slug}/${k}`));
+    for (let i = 0; i < keys.length; i += 1000) await env.MEDIA.delete(keys.slice(i, i + 1000));
+    if (results.length) await env.DB.prepare("DELETE FROM experiences WHERE slug IN (SELECT slug FROM experiences WHERE expires < ? LIMIT 2000)").bind(now).run();
     await env.DB.prepare("DELETE FROM otp WHERE expires < ?").bind(Date.now() - 864e5).run();
     await env.DB.prepare("DELETE FROM sessions WHERE expires < ?").bind(Date.now()).run();
     await env.DB.prepare("DELETE FROM users WHERE verified = 0 AND created < ?").bind(Date.now() - 7 * 864e5).run();
@@ -100,8 +115,8 @@ async function media(request, env, url) {
   if (!m || !env.MEDIA || !env.DB) return new Response("No encontrado", { status: 404 });
   const [, slug, kind] = m;
   await schema(env);
-  const exp = await env.DB.prepare("SELECT expires FROM experiences WHERE slug = ?").bind(slug).first();
-  if (!exp || exp.expires < Date.now()) return new Response("No encontrado", { status: 404 });
+  const exp = await env.DB.prepare("SELECT expires, paused FROM experiences WHERE slug = ?").bind(slug).first();
+  if (!exp || exp.expires < Date.now() || (exp.paused && kind !== "image")) return new Response("No encontrado", { status: 404 }); // a paused one keeps its thumbnail for the dashboard
   const key = `exp/${slug}/${kind}`;
   const range = request.headers.get("Range");
   let obj;
@@ -149,6 +164,7 @@ async function api(request, env, ctx, url) {
     const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(m[1]).first();
     if (!row) return json({ error: "No existe" }, 404);
     if (row.expires < Date.now()) return json({ error: "Expiró" }, 410);
+    if (row.paused) return json({ error: "Pausada", paused: true }, 410);
     ctx.waitUntil(env.DB.prepare("UPDATE experiences SET views = views + 1 WHERE slug = ?").bind(row.slug).run());
     return json(publicExp(row), 200, { "Cache-Control": "no-store" });
   }
@@ -246,22 +262,36 @@ async function api(request, env, ctx, url) {
 
   if (path === "/api/publish" && M === "POST") {
     if (!who) return json({ error: "Inicia sesión de nuevo." }, 401);
-    if (!(await limit(env, "pub:" + who, 10, 3600e3))) return json({ error: "Demasiadas publicaciones seguidas. Espera un rato." }, 429);
+    if (!(await limit(env, "pub:" + who, 30, 3600e3))) return json({ error: "Demasiadas publicaciones seguidas. Espera un rato." }, 429);
+    const P = planOf(me);
     const form = await request.formData();
     let meta; try { meta = JSON.parse(form.get("meta") || "{}"); } catch { return json({ error: "Datos inválidos." }, 400); }
-    const mine = await env.DB.prepare("SELECT * FROM experiences WHERE email = ?").bind(who).first();
+    // editing: meta.original is the experience's current slug (it can move to a new one)
+    const original = String(meta.original || "").toLowerCase();
+    const mine = original ? await env.DB.prepare("SELECT * FROM experiences WHERE slug = ? AND email = ? AND expires > ?").bind(original, who, Date.now()).first() : null;
+    if (original && !mine) return json({ error: "No encontramos esa experiencia en tu cuenta." }, 404);
+    if (mine && mine.paused) return json({ error: `Esta experiencia está pausada: tu plan ${P.name} incluye ${expCount(P.exp)}. Mejora tu plan para reactivarla.` }, 403);
+    if (!mine) {
+      const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM experiences WHERE email = ? AND paused = 0 AND expires > ?").bind(who, Date.now()).first();
+      if (n.n >= P.exp) return json({ error: `Tu plan ${P.name} incluye ${expCount(P.exp)}. Borra una o mejora tu plan para crear otra.` }, 403);
+    }
     const slug = String(meta.slug || "").toLowerCase();
-    const st = await slugStatus(env, slug, who);
+    const st = await slugStatus(env, slug, who, mine && mine.slug);
     if (!st.ok) return json({ error: st.reason }, 400);
     const data = cleanMeta(meta);
     if (data.error) return json({ error: data.error }, 400);
     const video = form.get("video"), image = form.get("image"), target = form.get("target"), qr = form.get("qr");
     const isNew = !mine;
     if (isNew && (!video || !image || !target)) return json({ error: "Faltan la imagen o el video." }, 400);
-    if (video && (video.size > LIMITS.videoBytes || !/^video\/(mp4|webm|quicktime)$/.test(video.type))) return json({ error: "El video debe ser MP4, WebM o MOV de máximo 25 MB." }, 400);
+    if (video && (video.size > P.videoMB * 1048576 || !/^video\/(mp4|webm|quicktime)$/.test(video.type))) return json({ error: `El video debe ser MP4, WebM o MOV de máximo ${P.videoMB} MB.` }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
     if (target && target.size > LIMITS.targetBytes) return json({ error: "La imagen no se pudo preparar. Intenta con otra." }, 400);
-    // one experience per account: changing the name moves the files
+    // an expired row with this slug that the cron has not deleted yet (anyone's): clear it first
+    if (!mine || mine.slug !== slug) {
+      const stale = await env.DB.prepare("SELECT slug FROM experiences WHERE slug = ?").bind(slug).first();
+      if (stale) { await deleteMedia(env, slug); await env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(slug).run(); }
+    }
+    // changing the name moves the files
     if (mine && mine.slug !== slug) {
       for (const k of ["video", "target", "image"]) {
         const isReplaced = (k === "video" && video) || (k === "image" && image) || (k === "target" && target);
@@ -270,18 +300,60 @@ async function api(request, env, ctx, url) {
       await deleteMedia(env, mine.slug);
       await env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(mine.slug).run();
     }
-    if (video) await env.MEDIA.put(`exp/${slug}/video`, await video.arrayBuffer(), { httpMetadata: { contentType: video.type } });
+    if (video) await env.MEDIA.put(`exp/${slug}/video`, video, { httpMetadata: { contentType: video.type } });
     if (image) await env.MEDIA.put(`exp/${slug}/image`, await image.arrayBuffer(), { httpMetadata: { contentType: image.type } });
     if (target) await env.MEDIA.put(`exp/${slug}/target`, await target.arrayBuffer(), { httpMetadata: { contentType: "application/octet-stream" } });
     const now = Date.now();
-    const created = mine && mine.slug === slug ? mine.created : now;
-    const expires = mine ? mine.expires : now + LIMITS.days * 864e5;
-    await env.DB.prepare("INSERT INTO experiences (slug, email, title, data, created, updated, expires, views) VALUES (?, ?, ?, ?, ?, ?, ?, 0) ON CONFLICT(slug) DO UPDATE SET title = excluded.title, data = excluded.data, updated = excluded.updated")
-      .bind(slug, who, data.title, JSON.stringify(data), created, now, expires).run();
+    const created = mine ? mine.created : now;
+    const expires = mine ? mine.expires : P.days ? now + P.days * 864e5 : FAR;
+    await env.DB.prepare("INSERT INTO experiences (slug, email, title, data, created, updated, expires, views, paused) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0) ON CONFLICT(slug) DO UPDATE SET title = excluded.title, data = excluded.data, updated = excluded.updated")
+      .bind(slug, who, data.title, JSON.stringify(data), created, now, expires, mine ? mine.views || 0 : 0).run();
     const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(slug).first();
     const out = ownerExp(row, request, env);
     if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
     return json({ ok: true, experience: out });
+  }
+
+  // ---- admin (ADMIN_EMAILS; by default César): plans are activated by hand, schools pay outside the site ----
+  if (path.startsWith("/api/admin/")) {
+    if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
+    if (!isAdmin(env, me)) return json({ error: "No tienes acceso." }, 403);
+    const now = Date.now();
+    if (path === "/api/admin/users" && M === "GET") {
+      const q = (url.searchParams.get("q") || "").trim().toLowerCase().slice(0, 80);
+      const { results } = await env.DB.prepare(`SELECT u.id, u.email, u.name, u.verified, u.created, u.plan, u.plan_until, u.plan_note,
+          (SELECT COUNT(*) FROM experiences e WHERE e.email = u.email AND e.paused = 0 AND e.expires > ?1) AS active,
+          (SELECT COUNT(*) FROM experiences e WHERE e.email = u.email AND e.paused = 1 AND e.expires > ?1) AS paused,
+          (SELECT COALESCE(SUM(views), 0) FROM experiences e WHERE e.email = u.email) AS views
+        FROM users u WHERE (?2 = '' OR instr(lower(u.email), ?2) > 0 OR instr(lower(u.name), ?2) > 0)
+        ORDER BY (COALESCE(u.plan, 'gratis') != 'gratis') DESC, u.created DESC LIMIT 300`).bind(now, q).all();
+      const totals = await env.DB.prepare(`SELECT (SELECT COUNT(*) FROM users WHERE verified = 1) AS users,
+          (SELECT COUNT(*) FROM users WHERE COALESCE(plan, 'gratis') != 'gratis') AS paid,
+          (SELECT COUNT(*) FROM experiences WHERE paused = 0 AND expires > ?1) AS experiences,
+          (SELECT COALESCE(SUM(views), 0) FROM experiences) AS views`).bind(now).first();
+      return json({ users: results.map(u => ({ ...u, effective: planOf(u).id })), totals, plans: PLANS });
+    }
+    if (path === "/api/admin/experiences" && M === "GET") {
+      const { results } = await env.DB.prepare("SELECT * FROM experiences WHERE email = ? AND expires > ? ORDER BY paused, updated DESC LIMIT 1000").bind(normEmail(url.searchParams.get("email")), now).all();
+      return json({ experiences: results.map(r => ownerExp(r, request, env)) });
+    }
+    if (path === "/api/admin/plan" && M === "POST") {
+      const b = await request.json().catch(() => ({}));
+      const user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(normEmail(b.email)).first();
+      if (!user) return json({ error: "No existe una cuenta con ese correo. Pídele que se registre primero en vorticevr.mx/cuenta/." }, 404);
+      const plan = String(b.plan || "");
+      if (!PLANS[plan]) return json({ error: "Plan inválido." }, 400);
+      let until = null;
+      if (plan !== "gratis" && b.until) {
+        const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(b.until));
+        if (!d) return json({ error: "Fecha inválida." }, 400);
+        until = Date.UTC(+d[1], +d[2] - 1, +d[3], 23, 59, 59) + 6 * 3600e3; // end of that day in Mexico (UTC−6)
+        if (until < now) return json({ error: "Esa fecha ya pasó." }, 400);
+      }
+      await applyPlan(env, user, plan, until, String(b.note || "").trim().slice(0, 300));
+      if (b.notify && plan !== "gratis") ctx.waitUntil(sendMail(env, user.email, `Tu plan ${PLANS[plan].name} de Vórtice VR está activo`, planMail(user, plan, until)));
+      return json({ ok: true });
+    }
   }
   return json({ error: "No encontrado" }, 404);
 }
@@ -291,7 +363,7 @@ function publicExp(row) {
   return { slug: row.slug, title: row.title, fit: d.fit, img: d.img, video: d.video, buttons: d.buttons, expires: row.expires };
 }
 function ownerExp(row, request, env) {
-  return { ...publicExp(row), url: expUrl(row.slug, request, env), created: row.created, updated: row.updated, views: row.views };
+  return { ...publicExp(row), url: expUrl(row.slug, request, env), created: row.created, updated: row.updated, views: row.views, paused: !!row.paused, forever: row.expires >= FAR };
 }
 function expUrl(slug, request, env) {
   const root = env.ROOT_DOMAIN || ROOT_DEFAULT;
@@ -299,11 +371,13 @@ function expUrl(slug, request, env) {
   if (host === root || host.endsWith("." + root) || host === "www." + root) return `https://${slug}.${root}/`;
   return `${new URL(request.url).origin}/e/${slug}/`; // previews and local tests
 }
-async function slugStatus(env, slug, owner) {
+// own = slug of the experience being edited (it may keep its name)
+async function slugStatus(env, slug, owner, own) {
   if (!SLUG.test(slug)) return { ok: false, reason: "Usa de 3 a 30 letras minúsculas, números o guiones (sin acentos ni espacios)." };
   if (RESERVED.has(slug)) return { ok: false, reason: "Ese nombre está reservado." };
+  if (slug === own) return { ok: true };
   const row = await env.DB.prepare("SELECT email, expires FROM experiences WHERE slug = ?").bind(slug).first();
-  if (row && row.email !== owner && row.expires > Date.now()) return { ok: false, reason: "Ese nombre ya está ocupado." };
+  if (row && row.expires > Date.now()) return { ok: false, reason: owner && row.email === owner ? "Ya tienes otra experiencia con ese link." : "Ese nombre ya está ocupado." };
   return { ok: true };
 }
 function cleanMeta(m) {
@@ -335,15 +409,36 @@ let schemaReady = false;
 async function schema(env) {
   if (schemaReady) return;
   await env.DB.batch([
-    env.DB.prepare("CREATE TABLE IF NOT EXISTS experiences (slug TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, title TEXT, data TEXT, created INTEGER, updated INTEGER, expires INTEGER, views INTEGER DEFAULT 0)"),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS experiences (${EXP_COLS})`),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS codes (email TEXT PRIMARY KEY, hash TEXT, expires INTEGER, tries INTEGER DEFAULT 0)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS ratelimit (k TEXT PRIMARY KEY, n INTEGER, reset INTEGER)"),
-    env.DB.prepare("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE NOT NULL, name TEXT, pass TEXT, verified INTEGER DEFAULT 0, created INTEGER)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE NOT NULL, name TEXT, pass TEXT, verified INTEGER DEFAULT 0, created INTEGER, plan TEXT DEFAULT 'gratis', plan_until INTEGER, plan_note TEXT)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires INTEGER, created INTEGER)"),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS sessions_user ON sessions (user_id)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS otp (email TEXT NOT NULL, purpose TEXT NOT NULL, hash TEXT, expires INTEGER, tries INTEGER DEFAULT 0, PRIMARY KEY (email, purpose))"),
   ]);
+  await migrate(env);
   schemaReady = true;
+}
+const EXP_COLS = "slug TEXT PRIMARY KEY, email TEXT NOT NULL, title TEXT, data TEXT, created INTEGER, updated INTEGER, expires INTEGER, views INTEGER DEFAULT 0, paused INTEGER DEFAULT 0";
+// Tables from before the plans: experiences had email UNIQUE (one per account) and users had no plan.
+// Production and the preview share this database: every change here has to keep the other version working.
+async function migrate(env) {
+  const { results } = await env.DB.prepare("SELECT name, sql FROM sqlite_master WHERE type = 'table' AND name IN ('experiences', 'users')").all();
+  const sql = Object.fromEntries(results.map(r => [r.name, r.sql || ""]));
+  const steps = [];
+  if (!/\bplan_until\b/.test(sql.users)) steps.push(
+    env.DB.prepare("ALTER TABLE users ADD COLUMN plan TEXT DEFAULT 'gratis'"),
+    env.DB.prepare("ALTER TABLE users ADD COLUMN plan_until INTEGER"),
+    env.DB.prepare("ALTER TABLE users ADD COLUMN plan_note TEXT"));
+  if (/email TEXT UNIQUE/i.test(sql.experiences)) steps.push(   // SQLite cannot drop a UNIQUE: copy into a new table
+    env.DB.prepare("DROP TABLE IF EXISTS experiences_new"),
+    env.DB.prepare(`CREATE TABLE experiences_new (${EXP_COLS})`),
+    env.DB.prepare("INSERT INTO experiences_new (slug, email, title, data, created, updated, expires, views) SELECT slug, email, title, data, created, updated, expires, views FROM experiences"),
+    env.DB.prepare("DROP TABLE experiences"),
+    env.DB.prepare("ALTER TABLE experiences_new RENAME TO experiences"));
+  if (steps.length) { try { await env.DB.batch(steps); } catch (e) { console.error("migración", e); /* another instance migrated first */ } }
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS experiences_email ON experiences (email)").run();
 }
 async function limit(env, key, max, windowMs) {
   const now = Date.now();
@@ -396,12 +491,37 @@ async function sessionFor(env, request, user) {
 async function auth(request, env) {
   const t = bearer(request);
   if (!t) return null;
-  const row = await env.DB.prepare("SELECT u.id, u.email, u.name, u.verified, s.expires FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?").bind(await sha256hex(t)).first();
+  const row = await env.DB.prepare("SELECT u.id, u.email, u.name, u.verified, u.plan, u.plan_until, s.expires FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?").bind(await sha256hex(t)).first();
   return row && row.expires > Date.now() && row.verified ? row : null;
 }
 async function account(env, request, user) {
-  const { results } = await env.DB.prepare("SELECT * FROM experiences WHERE email = ? AND expires > ? ORDER BY created DESC").bind(user.email, Date.now()).all();
-  return { user: { name: user.name, email: user.email }, experiences: results.map(r => ownerExp(r, request, env)), limit: LIMITS.perAccount };
+  const { results } = await env.DB.prepare("SELECT * FROM experiences WHERE email = ? AND expires > ? ORDER BY paused, created DESC").bind(user.email, Date.now()).all();
+  const plan = planOf(user);
+  return { user: { name: user.name, email: user.email }, experiences: results.map(r => ownerExp(r, request, env)), plan, limit: plan.exp, admin: isAdmin(env, user) || undefined };
+}
+
+// ---------- plans ----------
+// the plan in effect: a paid plan whose "paid until" date passed counts as free (the daily cron then applies it)
+function planOf(user) {
+  const id = PLANS[user.plan] && (!user.plan_until || user.plan_until > Date.now()) ? user.plan : "gratis";
+  return { id, ...PLANS[id], until: id === "gratis" ? null : user.plan_until || null };
+}
+const expCount = n => n === 1 ? "1 experiencia" : `${n.toLocaleString("es-MX")} experiencias`;
+const isAdmin = (env, user) => !!user && (env.ADMIN_EMAILS || ADMINS_DEFAULT).split(",").map(s => s.trim().toLowerCase()).includes(user.email);
+// Sets the plan and fits the user's experiences to it in one statement (the free Workers plan allows 50 queries per request).
+// The first `exp` (active first, most recently edited) stay active: on a paid plan with no end date, on the free plan for
+// 30 days (or what they had left). The rest are paused and deleted after 30 days unless the plan goes up again.
+async function applyPlan(env, user, plan, until, note) {
+  const P = PLANS[plan], now = Date.now();
+  await env.DB.batch([
+    env.DB.prepare("UPDATE users SET plan = ?, plan_until = ?, plan_note = ? WHERE id = ?").bind(plan, until, note || null, user.id),
+    env.DB.prepare(`UPDATE experiences SET
+        paused = CASE WHEN r.rn <= ?1 THEN 0 ELSE 1 END,
+        expires = CASE WHEN r.rn <= ?1 THEN (CASE WHEN ?2 = 0 THEN ?3 WHEN experiences.paused = 0 AND experiences.expires < ?3 THEN experiences.expires ELSE ?4 END)
+                       WHEN experiences.paused = 1 THEN experiences.expires ELSE ?5 END
+      FROM (SELECT slug, ROW_NUMBER() OVER (ORDER BY paused, updated DESC, slug) AS rn FROM experiences WHERE email = ?6 AND expires > ?7) AS r
+      WHERE experiences.slug = r.slug`).bind(P.exp, P.days, FAR, now + P.days * 864e5, now + LIMITS.pausedDays * 864e5, user.email, now),
+  ]);
 }
 // one-time codes by email: confirm the account once, or reset the password
 async function sendCode(env, em, purpose) {
@@ -455,4 +575,9 @@ const linkMail = e => shell(`<h1 style="font-size:20px">¡Tu experiencia de real
 <p><a href="${esc(e.url)}" style="color:#ffbe55;font-size:20px;font-weight:700">${esc(e.url.replace(/^https:\/\//, "").replace(/\/$/, ""))}</a></p>
 <p>Ábrelo en el celular, toca <b>Activar cámara</b> y apunta a tu imagen.</p>
 <p>Para editarla o borrarla entra a tu cuenta en <a href="https://vorticevr.mx/cuenta/" style="color:#d2b8ff">vorticevr.mx/cuenta</a>.</p>
-<p style="color:#a99bcb">Disponible hasta el ${new Date(e.expires).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}.</p>`);
+<p style="color:#a99bcb">${e.forever ? "Disponible mientras tu plan esté activo." : `Disponible hasta el ${fecha(e.expires)}.`}</p>`);
+const fecha = t => new Date(t).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
+const planMail = (user, plan, until) => shell(`<h1 style="font-size:20px">¡Tu plan ${PLANS[plan].name} está activo!</h1>
+<p>Hola ${esc(user.name || "")}, ya puedes tener hasta <b>${expCount(PLANS[plan].exp)}</b> activas al mismo tiempo, con videos de hasta ${PLANS[plan].videoSec / 60 >= 1 ? PLANS[plan].videoSec / 60 + " min" : PLANS[plan].videoSec + " s"} y ${PLANS[plan].videoMB} MB, sin fecha de vencimiento mientras tu plan esté vigente.</p>
+${until ? `<p>Pagado hasta el <b>${fecha(until)}</b>.</p>` : ""}
+<p>Entra a <a href="https://vorticevr.mx/cuenta/" style="color:#ffbe55;font-weight:700">vorticevr.mx/cuenta</a> para crear tus experiencias.</p>`);

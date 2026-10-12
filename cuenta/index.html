@@ -65,6 +65,20 @@ input:focus{border-color:var(--lav);outline:none}
 .empty p{color:var(--mute);margin:6px auto 20px;max-width:46ch}
 .acct{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px;margin-top:28px}
 .note{font-size:.85rem;color:var(--mute)}
+#planes{margin-top:10px}
+.phead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.phead h2{font-size:1.6rem;margin:4px 0}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin:18px 0 12px}
+.plan{border:1px solid var(--line);border-radius:14px;padding:16px;background:rgba(5,2,11,.5);display:flex;flex-direction:column;gap:6px}
+.plan.cur{border-color:var(--sun);box-shadow:0 0 0 1px var(--sun) inset}
+.plan h3{font-family:var(--fd);margin:0;font-size:1.1rem}
+.plan .price{font-family:var(--fd);font-size:1.6rem;font-weight:700}
+.plan .price small{font-size:.8rem;color:var(--mute);font-weight:500}
+.plan ul{margin:4px 0 10px;padding-left:18px;color:var(--mute);font-size:.9rem}
+.plan .btn{margin-top:auto;padding:10px 16px}
+.tag{display:inline-block;font-family:var(--fd);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;border-radius:999px;padding:3px 10px;border:1px solid var(--sun);color:var(--sun)}
+.exp.paused{opacity:.75}
+.exp.paused .tag{border-color:var(--bad);color:var(--bad)}
 </style>
 </head>
 <body>
@@ -130,8 +144,12 @@ input:focus{border-color:var(--lav);outline:none}
     <div class="dhead"><div><span class="kick">Mi cuenta</span><h1 id="pHello">Hola</h1><p id="pEmail"></p></div>
       <a class="btn primary" id="pCreate" href="../crear/">+ Crear experiencia</a></div>
     <div id="pList"></div>
+    <section class="card" id="planes">
+      <div class="phead"><div><span class="kick">Tu plan</span><h2 id="pPlanName">Gratis</h2><p class="note" id="pPlan"></p></div><a class="btn" id="pAdmin" href="../admin/" hidden>Administración</a></div>
+      <div class="plans" id="pPlans"></div>
+      <p class="note">El pago con tarjeta en línea llega pronto; por ahora escríbenos y activamos tu plan. ¿Eres escuela? Pregúntanos por el plan Escuela.</p>
+    </section>
     <div class="acct">
-      <div class="card"><h2>Tu plan</h2><p class="note" id="pPlan"></p></div>
       <div class="card"><h2>Cambiar contraseña</h2>
         <form id="fPass"><label class="f" for="aCur">Contraseña actual</label><input type="password" id="aCur" autocomplete="current-password" required>
           <label class="f" for="aNew">Nueva contraseña</label><input type="password" id="aNew" autocomplete="new-password" minlength="8" required>
@@ -146,7 +164,10 @@ input:focus{border-color:var(--lav);outline:none}
 <script>
 const $=id=>document.getElementById(id);
 const Q=new URLSearchParams(location.search);
-const NEXT=Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):null;
+const NEXT=Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":null;
+// public plans (Escuela is sold in person and activated from /admin/)
+const PLANS=[["gratis","Gratis",0,["1 experiencia","Video de 30 s y 25 MB","Dura 30 días"]],["basico","Básico",199,["5 experiencias","Cámbialas cuando quieras","Video de 1 min y 50 MB","Sin vencimiento mientras pagues"]],["pro","Pro",499,["50 experiencias","Cámbialas cuando quieras","Video de 2 min y 50 MB","Sin vencimiento mientras pagues"]]];
+const WA="529983448207";
 const VIEWS=["vEntrar","vRegistro","vCodigo","vOlvide","vPanel"];
 function view(v){ VIEWS.forEach(x=>$(x).hidden=x!==v); scrollTo(0,0); const f=$(v).querySelector("input"); if(f&&v!=="vPanel") setTimeout(()=>f.focus(),50); }
 function msg(id,t,kind){ const m=$(id); m.className="msg"+(kind?" "+kind:""); m.textContent=t||""; }
@@ -196,20 +217,34 @@ $("fOlvide").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,as
 
 // ---- dashboard ----
 function showPanel(data){
-  const {user,experiences,limit}=data;
+  const {user,experiences}=data;
+  const P=data.plan||{id:"gratis",name:"Gratis",exp:data.limit||1,days:30,videoMB:25,videoSec:30};
   $("pHello").textContent=`Hola, ${user.name||"bienvenido"}`; $("pEmail").textContent=user.email;
-  const full=experiences.length>=limit; $("pCreate").hidden=full;
-  $("pPlan").textContent=`Plan de prueba gratis: ${limit===1?"1 experiencia":limit+" experiencias"} activa, de hasta 30 segundos de video, que dura 30 días.${full?" Ya usaste tu experiencia; puedes editarla o borrarla para crear otra.":""}`;
+  const active=experiences.filter(x=>!x.paused).length, full=active>=P.exp; $("pCreate").hidden=full;
+  const dur=P.videoSec>=60?`${P.videoSec/60} min`:`${P.videoSec} s`;
+  $("pPlanName").textContent=P.name; $("pAdmin").hidden=!data.admin;
+  $("pPlan").textContent=`${active.toLocaleString("es-MX")} de ${P.exp.toLocaleString("es-MX")} ${P.exp===1?"experiencia":"experiencias"} en uso · video de hasta ${dur} y ${P.videoMB} MB · `
+    +(P.id==="gratis"?"cada experiencia dura 30 días.":P.until?`pagado hasta el ${new Date(P.until).toLocaleDateString("es-MX",{day:"numeric",month:"long",year:"numeric"})}.`:"sin vencimiento.")
+    +(full?(P.exp===1?" Ya usaste tu experiencia: edítala, bórrala para crear otra o mejora tu plan.":" Ya usaste todas: edita o borra una, o mejora tu plan."):"");
+  const shown=P.id==="escuela"?[...PLANS,["escuela","Escuela",1500,["1,000 experiencias","Cámbialas cuando quieras","Video de 2 min y 50 MB"]]]:PLANS;
+  $("pPlans").innerHTML=shown.map(([id,name,price,items])=>{ const cur=id===P.id;
+    const msg=encodeURIComponent(`Hola, quiero el plan ${name} de realidad aumentada para mi cuenta ${user.email}`);
+    return `<div class="plan${cur?" cur":""}"><h3>${name} ${cur?'<span class="tag">Tu plan</span>':""}</h3><div class="price">${price?"$"+price+" <small>MXN al mes</small>":"$0"}</div><ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul>`
+      +(!cur&&price?`<a class="btn sun" href="https://wa.me/${WA}?text=${msg}" target="_blank" rel="noopener">Lo quiero</a>`:"")+`</div>`; }).join("");
   const list=$("pList"); list.replaceChildren();
   if(!experiences.length){ list.innerHTML=`<div class="card empty"><h2>Todavía no tienes experiencias</h2><p>Sube una imagen y un video: cuando alguien apunte su celular a la imagen, el video aparecerá encima.</p><a class="btn primary" href="../crear/">Crear mi primera experiencia</a></div>`; }
   for(const exp of experiences){
     const days=Math.max(0,Math.ceil((exp.expires-Date.now())/864e5));
-    const el=document.createElement("article"); el.className="card exp";
+    const el=document.createElement("article"); el.className="card exp"+(exp.paused?" paused":"");
+    const until=new Date(exp.expires).toLocaleDateString("es-MX",{day:"numeric",month:"short"});
+    const stats=exp.paused?`<div><b>${days}</b><span>días antes de borrarse</span></div><div><b>Pausada</b><span>tu plan ya no la incluye</span></div>`
+      :exp.forever?`<div><b>Activa</b><span>mientras tu plan esté vigente</span></div>`
+      :`<div><b>${days}</b><span>días restantes</span></div><div><b>${until}</b><span>disponible hasta</span></div>`;
     el.innerHTML=`<div>
-        <div class="ehead"><img src="${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}" alt=""><div><span class="kick">Experiencia</span><h2>${esc(exp.title)}</h2></div></div>
-        <div class="link"><code>${esc(exp.url.replace(/^https?:\/\//,"").replace(/\/$/,""))}</code><button class="btn" type="button" data-a="copy">Copiar link</button><a class="btn primary" href="${esc(exp.url)}" target="_blank" rel="noopener">Abrir</a></div>
-        <div class="stats"><div><b>${(exp.views||0).toLocaleString("es-MX")}</b><span>veces abierta</span></div><div><b>${days}</b><span>días restantes</span></div><div><b>${new Date(exp.expires).toLocaleDateString("es-MX",{day:"numeric",month:"short"})}</b><span>disponible hasta</span></div></div>
-        <div class="row"><a class="btn" href="../crear/?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn danger" type="button" data-a="del">Borrar</button></div>
+        <div class="ehead"><img src="${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}" alt=""><div><span class="kick">Experiencia</span> ${exp.paused?'<span class="tag">Pausada</span>':""}<h2>${esc(exp.title)}</h2></div></div>
+        <div class="link"><code>${esc(exp.url.replace(/^https?:\/\//,"").replace(/\/$/,""))}</code><button class="btn" type="button" data-a="copy">Copiar link</button>${exp.paused?"":`<a class="btn primary" href="${esc(exp.url)}" target="_blank" rel="noopener">Abrir</a>`}</div>
+        <div class="stats"><div><b>${(exp.views||0).toLocaleString("es-MX")}</b><span>veces abierta</span></div>${stats}</div>
+        <div class="row">${exp.paused?`<a class="btn sun" href="#planes">Mejorar plan</a>`:`<a class="btn" href="../crear/?editar=${encodeURIComponent(exp.slug)}">Editar</a>`}<button class="btn danger" type="button" data-a="del">Borrar</button></div>
       </div>
       <div class="qr"><canvas aria-label="Código QR"></canvas><button class="btn sun" type="button" data-a="qr">Descargar QR</button></div>`;
     list.appendChild(el);

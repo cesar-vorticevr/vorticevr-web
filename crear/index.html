@@ -102,7 +102,7 @@ header .acts{display:flex;align-items:center;gap:14px}
 <header><a href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a class="mybtn" href="../cuenta/" style="text-decoration:none">Mi cuenta</a><a class="back" href="../">← Sitio</a></div></header>
 <main class="wrap">
   <div class="hero">
-    <span class="kick">Gratis · prueba de 30 días</span>
+    <span class="kick" id="kick">Gratis · prueba de 30 días</span>
     <h1>Crea tu realidad aumentada</h1>
     <p>Sube una imagen y un video. Cuando alguien apunte su celular a la imagen, el video aparecerá encima. Recibes un link propio y un código QR para compartir.</p>
   </div>
@@ -110,9 +110,9 @@ header .acts{display:flex;align-items:center;gap:14px}
   <div class="grid">
     <div>
       <section class="step" id="full" hidden>
-        <h2>Ya tienes tu experiencia</h2>
-        <p class="hint">Tu plan de prueba incluye una experiencia a la vez. Puedes editarla o borrarla desde tu cuenta para crear otra.</p>
-        <div class="row"><a class="btn primary" id="fullEdit" href="#">Editar mi experiencia</a><a class="btn" href="../cuenta/">Ir a mi cuenta</a></div>
+        <h2 id="fullTitle">Ya tienes tu experiencia</h2>
+        <p class="hint" id="fullText">Tu plan de prueba incluye una experiencia a la vez. Puedes editarla o borrarla desde tu cuenta para crear otra.</p>
+        <div class="row"><a class="btn primary" id="fullEdit" href="#">Editar mi experiencia</a><a class="btn" href="../cuenta/#planes">Ver planes</a><a class="btn" href="../cuenta/">Ir a mi cuenta</a></div>
       </section>
 
       <section class="step" id="s1">
@@ -124,7 +124,7 @@ header .acts{display:flex;align-items:center;gap:14px}
 
       <section class="step" id="s2">
         <h2><span class="n" id="n2">2</span>Tu video</h2>
-        <p class="hint">Máximo 30 segundos y 25 MB. MP4 funciona en todos los celulares.</p>
+        <p class="hint" id="vidHint">Máximo 30 segundos y 25 MB. MP4 funciona en todos los celulares.</p>
         <label class="drop" id="dVid"><input type="file" id="fVid" accept="video/mp4,video/webm,video/quicktime"><video class="thumb" id="tVid" muted playsinline hidden></video><span><b id="lVid">Elegir video</b><small>MP4, WebM o MOV</small></span></label>
         <div class="msg" id="mVid"></div>
       </section>
@@ -157,7 +157,7 @@ header .acts{display:flex;align-items:center;gap:14px}
         <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
         <button class="btn primary" id="publish" type="button" disabled>Publicar mi experiencia</button>
         <div class="bar" id="bPub" hidden><i></i></div><div class="msg" id="mPub"></div>
-        <p class="legal">Al publicar confirmas que tienes derecho a usar la imagen y el video. Vórtice VR puede retirar contenido inapropiado. La experiencia se borra a los 30 días; puedes editarla o borrarla desde tu cuenta.</p>
+        <p class="legal">Al publicar confirmas que tienes derecho a usar la imagen y el video. Vórtice VR puede retirar contenido inapropiado. <span id="legalDays">La experiencia se borra a los 30 días; puedes editarla o borrarla desde tu cuenta.</span></p>
       </section>
     </div>
 
@@ -180,7 +180,9 @@ const $=id=>document.getElementById(id);
 const API=VVR.api;      // the API lives on the same site
 const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
 $("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
-const MAX_VIDEO=25*1024*1024, MAX_SEC=30.5, IMG_MAX=1000;
+let MAX_MB=25, MAX_SEC=30;   // from the account's plan (see start)
+const IMG_MAX=1000;
+const durTxt=s=>s>=60?`${s/60} ${s===60?"minuto":"minutos"}`:`${s} segundos`;
 
 const S={img:null,imgBlob:null,imgW:0,imgH:0,target:null,compiling:false,video:null,vidW:0,vidH:0,fit:"width",token:null,email:null,mine:null,keepImg:false,keepVid:false};
 
@@ -222,11 +224,11 @@ async function onImage(file){
 // ---------- step 2: video → checks ----------
 function onVideo(file){
   if(!file) return; const m=$("mVid"); m.className="msg"; m.textContent="";
-  if(file.size>MAX_VIDEO){ m.className="msg bad"; m.textContent=`El video pesa ${(file.size/1048576).toFixed(1)} MB. El máximo es 25 MB.`; return; }
+  if(file.size>MAX_MB*1048576){ m.className="msg bad"; m.textContent=`El video pesa ${(file.size/1048576).toFixed(1)} MB. El máximo es ${MAX_MB} MB.`; return; }
   const url=URL.createObjectURL(file), v=document.createElement("video"); v.muted=true; v.preload="metadata"; v.src=url;
   v.onloadedmetadata=()=>{
     if(!v.videoWidth){ m.className="msg bad"; m.textContent="Este navegador no puede reproducir ese formato. Expórtalo como MP4 (H.264)."; return; }
-    if(v.duration>MAX_SEC){ m.className="msg bad"; m.textContent=`El video dura ${Math.round(v.duration)} s. El máximo es 30 s; recórtalo antes de subirlo.`; return; }
+    if(v.duration>MAX_SEC+.5){ m.className="msg bad"; m.textContent=`El video dura ${Math.round(v.duration)} s. El máximo es ${durTxt(MAX_SEC)}; recórtalo antes de subirlo.`; return; }
     S.video=file; S.vidW=v.videoWidth; S.vidH=v.videoHeight; S.keepVid=false;
     $("tVid").src=url; $("tVid").hidden=false; $("pVid").src=url; $("pVid").play().catch(()=>{}); $("lVid").textContent=file.name;
     m.className="msg ok"; m.textContent=`Video listo · ${Math.round(v.duration)} s · ${(file.size/1048576).toFixed(1)} MB`; $("n2").classList.add("done");
@@ -273,7 +275,7 @@ const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
 // ---------- account: this page needs a signed-in session (see /cuenta/) ----------
 function editing(exp){
   S.mine=exp||null; const mine=$("mine");
-  if(exp){ mine.hidden=false; mine.innerHTML=`Estás editando <b>${exp.title.replace(/</g,"&lt;")}</b>. Al publicar se actualiza (sigue disponible hasta el ${new Date(exp.expires).toLocaleDateString("es-MX")}).`; prefill(exp); }
+  if(exp){ mine.hidden=false; mine.innerHTML=`Estás editando <b>${exp.title.replace(/</g,"&lt;")}</b>. Al publicar se actualiza (${exp.forever?"sigue disponible mientras tu plan esté activo":"sigue disponible hasta el "+new Date(exp.expires).toLocaleDateString("es-MX")}).`; prefill(exp); }
   else mine.hidden=true;
   check();
 }
@@ -298,7 +300,7 @@ function check(){
 }
 $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Subiendo…"; bar.hidden=false; $("publish").disabled=true;
-  const meta={slug:slugIn.value,title:$("title").value.trim(),fit:S.fit,img:{w:S.imgW,h:S.imgH},video:{w:S.vidW,h:S.vidH},buttons:{}};
+  const meta={original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),fit:S.fit,img:{w:S.imgW,h:S.imgH},video:{w:S.vidW,h:S.vidH},buttons:{}};
   for(const [k] of SOC){ const v=toHandle(k,$("b_"+k).value); if(v) meta.buttons[k]=v; }
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
   if(S.imgBlob&&S.target){ fd.append("image",S.imgBlob,"image.jpg"); fd.append("target",S.target,"target.mind"); }
@@ -322,9 +324,20 @@ $("publish").addEventListener("click",async()=>{
   S.token=sess.token; S.email=sess.user&&sess.user.email;
   try{
     const r=await VVR.call("me"); S.email=r.user.email;
+    const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1,days:30,videoMB:25,videoSec:30};
+    MAX_MB=P.videoMB; MAX_SEC=P.videoSec;
+    $("vidHint").textContent=`Máximo ${durTxt(P.videoSec)} y ${P.videoMB} MB. MP4 funciona en todos los celulares.`;
+    if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name} · hasta ${P.exp.toLocaleString("es-MX")} experiencias`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
+    const active=r.experiences.filter(x=>!x.paused);
     const exp=ed?r.experiences.find(x=>x.slug===ed):null;
-    if(exp) editing(exp);
-    else if(r.experiences.length>=r.limit){ document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); $("full").hidden=false; $("fullEdit").href="?editar="+encodeURIComponent(r.experiences[0].slug); document.querySelector(".side").hidden=true; }
+    const block=(title,text,editSlug)=>{ document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); $("full").hidden=false; document.querySelector(".side").hidden=true;
+      $("fullTitle").textContent=title; $("fullText").textContent=text; $("fullEdit").hidden=!editSlug; if(editSlug) $("fullEdit").href="?editar="+encodeURIComponent(editSlug); };
+    const inc=P.exp===1?"una experiencia a la vez":`${P.exp.toLocaleString("es-MX")} experiencias activas`;
+    if(exp&&exp.paused) block("Esta experiencia está pausada",`Tu plan ${P.name} incluye ${inc}. Mejora tu plan para reactivarla, o bórrala desde tu cuenta.`,null);
+    else if(exp) editing(exp);
+    else if(active.length>=P.exp) P.exp===1
+      ? block("Ya tienes tu experiencia",`Tu plan ${P.name} incluye ${inc}. Puedes editarla, borrarla para crear otra, o mejorar tu plan.`,active[0].slug)
+      : block("Ya usaste todas tus experiencias",`Tu plan ${P.name} incluye ${inc}. Edita o borra una desde tu cuenta, o mejora tu plan.`,null);
   }catch(e){ if(e.status===401){ toLogin(); return; } }
   check(); updatePreview();
 })();

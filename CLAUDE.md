@@ -18,6 +18,7 @@ Responder a César en español, directo y práctico.
 | `/tarjeta/` | Tarjeta digital de César (destino de sus tarjetas NFC) |
 | `/johara/` | Portal de Johara De Leija, Directora General de OCV Tabasco (clienta) |
 | `/ra/ocv-johara/` | RA sobre la tarjeta impresa de Johara |
+| `/cuenta/`, `/crear/`, `/x/`, `/admin/` | Plataforma de RA (ver abajo) |
 | `/proyectos/<nombre>/` | Experiencias de Vórtice VR que se abren desde la portada: `observatorio`, `orbita`, `deletreo-lsm`, `steal-a-pinata` (archivos de César, publicados tal cual; a `orbita` solo se le agregó el encabezado HTML) |
 | `/assets/` | Logos e íconos compartidos |
 | `/assets/proyectos/` | Imágenes de las tarjetas de la portada (capturas con Chrome headless; la del juego es su portada original) |
@@ -83,7 +84,13 @@ Detalles:
 3. Cuando César apruebe: `git switch main && git merge --ff-only preview && git push` (eso publica). Subir `main` y `preview` en pushes separados, no al mismo tiempo.
 
 ## Plataforma de RA (`/cuenta/` y `/crear/`)
-Cualquiera crea una cuenta y una experiencia (imagen + video + botones) y obtiene `https://<nombre>.vorticevr.mx/` y un QR. Plan de prueba: 1 experiencia por cuenta (`LIMITS.perAccount`), dura 30 días, video ≤ 30 s y 25 MB.
+Cualquiera crea una cuenta y experiencias (imagen + video + botones) y obtiene `https://<nombre>.vorticevr.mx/` y un QR.
+- **Planes** (`PLANS` en `worker.js`): Gratis 1 experiencia, 30 días, video 30 s / 25 MB · Básico $199/mes 5 exp. · Pro $499/mes 50 exp. · Escuela $1,500/mes 1000 exp. (se vende por fuera, no aparece en la página; pago anual con descuento por definir). Los pagados: experiencias sin vencimiento mientras el plan esté vigente, video 1 min (Básico) o 2 min (Pro/Escuela) y 50 MB (no subir de 50 MB: el Worker lee el video completo en memoria).
+- `users.plan`, `plan_until` (pagado hasta; null = sin fecha), `plan_note`. `experiences.paused`; una experiencia con plan pagado tiene `expires` = año 9999 (`FAR`).
+- Cambiar de plan (`applyPlan`, una sola consulta): quedan activas las N más recientes; las demás se pausan (el visor dice "pausada") y se borran a los 30 días si no sube de plan. El cron diario regresa a Gratis las cuentas con `plan_until` vencido.
+- **`/admin/`**: solo `ADMIN_EMAILS` (por defecto `lad.cesargarcia@gmail.com`; se puede cambiar con la variable). Busca cuentas, ve sus experiencias, cambia plan con "pagado hasta" y nota, y opcionalmente avisa por correo. Así se activan escuelas y, mientras no haya Stripe, Básico/Pro (el botón "Lo quiero" del dashboard abre WhatsApp).
+- Stripe (decidido, por construir): Checkout + Customer Portal + webhook para Básico y Pro; Escuela sigue manual.
+- La tabla `experiences` tenía `email UNIQUE` (1 por cuenta): `migrate()` la copia a una tabla sin esa restricción. Producción y preview comparten la D1: todo cambio de esquema debe dejar funcionando la otra versión.
 - `/cuenta/`: registro (nombre, correo, contraseña) → código de 6 dígitos al correo **una sola vez** para confirmar → sesión de 30 días. Iniciar sesión con correo y contraseña; "Olvidé mi contraseña" con código. Dashboard: experiencias con imagen, link, QR descargable, vistas, días restantes, Editar (`/crear/?editar=<slug>`), Borrar; cambiar contraseña; cerrar sesión. `?siguiente=crear` regresa al creador después de entrar; `?publicada=<slug>` muestra el aviso de publicada.
 - `/crear/`: requiere sesión (si no, manda a `/cuenta/`). Reduce la imagen a 1000 px, compila el `.mind` en el navegador, vista previa con ajuste al ancho / al alto / toda la imagen, redes con solo el usuario (o @usuario o link pegado; WhatsApp de 10 dígitos agrega 52). Al publicar regresa al dashboard.
 - `assets/plataforma.js`: sesión (`localStorage` `vvr-sesion`), llamadas a la API y el QR con el isotipo (qrcode-generator).
@@ -95,7 +102,7 @@ Cualquiera crea una cuenta y una experiencia (imagen + video + botones) y obtien
 ## Siguiente etapa (acordado con César, octubre 2026)
 - **Respuestas siempre en español**, aunque César escriba en inglés.
 - **Multi-tenant**: todas las escuelas en el mismo Worker, D1 y R2. Cada escuela = organización (nombre, logo, colores, admins, maestros, alumnos, límites). Se identifica por subdominio (`escuela.vorticevr.mx`) o dominio propio (Cloudflare for SaaS). Todos los datos y consultas llevan la organización; videos en R2 bajo `org/<org>/...`. Pruebas automáticas de aislamiento entre escuelas. Respaldos (D1 Time Travel 30 días + respaldo propio).
-- **Planes propuestos** (MXN + IVA, por confirmar): Gratis (1 experiencia, 30 s / 25 MB, 30 días) · Creador $149/mes o $1,490/año (10 exp., 1 min / 60 MB) · Negocio $499/mes o $4,990/año (50 exp., 2 min / 100 MB, su logo) · Escuela marca blanca, licencia anual desde $18,000 (~500 alumnos) o $36,000 (~2,000), ilimitado con uso justo (~200 GB), capacitación incluida.
-- **Por construir**: planes y límites por cuenta; cobros (Stripe o Mercado Pago); organizaciones y panel de escuela; marca blanca y dominio propio; compresión de video en el navegador antes de subir; aviso de privacidad y términos (datos de menores); facturación CFDI.
+- **Planes**: ver "Plataforma de RA" (Gratis, Básico $199, Pro $499 y Escuela $1,500 por fuera). Falta confirmar si los precios incluyen IVA.
+- **Por construir**: cobros con Stripe para Básico y Pro; cuentas de maestros dentro del plan Escuela (organizaciones); marca blanca y dominio propio; compresión de video en el navegador antes de subir; aviso de privacidad y términos (datos de menores); facturación CFDI.
 - **Al empezar a cobrar**: pasar a Workers de pago (5 USD/mes) y subir `PBKDF2_ITER` (las contraseñas guardadas siguen funcionando). Costos estimados: 5–30 USD/mes para ~10 escuelas (R2 0.015 USD/GB después de 10 GB, tráfico gratis; Resend Pro 20 USD/mes si pasan de 100 correos/día).
 - **Pendientes de César**: confirmar que llegan los códigos por correo en producción; decidir si cambiar Villahermosa en el Observatorio; si "CEO" está bien en inglés; si se traducen los proyectos; probar la grabación de video de la RA en iPhone.

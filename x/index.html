@@ -192,7 +192,7 @@ async function load(){
   if(!slug){ message("Experiencia no encontrada","Revisa que el link esté completo."); return; }
   const base=new URLSearchParams(location.search).get("api")||"";
   let r; try{ r=await fetch(`${base}/api/exp/${encodeURIComponent(slug)}`,{signal:AbortSignal.timeout?AbortSignal.timeout(15000):undefined}); }catch(e){ message("Sin conexión","Revisa tu internet y vuelve a abrir el link."); return; }
-  if(r.status===410){ message("Esta experiencia ya terminó","Las experiencias de prueba duran 30 días."); return; }
+  if(r.status===410){ const j=await r.json().catch(()=>({})); if(j.paused) message("Esta experiencia está pausada","Su creador puede reactivarla desde su cuenta."); else message("Esta experiencia ya terminó","Las experiencias de prueba duran 30 días."); return; }
   if(!r.ok){ message("Experiencia no encontrada","Revisa que el link esté completo."); return; }
   CFG=await r.json(); CFG.base=base;
   const m=`${base}/m/${CFG.slug}/`;

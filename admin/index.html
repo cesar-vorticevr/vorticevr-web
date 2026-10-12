@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Administración · Vórtice VR</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../assets/icono.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Admin of the AR platform (only ADMIN_EMAILS): accounts, their plan and experiences; plans are activated by hand here. */
+:root{--void:#05020b;--panel:rgba(20,9,40,.72);--line:rgba(190,150,255,.2);--line2:rgba(190,150,255,.45);--vortex:#8b3fd6;--vortex-d:#5a1f8f;--lav:#d2b8ff;--ink:#f2ecff;--mute:#a99bcb;--sun:#ffbe55;--ok:#74e8ba;--bad:#ff8a9e;
+  --fd:"Chakra Petch",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;min-height:100vh;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55}
+a{color:var(--lav)}
+:focus-visible{outline:2px solid var(--lav);outline-offset:3px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1100px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 8px}
+header img{height:24px;display:block}
+header .acts{display:flex;align-items:center;gap:14px;font-family:var(--fd);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase}
+header .acts a{text-decoration:none;color:var(--mute)}
+main{max-width:1100px;margin:0 auto;padding:10px 20px 80px}
+.card{border:1px solid var(--line);background:var(--panel);border-radius:18px;padding:20px}
+.kick{font-family:var(--fd);font-size:.78rem;letter-spacing:.26em;text-transform:uppercase;color:var(--sun);font-weight:600}
+h1{font-family:var(--fd);font-size:clamp(1.8rem,4vw,2.6rem);line-height:1.05;margin:6px 0 18px}
+h2{font-family:var(--fd);margin:0 0 6px;font-size:1.2rem}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+.stats div{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:rgba(5,2,11,.5)}
+.stats b{display:block;font-family:var(--fd);font-size:1.6rem}
+.stats span{font-size:.8rem;color:var(--mute)}
+.how{margin-bottom:18px}
+.how ol{margin:8px 0 0;padding-left:20px;color:var(--mute)}
+.how li{margin:4px 0}
+.how b{color:var(--ink)}
+input,select{font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:10px 12px}
+input:focus,select:focus{border-color:var(--lav);outline:none}
+.search{width:100%;margin-bottom:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--fd);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:.78rem;border:1px solid var(--line2);border-radius:999px;padding:9px 16px;color:var(--ink);background:rgba(20,9,40,.6);cursor:pointer;text-decoration:none}
+.btn.primary{background:linear-gradient(135deg,var(--vortex),var(--vortex-d));border-color:var(--lav)}
+.btn.sm{padding:6px 12px;font-size:.72rem}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.user{margin-bottom:10px;padding:16px 18px}
+.uhead{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.uhead h2{margin:0;font-size:1.1rem;overflow-wrap:anywhere}
+.uhead .em{color:var(--mute);font-size:.9rem;overflow-wrap:anywhere}
+.meta{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:.85rem;color:var(--mute);margin-top:8px}
+.meta b{color:var(--ink)}
+.tag{display:inline-block;font-family:var(--fd);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;border-radius:999px;padding:3px 10px;border:1px solid var(--line2);color:var(--mute);vertical-align:middle}
+.tag.basico{border-color:var(--lav);color:var(--lav)} .tag.pro{border-color:var(--sun);color:var(--sun)} .tag.escuela{border-color:var(--ok);color:var(--ok)}
+.tag.warn{border-color:var(--bad);color:var(--bad)}
+.acts2{display:flex;gap:8px;flex-wrap:wrap}
+.form{border-top:1px solid var(--line);margin-top:14px;padding-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px;align-items:end}
+.form label{display:flex;flex-direction:column;gap:6px;font-size:.75rem;font-family:var(--fd);letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.form .wide{grid-column:1/-1}
+.form .quick{display:flex;gap:6px;flex-wrap:wrap}
+.form .chk{flex-direction:row;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-family:var(--fb);font-size:.9rem;color:var(--ink)}
+.msg{font-size:.9rem;min-height:1.2em}
+.msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+.exps{border-top:1px solid var(--line);margin-top:14px;padding-top:10px;display:grid;gap:8px}
+.exps a{font-family:var(--fm);font-size:.85rem;overflow-wrap:anywhere}
+.exps .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.88rem}
+.exps img{width:56px;height:42px;object-fit:cover;border-radius:6px;background:#120826}
+.center{text-align:center;padding:40px 20px;color:var(--mute)}
+</style>
+</head>
+<body>
+<header><a href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a href="../cuenta/">Mi cuenta</a><a href="../">← Sitio</a></div></header>
+<main>
+  <span class="kick">Plataforma de RA</span>
+  <h1>Administración</h1>
+  <div class="center card" id="status">Cargando…</div>
+
+  <div id="panel" hidden>
+    <div class="stats" id="stats"></div>
+
+    <details class="card how">
+      <summary><b>Cómo activar un plan pagado por fuera (escuelas, transferencias)</b></summary>
+      <ol>
+        <li>La persona responsable crea su cuenta en <b>vorticevr.mx/cuenta</b> con el correo de la escuela y la confirma con el código.</li>
+        <li>Recibes el pago (transferencia, efectivo, factura).</li>
+        <li>Aquí búscala por correo → <b>Cambiar plan</b> → elige el plan → <b>Pagado hasta</b> (+1 mes o +1 año) → escribe una nota (cómo pagó, factura) → <b>Guardar</b>.</li>
+        <li>Le llega un correo de aviso (si dejas la casilla marcada). Sus experiencias quedan activas sin vencimiento hasta esa fecha.</li>
+        <li>Si llega la fecha y no renuevas el plan, la cuenta regresa sola a Gratis: queda 1 experiencia activa y las demás se pausan 30 días antes de borrarse. Si renueva dentro de esos 30 días, solo vuelves a activarle el plan y se reactivan.</li>
+      </ol>
+    </details>
+
+    <input class="search" id="q" type="search" placeholder="Buscar por correo o nombre" autocomplete="off">
+    <div id="list"></div>
+  </div>
+</main>
+
+<script src="../assets/plataforma.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=t=>new Date(t).toLocaleDateString("es-MX",{day:"numeric",month:"short",year:"numeric"});
+const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+let PLANS={};
+
+async function load(q=""){
+  const r=await VVR.call("admin/users?q="+encodeURIComponent(q));
+  PLANS=r.plans; const t=r.totals;
+  $("stats").innerHTML=[[t.users,"cuentas confirmadas"],[t.paid,"con plan pagado"],[t.experiences,"experiencias activas"],[t.views,"vistas en total"]]
+    .map(([n,l])=>`<div><b>${Number(n||0).toLocaleString("es-MX")}</b><span>${l}</span></div>`).join("");
+  const list=$("list"); list.replaceChildren();
+  if(!r.users.length){ list.innerHTML=`<div class="card center">No hay cuentas${q?" con esa búsqueda":""}.</div>`; return; }
+  for(const u of r.users) list.appendChild(userCard(u));
+}
+
+function userCard(u){
+  const el=document.createElement("article"); el.className="card user";
+  const P=PLANS[u.effective]||PLANS.gratis, lapsed=u.plan&&u.plan!=="gratis"&&u.effective==="gratis";
+  el.innerHTML=`<div class="uhead"><div><h2>${esc(u.name||"(sin nombre)")} <span class="tag ${u.effective}">${esc(P.name)}</span>${u.verified?"":' <span class="tag warn">Sin confirmar</span>'}${lapsed?' <span class="tag warn">Venció</span>':""}</h2><div class="em">${esc(u.email)}</div></div>
+      <div class="acts2"><button class="btn sm primary" data-a="plan">Cambiar plan</button><button class="btn sm" data-a="exps">Ver experiencias</button></div></div>
+    <div class="meta"><span><b>${u.active}</b> de ${P.exp.toLocaleString("es-MX")} activas</span>${u.paused?`<span><b>${u.paused}</b> pausadas</span>`:""}<span><b>${Number(u.views||0).toLocaleString("es-MX")}</b> vistas</span>
+      ${u.plan_until&&u.effective!=="gratis"?`<span>Pagado hasta <b>${fmt(u.plan_until)}</b></span>`:""}<span>Cuenta desde ${fmt(u.created)}</span>${u.plan_note?`<span>Nota: ${esc(u.plan_note)}</span>`:""}</div>`;
+  el.querySelector("[data-a=plan]").addEventListener("click",()=>toggleForm(el,u));
+  el.querySelector("[data-a=exps]").addEventListener("click",()=>toggleExps(el,u));
+  return el;
+}
+
+function toggleForm(el,u){
+  const old=el.querySelector(".form"); if(old){ old.remove(); return; }
+  const f=document.createElement("div"); f.className="form";
+  const until=u.plan_until&&u.plan_until>Date.now()?ymd(new Date(u.plan_until)):"";
+  f.innerHTML=`<label>Plan<select data-k="plan">${Object.entries(PLANS).map(([id,p])=>`<option value="${id}" ${id===u.effective?"selected":""}>${esc(p.name)} · ${p.exp.toLocaleString("es-MX")} exp.${p.price?" · $"+p.price.toLocaleString("es-MX"):""}</option>`).join("")}</select></label>
+    <label>Pagado hasta<input type="date" data-k="until" value="${until}"></label>
+    <div class="quick"><button class="btn sm" type="button" data-m="1">+1 mes</button><button class="btn sm" type="button" data-m="12">+1 año</button><button class="btn sm" type="button" data-m="0">Sin fecha</button></div>
+    <label class="wide">Nota (cómo pagó, factura, contacto)<input type="text" data-k="note" maxlength="300" value="${esc(u.plan_note||"")}"></label>
+    <label class="chk wide"><input type="checkbox" data-k="notify" checked> Avisarle por correo que su plan está activo</label>
+    <div class="wide acts2"><button class="btn primary" type="button" data-a="save">Guardar</button><span class="msg" data-k="msg"></span></div>`;
+  const k=n=>f.querySelector(`[data-k=${n}]`), msg=(t,c)=>{ k("msg").className="msg "+(c||""); k("msg").textContent=t; };
+  f.querySelectorAll("[data-m]").forEach(b=>b.addEventListener("click",()=>{ const m=+b.dataset.m; if(!m) k("until").value="";
+    else { const base=k("until").value?new Date(k("until").value+"T12:00"):new Date(); base.setMonth(base.getMonth()+m); k("until").value=ymd(base); } warn(); }));
+  const warn=()=>{ const p=PLANS[k("plan").value]; const extra=u.active-p.exp;
+    msg(extra>0?`Se pausarán ${extra} de sus experiencias (las menos recientes).`:k("plan").value!=="gratis"&&!k("until").value?"Sin fecha: el plan queda activo hasta que lo cambies.":"", extra>0?"bad":""); };
+  k("plan").addEventListener("change",warn); k("until").addEventListener("change",warn); warn();
+  k("plan").addEventListener("change",()=>{ k("notify").checked=k("plan").value!=="gratis"; });
+  f.querySelector("[data-a=save]").addEventListener("click",async e=>{ e.target.disabled=true; msg("Guardando…");
+    try{ await VVR.call("admin/plan",{json:{email:u.email,plan:k("plan").value,until:k("plan").value==="gratis"?null:k("until").value||null,note:k("note").value,notify:k("notify").checked}});
+      msg("Listo.","ok"); setTimeout(()=>load($("q").value.trim()),700); }
+    catch(err){ msg(err.message,"bad"); e.target.disabled=false; } });
+  el.appendChild(f);
+}
+
+async function toggleExps(el,u){
+  const old=el.querySelector(".exps"); if(old){ old.remove(); return; }
+  const box=document.createElement("div"); box.className="exps"; box.textContent="Cargando…"; el.appendChild(box);
+  try{ const r=await VVR.call("admin/experiences?email="+encodeURIComponent(u.email));
+    box.innerHTML=r.experiences.length?r.experiences.map(x=>`<div class="row"><img src="${VVR.api}/m/${x.slug}/image" alt=""><b>${esc(x.title)}</b>${x.paused?' <span class="tag warn">Pausada</span>':""}<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.url.replace(/^https?:\/\//,"").replace(/\/$/,""))}</a><span class="em">${(x.views||0).toLocaleString("es-MX")} vistas · ${x.forever?"sin vencimiento":"hasta "+fmt(x.expires)}</span></div>`).join(""):"Sin experiencias.";
+  }catch(err){ box.textContent=err.message; }
+}
+
+let timer=0;
+$("q").addEventListener("input",()=>{ clearTimeout(timer); timer=setTimeout(()=>load($("q").value.trim()).catch(e=>alert(e.message)),300); });
+
+(async()=>{
+  if(!VVR.session()){ location.replace("../cuenta/?siguiente=admin"); return; }
+  try{ await load(); $("status").hidden=true; $("panel").hidden=false; }
+  catch(e){ if(e.status===401){ location.replace("../cuenta/?siguiente=admin"); return; }
+    $("status").textContent=e.status===403?"Esta cuenta no tiene acceso a la administración.":e.message; }
+})();
+</script>
+</body>
+</html>
