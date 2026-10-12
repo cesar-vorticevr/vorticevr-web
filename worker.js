@@ -36,7 +36,7 @@ export default {
       return assets(request, env, url);
     } catch (err) {
       console.error(err);
-      return json({ error: "Error interno. Intenta de nuevo." }, 500);
+      return json({ error: "Error interno. Intenta de nuevo.", detalle: env.SHOW_ERRORS === "0" ? undefined : String(err && err.message || err).slice(0, 200) }, 500);
     }
   },
 
