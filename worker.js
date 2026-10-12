@@ -14,6 +14,9 @@ const VIDEO = /\.(mp4|m4v|webm|mov)$/i;
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])$/;
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i;
 const BUTTONS = ["whatsapp", "facebook", "instagram", "youtube", "x", "tiktok", "web"];
+const LABELS = { whatsapp: "WhatsApp", facebook: "Facebook", instagram: "Instagram", youtube: "YouTube", x: "X", tiktok: "TikTok", web: "tu sitio web" };
+// social networks accept just the username (or a pasted link); this is how a username becomes a link
+const SOCIAL_BASE = { facebook: "https://facebook.com/", instagram: "https://instagram.com/", youtube: "https://youtube.com/@", x: "https://x.com/", tiktok: "https://tiktok.com/@" };
 
 export default {
   async fetch(request, env, ctx) {
@@ -36,7 +39,7 @@ export default {
       return assets(request, env, url);
     } catch (err) {
       console.error(err);
-      return json({ error: "Error interno. Intenta de nuevo.", detalle: env.SHOW_ERRORS === "0" ? undefined : String(err && err.message || err).slice(0, 200) }, 500);
+      return json({ error: "Error interno. Intenta de nuevo.", detalle: /workers.dev$|localhost$|^127./.test(url.hostname) ? String(err && err.message || err).slice(0, 200) : undefined }, 500);
     }
   },
 
@@ -242,7 +245,7 @@ function publicExp(row) {
   return { slug: row.slug, title: row.title, fit: d.fit, img: d.img, video: d.video, buttons: d.buttons, expires: row.expires };
 }
 function ownerExp(row, request, env) {
-  return { ...publicExp(row), url: expUrl(row.slug, request, env), created: row.created, views: row.views };
+  return { ...publicExp(row), url: expUrl(row.slug, request, env), created: row.created, updated: row.updated, views: row.views };
 }
 function expUrl(slug, request, env) {
   const root = env.ROOT_DOMAIN || ROOT_DEFAULT;
@@ -269,8 +272,13 @@ function cleanMeta(m) {
   for (const k of BUTTONS) {
     let v = String((m.buttons && m.buttons[k]) || "").trim().slice(0, 300);
     if (!v) continue;
-    if (k === "whatsapp") { v = v.replace(/[^\d+]/g, ""); if (v.replace(/\D/g, "").length < 8) return { error: "El número de WhatsApp no es válido." }; }
-    else { if (!/^https?:\/\//i.test(v)) v = "https://" + v; try { const u = new URL(v); if (!/^https?:$/.test(u.protocol)) throw 0; v = u.href; } catch { return { error: `El enlace de ${k} no es válido.` }; } }
+    if (k === "whatsapp") { v = v.replace(/\D/g, ""); if (v.length === 10) v = "52" + v; /* Mexican number without country code */ if (v.length < 10) return { error: "El número de WhatsApp no es válido." }; }
+    else if (SOCIAL_BASE[k] && !/^https?:/i.test(v) && !v.includes("/")) {
+      const u = v.replace(/^@/, "");
+      if (!/^[A-Za-z0-9._-]{1,60}$/.test(u)) return { error: `El usuario de ${LABELS[k]} no es válido (sin espacios).` };
+      v = SOCIAL_BASE[k] + u;
+    }
+    else { if (!/^https?:\/\//i.test(v)) v = "https://" + v; try { const u = new URL(v); if (!/^https?:$/.test(u.protocol)) throw 0; v = u.href; } catch { return { error: `El enlace de ${LABELS[k]} no es válido.` }; } }
     buttons[k] = v;
   }
   return { title, fit, img, video, buttons };
@@ -335,4 +343,5 @@ const linkMail = e => shell(`<h1 style="font-size:20px">¡Tu experiencia de real
 <p><b>${esc(e.title)}</b></p><p>Comparte este link (o el código QR adjunto):</p>
 <p><a href="${esc(e.url)}" style="color:#ffbe55;font-size:20px;font-weight:700">${esc(e.url.replace(/^https:\/\//, "").replace(/\/$/, ""))}</a></p>
 <p>Ábrelo en el celular, toca <b>Activar cámara</b> y apunta a tu imagen.</p>
+<p>Para editarla o borrarla entra a <a href="https://vorticevr.mx/crear/" style="color:#d2b8ff">vorticevr.mx/crear</a>, toca <b>Mi experiencia</b> y escribe este correo.</p>
 <p style="color:#a99bcb">Disponible hasta el ${new Date(e.expires).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}.</p>`);

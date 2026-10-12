@@ -53,7 +53,18 @@ input:focus{border-color:var(--lav);outline:none}
 .soc{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px}
 .soc label{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:4px 4px 4px 10px;background:rgba(5,2,11,.5)}
 .soc svg{width:20px;height:20px;fill:var(--lav);flex:none}
-.soc input{border:0!important;background:transparent!important;padding:8px 6px!important}
+.soc input{border:0!important;background:transparent!important;padding:8px 6px 8px 0!important;min-width:0}
+.soc .pre{font-family:var(--fm);font-size:.82rem;color:var(--mute);white-space:nowrap}
+header .acts{display:flex;align-items:center;gap:14px}
+.mybtn{font-family:var(--fd);font-weight:600;letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;border:1px solid var(--line2);border-radius:999px;padding:9px 14px;background:rgba(139,63,214,.2);color:var(--ink);cursor:pointer}
+.phead{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.phead img{width:150px;max-width:40%;border-radius:10px;border:1px solid var(--line2)}
+.phead h2{margin:4px 0 2px}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.stats div{flex:1 1 120px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:rgba(5,2,11,.5)}
+.stats b{display:block;font-family:var(--fd);font-size:1.25rem}
+.stats span{font-size:.78rem;color:var(--mute)}
+.btn.danger{border-color:rgba(255,138,158,.6);color:var(--bad)}
 .seg{display:flex;gap:6px;flex-wrap:wrap}
 .seg button{font:600 .85rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
@@ -88,7 +99,7 @@ input:focus{border-color:var(--lav);outline:none}
 </style>
 </head>
 <body>
-<header><a href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><a class="back" href="../">← Volver al sitio</a></header>
+<header><a href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><button class="mybtn" id="myBtn" type="button">Mi experiencia</button><a class="back" href="../">← Sitio</a></div></header>
 <main class="wrap">
   <div class="hero">
     <span class="kick">Gratis · prueba de 30 días</span>
@@ -98,13 +109,28 @@ input:focus{border-color:var(--lav);outline:none}
 
   <div class="grid">
     <div>
-      <section class="result" id="result" hidden>
-        <h2>¡Tu experiencia está lista!</h2>
-        <p id="resTitle" class="note"></p>
+      <section class="result" id="panel" hidden>
+        <p class="msg ok" id="pFresh" hidden style="margin:0 0 12px">¡Listo! Tu experiencia está publicada. También te la enviamos por correo.</p>
+        <div class="phead"><img id="pThumb" alt="Tu imagen"><div><span class="kick">Mi experiencia</span><h2 id="pTitle"></h2><p class="note" id="pWho" style="margin:0"></p></div></div>
         <div class="link"><code id="resUrl"></code><button class="btn" id="copy" type="button">Copiar link</button><a class="btn primary" id="open" target="_blank" rel="noopener">Abrir</a></div>
+        <div class="stats"><div><b id="pViews">0</b><span>veces abierta</span></div><div><b id="pDays">30</b><span>días restantes</span></div><div><b id="pUntil">—</b><span>disponible hasta</span></div></div>
         <canvas id="qr" width="1024" height="1180" aria-label="Código QR de tu experiencia"></canvas>
-        <div class="row"><button class="btn sun" id="dlqr" type="button">Descargar código QR</button><button class="btn" id="again" type="button">Editar</button></div>
-        <p class="note" id="resMail"></p>
+        <div class="row"><button class="btn sun" id="dlqr" type="button">Descargar código QR</button><button class="btn" id="pEdit" type="button">Editar</button><button class="btn danger" id="pDel" type="button">Borrar</button><button class="btn" id="pOut" type="button">Cerrar sesión</button></div>
+      </section>
+
+      <section class="step" id="login" hidden>
+        <h2>Entrar a mi experiencia</h2>
+        <p class="hint">Escribe el correo con el que la creaste y te mandamos un código. No necesitas contraseña.</p>
+        <label class="f" for="lEmail">Correo</label>
+        <input type="email" id="lEmail" autocomplete="email" placeholder="tu@correo.com">
+        <div class="row"><button class="btn primary" id="lSend" type="button">Enviarme el código</button></div>
+        <div id="lCodeBox" hidden>
+          <label class="f" for="lCode">Código de 6 dígitos</label>
+          <input type="text" id="lCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000">
+          <div class="row"><button class="btn primary" id="lVerify" type="button">Entrar</button></div>
+        </div>
+        <div class="msg" id="mLogin"></div>
+        <p class="note" style="margin-top:14px">¿Todavía no tienes una? <a href="#" id="lNew">Crea tu experiencia</a></p>
       </section>
 
       <section class="step" id="s1">
@@ -193,9 +219,15 @@ const MAX_VIDEO=25*1024*1024, MAX_SEC=30.5, IMG_MAX=1000;
 const S={img:null,imgBlob:null,imgW:0,imgH:0,target:null,compiling:false,video:null,vidW:0,vidH:0,fit:"width",token:null,email:null,mine:null,keepImg:false,keepVid:false};
 
 // ---------- social buttons ----------
-const SOC=[["whatsapp","WhatsApp","Número con lada, ej. 52 993 123 4567","tel"],["facebook","Facebook","facebook.com/tu-pagina","url"],["instagram","Instagram","instagram.com/tu-cuenta","url"],["youtube","YouTube","youtube.com/@tu-canal","url"],["x","X","x.com/tu-cuenta","url"],["tiktok","TikTok","tiktok.com/@tu-cuenta","url"],["web","Sitio web","tusitio.com","url"]];
+const SOC=[["whatsapp","WhatsApp","","993 123 4567","tel"],["facebook","Facebook","facebook.com/","tu-pagina","text"],["instagram","Instagram","instagram.com/","tu_usuario","text"],["youtube","YouTube","youtube.com/@","tu-canal","text"],["x","X","x.com/","tu_usuario","text"],["tiktok","TikTok","tiktok.com/@","tu_usuario","text"],["web","Sitio web","","tusitio.com","text"]];
+// accepts "usuario", "@usuario" or a pasted link, and keeps only the username for the social networks
+const BASES={facebook:"facebook.com",instagram:"instagram.com",youtube:"youtube.com",x:"x.com",tiktok:"tiktok.com"};
+function toHandle(k,v){ v=String(v||"").trim(); if(!BASES[k]||!v) return v;
+  if(/^https?:\/\//i.test(v)||v.includes("/")){ try{ const u=new URL(/^https?:/i.test(v)?v:"https://"+v); const seg=u.pathname.split("/").filter(Boolean)[0]||""; return decodeURIComponent(seg).replace(/^@/,""); }catch(e){ return v; } }
+  return v.replace(/^@/,""); }
 const ICON={whatsapp:'<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/>',facebook:'<path d="M20 2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8.6v-7.7H10v-3h2.6V9c0-2.6 1.6-4 3.9-4 1.1 0 2.1.1 2.3.1v2.7h-1.6c-1.3 0-1.5.6-1.5 1.5v1.9h3l-.4 3h-2.6V22H20a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>',instagram:'<path d="M7.8 2h8.4A5.8 5.8 0 0 1 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8A5.8 5.8 0 0 1 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2zm-.2 2A3.6 3.6 0 0 0 4 7.6v8.8A3.6 3.6 0 0 0 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6A3.6 3.6 0 0 0 16.4 4H7.6zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>',youtube:'<path d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4a2.5 2.5 0 0 0-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.8a2.5 2.5 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8c.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8zM10 15V9l5.2 3-5.2 3z"/>',x:'<path d="M17.8 3h3.1l-6.8 7.7L22 21h-6.2l-4.9-6.4L5.3 21H2.2l7.3-8.3L2 3h6.4l4.4 5.8L17.8 3zm-1.1 16.2h1.7L7.4 4.7H5.6l11.1 14.5z"/>',tiktok:'<path d="M16.6 3c.4 2.2 1.8 3.7 4 3.9v3a7.4 7.4 0 0 1-4-1.3v6.2A5.8 5.8 0 1 1 10.8 9v3.1a2.8 2.8 0 1 0 2.8 2.8V3h3z"/>',web:'<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm7.9 9h-3a15.6 15.6 0 0 0-1.3-5.5A8 8 0 0 1 19.9 11zM12 4c.9 1.1 1.8 3.6 2 7h-4c.2-3.4 1.1-5.9 2-7zM4.1 13h3c.1 2 .6 3.9 1.3 5.5A8 8 0 0 1 4.1 13zm3-2h-3a8 8 0 0 1 4.3-5.5A15.6 15.6 0 0 0 7.1 11zM12 20c-.9-1.1-1.8-3.6-2-7h4c-.2 3.4-1.1 5.9-2 7z"/>'};
-$("soc").innerHTML=SOC.map(([k,l,ph,t])=>`<label title="${l}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg><span class="vh" style="position:absolute;width:1px;height:1px;overflow:hidden">${l}</span><input type="${t==="tel"?"tel":"text"}" id="b_${k}" placeholder="${ph}" aria-label="${l}"></label>`).join("");
+$("soc").innerHTML=SOC.map(([k,l,pre,ph,t])=>`<label title="${l}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>${pre?`<span class="pre">${pre}</span>`:""}<input type="${t}" id="b_${k}" placeholder="${ph}" aria-label="${l}${pre?" (solo tu usuario)":""}" autocapitalize="off" autocomplete="off" spellcheck="false"></label>`).join("");
+for(const [k] of SOC) if(BASES[k]) $("b_"+k).addEventListener("change",e=>{ e.target.value=toHandle(k,e.target.value); });
 
 // ---------- step 1: image → downscale, preview, compile the MindAR target in this browser ----------
 let compilerMod=null;
@@ -285,20 +317,19 @@ $("verify").addEventListener("click",async()=>{ const m=$("mMail"); m.className=
     S.token=r.token; S.email=r.email; saveSession(); m.textContent=""; signedIn(r.experience); }
   catch(e){ m.className="msg bad"; m.textContent=e.message; } });
 $("code").addEventListener("keydown",e=>{ if(e.key==="Enter") $("verify").click(); });
-$("logout").addEventListener("click",()=>{ S.token=S.email=S.mine=null; try{localStorage.removeItem(SAVE)}catch(e){} $("mailA").hidden=false; $("mailB").hidden=true; $("mine").hidden=true; $("codeBox").hidden=true; $("n5").classList.remove("done"); check(); });
+$("logout").addEventListener("click",()=>{ S.token=S.email=S.mine=null; try{localStorage.removeItem(SAVE)}catch(e){} location.reload(); return; $("mailA").hidden=false; $("mailB").hidden=true; $("mine").hidden=true; $("codeBox").hidden=true; $("n5").classList.remove("done"); check(); });
 function signedIn(exp){
   $("mailA").hidden=true; $("mailB").hidden=false; $("who").textContent="Correo confirmado: "+S.email; $("n5").classList.add("done");
   S.mine=exp||null; const mine=$("mine");
   if(exp){ mine.hidden=false;
-    mine.innerHTML=`Ya tienes una experiencia: <b>${exp.title.replace(/</g,"&lt;")}</b> · <a href="${exp.url}" target="_blank" rel="noopener">${exp.url.replace(/^https?:\/\//,"").replace(/\/$/,"")}</a><br>Al publicar la vas a <b>actualizar</b> (sigue disponible hasta el ${new Date(exp.expires).toLocaleDateString("es-MX")}). <button class="btn" id="del" type="button" style="margin-top:8px;padding:8px 14px">Borrarla</button>`;
-    $("del").addEventListener("click",async()=>{ if(!confirm("¿Borrar tu experiencia? El link dejará de funcionar.")) return; try{ await call("me",{method:"DELETE"}); S.mine=null; mine.hidden=true; checkSlug(); }catch(e){ alert(e.message); } });
+    mine.innerHTML=`Estás editando tu experiencia <b>${exp.title.replace(/</g,"&lt;")}</b>. Al publicar se actualiza (sigue disponible hasta el ${new Date(exp.expires).toLocaleDateString("es-MX")}).`;
     prefill(exp);
   } else mine.hidden=true;
   check();
 }
 function prefill(exp){
   if(!$("title").value) $("title").value=exp.title; if(!slugIn.value){ slugIn.value=exp.slug; } checkSlug();
-  for(const [k] of SOC){ const el=$("b_"+k); if(!el.value&&exp.buttons&&exp.buttons[k]) el.value=exp.buttons[k]; }
+  for(const [k] of SOC){ const el=$("b_"+k); if(!el.value&&exp.buttons&&exp.buttons[k]) el.value=k==="whatsapp"?exp.buttons[k].replace(/^52(?=\d{10}$)/,""):toHandle(k,exp.buttons[k]); }
   S.fit=exp.fit||"width"; document.querySelectorAll("#fit button").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.fit===S.fit)));
   if(!S.imgBlob){ S.keepImg=true; S.imgW=exp.img.w; S.imgH=exp.img.h; const u=`${API}/m/${exp.slug}/image`; $("pImg").src=u; $("tImg").src=u; $("tImg").hidden=false; $("lImg").textContent="Imagen actual (puedes cambiarla)"; $("n1").classList.add("done"); }
   if(!S.video){ S.keepVid=true; S.vidW=exp.video.w; S.vidH=exp.video.h; const u=`${API}/m/${exp.slug}/video`; $("pVid").src=u; $("pVid").play().catch(()=>{}); $("tVid").src=u; $("tVid").hidden=false; $("lVid").textContent="Video actual (puedes cambiarlo)"; $("n2").classList.add("done"); }
@@ -318,7 +349,7 @@ function check(){
 $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Subiendo…"; bar.hidden=false; $("publish").disabled=true;
   const meta={slug:slugIn.value,title:$("title").value.trim(),fit:S.fit,img:{w:S.imgW,h:S.imgH},video:{w:S.vidW,h:S.vidH},buttons:{}};
-  for(const [k] of SOC){ const v=$("b_"+k).value.trim(); if(v) meta.buttons[k]=v; }
+  for(const [k] of SOC){ const v=toHandle(k,$("b_"+k).value); if(v) meta.buttons[k]=v; }
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
   if(S.imgBlob&&S.target){ fd.append("image",S.imgBlob,"image.jpg"); fd.append("target",S.target,"target.mind"); }
   if(S.video) fd.append("video",S.video,S.video.name);
@@ -328,12 +359,29 @@ $("publish").addEventListener("click",async()=>{
   xhr.upload.onprogress=e=>{ if(e.lengthComputable) bar.firstElementChild.style.width=(e.loaded/e.total*100)+"%"; };
   xhr.onload=()=>{ bar.hidden=true; let j={}; try{ j=JSON.parse(xhr.responseText); }catch(e){}
     if(xhr.status!==200){ m.className="msg bad"; m.textContent=j.error||"No se pudo publicar."; $("publish").disabled=false; if(xhr.status===401) $("logout").click(); return; }
-    m.textContent=""; S.mine=j.experience; showResult(j.experience); };
+    m.textContent=""; S.mine=j.experience; showPanel(j.experience,true); };
   xhr.onerror=()=>{ bar.hidden=true; m.className="msg bad"; m.textContent="Se cortó la conexión. Intenta de nuevo."; $("publish").disabled=false; };
   xhr.send(fd);
 });
 
-// ---------- result: link + QR ----------
+// ---------- views: editor (steps) · login · panel ----------
+const steps=()=>document.querySelectorAll(".step:not(#login)");
+function showEditor(){ $("panel").hidden=true; $("login").hidden=true; steps().forEach(x=>x.hidden=false); document.querySelector(".hero").hidden=false; }
+function showLogin(){ $("panel").hidden=true; steps().forEach(x=>x.hidden=true); $("login").hidden=false; document.querySelector(".hero").hidden=true; $("lEmail").focus(); }
+$("myBtn").addEventListener("click",()=>{ if(S.token&&S.mine) showPanel(S.mine); else if(S.token){ showEditor(); $("s1").scrollIntoView({behavior:"smooth"}); } else showLogin(); });
+$("lNew").addEventListener("click",e=>{ e.preventDefault(); showEditor(); });
+$("lSend").addEventListener("click",async()=>{ const m=$("mLogin"); m.className="msg"; m.textContent="Enviando…"; $("lSend").disabled=true;
+  try{ const r=await call("code",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("lEmail").value})});
+    $("lCodeBox").hidden=false; $("lCode").focus(); m.className="msg ok"; m.textContent=r.dev_code?`Modo de prueba: tu código es ${r.dev_code}`:"Te enviamos un código. Revisa también la carpeta de spam."; }
+  catch(e){ m.className="msg bad"; m.textContent=e.message; } setTimeout(()=>$("lSend").disabled=false,5000); });
+$("lVerify").addEventListener("click",async()=>{ const m=$("mLogin"); m.className="msg"; m.textContent="Confirmando…";
+  try{ const r=await call("verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("lEmail").value,code:$("lCode").value.trim()})});
+    S.token=r.token; S.email=r.email; saveSession(); m.textContent=""; $("email").value=r.email; signedIn(r.experience);
+    if(r.experience) showPanel(r.experience); else { showEditor(); $("mMail").className="msg ok"; $("mMail").textContent="Todavía no tienes una experiencia. Créala aquí."; } }
+  catch(e){ m.className="msg bad"; m.textContent=e.message; } });
+$("lCode").addEventListener("keydown",e=>{ if(e.key==="Enter") $("lVerify").click(); });
+
+// ---------- panel: link + QR ----------
 let icon=null;
 function drawQR(url,slug){
   const qr=qrcode(0,"H"); qr.addData(url); qr.make(); const n=qr.getModuleCount();
@@ -345,18 +393,24 @@ function drawQR(url,slug){
   x.fillStyle="#6b279b"; x.font="500 30px 'IBM Plex Sans', sans-serif"; x.fillText("Escanea y apunta tu cámara a la imagen",W/2,W+122);
 }
 icon=new Image(); icon.src="../assets/icono.png";
-function showResult(exp){
-  drawQR(exp.url,exp.slug);
-  $("result").hidden=false; $("resTitle").textContent=exp.title; $("resUrl").textContent=exp.url.replace(/^https:\/\//,"").replace(/\/$/,"");
-  $("open").href=exp.url; $("resMail").textContent=`También te lo enviamos a ${S.email}. Disponible hasta el ${new Date(exp.expires).toLocaleDateString("es-MX",{day:"numeric",month:"long",year:"numeric"})}.`;
-  document.querySelectorAll(".step").forEach(s=>s.hidden=true); scrollTo({top:0,behavior:"smooth"});
+function showPanel(exp,fresh){
+  S.mine=exp; drawQR(exp.url,exp.slug);
+  $("pFresh").hidden=!fresh; $("pTitle").textContent=exp.title; $("pWho").textContent=S.email||"";
+  $("pThumb").src=`${API}/m/${exp.slug}/image?v=${exp.updated||exp.created||""}`;
+  $("resUrl").textContent=exp.url.replace(/^https?:\/\//,"").replace(/\/$/,""); $("open").href=exp.url;
+  $("pViews").textContent=(exp.views||0).toLocaleString("es-MX");
+  $("pDays").textContent=Math.max(0,Math.ceil((exp.expires-Date.now())/864e5));
+  $("pUntil").textContent=new Date(exp.expires).toLocaleDateString("es-MX",{day:"numeric",month:"short"});
+  $("panel").hidden=false; $("login").hidden=true; steps().forEach(x=>x.hidden=true); document.querySelector(".hero").hidden=true; scrollTo({top:0,behavior:"smooth"});
   $("copy").onclick=async()=>{ try{ await navigator.clipboard.writeText(exp.url); $("copy").textContent="¡Copiado!"; setTimeout(()=>$("copy").textContent="Copiar link",1600); }catch(e){ prompt("Copia tu link:",exp.url); } };
   $("dlqr").onclick=()=>$("qr").toBlob(b=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download=`QR-${exp.slug}.png`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); },"image/png");
-  $("again").onclick=()=>{ $("result").hidden=true; document.querySelectorAll(".step").forEach(s=>s.hidden=false); signedIn(S.mine); };
+  $("pEdit").onclick=()=>{ showEditor(); signedIn(S.mine); $("s1").scrollIntoView({behavior:"smooth"}); };
+  $("pDel").onclick=async()=>{ if(!confirm("¿Borrar tu experiencia? El link y el QR dejarán de funcionar.")) return; try{ await call("me",{method:"DELETE"}); location.reload(); }catch(e){ alert(e.message); } };
+  $("pOut").onclick=()=>{ try{localStorage.removeItem(SAVE)}catch(e){} location.reload(); };
 }
 
 // ---------- session ----------
-(async()=>{ try{ const s=JSON.parse(localStorage.getItem(SAVE)||"null"); if(s&&s.token&&Date.now()-s.t<20*3600e3){ S.token=s.token; S.email=s.email; const r=await call("me"); signedIn(r.experience); } }catch(e){ S.token=null; } check(); updatePreview(); })();
+(async()=>{ try{ const s=JSON.parse(localStorage.getItem(SAVE)||"null"); if(s&&s.token&&Date.now()-s.t<20*3600e3){ S.token=s.token; S.email=s.email; const r=await call("me"); signedIn(r.experience); if(r.experience) showPanel(r.experience); } }catch(e){ S.token=null; } check(); updatePreview(); })();
 </script>
 </body>
 </html>
