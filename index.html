@@ -66,6 +66,59 @@ header.top nav a:hover{color:var(--ink)}
 .mkcta{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
 .mkcta small{color:var(--mute);font-size:.9rem}
 .mkcta small a{color:var(--lav)}
+/* "bring your images to life": plain-language pitch, a live demo (QR on a computer, open-the-camera on a phone)
+   and an animated phone that shows what happens: the image seen through the camera with the video on top of it */
+.mkhero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:56px;align-items:center;margin-bottom:64px}
+@media (max-width:900px){.mkhero{grid-template-columns:minmax(0,1fr);gap:40px}}
+.mktext h2{font-family:var(--fd);font-weight:700;font-size:clamp(2.3rem,5.6vw,4.2rem);line-height:1;margin:14px 0 18px;letter-spacing:-.01em;text-wrap:balance}
+.mktext h2 em{font-style:normal;background:linear-gradient(100deg,var(--lav),var(--sun));-webkit-background-clip:text;background-clip:text;color:transparent}
+.mktext>p{margin:0 0 26px;color:#ddd3f3;font-size:1.12rem;max-width:52ch}
+.try{display:flex;gap:18px;align-items:center;padding:16px 18px;border-radius:18px;border:1px solid rgba(255,190,85,.5);background:rgba(255,190,85,.08);margin-bottom:26px}
+.try canvas{width:128px;height:128px;border-radius:10px;background:#fff;flex:none}
+.try .tryq b{font-family:var(--fd);font-size:1.15rem;letter-spacing:.04em;color:var(--sun)}
+.try ol{margin:6px 0 0;padding-left:20px;display:grid;gap:2px;color:#ddd3f3;font-size:.98rem}
+.try .tryt{display:none;flex-direction:column;gap:10px;align-items:flex-start}
+.try .tryt small{color:var(--mute);font-size:.9rem}
+.try .tryt svg{width:20px;height:20px;fill:currentColor}
+.try.touch canvas,.try.touch .tryq{display:none}
+.try.touch .tryt{display:flex}
+.mkdemo{position:relative;aspect-ratio:1/1;max-width:560px;width:100%;justify-self:center}
+.mkdemo .poster{position:absolute;left:0;top:6%;width:74%;padding:14px;border-radius:14px;background:linear-gradient(160deg,rgba(40,16,74,.6),rgba(12,5,26,.7));border:1px solid var(--line2);box-shadow:0 30px 80px -30px rgba(139,63,214,.6);transform:rotate(-3deg)}
+.mkdemo .poster img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px}
+.mkdemo .poster::after{content:"";position:absolute;left:14px;right:14px;top:14px;height:3px;border-radius:3px;background:linear-gradient(90deg,transparent,var(--sun),transparent);box-shadow:0 0 18px var(--sun);animation:scan 3s var(--ease) infinite}
+@keyframes scan{0%,100%{top:14px;opacity:0}10%,90%{opacity:1}50%{top:calc(100% - 17px)}}
+.ptag,.stag{position:absolute;font-family:var(--fd);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;font-weight:600;padding:5px 12px;border-radius:999px}
+.ptag{left:18px;bottom:-14px;background:var(--surface-solid);border:1px solid var(--line2);color:var(--lav)}
+.mkdemo .phone{position:absolute;right:0;bottom:0;width:44%;aspect-ratio:9/18.5;border-radius:34px;padding:9px;background:linear-gradient(160deg,#2a1748,#0d0620);border:1px solid var(--line2);box-shadow:0 40px 90px -20px rgba(0,0,0,.9),0 0 50px rgba(139,63,214,.4);transform:rotate(4deg)}
+.mkdemo .screen{position:relative;width:100%;height:100%;border-radius:26px;overflow:hidden;background:#000}
+.mkdemo .cam{position:absolute;left:-30%;top:22%;width:160%;max-width:none;aspect-ratio:4/3;object-fit:cover;filter:brightness(.55) saturate(.8)}
+.mkdemo .vid{position:absolute;left:8%;right:8%;top:30%;aspect-ratio:16/10;border-radius:6px;overflow:hidden;box-shadow:0 0 0 2px var(--sun),0 12px 30px rgba(0,0,0,.7);animation:pop 9s var(--ease) infinite}
+.mkdemo .vid img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;animation:frame 9s linear infinite}
+.mkdemo .vid img:nth-child(2){animation-delay:3s}.mkdemo .vid img:nth-child(3){animation-delay:6s}
+.mkdemo .vid i{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--sun);transform-origin:0 50%;animation:prog 9s linear infinite}
+.stag{left:50%;bottom:16%;transform:translateX(-50%);white-space:nowrap;background:var(--sun);color:#1a0d00}
+@keyframes frame{0%{opacity:0}3%{opacity:1}33%{opacity:1}36%{opacity:0}100%{opacity:0}}
+@keyframes pop{0%{transform:scale(.4);opacity:0}6%{transform:scale(1);opacity:1}94%{transform:scale(1);opacity:1}100%{transform:scale(.4);opacity:0}}
+@keyframes prog{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+/* live demo: the image has to be fully visible so a phone can recognize it */
+.mkdemo.live .poster{transform:none;width:72%;top:0}
+.mkdemo.live .poster::after{display:none}
+.mkdemo.live .phone{width:38%;right:-2%;bottom:-4%}
+@media (max-width:900px){.mkdemo{max-width:440px}}
+.uses{display:flex;flex-direction:column;gap:14px;margin-bottom:52px}
+.uses .chips{display:flex;flex-wrap:wrap;gap:10px}
+.uses .chip{font-size:.9rem;padding:9px 16px}
+.mkplans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:16px}
+@media (max-width:820px){.mkplans{grid-template-columns:minmax(0,1fr)}}
+.mkplan{padding:22px;border-radius:16px;border:1px solid var(--line);background:linear-gradient(170deg,rgba(40,16,74,.5),rgba(12,5,26,.6))}
+.mkplan.hot{border-color:var(--sun);box-shadow:0 0 0 1px var(--sun) inset,0 20px 60px -30px rgba(255,190,85,.5)}
+.mkplan h3{margin:0;font-family:var(--fd);font-size:1.15rem}
+.mkplan .price{font-family:var(--fd);font-weight:700;font-size:2.2rem;line-height:1.2;margin:4px 0 6px}
+.mkplan .price small{font-size:.85rem;font-weight:500;color:var(--mute)}
+.mkplan p{margin:0;color:var(--mute);font-size:.95rem}
+.mknote{color:var(--mute);margin:0}
+.mknote a{color:var(--sun)}
+@media (prefers-reduced-motion:reduce){.mkdemo .poster::after,.mkdemo .vid,.mkdemo .vid i{animation:none}.mkdemo .vid img{animation:none}.mkdemo .vid img:first-child{opacity:1}}
 .lang{font:600 .78rem var(--fm);letter-spacing:.12em;min-width:46px;height:38px;padding:0 12px;border-radius:999px;border:1px solid var(--line2);background:transparent;color:var(--ink);cursor:pointer;transition:background .3s,border-color .3s}
 .lang:hover{border-color:var(--lav);background:rgba(139,63,214,.25)}
 header.top nav{gap:clamp(10px,2vw,22px)}
@@ -241,7 +294,7 @@ footer img{height:22px;width:auto}
 <header class="top" id="top"><div class="wrap">
   <a class="brand" href="./" aria-label="Vórtice VR, inicio" data-en-aria="Vórtice VR, home"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
   <nav aria-label="Secciones" data-en-aria="Sections">
-    <a href="#experiencias" data-en="Experiences">Experiencias</a><a href="#servicios" data-en="Services">Servicios</a><a href="#nosotros" data-en="About">Nosotros</a><a class="pill sun mag" href="cuenta/?siguiente=crear#registro" data-en="Create AR">Crea tu RA</a><a class="pill talk mag" href="#contacto" data-en="Let’s talk">Platiquemos</a>
+    <a href="#experiencias" data-en="Experiences">Experiencias</a><a href="#servicios" data-en="Services">Servicios</a><a href="#nosotros" data-en="About">Nosotros</a><a class="pill sun mag" href="#crea" data-en="Make yours">Crea la tuya</a><a class="pill talk mag" href="#contacto" data-en="Let’s talk">Platiquemos</a>
     <button class="lang mag" id="lang" type="button" aria-label="Ver en inglés" data-en-aria="Ver en español"><span data-en="ES">EN</span></button>
   </nav>
 </div></header>
@@ -260,7 +313,7 @@ footer img{height:22px;width:auto}
       <p class="fade" style="transition-delay:.7s" data-en="We are a studio for augmented reality, virtual reality, mixed reality and applied artificial intelligence. We design experiences for education, culture, tourism and brands, and take them from concept to something people use with their phone or a headset.">Somos un estudio de realidad aumentada, realidad virtual, realidad mixta e inteligencia artificial aplicada. Diseñamos experiencias para educación, cultura, turismo y marcas, y las llevamos del concepto a algo que la gente usa con su celular o con un visor.</p>
       <div class="actions fade" style="transition-delay:.9s">
         <a class="btn primary mag" href="#experiencias" data-en="Try it now ↓">Pruébalo ahora ↓</a>
-        <a class="btn sun mag" href="#crea" data-en="Create your AR for free">Crea tu RA gratis</a>
+        <a class="btn sun mag" href="#crea" data-en="Bring your image to life">Dale vida a tu imagen</a>
         <a class="btn mag" href="https://wa.me/529983448207?text=Hola%2C%20quiero%20platicar%20de%20un%20proyecto%20con%20V%C3%B3rtice%20VR" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg><span data-en="Let’s talk">Platiquemos</span></a>
       </div>
     </div></div>
@@ -271,6 +324,57 @@ footer img{height:22px;width:auto}
     <span data-en="Augmented reality">Realidad aumentada</span><span data-en="Virtual reality">Realidad virtual</span><span data-en="&lt;b&gt;✦&lt;/b&gt; Mixed reality"><b>✦</b> Realidad mixta</span><span data-en="Artificial intelligence">Inteligencia artificial</span><span data-en="Education">Educación</span><span data-en="Culture">Cultura</span><span data-en="&lt;b&gt;✦&lt;/b&gt; Tourism"><b>✦</b> Turismo</span><span data-en="Video games">Videojuegos</span>
     <span data-en="Augmented reality">Realidad aumentada</span><span data-en="Virtual reality">Realidad virtual</span><span data-en="&lt;b&gt;✦&lt;/b&gt; Mixed reality"><b>✦</b> Realidad mixta</span><span data-en="Artificial intelligence">Inteligencia artificial</span><span data-en="Education">Educación</span><span data-en="Culture">Cultura</span><span data-en="&lt;b&gt;✦&lt;/b&gt; Tourism"><b>✦</b> Turismo</span><span data-en="Video games">Videojuegos</span>
   </div></div>
+
+  <section id="crea" class="mk"><div class="wrap">
+    <div class="mkhero">
+      <div class="mktext reveal">
+        <span class="kick" data-en="New · free to start">Nuevo · empieza gratis</span>
+        <h2 data-en="Bring your images &lt;em&gt;to life&lt;/em&gt;.">Haz que tus imágenes <em>cobren vida</em>.</h2>
+        <p data-en="Point your phone’s camera at an image (your business card, a poster, a menu, an invitation) and a video plays right on top of it. Nothing to install: it opens with a QR code or a link.">Apunta la cámara del celular a una imagen (tu tarjeta, un cartel, un menú, una invitación) y encima aparece un video. No hay que instalar nada: se abre con un código QR o un link.</p>
+        <div class="try" id="try" hidden>
+          <canvas id="tryQR" aria-label="Código QR de la prueba" data-en-aria="QR code for the demo"></canvas>
+          <div class="tryq">
+            <b data-en="Try it now">Pruébalo ya</b>
+            <ol><li data-en="Scan this QR with your phone.">Escanea este QR con tu celular.</li><li data-en="Tap &lt;i&gt;Open camera&lt;/i&gt;.">Toca <i>Abrir la cámara</i>.</li><li data-en="Point it at the image on this screen.">Apunta a la imagen de esta pantalla.</li></ol>
+          </div>
+          <div class="tryt">
+            <a class="btn primary" id="tryOpen" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3 7.2 5H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.2L15 3H9zm3 5a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg><span data-en="Open the camera">Abrir la cámara</span></a>
+            <small data-en="Then point it at this image on another screen, or on a friend’s phone.">Luego apunta a esta imagen en otra pantalla o en el celular de alguien más.</small>
+          </div>
+        </div>
+        <div class="mkcta">
+          <a class="btn sun mag" href="cuenta/?siguiente=crear#registro" data-en="Make mine free">Hacer la mía gratis</a>
+          <a class="btn mag" href="cuenta/" data-en="I already have an account">Ya tengo cuenta</a>
+        </div>
+      </div>
+      <div class="mkdemo reveal" id="mkdemo" aria-hidden="true">
+        <div class="poster"><img id="demoPoster" src="assets/proyectos/steal-a-pinata.webp" alt=""><span class="ptag" data-en="Your image">Tu imagen</span></div>
+        <div class="phone"><div class="screen">
+          <img class="cam" id="demoCam" src="assets/proyectos/steal-a-pinata.webp" alt="">
+          <div class="vid"><img src="assets/proyectos/observatorio.webp" alt=""><img src="assets/proyectos/orbita.webp" alt=""><img src="assets/proyectos/deletreo-lsm.webp" alt=""><i></i></div>
+          <span class="stag" data-en="Your video">Tu video</span>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="mkgrid">
+      <div class="mkstep reveal"><span class="num">1</span><h3 data-en="Upload an image and a video">Sube una imagen y un video</h3><p data-en="The image people will point at (a card, a poster, a cover) and the video that will appear on it. You see a preview and adjust it.">La imagen que la gente va a enfocar (una tarjeta, un cartel, una portada) y el video que aparecerá encima. Ves cómo queda y lo ajustas.</p></div>
+      <div class="mkstep reveal"><span class="num">2</span><h3 data-en="Get your link and QR">Recibe tu link y tu QR</h3><p data-en="Your own link, yourname.vorticevr.mx, and a QR to print next to your image. Add your WhatsApp and social networks.">Tu link propio, tunombre.vorticevr.mx, y un QR para imprimir junto a tu imagen. Agrega tu WhatsApp y tus redes.</p></div>
+      <div class="mkstep reveal"><span class="num">3</span><h3 data-en="People point their camera">La gente apunta su cámara</h3><p data-en="They scan the QR, open the camera and your image comes to life on their phone. They can take a photo or record it.">Escanean el QR, abren la cámara y tu imagen cobra vida en su celular. Hasta pueden tomarle foto o grabarla.</p></div>
+    </div>
+
+    <div class="uses reveal">
+      <span class="kick" data-en="Where to use it">¿Dónde lo usas?</span>
+      <div class="chips"><span class="chip" data-en="Business cards">Tarjetas de presentación</span><span class="chip" data-en="Menus and products">Menús y productos</span><span class="chip" data-en="Invitations">Invitaciones</span><span class="chip" data-en="Books and homework">Libros y tareas escolares</span><span class="chip" data-en="Posters and events">Carteles y eventos</span><span class="chip" data-en="Photos and memories">Fotos y recuerdos</span></div>
+    </div>
+
+    <div class="mkplans">
+      <div class="mkplan reveal"><h3 data-en="Free">Gratis</h3><div class="price">$0</div><p data-en="1 image with video · lasts 30 days">1 imagen con video · dura 30 días</p></div>
+      <div class="mkplan reveal"><h3 data-en="Basic">Básico</h3><div class="price">$199 <small data-en="MXN / month">MXN al mes</small></div><p data-en="5 images · change them whenever you want · no expiration while you pay">5 imágenes · cámbialas cuando quieras · sin vencimiento mientras pagues</p></div>
+      <div class="mkplan reveal hot"><h3>Pro</h3><div class="price">$499 <small data-en="MXN / month">MXN al mes</small></div><p data-en="50 images · bigger videos · opens straight to your experience, without the Vórtice VR screen">50 imágenes · videos más grandes · abre directo tu experiencia, sin la pantalla de Vórtice VR</p></div>
+    </div>
+    <p class="mknote" data-en="School or company? &lt;a href=&quot;https://wa.me/529983448207?text=Hola%2C%20quiero%20informaci%C3%B3n%20del%20plan%20para%20escuelas%20o%20empresas&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;Ask us about a plan for you&lt;/a&gt;.">¿Escuela o empresa? <a href="https://wa.me/529983448207?text=Hola%2C%20quiero%20informaci%C3%B3n%20del%20plan%20para%20escuelas%20o%20empresas" target="_blank" rel="noopener">Pregúntanos por un plan a tu medida</a>.</p>
+  </div></section>
 
   <section id="experiencias"><div class="wrap">
     <div class="shead reveal">
@@ -323,24 +427,6 @@ footer img{height:22px;width:auto}
           </div>
         </a>
       </article>
-    </div>
-  </div></section>
-
-  <section id="crea" class="mk"><div class="wrap">
-    <div class="shead reveal">
-      <span class="kick" data-en="New · free">Nuevo · gratis</span>
-      <h2 data-en="Create your own augmented reality.">Crea tu propia realidad aumentada.</h2>
-      <p data-en="Make your image come alive: point a phone at it and your video appears on top. No apps, no code. Share it with a link and a QR code.">Haz que tu imagen cobre vida: apuntas el celular y tu video aparece encima. Sin apps ni programación. La compartes con un link y un código QR.</p>
-    </div>
-    <div class="mkgrid">
-      <div class="mkstep reveal"><span class="num">1</span><h3 data-en="Create your account">Crea tu cuenta</h3><p data-en="With your name, email and a password. You confirm your email once.">Con tu nombre, correo y una contraseña. Confirmas tu correo una sola vez.</p></div>
-      <div class="mkstep reveal"><span class="num">2</span><h3 data-en="Upload your image and video">Sube tu imagen y tu video</h3><p data-en="A poster, a card, a cover… and a video of up to 30 seconds. You see the preview and adjust how it fits.">Un póster, una tarjeta, una portada… y un video de hasta 30 segundos. Ves la vista previa y ajustas cómo se acomoda.</p></div>
-      <div class="mkstep reveal"><span class="num">3</span><h3 data-en="Share your link and QR">Comparte tu link y tu QR</h3><p data-en="You get your own link, yourname.vorticevr.mx, and a QR to print. Add your WhatsApp and social networks.">Recibes tu link propio, tunombre.vorticevr.mx, y un QR para imprimir. Agrega tu WhatsApp y tus redes.</p></div>
-    </div>
-    <div class="mkcta reveal">
-      <a class="btn sun mag" href="cuenta/?siguiente=crear#registro" data-en="Create free account">Crear cuenta gratis</a>
-      <a class="btn mag" href="cuenta/" data-en="I already have an account">Ya tengo cuenta</a>
-      <small data-en="Free trial: 1 experience, active for 30 days.">Prueba gratis: 1 experiencia, activa por 30 días.</small>
     </div>
   </div></section>
 
@@ -467,6 +553,29 @@ footer img{height:22px;width:auto}
     c2.classList.toggle('hot',!!e.target.closest('a,button')); },{passive:true});
   document.addEventListener('pointerleave',()=>document.body.classList.remove('has-cur'));
   (function loop(){ rx+=(mx-rx)*.18; ry+=(my-ry)*.18; c1.style.transform=`translate(${mx}px,${my}px)`; c2.style.transform=`translate(${rx}px,${ry}px)`; requestAnimationFrame(loop); })();
+})();
+</script>
+
+<script>
+// ---- "Pruébalo ya": live demo with the platform experience "ejemplo" (César's account, Pro plan). If it does not
+// exist, the section keeps only the animation. Computer: a QR to scan and the image to point at. Phone: open the camera.
+(async()=>{
+  const DEMO="ejemplo";
+  let ok=false; try{ ok=(await fetch(`api/exp/${DEMO}`,{cache:"no-store"})).ok; }catch(e){}
+  if(!ok) return;
+  const img=`m/${DEMO}/image`, onRoot=/(^|\.)vorticevr\.mx$/.test(location.hostname);
+  const url=onRoot?`https://${DEMO}.vorticevr.mx/`:new URL(`e/${DEMO}/`,location.href).href;
+  document.getElementById("demoPoster").src=img; document.getElementById("demoCam").src=img;
+  document.getElementById("mkdemo").classList.add("live");
+  document.getElementById("tryOpen").href=url;
+  const tr=document.getElementById("try"); tr.hidden=false;
+  if(matchMedia("(pointer:coarse)").matches){ tr.classList.add("touch"); return; }
+  const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js";
+  s.onload=()=>{ const qr=qrcode(0,"M"); qr.addData(url); qr.make(); const n=qr.getModuleCount(), c=document.getElementById("tryQR"), x=c.getContext("2d"), cell=8, m=16;
+    c.width=c.height=n*cell+2*m; x.fillStyle="#fff"; x.fillRect(0,0,c.width,c.height); x.fillStyle="#1b0a36";
+    for(let r=0;r<n;r++) for(let k=0;k<n;k++) if(qr.isDark(r,k)) x.fillRect(m+k*cell,m+r*cell,cell,cell); };
+  s.onerror=()=>tr.classList.add("touch");
+  document.head.appendChild(s);
 })();
 </script>
 

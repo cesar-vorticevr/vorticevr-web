@@ -32,6 +32,10 @@ button{font:inherit;color:inherit;cursor:pointer}
 #intro .k{font-family:var(--fd);font-size:.78rem;letter-spacing:.24em;text-transform:uppercase;color:var(--sun)}
 #intro h1{font-family:var(--fd);font-size:clamp(1.6rem,6vw,2.4rem);line-height:1.1;margin:0;max-width:18ch;text-wrap:balance}
 #intro p{margin:0;max-width:34ch;color:var(--mute);line-height:1.5}
+#intro .steps{margin:0;padding:0;list-style:none;counter-reset:s;display:grid;gap:8px;text-align:left;color:var(--mute);max-width:34ch}
+#intro .steps li{counter-increment:s;display:flex;gap:10px;align-items:baseline;line-height:1.4}
+#intro .steps li::before{content:counter(s);flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:700 .78rem var(--fd);background:rgba(139,63,214,.45);color:#fff}
+#intro .steps b{color:var(--ink)}
 #intro .thumb{width:min(70vw,300px);border-radius:12px;box-shadow:0 0 0 2px rgba(210,184,255,.5),0 20px 50px -12px rgba(139,63,214,.7)}
 .big{font-family:var(--fd);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:.95rem;border:1px solid var(--lav);border-radius:999px;padding:16px 30px;color:#fff;background:linear-gradient(135deg,var(--vortex),#5a1f8f);box-shadow:0 0 30px rgba(139,63,214,.55)}
 .big:disabled{opacity:.6}
@@ -124,11 +128,11 @@ button{font:inherit;color:inherit;cursor:pointer}
 <header id="brand"><a href="https://vorticevr.mx/" aria-label="Vórtice VR"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a></header>
 
 <div id="intro">
-  <span class="k">Realidad aumentada</span>
+  <span class="k">Esta imagen tiene un video</span>
   <h1 id="title">Cargando…</h1>
   <img class="thumb" id="thumb" alt="Imagen que debes enfocar con la cámara" hidden>
-  <p>Activa la cámara y apunta a esta imagen para ver el video sobre ella.</p>
-  <button class="big" id="start" type="button" disabled>Activar cámara</button>
+  <ol class="steps"><li>Toca <b>Abrir la cámara</b> y, si te lo pregunta, <b>Permitir</b>.</li><li>Apunta a esta imagen.</li><li>Mira cómo cobra vida.</li></ol>
+  <button class="big" id="start" type="button" disabled>Abrir la cámara</button>
   <div id="err" hidden></div>
   <div class="made">Hecho con Vórtice VR · <a href="https://vorticevr.mx/cuenta/?siguiente=crear#registro">Crea la tuya gratis</a></div>
 </div>

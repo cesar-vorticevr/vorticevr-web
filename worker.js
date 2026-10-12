@@ -22,6 +22,7 @@ const PLANS = {
 };
 const FAR = 253402300799000; // expires of an experience on a paid plan: "while the plan is active" (year 9999)
 const ADMINS_DEFAULT = "lad.cesargarcia@gmail.com";
+const ADMIN_SLUGS = new Set(["ejemplo"]); // only an admin can take these (the home page demo uses "ejemplo")
 const VIDEO = /\.(mp4|m4v|webm|mov)$/i;
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])$/;
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i;
@@ -170,7 +171,7 @@ async function api(request, env, ctx, url) {
     return json({ ...publicExp(row), brand: planOf(row).brand }, 200, { "Cache-Control": "no-store" });
   }
 
-  if (path === "/api/slug" && M === "GET") return json(await slugStatus(env, (url.searchParams.get("s") || "").toLowerCase(), null));
+  if (path === "/api/slug" && M === "GET") { const who0 = await auth(request, env); return json(await slugStatus(env, (url.searchParams.get("s") || "").toLowerCase(), null, null, isAdmin(env, who0))); }
 
   // ---- accounts: register → confirm email once → log in with password (session 30 days) ----
   if (path === "/api/register" && M === "POST") {
@@ -277,7 +278,7 @@ async function api(request, env, ctx, url) {
       if (n.n >= P.exp) return json({ error: `Tu plan ${P.name} incluye ${expCount(P.exp)}. Borra una o mejora tu plan para crear otra.` }, 403);
     }
     const slug = String(meta.slug || "").toLowerCase();
-    const st = await slugStatus(env, slug, who, mine && mine.slug);
+    const st = await slugStatus(env, slug, who, mine && mine.slug, isAdmin(env, me));
     if (!st.ok) return json({ error: st.reason }, 400);
     const data = cleanMeta(meta);
     if (data.error) return json({ error: data.error }, 400);
@@ -373,9 +374,9 @@ function expUrl(slug, request, env) {
   return `${new URL(request.url).origin}/e/${slug}/`; // previews and local tests
 }
 // own = slug of the experience being edited (it may keep its name)
-async function slugStatus(env, slug, owner, own) {
+async function slugStatus(env, slug, owner, own, admin) {
   if (!SLUG.test(slug)) return { ok: false, reason: "Usa de 3 a 30 letras minúsculas, números o guiones (sin acentos ni espacios)." };
-  if (RESERVED.has(slug)) return { ok: false, reason: "Ese nombre está reservado." };
+  if (RESERVED.has(slug) || (ADMIN_SLUGS.has(slug) && !admin)) return { ok: false, reason: "Ese nombre está reservado." };
   if (slug === own) return { ok: true };
   const row = await env.DB.prepare("SELECT email, expires FROM experiences WHERE slug = ?").bind(slug).first();
   if (row && row.expires > Date.now()) return { ok: false, reason: owner && row.email === owner ? "Ya tienes otra experiencia con ese link." : "Ese nombre ya está ocupado." };
@@ -574,7 +575,7 @@ const codeMail = (code, purpose) => shell(`<h1 style="font-size:20px">${purpose 
 const linkMail = e => shell(`<h1 style="font-size:20px">¡Tu experiencia de realidad aumentada está lista!</h1>
 <p><b>${esc(e.title)}</b></p><p>Comparte este link (o el código QR adjunto):</p>
 <p><a href="${esc(e.url)}" style="color:#ffbe55;font-size:20px;font-weight:700">${esc(e.url.replace(/^https:\/\//, "").replace(/\/$/, ""))}</a></p>
-<p>Ábrelo en el celular, toca <b>Activar cámara</b> y apunta a tu imagen.</p>
+<p>Ábrelo en el celular, toca <b>Abrir la cámara</b> y apunta a tu imagen.</p>
 <p>Para editarla o borrarla entra a tu cuenta en <a href="https://vorticevr.mx/cuenta/" style="color:#d2b8ff">vorticevr.mx/cuenta</a>.</p>
 <p style="color:#a99bcb">${e.forever ? "Disponible mientras tu plan esté activo." : `Disponible hasta el ${fecha(e.expires)}.`}</p>`);
 const fecha = t => new Date(t).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
