@@ -9,7 +9,7 @@ Responder a César en español, directo y práctico.
 - Dominios conectados al Worker `vorticevr-web`: `vorticevr.mx`, `www.vorticevr.mx`, `t.vorticevr.mx`.
 - DNS en Cloudflare; el dominio está registrado en GoDaddy. Ya no se usa Wix.
 - Rutas siempre relativas (funcionan en cualquier dominio o subdominio).
-- `worker.js`: Worker mínimo que solo corre en `/ra/*` (`run_worker_first`). Los static assets ignoran las peticiones `Range` y el iPhone las necesita para reproducir `<video>`; el Worker responde 206 para videos y deja pasar todo lo demás. Los videos nuevos deben ir bajo `/ra/` (o ampliar `run_worker_first`).
+- `worker.js`: corre antes que los assets en todas las peticiones (`run_worker_first: true`). Responde `Range` (206) a los videos (el iPhone lo necesita), sirve las experiencias de la plataforma de RA y su API. Ver "Plataforma de RA".
 
 ## Estructura
 | Ruta | Qué es |
@@ -81,3 +81,11 @@ Detalles:
 1. Local: `node tools/servidor-local.mjs` → http://localhost:8080 (también muestra la IP para abrirlo desde el celular en el mismo wifi). La cámara de la RA en el celular requiere https: para eso usar la versión preview.
 2. Preview en internet: commit y push a la rama `preview`. Cloudflare sube una versión de prueba (no toca producción) en **https://preview-vorticevr-web.lad-cesargarcia.workers.dev/** (patrón `<rama>-vorticevr-web.lad-cesargarcia.workers.dev`; Cloudflare le pone `X-Robots-Tag: noindex`). Requiere el bloque `"previews": {}` en `wrangler.jsonc`.
 3. Cuando César apruebe: `git switch main && git merge --ff-only preview && git push` (eso publica). Subir `main` y `preview` en pushes separados, no al mismo tiempo.
+
+## Plataforma de RA (`/crear/`)
+Cualquiera crea una experiencia (imagen + video + botones) y obtiene `https://<nombre>.vorticevr.mx/` y un QR. Una por correo, dura 30 días, video ≤ 30 s y 25 MB.
+- `/crear/`: creador. Reduce la imagen a 1000 px, compila el `.mind` en el navegador (MindAR `Compiler`), vista previa con ajuste al ancho / al alto / toda la imagen, código por correo, publica y dibuja el QR (qrcode-generator, con el isotipo al centro).
+- `/x/`: visor genérico. Lee `/api/exp/<slug>` y los archivos de `/m/<slug>/{video,target,image}`. Mismo comportamiento que la RA de Johara (video sobre la imagen, a pantalla si se pierde, pantalla completa, sonido, foto/video con audio del video) + botones de redes, logo arriba y la imagen como marca de agua.
+- `worker.js`: `nombre.vorticevr.mx` y `/e/nombre/` → visor; `/api/{code,verify,slug,me,publish,exp/<slug>}`; `/m/...` desde R2 con Range; cron diario borra lo vencido. Nombres reservados en `RESERVED`.
+- Requiere: D1 `DB`, R2 `MEDIA`, secretos `SESSION_SECRET` y `RESEND_API_KEY` (correo desde `ra@vorticevr.mx`), DNS comodín `*` proxied y la ruta `*.vorticevr.mx/*`. Sin D1/R2 la API responde 503 y el resto del sitio funciona.
+- Pruebas locales: copiar el sitio a una carpeta temporal con los assets en `public/` (si no, `wrangler dev` se reinicia en bucle), `vars` `ROOT_DOMAIN=localhost`, `DEV_CODES=1` (el código sale en la respuesta, nunca en producción) y `SESSION_SECRET`. `nombre.localhost:<puerto>` funciona en Chrome.

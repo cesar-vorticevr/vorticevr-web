@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Crea tu realidad aumentada · Vórtice VR</title>
+<meta name="description" content="Crea gratis una experiencia de realidad aumentada: sube una imagen y un video, y comparte el link y el código QR.">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../assets/icono.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one column of numbered steps; on wide screens the live preview sticks on the right. */
+:root{--void:#05020b;--panel:rgba(20,9,40,.7);--line:rgba(190,150,255,.2);--line2:rgba(190,150,255,.45);--vortex:#8b3fd6;--vortex-d:#5a1f8f;--lav:#d2b8ff;--ink:#f2ecff;--mute:#a99bcb;--sun:#ffbe55;--ok:#74e8ba;--bad:#ff8a9e;
+  --fd:"Chakra Petch",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55;min-height:100vh}
+a{color:var(--lav)}
+:focus-visible{outline:2px solid var(--lav);outline-offset:3px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1180px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 8px}
+header img{height:24px;display:block}
+header a.back{font-family:var(--fd);font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--mute)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+.hero{padding:28px 0 26px}
+.kick{font-family:var(--fd);font-size:.78rem;letter-spacing:.26em;text-transform:uppercase;color:var(--sun);font-weight:600}
+h1{font-family:var(--fd);font-size:clamp(2rem,5vw,3.2rem);line-height:1.02;margin:8px 0 10px;text-wrap:balance}
+.hero p{margin:0;color:var(--mute);max-width:62ch}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,440px);gap:28px;align-items:start}
+@media (max-width:920px){.grid{grid-template-columns:minmax(0,1fr)}}
+.side{position:sticky;top:16px}
+@media (max-width:920px){.side{position:static;order:-1}}
+.step{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:20px;margin-bottom:16px}
+.step h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font-family:var(--fd);font-size:1.2rem}
+.step h2 .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--fm);font-size:.85rem;background:rgba(139,63,214,.3);border:1px solid var(--line2);flex:none}
+.step h2 .n.done{background:var(--ok);color:#0b2a1e;border-color:var(--ok)}
+.step>p.hint{margin:0 0 14px;color:var(--mute);font-size:.92rem}
+.drop{display:flex;align-items:center;gap:14px;border:1.5px dashed var(--line2);border-radius:12px;padding:16px;cursor:pointer;transition:border-color .2s,background .2s}
+.drop:hover,.drop.over{border-color:var(--lav);background:rgba(139,63,214,.12)}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.drop .thumb{width:84px;height:64px;border-radius:8px;object-fit:cover;background:#120826;flex:none}
+.drop b{display:block}
+.drop small{color:var(--mute)}
+.bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--vortex),var(--sun));transition:width .2s}
+.msg{font-size:.88rem;margin-top:8px}
+.msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+label.f{display:block;font-size:.8rem;font-family:var(--fd);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:12px 0 6px}
+input[type=text],input[type=email],input[type=tel],input[type=url]{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:11px 12px}
+input:focus{border-color:var(--lav);outline:none}
+.slugrow{display:flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:rgba(5,2,11,.7);overflow:hidden}
+.slugrow input{border:0;background:transparent;border-radius:0;text-align:right;padding-right:2px;min-width:0}
+.slugrow span{padding:11px 12px 11px 0;color:var(--mute);white-space:nowrap;font-family:var(--fm);font-size:.9rem}
+.soc{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px}
+.soc label{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:4px 4px 4px 10px;background:rgba(5,2,11,.5)}
+.soc svg{width:20px;height:20px;fill:var(--lav);flex:none}
+.soc input{border:0!important;background:transparent!important;padding:8px 6px!important}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{font:600 .85rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--fd);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:.85rem;border:1px solid var(--line2);border-radius:999px;padding:13px 22px;color:var(--ink);background:rgba(20,9,40,.6);cursor:pointer;text-decoration:none}
+.btn.primary{background:linear-gradient(135deg,var(--vortex),var(--vortex-d));border-color:var(--lav);box-shadow:0 0 26px rgba(139,63,214,.45)}
+.btn.sun{background:linear-gradient(135deg,#ffd27f,#ff9f3a);color:#1a0d00;border-color:var(--sun)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.note{font-size:.85rem;color:var(--mute)}
+
+/* preview */
+.pv{border:1px solid var(--line2);border-radius:18px;background:#120826;padding:16px}
+.pv h3{margin:0 0 4px;font-family:var(--fd);font-size:1rem}
+.stage{position:relative;margin:12px auto 0;background:#000;border-radius:10px;overflow:hidden;display:grid;place-items:center;aspect-ratio:3/2}
+.stage .img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:.45}
+.stage .box{position:relative;overflow:visible}
+.stage .box>img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill}
+.stage video{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);object-fit:fill;opacity:.92;box-shadow:0 0 0 2px rgba(255,190,85,.9),0 10px 30px rgba(0,0,0,.6)}
+.stage .box::after{content:"";position:absolute;inset:0;border:2px dashed rgba(255,255,255,.95);border-radius:2px;pointer-events:none;z-index:2;box-shadow:0 0 0 9999px rgba(5,2,11,.35)}
+.stage .empty{color:var(--mute);font-size:.9rem;padding:30px;text-align:center}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:.78rem;color:var(--mute)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+
+/* result */
+.result{border:1px solid var(--ok);background:linear-gradient(170deg,rgba(116,232,186,.12),rgba(20,9,40,.7));border-radius:16px;padding:22px;margin-bottom:16px}
+.result h2{margin:0 0 8px;font-family:var(--fd)}
+.link{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.link code{font-family:var(--fm);font-size:1.05rem;color:var(--sun);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;overflow-wrap:anywhere}
+#qr{width:220px;max-width:100%;height:auto;border-radius:12px;background:#fff;display:block;margin:12px 0}
+.mine{border:1px solid rgba(255,190,85,.5);background:rgba(255,190,85,.07);border-radius:12px;padding:12px 14px;margin-top:12px;font-size:.92rem}
+.legal{font-size:.8rem;color:var(--mute);margin-top:10px}
+</style>
+</head>
+<body>
+<header><a href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><a class="back" href="../">← Volver al sitio</a></header>
+<main class="wrap">
+  <div class="hero">
+    <span class="kick">Gratis · prueba de 30 días</span>
+    <h1>Crea tu realidad aumentada</h1>
+    <p>Sube una imagen y un video. Cuando alguien apunte su celular a la imagen, el video aparecerá encima. Recibes un link propio y un código QR para compartir.</p>
+  </div>
+
+  <div class="grid">
+    <div>
+      <section class="result" id="result" hidden>
+        <h2>¡Tu experiencia está lista!</h2>
+        <p id="resTitle" class="note"></p>
+        <div class="link"><code id="resUrl"></code><button class="btn" id="copy" type="button">Copiar link</button><a class="btn primary" id="open" target="_blank" rel="noopener">Abrir</a></div>
+        <canvas id="qr" width="1024" height="1180" aria-label="Código QR de tu experiencia"></canvas>
+        <div class="row"><button class="btn sun" id="dlqr" type="button">Descargar código QR</button><button class="btn" id="again" type="button">Editar</button></div>
+        <p class="note" id="resMail"></p>
+      </section>
+
+      <section class="step" id="s1">
+        <h2><span class="n" id="n1">1</span>Tu imagen</h2>
+        <p class="hint">La que la gente va a enfocar: una tarjeta, un póster, una portada. Funciona mejor con muchos detalles y contraste; evita fondos lisos o repetitivos.</p>
+        <label class="drop" id="dImg"><input type="file" id="fImg" accept="image/jpeg,image/png,image/webp"><img class="thumb" id="tImg" alt="" hidden><span><b id="lImg">Elegir imagen</b><small>JPG, PNG o WebP</small></span></label>
+        <div class="bar" id="bImg" hidden><i></i></div><div class="msg" id="mImg"></div>
+      </section>
+
+      <section class="step" id="s2">
+        <h2><span class="n" id="n2">2</span>Tu video</h2>
+        <p class="hint">Máximo 30 segundos y 25 MB. MP4 funciona en todos los celulares.</p>
+        <label class="drop" id="dVid"><input type="file" id="fVid" accept="video/mp4,video/webm,video/quicktime"><video class="thumb" id="tVid" muted playsinline hidden></video><span><b id="lVid">Elegir video</b><small>MP4, WebM o MOV</small></span></label>
+        <div class="msg" id="mVid"></div>
+      </section>
+
+      <section class="step" id="s3">
+        <h2><span class="n" id="n3">3</span>Ajusta el video sobre la imagen</h2>
+        <p class="hint">Así se verá encima de tu imagen. Elige cómo se escala:</p>
+        <div class="seg" id="fit">
+          <button type="button" data-fit="width" aria-pressed="true">Al ancho de la imagen</button>
+          <button type="button" data-fit="height" aria-pressed="false">Al alto de la imagen</button>
+          <button type="button" data-fit="fill" aria-pressed="false">Toda la imagen</button>
+        </div>
+        <p class="note" id="fitNote" style="margin:10px 0 0"></p>
+      </section>
+
+      <section class="step" id="s4">
+        <h2><span class="n" id="n4">4</span>Datos y botones</h2>
+        <label class="f" for="title">Título</label>
+        <input type="text" id="title" maxlength="80" placeholder="Ej. Conoce nuestra nueva colección">
+        <label class="f" for="slug">Tu link</label>
+        <div class="slugrow"><input type="text" id="slug" maxlength="30" placeholder="tu-nombre" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="root">.vorticevr.mx</span></div>
+        <div class="msg" id="mSlug"></div>
+        <label class="f">Botones (opcionales)</label>
+        <div class="soc" id="soc"></div>
+      </section>
+
+      <section class="step" id="s5">
+        <h2><span class="n" id="n5">5</span>Tu correo</h2>
+        <p class="hint">Te mandamos un código para confirmar que es tuyo y ahí mismo te llegará el link. Una experiencia por correo.</p>
+        <div id="mailA">
+          <label class="f" for="email">Correo</label>
+          <input type="email" id="email" autocomplete="email" placeholder="tu@correo.com">
+          <div class="row"><button class="btn" id="sendCode" type="button">Enviarme el código</button></div>
+          <div id="codeBox" hidden>
+            <label class="f" for="code">Código de 6 dígitos</label>
+            <input type="text" id="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000">
+            <div class="row"><button class="btn" id="verify" type="button">Confirmar</button></div>
+          </div>
+        </div>
+        <div id="mailB" hidden><p class="msg ok" id="who"></p><button class="btn" id="logout" type="button">Usar otro correo</button></div>
+        <div class="msg" id="mMail"></div>
+        <div class="mine" id="mine" hidden></div>
+      </section>
+
+      <section class="step" id="s6">
+        <h2><span class="n" id="n6">6</span>Publicar</h2>
+        <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
+        <button class="btn primary" id="publish" type="button" disabled>Publicar mi experiencia</button>
+        <div class="bar" id="bPub" hidden><i></i></div><div class="msg" id="mPub"></div>
+        <p class="legal">Al publicar confirmas que tienes derecho a usar la imagen y el video. Vórtice VR puede retirar contenido inapropiado. Tu correo solo se usa para esta experiencia y para avisarte de ella. La experiencia se borra a los 30 días.</p>
+      </section>
+    </div>
+
+    <aside class="side">
+      <div class="pv">
+        <h3>Vista previa</h3>
+        <div class="stage" id="stage"><div class="empty" id="empty">Sube tu imagen y tu video para ver cómo queda.</div>
+          <div class="box" id="box" hidden><img id="pImg" alt="Tu imagen"><video id="pVid" muted loop playsinline autoplay></video></div>
+        </div>
+        <div class="legend"><span><i style="border:2px dashed #fff"></i>Borde de tu imagen</span><span><i style="background:var(--sun)"></i>Borde del video</span></div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script type="module">
+const $=id=>document.getElementById(id);
+const API=new URLSearchParams(location.search).get("api")||"..";      // the API lives on the same site
+const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
+$("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
+const MAX_VIDEO=25*1024*1024, MAX_SEC=30.5, IMG_MAX=1000;
+
+const S={img:null,imgBlob:null,imgW:0,imgH:0,target:null,compiling:false,video:null,vidW:0,vidH:0,fit:"width",token:null,email:null,mine:null,keepImg:false,keepVid:false};
+
+// ---------- social buttons ----------
+const SOC=[["whatsapp","WhatsApp","Número con lada, ej. 52 993 123 4567","tel"],["facebook","Facebook","facebook.com/tu-pagina","url"],["instagram","Instagram","instagram.com/tu-cuenta","url"],["youtube","YouTube","youtube.com/@tu-canal","url"],["x","X","x.com/tu-cuenta","url"],["tiktok","TikTok","tiktok.com/@tu-cuenta","url"],["web","Sitio web","tusitio.com","url"]];
+const ICON={whatsapp:'<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/>',facebook:'<path d="M20 2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8.6v-7.7H10v-3h2.6V9c0-2.6 1.6-4 3.9-4 1.1 0 2.1.1 2.3.1v2.7h-1.6c-1.3 0-1.5.6-1.5 1.5v1.9h3l-.4 3h-2.6V22H20a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>',instagram:'<path d="M7.8 2h8.4A5.8 5.8 0 0 1 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8A5.8 5.8 0 0 1 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2zm-.2 2A3.6 3.6 0 0 0 4 7.6v8.8A3.6 3.6 0 0 0 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6A3.6 3.6 0 0 0 16.4 4H7.6zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>',youtube:'<path d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4a2.5 2.5 0 0 0-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.8a2.5 2.5 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8c.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8zM10 15V9l5.2 3-5.2 3z"/>',x:'<path d="M17.8 3h3.1l-6.8 7.7L22 21h-6.2l-4.9-6.4L5.3 21H2.2l7.3-8.3L2 3h6.4l4.4 5.8L17.8 3zm-1.1 16.2h1.7L7.4 4.7H5.6l11.1 14.5z"/>',tiktok:'<path d="M16.6 3c.4 2.2 1.8 3.7 4 3.9v3a7.4 7.4 0 0 1-4-1.3v6.2A5.8 5.8 0 1 1 10.8 9v3.1a2.8 2.8 0 1 0 2.8 2.8V3h3z"/>',web:'<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm7.9 9h-3a15.6 15.6 0 0 0-1.3-5.5A8 8 0 0 1 19.9 11zM12 4c.9 1.1 1.8 3.6 2 7h-4c.2-3.4 1.1-5.9 2-7zM4.1 13h3c.1 2 .6 3.9 1.3 5.5A8 8 0 0 1 4.1 13zm3-2h-3a8 8 0 0 1 4.3-5.5A15.6 15.6 0 0 0 7.1 11zM12 20c-.9-1.1-1.8-3.6-2-7h4c-.2 3.4-1.1 5.9-2 7z"/>'};
+$("soc").innerHTML=SOC.map(([k,l,ph,t])=>`<label title="${l}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg><span class="vh" style="position:absolute;width:1px;height:1px;overflow:hidden">${l}</span><input type="${t==="tel"?"tel":"text"}" id="b_${k}" placeholder="${ph}" aria-label="${l}"></label>`).join("");
+
+// ---------- step 1: image → downscale, preview, compile the MindAR target in this browser ----------
+let compilerMod=null;
+async function onImage(file){
+  if(!file) return; const m=$("mImg"); m.className="msg"; m.textContent="";
+  if(!/^image\/(jpeg|png|webp)$/.test(file.type)){ m.className="msg bad"; m.textContent="Usa una imagen JPG, PNG o WebP."; return; }
+  const bmp=await createImageBitmap(file).catch(()=>null); if(!bmp){ m.className="msg bad"; m.textContent="No pude abrir esa imagen."; return; }
+  if(Math.min(bmp.width,bmp.height)<300){ m.className="msg bad"; m.textContent="La imagen es muy pequeña. Usa una de al menos 600 px."; return; }
+  const k=Math.min(1,IMG_MAX/Math.max(bmp.width,bmp.height)), w=Math.round(bmp.width*k), h=Math.round(bmp.height*k);
+  const cv=document.createElement("canvas"); cv.width=w; cv.height=h; cv.getContext("2d").drawImage(bmp,0,0,w,h);
+  S.imgBlob=await new Promise(r=>cv.toBlob(r,"image/jpeg",.88)); S.imgW=w; S.imgH=h; S.keepImg=false; S.target=null;
+  const url=URL.createObjectURL(S.imgBlob); $("tImg").src=url; $("tImg").hidden=false; $("pImg").src=url; $("lImg").textContent=file.name;
+  updatePreview(); check();
+  // compile
+  S.compiling=true; const bar=$("bImg"); bar.hidden=false; bar.firstElementChild.style.width="2%"; m.textContent="Preparando la imagen para la realidad aumentada…";
+  try{
+    compilerMod=compilerMod||await import("https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js");
+    const img=new Image(); img.src=url; await img.decode();
+    const c=new compilerMod.Compiler();
+    await c.compileImageTargets([img],p=>{ bar.firstElementChild.style.width=Math.max(2,p)+"%"; });
+    S.target=new Blob([await c.exportData()],{type:"application/octet-stream"});
+    m.className="msg ok"; m.textContent="Imagen lista."; $("n1").classList.add("done");
+  }catch(e){ console.error(e); m.className="msg bad"; m.textContent="No pude preparar esta imagen. Prueba con otra con más detalles."; }
+  S.compiling=false; bar.hidden=true; check();
+}
+// ---------- step 2: video → checks ----------
+function onVideo(file){
+  if(!file) return; const m=$("mVid"); m.className="msg"; m.textContent="";
+  if(file.size>MAX_VIDEO){ m.className="msg bad"; m.textContent=`El video pesa ${(file.size/1048576).toFixed(1)} MB. El máximo es 25 MB.`; return; }
+  const url=URL.createObjectURL(file), v=document.createElement("video"); v.muted=true; v.preload="metadata"; v.src=url;
+  v.onloadedmetadata=()=>{
+    if(!v.videoWidth){ m.className="msg bad"; m.textContent="Este navegador no puede reproducir ese formato. Expórtalo como MP4 (H.264)."; return; }
+    if(v.duration>MAX_SEC){ m.className="msg bad"; m.textContent=`El video dura ${Math.round(v.duration)} s. El máximo es 30 s; recórtalo antes de subirlo.`; return; }
+    S.video=file; S.vidW=v.videoWidth; S.vidH=v.videoHeight; S.keepVid=false;
+    $("tVid").src=url; $("tVid").hidden=false; $("pVid").src=url; $("pVid").play().catch(()=>{}); $("lVid").textContent=file.name;
+    m.className="msg ok"; m.textContent=`Video listo · ${Math.round(v.duration)} s · ${(file.size/1048576).toFixed(1)} MB`; $("n2").classList.add("done");
+    updatePreview(); check();
+  };
+  v.onerror=()=>{ m.className="msg bad"; m.textContent="No pude abrir ese video. Expórtalo como MP4 (H.264)."; };
+}
+for(const [inp,drop,fn] of [["fImg","dImg",onImage],["fVid","dVid",onVideo]]){
+  $(inp).addEventListener("change",e=>fn(e.target.files[0]));
+  const d=$(drop); d.addEventListener("dragover",e=>{e.preventDefault();d.classList.add("over");}); d.addEventListener("dragleave",()=>d.classList.remove("over"));
+  d.addEventListener("drop",e=>{e.preventDefault();d.classList.remove("over");fn(e.dataTransfer.files[0]);});
+}
+
+// ---------- step 3: preview with the same geometry as the viewer ----------
+const FITNOTE={width:"El video ocupa todo el ancho de la imagen; su alto depende de su proporción.",height:"El video ocupa todo el alto de la imagen; su ancho depende de su proporción.",fill:"El video se estira para cubrir exactamente toda la imagen (puede deformarse si las proporciones son distintas)."};
+document.querySelectorAll("#fit button").forEach(b=>b.addEventListener("click",()=>{ S.fit=b.dataset.fit; document.querySelectorAll("#fit button").forEach(x=>x.setAttribute("aria-pressed",String(x===b))); updatePreview(); }));
+function updatePreview(){
+  $("fitNote").textContent=FITNOTE[S.fit];
+  const has=S.imgW&&S.vidW; $("box").hidden=!S.imgW; $("empty").hidden=!!S.imgW;
+  if(!S.imgW) return;
+  const st=$("stage"), sw=st.clientWidth-40, sh=st.clientHeight-40;
+  const k=Math.min(sw/S.imgW, sh/S.imgH), bw=S.imgW*k, bh=S.imgH*k;   // the image box
+  $("box").style.width=bw+"px"; $("box").style.height=bh+"px";
+  const v=$("pVid"); v.hidden=!has; if(!has) return;
+  const va=S.vidW/S.vidH; let w=bw, h=bw/va;
+  if(S.fit==="height"){ h=bh; w=bh*va; } else if(S.fit==="fill"){ w=bw; h=bh; }
+  v.style.width=w+"px"; v.style.height=h+"px";
+  $("n3").classList.add("done");
+}
+addEventListener("resize",updatePreview);
+
+// ---------- step 4: name ----------
+const slugIn=$("slug"); let slugOk=false, slugTimer=0;
+const toSlug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9-]+/g,"-").replace(/-+/g,"-").replace(/^-/,"").slice(0,30);
+slugIn.addEventListener("input",()=>{ const c=slugIn.selectionStart; slugIn.value=toSlug(slugIn.value); slugIn.setSelectionRange(c,c); checkSlug(); });
+$("title").addEventListener("input",()=>{ if(!slugIn.dataset.touched && !S.mine){ slugIn.value=toSlug($("title").value).replace(/-$/,""); checkSlug(); } check(); });
+slugIn.addEventListener("keydown",()=>slugIn.dataset.touched="1");
+function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false; check(); const s=slugIn.value.replace(/-$/,"");
+  if(s.length<3){ m.className="msg"; m.textContent=""; return; }
+  if(S.mine&&S.mine.slug===s){ slugOk=true; m.className="msg ok"; m.textContent="Es tu link actual."; check(); return; }
+  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`)).json(); slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
+const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
+
+// ---------- step 5: email ----------
+const SAVE="vvr-crear";
+function saveSession(){ try{ localStorage.setItem(SAVE,JSON.stringify({token:S.token,email:S.email,t:Date.now()})); }catch(e){} }
+async function call(path,opt={}){ const h=opt.headers||{}; if(S.token) h.Authorization="Bearer "+S.token; const r=await fetch(`${API}/api/${path}`,{...opt,headers:h}); let j={}; try{ j=await r.json(); }catch(e){} if(!r.ok) throw new Error(j.error||"Algo salió mal. Intenta de nuevo."); return j; }
+$("sendCode").addEventListener("click",async()=>{ const m=$("mMail"); m.className="msg"; m.textContent="Enviando…"; $("sendCode").disabled=true;
+  try{ const r=await call("code",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("email").value})});
+    $("codeBox").hidden=false; $("code").focus(); m.className="msg ok"; m.textContent=r.dev_code?`Modo de prueba: tu código es ${r.dev_code}`:"Te enviamos un código. Revisa también la carpeta de spam."; }
+  catch(e){ m.className="msg bad"; m.textContent=e.message; } setTimeout(()=>$("sendCode").disabled=false,5000); });
+$("verify").addEventListener("click",async()=>{ const m=$("mMail"); m.className="msg"; m.textContent="Confirmando…";
+  try{ const r=await call("verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("email").value,code:$("code").value.trim()})});
+    S.token=r.token; S.email=r.email; saveSession(); m.textContent=""; signedIn(r.experience); }
+  catch(e){ m.className="msg bad"; m.textContent=e.message; } });
+$("code").addEventListener("keydown",e=>{ if(e.key==="Enter") $("verify").click(); });
+$("logout").addEventListener("click",()=>{ S.token=S.email=S.mine=null; try{localStorage.removeItem(SAVE)}catch(e){} $("mailA").hidden=false; $("mailB").hidden=true; $("mine").hidden=true; $("codeBox").hidden=true; $("n5").classList.remove("done"); check(); });
+function signedIn(exp){
+  $("mailA").hidden=true; $("mailB").hidden=false; $("who").textContent="Correo confirmado: "+S.email; $("n5").classList.add("done");
+  S.mine=exp||null; const mine=$("mine");
+  if(exp){ mine.hidden=false;
+    mine.innerHTML=`Ya tienes una experiencia: <b>${exp.title.replace(/</g,"&lt;")}</b> · <a href="${exp.url}" target="_blank" rel="noopener">${exp.url.replace(/^https?:\/\//,"").replace(/\/$/,"")}</a><br>Al publicar la vas a <b>actualizar</b> (sigue disponible hasta el ${new Date(exp.expires).toLocaleDateString("es-MX")}). <button class="btn" id="del" type="button" style="margin-top:8px;padding:8px 14px">Borrarla</button>`;
+    $("del").addEventListener("click",async()=>{ if(!confirm("¿Borrar tu experiencia? El link dejará de funcionar.")) return; try{ await call("me",{method:"DELETE"}); S.mine=null; mine.hidden=true; checkSlug(); }catch(e){ alert(e.message); } });
+    prefill(exp);
+  } else mine.hidden=true;
+  check();
+}
+function prefill(exp){
+  if(!$("title").value) $("title").value=exp.title; if(!slugIn.value){ slugIn.value=exp.slug; } checkSlug();
+  for(const [k] of SOC){ const el=$("b_"+k); if(!el.value&&exp.buttons&&exp.buttons[k]) el.value=exp.buttons[k]; }
+  S.fit=exp.fit||"width"; document.querySelectorAll("#fit button").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.fit===S.fit)));
+  if(!S.imgBlob){ S.keepImg=true; S.imgW=exp.img.w; S.imgH=exp.img.h; const u=`${API}/m/${exp.slug}/image`; $("pImg").src=u; $("tImg").src=u; $("tImg").hidden=false; $("lImg").textContent="Imagen actual (puedes cambiarla)"; $("n1").classList.add("done"); }
+  if(!S.video){ S.keepVid=true; S.vidW=exp.video.w; S.vidH=exp.video.h; const u=`${API}/m/${exp.slug}/video`; $("pVid").src=u; $("pVid").play().catch(()=>{}); $("tVid").src=u; $("tVid").hidden=false; $("lVid").textContent="Video actual (puedes cambiarlo)"; $("n2").classList.add("done"); }
+  updatePreview();
+}
+
+// ---------- step 6: publish ----------
+function check(){
+  const imgOk=(!!S.target&&!!S.imgBlob)||(S.keepImg&&!!S.mine);
+  const vidOk=!!S.video||(S.keepVid&&!!S.mine);
+  const ok=imgOk&&vidOk&&$("title").value.trim()&&slugOk&&S.token&&!S.compiling;
+  $("n4").classList.toggle("done",!!($("title").value.trim()&&slugOk));
+  $("publish").disabled=!ok;
+  $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)} y te lo mandaremos a ${S.email}.`:
+    S.compiling?"Estamos preparando tu imagen…":!imgOk?"Falta tu imagen.":!vidOk?"Falta tu video.":!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Confirma tu correo.";
+}
+$("publish").addEventListener("click",async()=>{
+  const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Subiendo…"; bar.hidden=false; $("publish").disabled=true;
+  const meta={slug:slugIn.value,title:$("title").value.trim(),fit:S.fit,img:{w:S.imgW,h:S.imgH},video:{w:S.vidW,h:S.vidH},buttons:{}};
+  for(const [k] of SOC){ const v=$("b_"+k).value.trim(); if(v) meta.buttons[k]=v; }
+  const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
+  if(S.imgBlob&&S.target){ fd.append("image",S.imgBlob,"image.jpg"); fd.append("target",S.target,"target.mind"); }
+  if(S.video) fd.append("video",S.video,S.video.name);
+  drawQR(linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug), meta.slug);
+  const qrBlob=await new Promise(r=>$("qr").toBlob(r,"image/png")); fd.append("qr",qrBlob,"qr.png");
+  const xhr=new XMLHttpRequest(); xhr.open("POST",`${API}/api/publish`); xhr.setRequestHeader("Authorization","Bearer "+S.token);
+  xhr.upload.onprogress=e=>{ if(e.lengthComputable) bar.firstElementChild.style.width=(e.loaded/e.total*100)+"%"; };
+  xhr.onload=()=>{ bar.hidden=true; let j={}; try{ j=JSON.parse(xhr.responseText); }catch(e){}
+    if(xhr.status!==200){ m.className="msg bad"; m.textContent=j.error||"No se pudo publicar."; $("publish").disabled=false; if(xhr.status===401) $("logout").click(); return; }
+    m.textContent=""; S.mine=j.experience; showResult(j.experience); };
+  xhr.onerror=()=>{ bar.hidden=true; m.className="msg bad"; m.textContent="Se cortó la conexión. Intenta de nuevo."; $("publish").disabled=false; };
+  xhr.send(fd);
+});
+
+// ---------- result: link + QR ----------
+let icon=null;
+function drawQR(url,slug){
+  const qr=qrcode(0,"H"); qr.addData(url); qr.make(); const n=qr.getModuleCount();
+  const cv=$("qr"), x=cv.getContext("2d"), W=1024, M=80, cell=Math.floor((W-2*M)/n), off=Math.floor((W-cell*n)/2);
+  x.fillStyle="#fff"; x.fillRect(0,0,cv.width,cv.height); x.fillStyle="#1b0a36";
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(qr.isDark(r,c)) x.fillRect(off+c*cell,off+r*cell,cell,cell);
+  if(icon&&icon.complete){ const s=cell*n*.2, p=(W-s)/2; x.fillStyle="#fff"; x.beginPath(); x.roundRect?x.roundRect(p-14,p-14,s+28,s+28,24):x.rect(p-14,p-14,s+28,s+28); x.fill(); x.drawImage(icon,p,p,s,s); }
+  x.fillStyle="#1b0a36"; x.font="600 46px 'Chakra Petch', sans-serif"; x.textAlign="center"; x.fillText(url.replace(/^https?:\/\//,"").replace(/\/$/,""),W/2,W+70);
+  x.fillStyle="#6b279b"; x.font="500 30px 'IBM Plex Sans', sans-serif"; x.fillText("Escanea y apunta tu cámara a la imagen",W/2,W+122);
+}
+icon=new Image(); icon.src="../assets/icono.png";
+function showResult(exp){
+  drawQR(exp.url,exp.slug);
+  $("result").hidden=false; $("resTitle").textContent=exp.title; $("resUrl").textContent=exp.url.replace(/^https:\/\//,"").replace(/\/$/,"");
+  $("open").href=exp.url; $("resMail").textContent=`También te lo enviamos a ${S.email}. Disponible hasta el ${new Date(exp.expires).toLocaleDateString("es-MX",{day:"numeric",month:"long",year:"numeric"})}.`;
+  document.querySelectorAll(".step").forEach(s=>s.hidden=true); scrollTo({top:0,behavior:"smooth"});
+  $("copy").onclick=async()=>{ try{ await navigator.clipboard.writeText(exp.url); $("copy").textContent="¡Copiado!"; setTimeout(()=>$("copy").textContent="Copiar link",1600); }catch(e){ prompt("Copia tu link:",exp.url); } };
+  $("dlqr").onclick=()=>$("qr").toBlob(b=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download=`QR-${exp.slug}.png`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); },"image/png");
+  $("again").onclick=()=>{ $("result").hidden=true; document.querySelectorAll(".step").forEach(s=>s.hidden=false); signedIn(S.mine); };
+}
+
+// ---------- session ----------
+(async()=>{ try{ const s=JSON.parse(localStorage.getItem(SAVE)||"null"); if(s&&s.token&&Date.now()-s.t<20*3600e3){ S.token=s.token; S.email=s.email; const r=await call("me"); signedIn(r.experience); } }catch(e){ S.token=null; } check(); updatePreview(); })();
+</script>
+</body>
+</html>

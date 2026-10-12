@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05020b">
+<title>Realidad aumentada · Vórtice VR</title>
+<link rel="icon" href="/assets/icono.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Visor de experiencias creadas en vorticevr.mx/crear/. Pantalla completa sobre la cámara:
+   logo de Vórtice VR arriba, controles del video a la derecha, redes y captura abajo. */
+:root{--void:#05020b;--ink:#f2ecff;--mute:#b9addb;--vortex:#8b3fd6;--lav:#d2b8ff;--sun:#ffbe55;--glass:rgba(10,4,22,.62);
+  --fd:"Chakra Petch",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%;background:#000;color:var(--ink);font-family:var(--fb);overflow:hidden;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--lav);outline-offset:3px}
+#ar{position:fixed;inset:0}
+.mindar-ui-overlay{display:none!important}
+
+/* logo: always on top of everything */
+#brand{position:fixed;left:0;right:0;top:0;z-index:60;display:flex;justify-content:center;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 22px;background:linear-gradient(180deg,rgba(5,2,11,.7),rgba(5,2,11,0));pointer-events:none}
+#brand a{pointer-events:auto;display:block}
+#brand img{height:24px;width:auto;display:block;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6))}
+
+/* intro */
+#intro{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:80px 22px calc(28px + env(safe-area-inset-bottom,0px));text-align:center;
+  background:radial-gradient(90% 60% at 50% 30%,#22104a,#05020b 70%)}
+#intro .k{font-family:var(--fd);font-size:.78rem;letter-spacing:.24em;text-transform:uppercase;color:var(--sun)}
+#intro h1{font-family:var(--fd);font-size:clamp(1.6rem,6vw,2.4rem);line-height:1.1;margin:0;max-width:18ch;text-wrap:balance}
+#intro p{margin:0;max-width:34ch;color:var(--mute);line-height:1.5}
+#intro .thumb{width:min(70vw,300px);border-radius:12px;box-shadow:0 0 0 2px rgba(210,184,255,.5),0 20px 50px -12px rgba(139,63,214,.7)}
+.big{font-family:var(--fd);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:.95rem;border:1px solid var(--lav);border-radius:999px;padding:16px 30px;color:#fff;background:linear-gradient(135deg,var(--vortex),#5a1f8f);box-shadow:0 0 30px rgba(139,63,214,.55)}
+.big:disabled{opacity:.6}
+#err{color:#ffb3c0;font-weight:600;max-width:34ch}
+.made{font-size:.82rem;color:var(--mute)}
+.made a{color:var(--lav)}
+
+/* watermark: the image to look for */
+#guide{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;pointer-events:none;transition:opacity .35s}
+#guide.off{opacity:0}
+#guide .frame{position:relative;width:min(78vw,420px)}
+#guide .frame img{width:100%;height:auto;display:block;opacity:.4;border-radius:8px}
+#guide .frame::before{content:"";position:absolute;inset:-8px;border:3px solid #fff;border-radius:12px;opacity:.9;
+  clip-path:polygon(0 0,22% 0,22% 4px,4px 4px,4px 22%,0 22%,0 78%,4px 78%,4px calc(100% - 4px),22% calc(100% - 4px),22% 100%,78% 100%,78% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 78%,100% 78%,100% 22%,calc(100% - 4px) 22%,calc(100% - 4px) 4px,78% 4px,78% 0,100% 0,100% 100%,0 100%)}
+#guide p{margin:0;background:var(--glass);padding:9px 16px;border-radius:999px;font-size:.88rem;font-weight:600}
+#guide.mini{justify-content:flex-start;padding-top:calc(64px + env(safe-area-inset-top,0px))}
+#guide.mini .frame{width:min(30vw,130px)}
+#guide.mini p{display:none}
+
+/* video on screen while the image is out of view */
+#vbox{position:fixed;left:50%;top:50%;z-index:12;width:min(92vw,560px);transform:translate(-50%,-50%) scale(.92);opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;display:flex;flex-direction:column;align-items:center;gap:10px}
+#vbox.on{opacity:1;transform:translate(-50%,-50%);pointer-events:auto}
+#vbox .player{position:relative;width:100%;border-radius:14px;overflow:hidden;background:#000;box-shadow:0 18px 50px -12px rgba(0,0,0,.8)}
+#vbox video{width:100%;max-height:60vh;display:block;object-fit:contain}
+#vbox p{margin:0;background:var(--glass);padding:8px 14px;border-radius:999px;font-size:.82rem;font-weight:600;text-align:center}
+#vbox.full{width:100vw;height:100dvh;top:0;left:0;transform:none;background:#000;z-index:55;justify-content:center}
+#vbox.full .player{border-radius:0;box-shadow:none;height:100%;display:flex;align-items:center}
+#vbox.full video{max-height:100%;height:100%}
+#vbox.full p{display:none}
+
+/* video controls */
+#vctl{position:fixed;right:12px;top:calc(64px + env(safe-area-inset-top,0px));z-index:58;display:flex;flex-direction:column;gap:10px}
+.ic{width:44px;height:44px;border-radius:50%;border:0;background:var(--glass);display:grid;place-items:center;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.ic svg{width:22px;height:22px;fill:#fff}
+
+/* social buttons */
+#social{position:fixed;left:0;right:0;z-index:20;bottom:calc(150px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;flex-wrap:wrap;gap:10px;padding:0 16px}
+#social a{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--glass);border:1px solid rgba(210,184,255,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#social svg{width:22px;height:22px;fill:#fff}
+
+/* capture */
+#controls{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 16px calc(18px + env(safe-area-inset-bottom,0px));background:linear-gradient(0deg,rgba(5,2,11,.55),rgba(5,2,11,0))}
+#modes{display:flex;gap:4px;background:var(--glass);border-radius:999px;padding:4px}
+#modes button{font-size:.8rem;font-weight:700;background:transparent;border:0;border-radius:999px;padding:7px 16px}
+#modes button[aria-pressed="true"]{background:#fff;color:#111}
+#shutter{width:70px;height:70px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,.22);padding:0;display:grid;place-items:center}
+#shutter span{width:52px;height:52px;border-radius:50%;background:#fff;transition:all .2s}
+#shutter.video span{background:#e5243b}
+#shutter.rec span{width:24px;height:24px;border-radius:6px;background:#e5243b}
+#timer{font-weight:800;font-size:.85rem;background:#e5243b;padding:3px 10px;border-radius:999px;font-variant-numeric:tabular-nums}
+#flash{position:fixed;inset:0;z-index:70;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
+#flash.on{opacity:.85;transition:none}
+#sheet{position:fixed;inset:0;z-index:80;background:rgba(10,8,12,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(20px + env(safe-area-inset-bottom,0px))}
+#sheet .media{max-width:100%;max-height:62vh;border-radius:14px;overflow:hidden;background:#000;display:flex}
+#sheet img,#sheet video{max-width:100%;max-height:62vh;display:block}
+#sheet .row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.act{font-weight:800;font-size:.95rem;border:0;border-radius:999px;padding:13px 22px;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.act.primary{background:var(--vortex);color:#fff}
+.act.ghost{background:rgba(255,255,255,.12);color:#fff}
+#sheet small{color:rgba(255,255,255,.7);font-size:.78rem;text-align:center;max-width:36ch;line-height:1.4}
+
+/* message screens (expired / not found) */
+#msg{position:fixed;inset:0;z-index:45;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;background:radial-gradient(90% 60% at 50% 30%,#22104a,#05020b 70%)}
+#msg h1{font-family:var(--fd);margin:0;font-size:1.8rem}
+#msg p{margin:0;color:var(--mute);max-width:34ch;line-height:1.5}
+#msg a.big{text-decoration:none}
+@media (prefers-reduced-motion:reduce){#vbox,#guide{transition:none}}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "mindar-image-three":"https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+}}
+</script>
+</head>
+<body>
+<div id="ar"></div>
+<header id="brand"><a href="https://vorticevr.mx/" aria-label="Vórtice VR"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a></header>
+
+<div id="intro">
+  <span class="k">Realidad aumentada</span>
+  <h1 id="title">Cargando…</h1>
+  <img class="thumb" id="thumb" alt="Imagen que debes enfocar con la cámara" hidden>
+  <p>Activa la cámara y apunta a esta imagen para ver el video sobre ella.</p>
+  <button class="big" id="start" type="button" disabled>Activar cámara</button>
+  <div id="err" hidden></div>
+  <div class="made">Hecho con Vórtice VR · <a href="https://vorticevr.mx/crear/">Crea la tuya gratis</a></div>
+</div>
+
+<div id="msg" hidden><h1 id="msgT"></h1><p id="msgP"></p><a class="big" href="https://vorticevr.mx/crear/">Crea tu experiencia</a></div>
+
+<div id="guide" hidden><div class="frame"><img id="guideImg" alt=""></div><p>Apunta la cámara a esta imagen</p></div>
+
+<div id="vbox" aria-hidden="true">
+  <div class="player"><video id="vid" playsinline webkit-playsinline loop preload="auto" crossorigin="anonymous"></video></div>
+  <p>Apunta a la imagen para verlo sobre ella</p>
+</div>
+
+<div id="vctl" hidden>
+  <button class="ic" id="play" type="button" aria-label="Pausar video"></button>
+  <button class="ic" id="snd" type="button" aria-label="Silenciar"></button>
+  <button class="ic" id="fs" type="button" aria-label="Ver video en pantalla completa"><svg viewBox="0 0 24 24"><path d="M4 4h6v2H6v4H4V4zm10 0h6v6h-2V6h-4V4zM4 14h2v4h4v2H4v-6zm14 0h2v6h-6v-2h4v-4z"/></svg></button>
+</div>
+
+<nav id="social" aria-label="Redes" hidden></nav>
+
+<div id="controls" hidden>
+  <span id="timer" hidden>0:00</span>
+  <button id="shutter" type="button" aria-label="Tomar foto"><span></span></button>
+  <div id="modes" role="group" aria-label="Modo de captura"><button type="button" data-mode="photo" aria-pressed="true">Foto</button><button type="button" data-mode="video" aria-pressed="false">Video</button></div>
+</div>
+<div id="flash"></div>
+<div id="sheet" hidden>
+  <div class="media" id="media"></div>
+  <div class="row">
+    <button class="act primary" id="share" type="button">Guardar o compartir</button>
+    <a class="act ghost" id="download" href="#" download>Descargar</a>
+    <button class="act ghost" id="close" type="button">Cerrar</button>
+  </div>
+  <small id="saveHint">En iPhone toca “Guardar o compartir” y elige “Guardar imagen” o “Guardar video” para que quede en tu galería.</small>
+</div>
+
+<script type="module">
+import * as THREE from "three";
+import { MindARThree } from "mindar-image-three";
+
+const $=id=>document.getElementById(id);
+const vid=$("vid"), vbox=$("vbox"), guide=$("guide"), startBtn=$("start");
+
+// ---- which experience: nombre.vorticevr.mx, /e/nombre/, or ?s=nombre (pruebas) ----
+function slugFromUrl(){
+  const q=new URLSearchParams(location.search).get("s"); if(q) return q;
+  const m=location.pathname.match(/\/e\/([a-z0-9-]+)/); if(m) return m[1];
+  const h=location.hostname.split("."); if(h.length>=3 || (h.length===2 && h[1]==="localhost")) return h[0];
+  return null;
+}
+const slug=slugFromUrl();
+let CFG=null;
+function message(t,p){ $("intro").hidden=true; $("msgT").textContent=t; $("msgP").textContent=p; $("msg").hidden=false; }
+
+const ICONS={
+  whatsapp:'<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 2.9 2.9 0 0 0-.9 2.2 5 5 0 0 0 1 2.6 11.4 11.4 0 0 0 4.4 3.9c1.6.7 2.3.8 3.1.6a2.6 2.6 0 0 0 1.7-1.2 2.1 2.1 0 0 0 .2-1.2c-.1-.1-.3-.2-.5-.3z"/>',
+  facebook:'<path d="M20 2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8.6v-7.7H10v-3h2.6V9c0-2.6 1.6-4 3.9-4 1.1 0 2.1.1 2.3.1v2.7h-1.6c-1.3 0-1.5.6-1.5 1.5v1.9h3l-.4 3h-2.6V22H20a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>',
+  instagram:'<path d="M7.8 2h8.4A5.8 5.8 0 0 1 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8A5.8 5.8 0 0 1 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2zm-.2 2A3.6 3.6 0 0 0 4 7.6v8.8A3.6 3.6 0 0 0 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6A3.6 3.6 0 0 0 16.4 4H7.6zm9.7 1.5a1.3 1.3 0 1 1 0 2.5 1.3 1.3 0 0 1 0-2.5zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>',
+  youtube:'<path d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4a2.5 2.5 0 0 0-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.8a2.5 2.5 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8c.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8zM10 15V9l5.2 3-5.2 3z"/>',
+  x:'<path d="M17.8 3h3.1l-6.8 7.7L22 21h-6.2l-4.9-6.4L5.3 21H2.2l7.3-8.3L2 3h6.4l4.4 5.8L17.8 3zm-1.1 16.2h1.7L7.4 4.7H5.6l11.1 14.5z"/>',
+  tiktok:'<path d="M16.6 3c.4 2.2 1.8 3.7 4 3.9v3a7.4 7.4 0 0 1-4-1.3v6.2A5.8 5.8 0 1 1 10.8 9v3.1a2.8 2.8 0 1 0 2.8 2.8V3h3z"/>',
+  web:'<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm7.9 9h-3a15.6 15.6 0 0 0-1.3-5.5A8 8 0 0 1 19.9 11zM12 4c.9 1.1 1.8 3.6 2 7h-4c.2-3.4 1.1-5.9 2-7zM4.1 13h3c.1 2 .6 3.9 1.3 5.5A8 8 0 0 1 4.1 13zm3-2h-3a8 8 0 0 1 4.3-5.5A15.6 15.6 0 0 0 7.1 11zM12 20c-.9-1.1-1.8-3.6-2-7h4c-.2 3.4-1.1 5.9-2 7zm3.6-1.5c.7-1.6 1.2-3.5 1.3-5.5h3a8 8 0 0 1-4.3 5.5z"/>'};
+const LABEL={whatsapp:"WhatsApp",facebook:"Facebook",instagram:"Instagram",youtube:"YouTube",x:"X",tiktok:"TikTok",web:"Sitio web"};
+const ORDER=["whatsapp","facebook","instagram","youtube","x","tiktok","web"];
+function socialHref(k,v){ if(k==="whatsapp") return "https://wa.me/"+String(v).replace(/[^\d]/g,""); return v; }
+
+async function load(){
+  if(!slug){ message("Experiencia no encontrada","Revisa que el link esté completo."); return; }
+  const base=new URLSearchParams(location.search).get("api")||"";
+  let r; try{ r=await fetch(`${base}/api/exp/${encodeURIComponent(slug)}`); }catch(e){ message("Sin conexión","Revisa tu internet y vuelve a abrir el link."); return; }
+  if(r.status===410){ message("Esta experiencia ya terminó","Las experiencias de prueba duran 30 días."); return; }
+  if(!r.ok){ message("Experiencia no encontrada","Revisa que el link esté completo."); return; }
+  CFG=await r.json(); CFG.base=base;
+  const m=`${base}/m/${CFG.slug}/`;
+  CFG.media={video:m+"video",target:m+"target",image:m+"image"};
+  document.title=`${CFG.title||"Realidad aumentada"} · Vórtice VR`;
+  $("title").textContent=CFG.title||"Realidad aumentada";
+  $("thumb").src=CFG.media.image; $("thumb").hidden=false; $("guideImg").src=CFG.media.image;
+  vid.src=CFG.media.video;
+  const soc=$("social"); soc.replaceChildren();
+  for(const k of ORDER){ const v=CFG.buttons&&CFG.buttons[k]; if(!v) continue;
+    const a=document.createElement("a"); a.href=socialHref(k,v); a.target="_blank"; a.rel="noopener"; a.setAttribute("aria-label",LABEL[k]);
+    a.innerHTML=`<svg viewBox="0 0 24 24">${ICONS[k]}</svg>`; soc.appendChild(a); }
+  startBtn.disabled=false;
+}
+
+// ---- video controls ----
+const I_PLAY='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>', I_PAUSE='<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+const I_SON='<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>';
+const I_SOFF='<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm16.6 3 2.1-2.1-1.4-1.4-2.1 2.1-2.1-2.1-1.4 1.4 2.1 2.1-2.1 2.1 1.4 1.4 2.1-2.1 2.1 2.1 1.4-1.4-2.1-2.1z"/></svg>';
+let userPaused=false;
+const showCtl=()=>{ $("play").innerHTML=vid.paused?I_PLAY:I_PAUSE; $("play").setAttribute("aria-label",vid.paused?"Reproducir video":"Pausar video");
+  $("snd").innerHTML=vid.muted?I_SOFF:I_SON; $("snd").setAttribute("aria-label",vid.muted?"Activar sonido":"Silenciar"); };
+["play","pause","volumechange"].forEach(e=>vid.addEventListener(e,showCtl));
+const playVid=()=>vid.play().catch(()=>{ vid.muted=true; return vid.play().catch(()=>{}); });
+$("play").addEventListener("click",()=>{ if(vid.paused){ userPaused=false; playVid(); } else { userPaused=true; vid.pause(); } });
+$("snd").addEventListener("click",()=>{ vid.muted=!vid.muted; if(vid.paused&&!userPaused) playVid(); });
+let setMode=()=>{};
+const cssFull=on=>{ vbox.classList.toggle("full",on); setMode(); };
+$("fs").addEventListener("click",()=>{
+  if(vbox.classList.contains("full")) return cssFull(false);
+  const fallback=()=>{ if(vid.webkitEnterFullscreen){ try{ vid.webkitEnterFullscreen(); return; }catch(e){} } cssFull(true); };
+  if(vid.requestFullscreen) vid.requestFullscreen().catch(fallback); else fallback();
+});
+vid.addEventListener("webkitendfullscreen",()=>{ if(!userPaused) playVid(); });
+
+// ---- photo / video capture: camera + 3D layer (+ on-screen video), audio of the video when possible ----
+function setupCapture(mind){
+  const container=$("ar"), shutter=$("shutter"), timer=$("timer"), flash=$("flash"), sheet=$("sheet"), media=$("media");
+  const out=document.createElement("canvas"), ctx=out.getContext("2d");
+  let mode="photo", wantPhoto=false, recorder=null, chunks=[], recStart=0, tick=null, lastUrl=null;
+  const MAX_SEC=30;
+  document.querySelectorAll("#modes button").forEach(b=>b.addEventListener("click",()=>{ if(recorder) return; mode=b.dataset.mode;
+    document.querySelectorAll("#modes button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+    shutter.classList.toggle("video",mode==="video"); shutter.setAttribute("aria-label",mode==="video"?"Grabar video":"Tomar foto"); }));
+  function size(){ const r=container.getBoundingClientRect(), dpr=Math.min(devicePixelRatio||1,2);
+    let w=Math.round(r.width*dpr), h=Math.round(r.height*dpr); const f=Math.min(1,1920/Math.max(w,h)); w=Math.round(w*f)&~1; h=Math.round(h*f)&~1;
+    if(out.width!==w||out.height!==h){ out.width=w; out.height=h; } return {r,sx:w/r.width,sy:h/r.height}; }
+  function compose(){ const {r,sx,sy}=size(); const cam=container.querySelector("video"), gl=mind.renderer.domElement, onScreen=vbox.classList.contains("on")?vid:null;
+    ctx.fillStyle="#000"; ctx.fillRect(0,0,out.width,out.height);
+    for(const el of [cam,gl,onScreen]){ if(!el) continue; const b=el.getBoundingClientRect(); ctx.drawImage(el,(b.left-r.left)*sx,(b.top-r.top)*sy,b.width*sx,b.height*sy); }
+    // logo on the capture too
+    const lg=$("brand").querySelector("img"); if(lg.complete){ const lw=out.width*.32, lh=lw*lg.naturalHeight/lg.naturalWidth; ctx.globalAlpha=.9; ctx.drawImage(lg,(out.width-lw)/2,out.height*.03,lw,lh); ctx.globalAlpha=1; } }
+  function afterRender(){ if(wantPhoto){ wantPhoto=false; compose(); out.toBlob(b=>show(b,"image"),"image/jpeg",.92); } else if(recorder) compose(); }
+  function pickType(){ for(const t of ["video/mp4;codecs=avc1,mp4a","video/mp4;codecs=avc1","video/mp4","video/webm;codecs=vp9,opus","video/webm"]) if(window.MediaRecorder&&MediaRecorder.isTypeSupported(t)) return t; return ""; }
+  function startRec(){
+    if(!window.MediaRecorder||!out.captureStream){ alertSheet("Tu navegador no permite grabar video aquí. Usa la opción de foto."); return; }
+    compose(); const stream=out.captureStream(30);
+    if(AUDIO.dest && !vid.muted) AUDIO.dest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
+    const type=pickType(); recorder=new MediaRecorder(stream,type?{mimeType:type,videoBitsPerSecond:6e6}:undefined); chunks=[];
+    recorder.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
+    recorder.onstop=()=>{ const t=recorder.mimeType||type||"video/webm"; recorder=null; show(new Blob(chunks,{type:t}),"video"); };
+    recorder.start(250); recStart=performance.now(); shutter.classList.add("rec"); shutter.setAttribute("aria-label","Detener grabación"); timer.hidden=false;
+    tick=setInterval(()=>{ const s=Math.floor((performance.now()-recStart)/1000); timer.textContent=`0:${String(s).padStart(2,"0")}`; if(s>=MAX_SEC) stopRec(); },250); }
+  function stopRec(){ clearInterval(tick); timer.hidden=true; timer.textContent="0:00"; shutter.classList.remove("rec"); shutter.setAttribute("aria-label","Grabar video"); if(recorder&&recorder.state!=="inactive") recorder.stop(); }
+  shutter.addEventListener("click",()=>{ if(mode==="photo"){ flash.classList.add("on"); requestAnimationFrame(()=>requestAnimationFrame(()=>flash.classList.remove("on"))); wantPhoto=true; } else if(recorder) stopRec(); else startRec(); });
+  const stamp=()=>{ const d=new Date(),p=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };
+  function show(blob,kind){
+    if(!blob||!blob.size){ alertSheet("No se pudo guardar la captura. Intenta de nuevo."); return; }
+    if(lastUrl) URL.revokeObjectURL(lastUrl); lastUrl=URL.createObjectURL(blob);
+    const name=`VorticeVR-${CFG.slug}-${stamp()}.${kind==="image"?"jpg":(blob.type.includes("mp4")?"mp4":"webm")}`;
+    media.replaceChildren(); const el=document.createElement(kind==="image"?"img":"video"); el.src=lastUrl;
+    if(kind==="video"){ el.controls=true; el.playsInline=true; el.autoplay=true; el.muted=true; el.loop=true; } else el.alt="Tu foto en realidad aumentada";
+    media.appendChild(el); $("download").href=lastUrl; $("download").download=name;
+    const file=new File([blob],name,{type:blob.type}); const canShare=!!(navigator.canShare&&navigator.canShare({files:[file]}));
+    $("share").hidden=!canShare; $("download").hidden=false; $("saveHint").hidden=!canShare;
+    $("share").onclick=async()=>{ try{ await navigator.share({files:[file],title:CFG.title||"Realidad aumentada"}); }catch(e){} };
+    sheet.hidden=false; }
+  function alertSheet(msg){ media.replaceChildren(Object.assign(document.createElement("p"),{textContent:msg,style:"color:#fff;padding:20px;margin:0;max-width:30ch;text-align:center"})); $("share").hidden=true; $("download").hidden=true; $("saveHint").hidden=true; sheet.hidden=false; }
+  $("close").addEventListener("click",()=>{ sheet.hidden=true; media.replaceChildren(); });
+  return {afterRender};
+}
+// Audio of the video for recordings: routed through WebAudio once (created inside the user's tap).
+const AUDIO={};
+function setupAudio(){ try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; const ac=new AC(); const src=ac.createMediaElementSource(vid);
+  const dest=ac.createMediaStreamDestination(); src.connect(ac.destination); src.connect(dest); AUDIO.ac=ac; AUDIO.dest=dest; ac.resume&&ac.resume(); }catch(e){} }
+
+async function start(){
+  vid.muted=false; vid.play().then(()=>vid.pause()).catch(()=>{}); setupAudio();       // unlock sound inside the tap (iOS)
+  startBtn.disabled=true; startBtn.textContent="Cargando…"; $("err").hidden=true;
+  try{
+    const mind=new MindARThree({container:$("ar"),imageTargetSrc:CFG.media.target,uiLoading:"no",uiScanning:"no",uiError:"no",filterMinCF:0.0001,filterBeta:0.001});
+    const {renderer,scene,camera}=mind; renderer.outputColorSpace=THREE.SRGBColorSpace;
+    const anchor=mind.addAnchor(0);
+    // the image is 1 wide and IH tall, centered; the video is sized by the creator's fit mode
+    const IH=CFG.img.h/CFG.img.w, VA=CFG.video.w/CFG.video.h;
+    let pw=1, ph=1/VA;
+    if(CFG.fit==="height"){ ph=IH; pw=IH*VA; } else if(CFG.fit==="fill"){ pw=1; ph=IH; }
+    const vtex=new THREE.VideoTexture(vid); vtex.colorSpace=THREE.SRGBColorSpace;
+    const vplane=new THREE.Mesh(new THREE.PlaneGeometry(pw,ph),new THREE.MeshBasicMaterial({map:vtex,toneMapped:false,transparent:true,opacity:0}));
+    vplane.position.z=0.004; anchor.group.add(vplane);
+
+    let found=false, started=false;
+    setMode=()=>{ const full=vbox.classList.contains("full"), onScreen=started&&(!found||full);
+      vbox.classList.toggle("on",onScreen); vbox.setAttribute("aria-hidden",String(!onScreen));
+      guide.classList.toggle("off",found&&!full); guide.classList.toggle("mini",started&&!found); };
+    anchor.onTargetFound=()=>{ found=true; if(!started){ started=true; vid.currentTime=0; $("vctl").hidden=false; } if(!userPaused) playVid(); setMode(); };
+    anchor.onTargetLost=()=>{ found=false; setMode(); };
+
+    const capture=setupCapture(mind);
+    await mind.start();
+    $("intro").hidden=true; guide.hidden=false; $("controls").hidden=false; $("social").hidden=!$("social").children.length; showCtl(); setMode();
+    const clock=new THREE.Clock(); let appear=0;
+    renderer.setAnimationLoop(()=>{ const dt=clock.getDelta(); appear=found?Math.min(1,appear+dt*2.4):0;
+      vplane.material.opacity=1-Math.pow(1-appear,3); vplane.scale.setScalar(.9+.1*vplane.material.opacity);
+      if(found&&vid.readyState>=2) vtex.needsUpdate=true; // a hidden <video> is not painted, so its frame callback stops (iPhone): push frames ourselves
+      renderer.render(scene,camera); capture.afterRender(); });
+  }catch(e){
+    console.error(e); startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false;
+    $("err").textContent=(e&&(e.name==="NotAllowedError"||/Permission/i.test(e.message||"")))?"No se dio permiso a la cámara. Actívalo en los ajustes del navegador y vuelve a intentar.":"No se pudo iniciar la cámara. Abre este link en Chrome o Safari (no dentro de Instagram o WhatsApp).";
+  }
+}
+startBtn.addEventListener("click",start);
+load();
+</script>
+</body>
+</html>
