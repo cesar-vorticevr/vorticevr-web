@@ -11,11 +11,12 @@ const ROOT_DEFAULT = "vorticevr.mx";
 const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear","create","ra","x","e","m","preview","app","apps","static","assets","cdn","dev","test","staging","beta","demo","vorticevr","vortice","soporte","support","help","ayuda","blog","shop","tienda","login","cuenta","account","johara","tarjeta","proyectos","status","docs"]);
 const LIMITS = { imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, codeMinutes: 10, codeTries: 5, sessionDays: 30, pausedDays: 30 };
 // Plans. exp = active experiences; days = how long each one lasts (0 = while the plan is active);
+// views = most times each experience can be opened (Gratis only, so a viral free QR cannot run up costs);
 // brand = the viewer opens with the "Creado con Vórtice VR" screen. Video: limited by size only, not duration.
 // Paid plans are activated by an admin in /admin/ (escuela always; basico/pro until Stripe is connected).
 // Videos stay ≤ 50 MB: the Worker reads the whole upload in memory (128 MB).
 const PLANS = {
-  gratis:  { name: "Gratis",  exp: 1,    days: 30, videoMB: 25, brand: true,  price: 0 },
+  gratis:  { name: "Gratis",  exp: 1,    days: 30, videoMB: 25, brand: true,  price: 0, views: 1000 },
   basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 25, brand: true,  price: 199 },
   pro:     { name: "Pro",     exp: 50,   days: 0,  videoMB: 50, brand: false, price: 499 },
   escuela: { name: "Escuela", exp: 1000, days: 0,  videoMB: 50, brand: false, price: 1500 },
@@ -167,6 +168,8 @@ async function api(request, env, ctx, url) {
     if (!row) return json({ error: "No existe" }, 404);
     if (row.expires < Date.now()) return json({ error: "Expiró" }, 410);
     if (row.paused) return json({ error: "Pausada", paused: true }, 410);
+    const P = planOf(row);
+    if (P.views && row.views >= P.views) return json({ error: "Límite de vistas", limit: true }, 410);
     ctx.waitUntil(env.DB.prepare("UPDATE experiences SET views = views + 1 WHERE slug = ?").bind(row.slug).run());
     return json({ ...publicExp(row), brand: planOf(row).brand }, 200, { "Cache-Control": "no-store" });
   }
@@ -563,7 +566,8 @@ const expCount = n => n === 1 ? "1 experiencia" : `${n.toLocaleString("es-MX")} 
 const isAdmin = (env, user) => !!user && (env.ADMIN_EMAILS || ADMINS_DEFAULT).split(",").map(s => s.trim().toLowerCase()).includes(user.email);
 // Sets the plan and fits the user's experiences to it in one statement (the free Workers plan allows 50 queries per request).
 // The first `exp` (active first, most recently edited) stay active: on a paid plan with no end date, on the free plan for
-// 30 days (or what they had left). The rest are paused and deleted after 30 days unless the plan goes up again.
+// 30 days (or what they had left). The rest are paused: on a paid plan they are kept; on the free plan they are deleted
+// after 30 days unless the plan goes up again.
 async function applyPlan(env, user, plan, until, note) {
   const P = PLANS[plan], now = Date.now();
   await env.DB.batch([
@@ -571,7 +575,7 @@ async function applyPlan(env, user, plan, until, note) {
     env.DB.prepare(`UPDATE experiences SET
         paused = CASE WHEN r.rn <= ?1 THEN 0 ELSE 1 END,
         expires = CASE WHEN r.rn <= ?1 THEN (CASE WHEN ?2 = 0 THEN ?3 WHEN experiences.paused = 0 AND experiences.expires < ?3 THEN experiences.expires ELSE ?4 END)
-                       WHEN experiences.paused = 1 THEN experiences.expires ELSE ?5 END
+                       WHEN ?2 = 0 THEN ?3 WHEN experiences.paused = 1 AND experiences.expires < ?3 THEN experiences.expires ELSE ?5 END
       FROM (SELECT slug, ROW_NUMBER() OVER (ORDER BY paused, updated DESC, slug) AS rn FROM experiences WHERE email = ?6 AND expires > ?7) AS r
       WHERE experiences.slug = r.slug`).bind(P.exp, P.days, FAR, now + P.days * 864e5, now + LIMITS.pausedDays * 864e5, user.email, now),
   ]);
