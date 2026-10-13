@@ -63,6 +63,36 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
 .exps .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.88rem}
 .exps img{width:56px;height:42px;object-fit:cover;border-radius:6px;background:#120826}
 .center{text-align:center;padding:40px 20px;color:var(--mute)}
+.tabs{display:inline-flex;gap:4px;padding:4px;margin-bottom:18px;border-radius:999px;border:1px solid var(--line2);background:rgba(5,2,11,.6)}
+.tabs button{font:600 .82rem var(--fd);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);background:transparent;border:0;border-radius:999px;padding:9px 16px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--lav);color:#1a0d33}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:rgba(5,2,11,.5)}
+.kpi b{display:block;font-family:var(--fd);font-size:1.7rem;line-height:1.2}
+.kpi span{font-size:.82rem;color:var(--mute)}
+.kpi small{display:block;font-size:.78rem;color:var(--mute);margin-top:4px}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px;margin-bottom:16px}
+.chart{margin:0;padding:16px 16px 10px;position:relative}
+.chart h3{margin:0;font-family:var(--fd);font-size:1rem}
+.chart .sub{color:var(--mute);font-size:.8rem;margin:2px 0 8px}
+.chart svg{display:block;overflow:visible;max-width:100%}
+.chart .grid line{stroke:rgba(190,150,255,.12)}
+.chart .axis text{fill:var(--mute);font:11px var(--fb)}
+.chart rect.hit{fill:transparent}
+.tip{position:absolute;pointer-events:none;background:#0d0620;border:1px solid var(--line2);border-radius:8px;padding:6px 10px;font-size:.8rem;white-space:nowrap;transform:translate(-50%,-110%);box-shadow:0 8px 20px rgba(0,0,0,.5)}
+.tablewrap{overflow-x:auto}
+table.top{width:100%;border-collapse:collapse;font-size:.88rem}
+table.top th,table.top td{text-align:left;padding:8px;border-bottom:1px solid var(--line)}
+table.top th{color:var(--mute);font-weight:600}
+table.top td.n{text-align:right;font-variant-numeric:tabular-nums}
+.note{font-size:.82rem;color:var(--mute)}
+.cform{border-top:0;padding-top:4px}
+#couponList{margin-top:12px}
+.coupon{display:flex;gap:10px 16px;align-items:center;flex-wrap:wrap;padding:14px 18px;margin-bottom:10px}
+.coupon code{font-family:var(--fm);font-size:1.05rem;color:var(--sun);letter-spacing:.06em}
+.coupon .meta{margin-top:0}
+.coupon .acts2{margin-left:auto}
+.coupon.off{opacity:.55}
 </style>
 </head>
 <body>
@@ -73,6 +103,44 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
   <div class="center card" id="status">Cargando…</div>
 
   <div id="panel" hidden>
+    <nav class="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="resumen" aria-selected="true">Resumen</button>
+      <button type="button" role="tab" data-tab="cuentas" aria-selected="false">Cuentas</button>
+      <button type="button" role="tab" data-tab="cupones" aria-selected="false">Cupones</button>
+    </nav>
+
+    <!-- analytics -->
+    <section id="t-resumen">
+      <div class="kpis" id="kpis"></div>
+      <div class="charts">
+        <figure class="card chart" id="cViews"></figure>
+        <figure class="card chart" id="cSignups"></figure>
+        <figure class="card chart" id="cPublishes"></figure>
+      </div>
+      <div class="card"><h2>Experiencias más vistas</h2><div class="tablewrap"><table class="top" id="topT"></table></div></div>
+      <p class="note">Las gráficas cuentan desde octubre de 2026 (cuando se empezó a registrar cada día). "Ingreso mensual" estima lo que entra al mes: Stripe (los anuales divididos entre 12) más los planes que activas a mano; las cortesías cuentan $0.</p>
+    </section>
+
+    <!-- coupons -->
+    <section id="t-cupones" hidden>
+      <div class="card">
+        <h2>Crear cupón de cortesía</h2>
+        <p class="note">Da el plan que elijas por los meses que elijas. Cada cuenta lo puede usar una vez; tú decides cuántas cuentas en total. Se canjea en Mi cuenta → "Tengo un código". Al terminar la cortesía, la cuenta regresa sola a Gratis.</p>
+        <form class="form cform" id="fCoupon">
+          <label>Plan<select name="plan"><option value="basico">Básico</option><option value="pro" selected>Pro</option><option value="escuela">Escuela</option></select></label>
+          <label>Meses gratis<input name="months" type="number" min="1" max="24" value="1" required></label>
+          <label>Veces que se puede usar<input name="max_uses" type="number" min="1" max="10000" value="10" required></label>
+          <label>Código (opcional)<input name="code" maxlength="30" placeholder="Se genera solo" autocapitalize="characters"></label>
+          <label>Vence el (opcional)<input name="expires" type="date"></label>
+          <label class="wide">Nota (para quién o por qué)<input name="note" maxlength="200" placeholder="Ej. Expo 2026, escuela Benito Juárez…"></label>
+          <div class="wide acts2"><button class="btn primary" type="submit">Crear cupón</button><span class="msg" id="mCoupon"></span></div>
+        </form>
+      </div>
+      <div id="couponList"></div>
+    </section>
+
+    <!-- accounts -->
+    <section id="t-cuentas" hidden>
     <div class="stats" id="stats"></div>
 
     <details class="card how">
@@ -88,6 +156,7 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
 
     <input class="search" id="q" type="search" placeholder="Buscar por correo o nombre" autocomplete="off">
     <div id="list"></div>
+    </section>
   </div>
 </main>
 
@@ -153,12 +222,77 @@ async function toggleExps(el,u){
   }catch(err){ box.textContent=err.message; }
 }
 
+// ---- tabs
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",String(x===b)));
+  ["resumen","cuentas","cupones"].forEach(t=>$("t-"+t).hidden=t!==b.dataset.tab);
+  if(b.dataset.tab==="cupones") loadCoupons(); if(b.dataset.tab==="resumen") loadStats(); }));
+
+// ---- analytics
+const nf=n=>Number(n||0).toLocaleString("es-MX");
+let lastStats=null;
+addEventListener("resize",()=>{ clearTimeout(window.__rs); window.__rs=setTimeout(()=>lastStats&&drawCharts(lastStats),200); });
+function drawCharts(s){
+  bars($("cViews"),"Vistas por día","Cuántas veces se abrieron experiencias",s.series,"views","vistas");
+  bars($("cSignups"),"Cuentas nuevas por día","Cuentas que confirmaron su correo",s.series,"signups","cuentas");
+  bars($("cPublishes"),"Experiencias creadas por día","Experiencias nuevas publicadas",s.series,"publishes","experiencias");
+}
+async function loadStats(){
+  const s=lastStats=await VVR.call("admin/stats");
+  const k=[[nf(s.users),"cuentas confirmadas",`+${nf(s.new7)} en 7 días · +${nf(s.new30)} en 30`],
+    [nf(s.paid),"con plan pagado",`Básico ${s.byPlan.basico} · Pro ${s.byPlan.pro} · Escuela ${s.byPlan.escuela}`],
+    ["$"+nf(s.mrr),"ingreso mensual estimado",`Stripe ${s.kind.stripe} · a mano ${s.kind.manual} · cortesías ${s.kind.cortesia}`],
+    [s.conversion+"%","de cuentas que pagan","sin contar cortesías"],
+    [nf(s.experiences.active),"experiencias activas",`${nf(s.experiences.new30)} nuevas en 30 días · ${nf(s.experiences.paused)} pausadas`],
+    [nf(s.views30),"vistas en 30 días",`${nf(s.experiences.views)} en total`]];
+  $("kpis").innerHTML=k.map(([v,l,sm])=>`<div class="kpi"><b>${v}</b><span>${l}</span><small>${sm}</small></div>`).join("");
+  drawCharts(s);
+  $("topT").innerHTML="<tr><th>Experiencia</th><th>Dueño</th><th class='n'>Vistas</th></tr>"+(s.top.length?s.top.map(t=>`<tr><td><a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.title)}</a></td><td>${esc(t.email)}</td><td class="n">${nf(t.views)}</td></tr>`).join(""):"<tr><td colspan='3'>Todavía no hay vistas.</td></tr>");
+}
+// one series per chart (bars per day, 30 days), hover tooltip; the title names the series, so no legend
+function bars(fig,title,sub,series,key,unit){
+  const W=Math.max(260,fig.clientWidth-32),H=150,P={l:30,r:4,t:8,b:20},max=Math.max(1,...series.map(d=>d[key])),nice=max<=5?5:Math.ceil(max/4)*4;
+  const bw=(W-P.l-P.r)/series.length, y=v=>H-P.b-(H-P.t-P.b)*v/nice;
+  const ticks=[0,nice/2,nice].map(v=>`<line x1="${P.l}" x2="${W-P.r}" y1="${y(v)}" y2="${y(v)}"/><text x="${P.l-6}" y="${y(v)+4}" text-anchor="end">${nf(v)}</text>`).join("");
+  const lab=d=>new Date(d+"T12:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"});
+  const g=series.map((d,i)=>{ const x=P.l+i*bw, h=H-P.b-y(d[key]), w=Math.max(2,bw-2);
+    const r=Math.min(4,w/2,h); const top=y(d[key]);
+    const path=h>0?`<path class="barp" d="M${x+1},${H-P.b} V${top+r} Q${x+1},${top} ${x+1+r},${top} H${x+1+w-r} Q${x+1+w},${top} ${x+1+w},${top+r} V${H-P.b} Z" fill="#a774f2"/>`:"";
+    return `<g data-i="${i}"><rect class="hit" x="${x}" y="${P.t}" width="${bw}" height="${H-P.t-P.b}"/>${path}</g>`; }).join("");
+  const xl=[0,Math.floor(series.length/2),series.length-1].map(i=>`<text x="${P.l+i*bw+bw/2}" y="${H-4}" text-anchor="middle">${lab(series[i].day)}</text>`).join("");
+  const total=series.reduce((n,d)=>n+d[key],0);
+  fig.innerHTML=`<h3>${title}</h3><p class="sub">${sub} · ${nf(total)} en 30 días</p><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${title}"><g class="grid axis">${ticks}</g><g>${g}</g><g class="axis">${xl}</g></svg><div class="tip" hidden></div>`;
+  const tip=fig.querySelector(".tip"), svg=fig.querySelector("svg");
+  svg.querySelectorAll("g[data-i]").forEach(el=>{ el.addEventListener("pointerenter",()=>{ const d=series[+el.dataset.i], r=el.getBoundingClientRect(), fr=fig.getBoundingClientRect();
+      tip.hidden=false; tip.textContent=`${lab(d.day)}: ${nf(d[key])} ${unit}`; tip.style.left=(r.left-fr.left+r.width/2)+"px"; tip.style.top=(svg.getBoundingClientRect().top-fr.top+10)+"px";
+      el.querySelector(".barp")&&el.querySelector(".barp").setAttribute("fill","#c9a6ff"); });
+    el.addEventListener("pointerleave",()=>{ tip.hidden=true; el.querySelector(".barp")&&el.querySelector(".barp").setAttribute("fill","#a774f2"); }); });
+}
+
+// ---- coupons
+async function loadCoupons(){
+  const r=await VVR.call("admin/coupons"), box=$("couponList");
+  if(!r.coupons.length){ box.innerHTML='<div class="card center">Todavía no hay cupones.</div>'; return; }
+  box.replaceChildren(...r.coupons.map(c=>{ const el=document.createElement("article"); el.className="card coupon"+(c.active?"":" off");
+    const venc=c.expires?`vence ${fmt(c.expires)}`:"sin fecha límite", left=c.max_uses-c.uses;
+    el.innerHTML=`<code>${esc(c.code)}</code><span class="tag ${c.plan}">${esc((PLANS[c.plan]||{}).name||c.plan)} · ${c.months} ${c.months===1?"mes":"meses"}</span>
+      <div class="meta"><span><b>${nf(c.uses)}</b> de ${nf(c.max_uses)} usos</span><span>${venc}</span>${c.note?`<span>${esc(c.note)}</span>`:""}${!c.active?"<span><b>Desactivado</b></span>":left<=0?"<span><b>Agotado</b></span>":""}</div>
+      <div class="acts2"><button class="btn sm" data-a="copy" type="button">Copiar</button><button class="btn sm" data-a="tog" type="button">${c.active?"Desactivar":"Activar"}</button></div>`;
+    el.querySelector("[data-a=copy]").onclick=async e=>{ try{ await navigator.clipboard.writeText(c.code); e.target.textContent="¡Copiado!"; }catch(_){ prompt("Copia el código:",c.code); } };
+    el.querySelector("[data-a=tog]").onclick=async()=>{ await VVR.call("admin/coupons/"+encodeURIComponent(c.code),{json:{active:!c.active}}); loadCoupons(); };
+    return el; }));
+}
+$("fCoupon").addEventListener("submit",async e=>{ e.preventDefault(); const m=$("mCoupon"), d=Object.fromEntries(new FormData(e.target));
+  m.className="msg"; m.textContent="Creando…";
+  try{ const r=await VVR.call("admin/coupons",{json:d}); m.className="msg ok"; m.textContent="Cupón creado: "+r.code; e.target.code.value=""; e.target.note.value=""; loadCoupons(); }
+  catch(err){ m.className="msg bad"; m.textContent=err.message; } });
+
 let timer=0;
 $("q").addEventListener("input",()=>{ clearTimeout(timer); timer=setTimeout(()=>load($("q").value.trim()).catch(e=>alert(e.message)),300); });
 
 (async()=>{
   if(!VVR.session()){ location.replace("../cuenta/?siguiente=admin"); return; }
-  try{ await load(); $("status").hidden=true; $("panel").hidden=false; }
+  try{ await load(); await loadStats(); $("status").hidden=true; $("panel").hidden=false; drawCharts(lastStats); }
   catch(e){ if(e.status===401){ location.replace("../cuenta/?siguiente=admin"); return; }
     $("status").textContent=e.status===403?"Esta cuenta no tiene acceso a la administración.":e.message; }
 })();

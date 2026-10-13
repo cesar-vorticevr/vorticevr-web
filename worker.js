@@ -188,7 +188,7 @@ async function api(request, env, ctx, url) {
     if (row.paused) return json({ error: "Pausada", paused: true }, 410);
     const P = planOf(row);
     if (P.views && row.views >= P.views) return json({ error: "Límite de vistas", limit: true }, 410);
-    ctx.waitUntil(env.DB.prepare("UPDATE experiences SET views = views + 1 WHERE slug = ?").bind(row.slug).run());
+    ctx.waitUntil(env.DB.batch([env.DB.prepare("UPDATE experiences SET views = views + 1 WHERE slug = ?").bind(row.slug), bump(env, "views")]));
     return json({ ...publicExp(row), brand: planOf(row).brand }, 200, { "Cache-Control": "no-store" });
   }
 
@@ -206,6 +206,7 @@ async function api(request, env, ctx, url) {
 <p style="color:#d2b8ff">Le interesa: <b>${esc(topic)}</b></p>
 <div style="white-space:pre-wrap;background:#1b0a36;border-radius:10px;padding:14px">${esc(msg)}</div>
 <p style="color:#a99bcb;font-size:12px">Contesta este correo para responderle directamente.</p>`);
+    ctx.waitUntil(bump(env, "contacts").run());
     const sent = await sendMail(env, env.CONTACT_TO || "hola@vorticevr.mx", `Contacto: ${name} · ${topic}`, html, undefined, em);
     return sent ? json({ ok: true }) : json({ error: "No se pudo enviar. Escríbenos a hola@vorticevr.mx." }, 502);
   }
@@ -235,7 +236,7 @@ async function api(request, env, ctx, url) {
     if (bad) return bad;
     const user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(em).first();
     if (!user) return json({ error: "No encontramos esa cuenta. Regístrate de nuevo." }, 404);
-    await env.DB.prepare("UPDATE users SET verified = 1 WHERE id = ?").bind(user.id).run();
+    await env.DB.batch([env.DB.prepare("UPDATE users SET verified = 1 WHERE id = ?").bind(user.id), bump(env, "signups")]);
     return json(await sessionFor(env, request, { ...user, verified: 1 }));
   }
 
@@ -336,6 +337,7 @@ async function api(request, env, ctx, url) {
     if (data.error) return json({ error: data.error }, 400);
     const video = form.get("video"), image = form.get("image"), target = form.get("target"), qr = form.get("qr");
     const isNew = !mine;
+    if (isNew) ctx.waitUntil(bump(env, "publishes").run());
     if (isNew && (!video || !image || !target)) return json({ error: "Faltan la imagen o el video." }, 400);
     if (video && (video.size > P.videoMB * 1048576 || !/^video\/(mp4|webm|quicktime)$/.test(video.type))) return json({ error: `El video debe ser MP4, WebM o MOV de máximo ${P.videoMB} MB.` }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
@@ -366,6 +368,30 @@ async function api(request, env, ctx, url) {
     const out = ownerExp(row, request, env);
     if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
     return json({ ok: true, experience: out });
+  }
+
+  // ---- courtesy code: gives its plan for N months (ends on its own; the cron moves the account back to Gratis) ----
+  if (path === "/api/coupon" && M === "POST") {
+    if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
+    if (!(await limit(env, "coupon:" + me.id, 10, 3600e3))) return json({ error: "Demasiados intentos. Espera un rato." }, 429);
+    const code = String((await request.json().catch(() => ({}))).code || "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 40);
+    const c = code && await env.DB.prepare("SELECT * FROM coupons WHERE code = ?").bind(code).first();
+    const now = Date.now();
+    if (!c || !c.active || (c.expires && c.expires < now)) return json({ error: "Ese código no es válido o ya venció." }, 404);
+    if (c.uses >= c.max_uses) return json({ error: "Ese código ya se usó todas las veces posibles." }, 410);
+    const cur = planOf(me);
+    if (billingInfo(env, me).subscribed) return json({ error: "Ya tienes una suscripción activa; este código es para cuentas sin suscripción." }, 409);
+    if (PLAN_RANK[cur.id] > PLAN_RANK[c.plan]) return json({ error: `Tu plan actual (${cur.name}) ya incluye más que este código.` }, 409);
+    const got = await env.DB.prepare("INSERT OR IGNORE INTO redemptions (code, user_id, at) VALUES (?, ?, ?)").bind(code, me.id, now).run();
+    if (!got.meta.changes) return json({ error: "Ya usaste este código en tu cuenta." }, 409);
+    const took = await env.DB.prepare("UPDATE coupons SET uses = uses + 1 WHERE code = ? AND uses < max_uses").bind(code).run();
+    if (!took.meta.changes) { await env.DB.prepare("DELETE FROM redemptions WHERE code = ? AND user_id = ?").bind(code, me.id).run(); return json({ error: "Ese código ya se usó todas las veces posibles." }, 410); }
+    // same plan with an end date: add the months to it; otherwise the plan starts now
+    const from = cur.id === c.plan && cur.until && cur.until > now ? cur.until : now;
+    const until = addMonths(from, c.months);
+    await applyPlan(env, me, c.plan, until, `Cupón ${code}`);
+    ctx.waitUntil(sendMail(env, me.email, `Tu cortesía del plan ${PLANS[c.plan].name} está activa`, planMail(me, c.plan, until)));
+    return json({ ok: true, plan: PLANS[c.plan].name, until });
   }
 
   // ---- support from the dashboard: the message goes with the account details; paid plans are marked first ----
@@ -444,6 +470,33 @@ async function api(request, env, ctx, url) {
       const { results } = await env.DB.prepare("SELECT * FROM experiences WHERE email = ? AND expires > ? ORDER BY paused, updated DESC LIMIT 1000").bind(normEmail(url.searchParams.get("email")), now).all();
       return json({ experiences: results.map(r => ownerExp(r, request, env)) });
     }
+    if (path === "/api/admin/coupons" && M === "GET") {
+      const { results } = await env.DB.prepare("SELECT * FROM coupons ORDER BY created DESC LIMIT 200").all();
+      return json({ coupons: results });
+    }
+    if (path === "/api/admin/coupons" && M === "POST") {
+      const b = await request.json().catch(() => ({}));
+      if (!["basico", "pro", "escuela"].includes(b.plan)) return json({ error: "Elige el plan del cupón." }, 400);
+      const months = Math.round(Number(b.months)), uses = Math.round(Number(b.max_uses));
+      if (!(months >= 1 && months <= 24)) return json({ error: "Los meses deben ser de 1 a 24." }, 400);
+      if (!(uses >= 1 && uses <= 10000)) return json({ error: "Las veces de uso deben ser de 1 a 10,000." }, 400);
+      let code = String(b.code || "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 30);
+      if (code && code.length < 4) return json({ error: "El código debe tener al menos 4 letras o números." }, 400);
+      if (!code) { const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", r = crypto.getRandomValues(new Uint8Array(8)); code = "VVR-" + [...r].map((x, i) => A[x % A.length] + (i === 3 ? "-" : "")).join(""); }
+      let expires = null;
+      if (b.expires) { const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(b.expires)); if (!d) return json({ error: "Fecha inválida." }, 400); expires = Date.UTC(+d[1], +d[2] - 1, +d[3], 23, 59, 59) + 6 * 3600e3; }
+      const r = await env.DB.prepare("INSERT OR IGNORE INTO coupons (code, plan, months, max_uses, uses, expires, note, active, created) VALUES (?, ?, ?, ?, 0, ?, ?, 1, ?)")
+        .bind(code, b.plan, months, uses, expires, String(b.note || "").trim().slice(0, 200), now).run();
+      if (!r.meta.changes) return json({ error: "Ya existe un cupón con ese código." }, 409);
+      return json({ ok: true, code });
+    }
+    m = path.match(/^\/api\/admin\/coupons\/([A-Z0-9-]+)$/);
+    if (m && M === "POST") {
+      const b = await request.json().catch(() => ({}));
+      await env.DB.prepare("UPDATE coupons SET active = ? WHERE code = ?").bind(b.active ? 1 : 0, m[1]).run();
+      return json({ ok: true });
+    }
+    if (path === "/api/admin/stats" && M === "GET") return json(await adminStats(env, request));
     if (path === "/api/admin/plan" && M === "POST") {
       const b = await request.json().catch(() => ({}));
       const user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(normEmail(b.email)).first();
@@ -523,6 +576,11 @@ async function schema(env) {
     env.DB.prepare("CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires INTEGER, created INTEGER)"),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS sessions_user ON sessions (user_id)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS otp (email TEXT NOT NULL, purpose TEXT NOT NULL, hash TEXT, expires INTEGER, tries INTEGER DEFAULT 0, PRIMARY KEY (email, purpose))"),
+    // courtesy codes made in /admin/: a plan for N months, usable max_uses times (once per account)
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS coupons (code TEXT PRIMARY KEY, plan TEXT NOT NULL, months INTEGER NOT NULL, max_uses INTEGER NOT NULL, uses INTEGER DEFAULT 0, expires INTEGER, note TEXT, active INTEGER DEFAULT 1, created INTEGER)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS redemptions (code TEXT NOT NULL, user_id INTEGER NOT NULL, at INTEGER, PRIMARY KEY (code, user_id))"),
+    // one row per day (Mexico time) for the admin charts
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS stats (day TEXT PRIMARY KEY, views INTEGER DEFAULT 0, signups INTEGER DEFAULT 0, publishes INTEGER DEFAULT 0, contacts INTEGER DEFAULT 0)"),
   ]);
   await migrate(env);
   schemaReady = true;
@@ -609,6 +667,46 @@ async function account(env, request, user) {
   const { results } = await env.DB.prepare("SELECT * FROM experiences WHERE email = ? AND expires > ? ORDER BY paused, created DESC").bind(user.email, Date.now()).all();
   const plan = planOf(user);
   return { user: { name: user.name, email: user.email }, experiences: results.map(r => ownerExp(r, request, env)), plan, limit: plan.exp, admin: isAdmin(env, user) || undefined, billing: billingInfo(env, user) };
+}
+
+// ---------- daily stats and admin analytics ----------
+const today = () => new Date(Date.now() - 6 * 3600e3).toISOString().slice(0, 10);   // Mexico (UTC−6)
+const bump = (env, field) => env.DB.prepare(`INSERT INTO stats (day, ${field}) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET ${field} = ${field} + 1`).bind(today());
+function addMonths(t, n) { const d = new Date(t); d.setUTCMonth(d.getUTCMonth() + n); return d.getTime(); }
+const PLAN_RANK = { gratis: 0, basico: 1, pro: 2, escuela: 3 };
+// What matters to run the platform: accounts and growth, paying plans and monthly income, experiences and views,
+// a 30-day daily series, and the most viewed experiences. About 10 queries.
+async function adminStats(env, request) {
+  const now = Date.now(), d30 = now - 30 * 864e5, d7 = now - 7 * 864e5;
+  const [acc, plans, exps, top, days, cps] = await env.DB.batch([
+    env.DB.prepare(`SELECT COUNT(*) AS users, SUM(created > ?1) AS new7, SUM(created > ?2) AS new30 FROM users WHERE verified = 1`).bind(d7, d30),
+    env.DB.prepare(`SELECT plan, plan_until, plan_note, stripe_status FROM users WHERE COALESCE(plan, 'gratis') != 'gratis' AND (plan_until IS NULL OR plan_until > ?)`).bind(now),
+    env.DB.prepare(`SELECT SUM(paused = 0) AS active, SUM(paused = 1) AS paused, SUM(created > ?2) AS new30, COALESCE(SUM(views), 0) AS views FROM experiences WHERE expires > ?1`).bind(now, d30),
+    env.DB.prepare(`SELECT slug, title, email, views FROM experiences WHERE expires > ? ORDER BY views DESC LIMIT 10`).bind(now),
+    env.DB.prepare(`SELECT * FROM stats WHERE day >= ? ORDER BY day`).bind(new Date(d30 - 6 * 3600e3).toISOString().slice(0, 10)),
+    env.DB.prepare(`SELECT COUNT(*) AS coupons, COALESCE(SUM(uses), 0) AS uses FROM coupons`),
+  ]);
+  const a = acc.results[0], e = exps.results[0];
+  // paying accounts by plan; monthly income: Stripe (yearly ÷ 12) + plans activated by hand; courtesy codes are $0
+  const byPlan = { basico: 0, pro: 0, escuela: 0 }, kind = { stripe: 0, manual: 0, cortesia: 0 }; let mrr = 0;
+  for (const u of plans.results) {
+    if (!PLANS[u.plan]) continue; byPlan[u.plan] = (byPlan[u.plan] || 0) + 1;
+    const note = u.plan_note || "";
+    if (/^Cupón/.test(note)) { kind.cortesia++; continue; }
+    if (/^Stripe/.test(note) && ["active", "trialing", "past_due"].includes(u.stripe_status)) { kind.stripe++; mrr += /· anual$/.test(note) ? PLANS[u.plan].price * YEAR_MONTHS / 12 : PLANS[u.plan].price; }
+    else { kind.manual++; mrr += PLANS[u.plan].price; }
+  }
+  const series = []; const map = Object.fromEntries(days.results.map(r => [r.day, r]));
+  for (let i = 29; i >= 0; i--) { const day = new Date(now - 6 * 3600e3 - i * 864e5).toISOString().slice(0, 10), r = map[day] || {}; series.push({ day, views: r.views || 0, signups: r.signups || 0, publishes: r.publishes || 0, contacts: r.contacts || 0 }); }
+  const paid = byPlan.basico + byPlan.pro + byPlan.escuela;
+  return {
+    users: a.users || 0, new7: a.new7 || 0, new30: a.new30 || 0, paid, byPlan, kind, mrr: Math.round(mrr),
+    conversion: a.users ? Math.round(1000 * (paid - kind.cortesia) / a.users) / 10 : 0,
+    experiences: { active: e.active || 0, paused: e.paused || 0, new30: e.new30 || 0, views: e.views || 0 },
+    views30: series.reduce((n, x) => n + x.views, 0), series,
+    top: top.results.map(r => ({ ...r, url: expUrl(r.slug, request, env) })),
+    coupons: cps.results[0],
+  };
 }
 
 // ---------- plans ----------

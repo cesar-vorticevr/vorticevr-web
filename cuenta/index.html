@@ -76,6 +76,8 @@ input:focus{border-color:var(--lav);outline:none}
 .lim{font-family:var(--fm);font-size:1rem;color:var(--sun);margin-left:6px}
 #passBox{max-width:440px;margin-bottom:18px}
 #helpBox{max-width:560px;margin-bottom:18px}
+#codeBox{max-width:440px;margin-bottom:18px}
+#cCodeIn{text-transform:uppercase;letter-spacing:.08em;font-family:var(--fm)}
 select,textarea{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:12px}
 textarea{resize:vertical}
 select:focus,textarea:focus{border-color:var(--lav);outline:none}
@@ -156,6 +158,7 @@ dialog .row{justify-content:space-between}
         <button type="button" id="pUpgrade">Cambiar de plan</button>
         <button type="button" id="pManage" hidden>Administrar suscripción</button>
         <a id="pAdmin" href="../admin/" hidden>Administración</a>
+        <button type="button" id="pCodeBtn">Tengo un código</button>
         <button type="button" id="pHelpBtn">Ayuda y soporte</button>
         <button type="button" id="pPassBtn">Cambiar contraseña</button>
         <button type="button" id="pOut">Cerrar sesión</button>
@@ -229,6 +232,13 @@ dialog .row{justify-content:space-between}
         <button class="btn sm" id="plansClose" type="button">Cerrar</button></div>
       <div class="plans" id="pPlans"></div>
       <p class="note" id="pNote"></p>
+    </section>
+
+    <section class="card" id="codeBox" hidden>
+      <div class="phead"><h2>Tengo un código</h2><button class="btn sm" id="codeClose" type="button">Cerrar</button></div>
+      <p class="note">Si te dieron un código de cortesía, escríbelo aquí para activar tu plan.</p>
+      <form id="fCode"><label class="f" for="cCodeIn">Código</label><input id="cCodeIn" maxlength="40" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="VVR-XXXX-XXXX" required>
+        <button class="btn sun wide" type="submit">Activar</button></form><div class="msg" id="mCode"></div>
     </section>
 
     <section class="card" id="helpBox" hidden>
@@ -395,6 +405,14 @@ $("pHelpBtn").addEventListener("click",()=>{ menu(false);
   $("helpLead").textContent=`Cuéntanos qué pasó y te respondemos a ${DATA.user.email}${DATA.plan&&DATA.plan.id!=="gratis"?" lo antes posible (tu plan "+DATA.plan.name+" tiene prioridad)":""}.`;
   $("helpBox").hidden=false; $("helpBox").scrollIntoView({behavior:"smooth",block:"start"}); setTimeout(()=>$("hMsg").focus(),300); });
 $("helpClose").addEventListener("click",()=>{ $("helpBox").hidden=true; });
+// courtesy code (see /api/coupon): the plan for some months, then back to Gratis on its own
+$("pCodeBtn").addEventListener("click",()=>{ menu(false); $("codeBox").hidden=false; $("codeBox").scrollIntoView({behavior:"smooth",block:"start"}); setTimeout(()=>$("cCodeIn").focus(),300); });
+$("codeClose").addEventListener("click",()=>{ $("codeBox").hidden=true; });
+$("fCode").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,async()=>{ msg("mCode","Activando…");
+  try{ const r=await VVR.call("coupon",{json:{code:$("cCodeIn").value}}); $("codeBox").hidden=true; $("cCodeIn").value=""; msg("mCode","");
+    showPanel(await VVR.call("me")); banner(`¡Listo! Tu plan ${r.plan} está activo hasta el ${fmtD(r.until)}. Disfrútalo.`);
+    if(window.vvrSparkle) window.vvrSparkle(innerWidth/2,140); scrollTo({top:0,behavior:"smooth"}); }
+  catch(err){ msg("mCode",err.message,"bad"); } }); });
 $("fHelp").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,async()=>{ msg("mHelp","Enviando…");
   try{ await VVR.call("support",{json:{message:$("hMsg").value,slug:$("hExp").value}}); msg("mHelp","¡Listo! Te respondemos por correo pronto.","ok"); $("hMsg").value=""; }
   catch(err){ msg("mHelp",err.message,"bad"); } }); });
