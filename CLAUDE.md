@@ -19,7 +19,7 @@ Responder a César en español, directo y práctico.
 | `/johara/` | Portal de Johara De Leija, Directora General de OCV Tabasco (clienta) |
 | `/ra/ocv-johara/` | RA sobre la tarjeta impresa de Johara |
 | `/cuenta/`, `/crear/`, `/x/`, `/admin/` | Plataforma de RA (ver abajo) |
-| `/proyectos/<nombre>/` | Experiencias de Vórtice VR que se abren desde la portada: `observatorio`, `orbita`, `deletreo-lsm`, `steal-a-pinata` (archivos de César, publicados tal cual; a `orbita` solo se le agregó el encabezado HTML) |
+| `/proyectos/<nombre>/` | Experiencias de Vórtice VR que se abren desde la portada: `observatorio`, `orbita`, `deletreo-lsm` (y `steal-a-pinata`, publicada pero ya sin enlace en la portada; archivos de César, publicados tal cual; a `orbita` solo se le agregó el encabezado HTML) |
 | `/assets/` | Logos e íconos compartidos |
 | `/assets/proyectos/` | Imágenes de las tarjetas de la portada (capturas con Chrome headless; la del juego es su portada original) |
 | `_clientes/`, `_plantillas/`, `tools/` | Fuentes para generar tarjetas de clientes (no se publican: `.assetsignore`) |
@@ -36,7 +36,9 @@ Las tarjetas NFC y QR de clientes apuntan a `https://vorticevr.mx/<cliente>/` (`
 - Estética de los propios proyectos: fondo `#05020b`, morados `#8b3fd6`/`#d2b8ff`, dorado `#ffbe55`; Chakra Petch + IBM Plex Sans/Mono.
 - Hero: three.js 0.160 (import map). ~14k partículas (8k en celular) giran en un vórtice y forman el isotipo, muestreado de `assets/icono.png` con su morado original (`#6b279b`); un tercio sigue orbitando. El cursor las empuja, un clic las dispersa y el scroll las devuelve al vórtice. Solo renderiza con el hero visible. Si no hay WebGL se muestra `icono.png`.
 - Efectos sin librerías: revelado al hacer scroll, inclinación de tarjetas, botones magnéticos, cursor propio (solo mouse). Con "reducir movimiento" todo queda quieto.
-- Sección `#crea` (justo después del hero, antes de Experiencias): "Haz que tus imágenes cobren vida". Sin la palabra "RA" ni "realidad aumentada" (mucha gente no la entiende): se habla de imagen, video y cámara. Prioridad: que la gente abra la cámara y lo pruebe. Animación de un celular que muestra la imagen con el video encima, pasos, usos, planes (Gratis, Básico, Pro; escuelas por WhatsApp).
+- **Prioridad de la portada: vender la plataforma de realidad aumentada.** El hero dice "Plataforma de realidad aumentada / Crea tu propia realidad aumentada" (botones: Crear la mía gratis, ¿Cómo funciona?). Se nombra "realidad aumentada" completo (no "RA") y se explica brevemente.
+- Sección `#crea` (justo después del hero): "¿Qué es la realidad aumentada? / Tu imagen impresa, con un video encima". Animación de un celular que muestra la imagen con el video encima, pasos, usos, planes (Gratis, Básico, Pro; escuelas por WhatsApp). Video explicativo: subir `assets/video-ra.mp4` y aparece solo en la sección (si no existe, no se muestra).
+- `#experiencias` = "Proyectos educativos que hemos desarrollado" (qué más hace Vórtice VR): Observatorio, Órbita, Deletreo LSM. Steal a Piñata se quitó de la portada (octubre 2026); su página `/proyectos/steal-a-pinata/` sigue publicada.
 - Demo "Pruébalo ya": si existe la experiencia `ejemplo` (de César, plan Pro), su imagen se muestra en la sección; en computadora sale un QR para escanearla y en celular el botón "Abrir la cámara". Si no existe, solo queda la animación. `ejemplo` es un nombre que solo un admin puede usar (`ADMIN_SLUGS`). Cada visita a la portada le suma una vista.
 - La sección Nosotros solo usa datos confirmados (desde 2016, Villahermosa, director, áreas); César la va a completar.
 

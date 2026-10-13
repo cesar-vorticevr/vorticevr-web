@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Vórtice VR · Realidad aumentada, virtual e IA</title>
-<meta name="description" content="Estudio de realidad aumentada, realidad virtual, realidad mixta e inteligencia artificial aplicada. Desde 2016. Prueba nuestras experiencias en tu navegador.">
+<title>Vórtice VR · Crea tu realidad aumentada</title>
+<meta name="description" content="Crea tu propia realidad aumentada: sube una imagen y un video y, al apuntar el celular a la imagen, el video aparece encima. Sin apps, con un QR. Gratis para empezar.">
 <meta property="og:title" content="Vórtice VR">
-<meta property="og:description" content="Experiencias inmersivas: realidad aumentada, realidad virtual e IA aplicada.">
+<meta property="og:description" content="Crea tu realidad aumentada: tu imagen cobra vida con un video al apuntarle con el celular.">
 <meta property="og:image" content="assets/proyectos/observatorio.webp">
 <meta name="theme-color" content="#05020b">
 <link rel="icon" href="assets/icono.png">
@@ -105,6 +105,8 @@ header.top nav a:hover{color:var(--ink)}
 .mkdemo.live .poster::after{display:none}
 .mkdemo.live .phone{width:38%;right:-2%;bottom:-4%}
 @media (max-width:900px){.mkdemo{max-width:440px}}
+.mkvideo{margin:0 auto 56px;max-width:900px;border-radius:18px;overflow:hidden;border:1px solid var(--line2);box-shadow:0 30px 80px -30px rgba(139,63,214,.6);background:#000}
+.mkvideo video{width:100%;display:block;aspect-ratio:16/9;background:#000}
 .uses{display:flex;flex-direction:column;gap:14px;margin-bottom:52px}
 .uses .chips{display:flex;flex-wrap:wrap;gap:10px}
 .uses .chip{font-size:.9rem;padding:9px 16px}
@@ -294,7 +296,7 @@ footer img{height:22px;width:auto}
 <header class="top" id="top"><div class="wrap">
   <a class="brand" href="./" aria-label="Vórtice VR, inicio" data-en-aria="Vórtice VR, home"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
   <nav aria-label="Secciones" data-en-aria="Sections">
-    <a href="#experiencias" data-en="Experiences">Experiencias</a><a href="#servicios" data-en="Services">Servicios</a><a href="#nosotros" data-en="About">Nosotros</a><a class="pill sun mag" href="#crea" data-en="Make yours">Crea la tuya</a><a class="pill talk mag" href="#contacto" data-en="Let’s talk">Platiquemos</a>
+    <a href="#crea" data-en="Augmented reality">Realidad aumentada</a><a href="#experiencias" data-en="Projects">Proyectos</a><a href="#servicios" data-en="Services">Servicios</a><a href="#nosotros" data-en="About">Nosotros</a><a class="pill sun mag" href="#crea" data-en="Make yours">Crea la tuya</a><a class="pill talk mag" href="#contacto" data-en="Let’s talk">Platiquemos</a>
     <button class="lang mag" id="lang" type="button" aria-label="Ver en inglés" data-en-aria="Ver en español"><span data-en="ES">EN</span></button>
   </nav>
 </div></header>
@@ -308,12 +310,12 @@ footer img{height:22px;width:auto}
       <div class="tel mono"><span data-en="Immersive studio">Estudio inmersivo</span><br><span data-en="AR · VR · MR · AI">RA · RV · RM · IA</span><br><b id="ptxt" data-en="Move the cursor over the vortex">Mueve el cursor sobre el vórtice</b></div>
     </div>
     <div class="content"><div class="wrap">
-      <span class="kick fade" style="transition-delay:.1s" data-en="Since 2016">Desde 2016</span>
-      <h1 id="h1" data-en="Experiences you &lt;span class=&quot;nw&quot;&gt;&lt;em&gt;live&lt;/em&gt;,&lt;/span&gt; not just watch.">Experiencias que se <span class="nw"><em>viven</em>,</span> no solo se ven.</h1>
-      <p class="fade" style="transition-delay:.7s" data-en="We are a studio for augmented reality, virtual reality, mixed reality and applied artificial intelligence. We design experiences for education, culture, tourism and brands, and take them from concept to something people use with their phone or a headset.">Somos un estudio de realidad aumentada, realidad virtual, realidad mixta e inteligencia artificial aplicada. Diseñamos experiencias para educación, cultura, turismo y marcas, y las llevamos del concepto a algo que la gente usa con su celular o con un visor.</p>
+      <span class="kick fade" style="transition-delay:.1s" data-en="Augmented reality platform">Plataforma de realidad aumentada</span>
+      <h1 id="h1" data-en="Create your own &lt;em&gt;augmented reality&lt;/em&gt;.">Crea tu propia <em>realidad aumentada</em>.</h1>
+      <p class="fade" style="transition-delay:.7s" data-en="Upload an image and a video. When someone points their phone at the image, the video appears on top of it. No app to install: it opens with a QR code. Free to start.">Sube una imagen y un video. Cuando alguien apunte su celular a la imagen, el video aparece encima. Sin instalar ninguna app: se abre con un código QR. Empieza gratis.</p>
       <div class="actions fade" style="transition-delay:.9s">
-        <a class="btn primary mag" href="#experiencias" data-en="Try it now ↓">Pruébalo ahora ↓</a>
-        <a class="btn sun mag" href="#crea" data-en="Bring your image to life">Dale vida a tu imagen</a>
+        <a class="btn sun mag" href="cuenta/?siguiente=crear#registro" data-en="Create mine free">Crear la mía gratis</a>
+        <a class="btn primary mag" href="#crea" data-en="How does it work? ↓">¿Cómo funciona? ↓</a>
         <a class="btn mag" href="https://wa.me/529983448207?text=Hola%2C%20quiero%20platicar%20de%20un%20proyecto%20con%20V%C3%B3rtice%20VR" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg><span data-en="Let’s talk">Platiquemos</span></a>
       </div>
     </div></div>
@@ -328,9 +330,9 @@ footer img{height:22px;width:auto}
   <section id="crea" class="mk"><div class="wrap">
     <div class="mkhero">
       <div class="mktext reveal">
-        <span class="kick" data-en="New · free to start">Nuevo · empieza gratis</span>
-        <h2 data-en="Bring your images &lt;em&gt;to life&lt;/em&gt;.">Haz que tus imágenes <em>cobren vida</em>.</h2>
-        <p data-en="Point your phone’s camera at an image (your business card, a poster, a menu, an invitation) and a video plays right on top of it. Nothing to install: it opens with a QR code or a link.">Apunta la cámara del celular a una imagen (tu tarjeta, un cartel, un menú, una invitación) y encima aparece un video. No hay que instalar nada: se abre con un código QR o un link.</p>
+        <span class="kick" data-en="What is augmented reality?">¿Qué es la realidad aumentada?</span>
+        <h2 data-en="Your printed image, &lt;em&gt;with a video on top&lt;/em&gt;.">Tu imagen impresa, <em>con un video encima</em>.</h2>
+        <p data-en="Augmented reality shows digital content on top of the real world, seen through your phone’s camera. With our platform, a printed image (your business card, a poster, a menu, an invitation) plays a video right on top of it when someone points their phone at it. Nothing to install: it opens with a QR code or a link.">La realidad aumentada muestra contenido digital encima del mundo real, visto a través de la cámara del celular. Con nuestra plataforma, una imagen impresa (tu tarjeta, un cartel, un menú, una invitación) reproduce un video justo encima cuando alguien le apunta con su celular. No hay que instalar nada: se abre con un código QR o un link.</p>
         <div class="try" id="try" hidden>
           <canvas id="tryQR" aria-label="Código QR de la prueba" data-en-aria="QR code for the demo"></canvas>
           <div class="tryq">
@@ -348,14 +350,16 @@ footer img{height:22px;width:auto}
         </div>
       </div>
       <div class="mkdemo reveal" id="mkdemo" aria-hidden="true">
-        <div class="poster"><img id="demoPoster" src="assets/proyectos/steal-a-pinata.webp" alt=""><span class="ptag" data-en="Your image">Tu imagen</span></div>
+        <div class="poster"><img id="demoPoster" src="assets/proyectos/orbita.webp" alt=""><span class="ptag" data-en="Your image">Tu imagen</span></div>
         <div class="phone"><div class="screen">
-          <img class="cam" id="demoCam" src="assets/proyectos/steal-a-pinata.webp" alt="">
-          <div class="vid"><img src="assets/proyectos/observatorio.webp" alt=""><img src="assets/proyectos/orbita.webp" alt=""><img src="assets/proyectos/deletreo-lsm.webp" alt=""><i></i></div>
+          <img class="cam" id="demoCam" src="assets/proyectos/orbita.webp" alt="">
+          <div class="vid"><img src="assets/proyectos/observatorio.webp" alt=""><img src="assets/proyectos/deletreo-lsm.webp" alt=""><img src="assets/proyectos/observatorio.webp" alt=""><i></i></div>
           <span class="stag" data-en="Your video">Tu video</span>
         </div></div>
       </div>
     </div>
+
+    <div class="mkvideo reveal" id="mkvideo" hidden><video controls playsinline preload="metadata" src="assets/video-ra.mp4"></video></div>
 
     <div class="mkgrid">
       <div class="mkstep reveal"><span class="num">1</span><h3 data-en="Upload an image and a video">Sube una imagen y un video</h3><p data-en="The image people will point at (a card, a poster, a cover) and the video that will appear on it. You see a preview and adjust it.">La imagen que la gente va a enfocar (una tarjeta, un cartel, una portada) y el video que aparecerá encima. Ves cómo queda y lo ajustas.</p></div>
@@ -378,9 +382,9 @@ footer img{height:22px;width:auto}
 
   <section id="experiencias"><div class="wrap">
     <div class="shead reveal">
-      <span class="kick" data-en="Try it now">Pruébalo ahora</span>
-      <h2 data-en="Don’t take our word for it: open it and play.">No te lo contamos: ábrelo y juega.</h2>
-      <p data-en="Real experiences made by Vórtice VR. They run in the browser, nothing to download.">Experiencias reales hechas por Vórtice VR. Funcionan en el navegador, sin descargar nada.</p>
+      <span class="kick" data-en="What else Vórtice VR does">Qué más hace Vórtice VR</span>
+      <h2 data-en="Educational projects we have built.">Proyectos educativos que hemos desarrollado.</h2>
+      <p data-en="Besides the platform, we design custom experiences for schools, museums and institutions. These are real; open them and try them in your browser.">Además de la plataforma, diseñamos experiencias a la medida para escuelas, museos e instituciones. Estas son reales: ábrelas y pruébalas en tu navegador.</p>
     </div>
     <div class="xgrid">
       <article class="xcard wide reveal">
@@ -416,17 +420,6 @@ footer img{height:22px;width:auto}
           </div>
         </a>
       </article>
-      <article class="xcard wide split reveal">
-        <a class="xin" href="proyectos/steal-a-pinata/">
-          <div class="xmedia"><span class="xnum">04</span><img src="assets/proyectos/steal-a-pinata.webp" alt="Portada de Steal a Piñata: piñatas, papel picado y una catrina" data-en-alt="Steal a Piñata cover art: piñatas, papel picado and a catrina" loading="lazy"></div>
-          <div class="xbody">
-            <div class="chips"><span class="chip" data-en="Video game">Videojuego</span><span class="chip">3D</span><span class="chip sun" data-en="Roblox prototype">Prototipo para Roblox</span></div>
-            <h3>Steal a Piñata</h3>
-            <p data-en="A playable prototype of a video game designed for Roblox: buy living piñatas from the parade, collect their candy, protect your base and steal the bots’ piñatas. Featuring a Catrina, an Alebrije, a Quetzal and even a spectral Xolo.">Prototipo jugable de un videojuego diseñado para Roblox: compra piñatas vivas del desfile, cobra sus dulces, protege tu base y roba las de los bots. Con Catrina, Alebrije, Quetzal y hasta un Xolo espectral.</p>
-            <div class="xgo"><span data-en="Play &lt;small&gt;· keyboard or touch screen · in Spanish&lt;/small&gt;">Jugar <small>· teclado o pantalla táctil</small></span><span class="arr">→</span></div>
-          </div>
-        </a>
-      </article>
     </div>
   </div></section>
 
@@ -443,10 +436,10 @@ footer img{height:22px;width:auto}
   <section id="proyectos"><div class="wrap">
     <div class="shead reveal"><span class="kick" data-en="More projects">Más proyectos</span><h2 data-en="On the street, in the classroom, in your hand.">En la calle, en el aula, en tu mano.</h2></div>
     <div class="plist">
-      <article class="prow reveal"><span class="n">05</span><span class="kind" data-en="AR · Street art">RA · Arte urbano</span><div><h3 data-en="Augmented reality murals in Comalcalco">Murales con realidad aumentada en Comalcalco</h3><p data-en="Murals that come to life when you point your phone at them, bringing public art and technology together.">Murales que se animan al apuntarles con el celular, uniendo arte público y tecnología.</p></div></article>
-      <article class="prow reveal"><span class="n">06</span><span class="kind" data-en="VR · Education">RV · Educación</span><div><h3 data-en="Planets in Orbit">Planetas en Órbita</h3><p data-en="An experience for Meta Quest 3 and 3S: a one-minute challenge to build the solar system.">Experiencia para Meta Quest 3 y 3S: un reto de un minuto para armar el sistema solar.</p></div></article>
-      <article class="prow reveal"><span class="n">07</span><span class="kind" data-en="AR · Festival">RA · Festival</span><div><h3 data-en="MOVART Festival">Festival MOVART</h3><p data-en="Browser-based augmented reality experiences for the festival audience.">Experiencias de realidad aumentada en el navegador para el público del festival.</p></div></article>
-      <article class="prow reveal"><span class="n">08</span><span class="kind" data-en="NFC · AR">NFC · RA</span><div><h3 data-en="Smart business cards">Tarjetas de presentación inteligentes</h3><p data-en="Cards with NFC and a QR code that open a contact portal and an augmented reality experience on the card itself. &lt;a href=&quot;tarjeta/&quot;&gt;See the Vórtice VR card&lt;/a&gt;.">Tarjetas con NFC y código QR que abren un portal de contacto y una experiencia en realidad aumentada sobre la propia tarjeta. <a href="tarjeta/">Ver la tarjeta de Vórtice VR</a>.</p></div></article>
+      <article class="prow reveal"><span class="n">04</span><span class="kind" data-en="AR · Street art">RA · Arte urbano</span><div><h3 data-en="Augmented reality murals in Comalcalco">Murales con realidad aumentada en Comalcalco</h3><p data-en="Murals that come to life when you point your phone at them, bringing public art and technology together.">Murales que se animan al apuntarles con el celular, uniendo arte público y tecnología.</p></div></article>
+      <article class="prow reveal"><span class="n">05</span><span class="kind" data-en="VR · Education">RV · Educación</span><div><h3 data-en="Planets in Orbit">Planetas en Órbita</h3><p data-en="An experience for Meta Quest 3 and 3S: a one-minute challenge to build the solar system.">Experiencia para Meta Quest 3 y 3S: un reto de un minuto para armar el sistema solar.</p></div></article>
+      <article class="prow reveal"><span class="n">06</span><span class="kind" data-en="AR · Festival">RA · Festival</span><div><h3 data-en="MOVART Festival">Festival MOVART</h3><p data-en="Browser-based augmented reality experiences for the festival audience.">Experiencias de realidad aumentada en el navegador para el público del festival.</p></div></article>
+      <article class="prow reveal"><span class="n">07</span><span class="kind" data-en="NFC · AR">NFC · RA</span><div><h3 data-en="Smart business cards">Tarjetas de presentación inteligentes</h3><p data-en="Cards with NFC and a QR code that open a contact portal and an augmented reality experience on the card itself. &lt;a href=&quot;tarjeta/&quot;&gt;See the Vórtice VR card&lt;/a&gt;.">Tarjetas con NFC y código QR que abren un portal de contacto y una experiencia en realidad aumentada sobre la propia tarjeta. <a href="tarjeta/">Ver la tarjeta de Vórtice VR</a>.</p></div></article>
     </div>
   </div></section>
 
@@ -496,7 +489,7 @@ footer img{height:22px;width:auto}
   const A=[...document.querySelectorAll("[data-en-aria]")]; A.forEach(e=>e.dataset.esAria=e.getAttribute("aria-label")||"");
   const I=[...document.querySelectorAll("[data-en-alt]")]; I.forEach(e=>e.dataset.esAlt=e.alt);
   const META={es:{t:document.title,d:document.querySelector("meta[name=description]").content},
-    en:{t:"Vórtice VR · Augmented reality, virtual reality and AI",d:"A studio for augmented reality, virtual reality, mixed reality and applied artificial intelligence, since 2016. Try our experiences in your browser."}};
+    en:{t:"Vórtice VR · Create your augmented reality",d:"Create your own augmented reality: upload an image and a video, and when a phone points at the image the video appears on top. No apps, just a QR code. Free to start."}};
   let lang="es";
   function setLang(l,first){ lang=l; const en=l==="en"; document.documentElement.lang=l;
     T.forEach(e=>e.innerHTML=en?e.dataset.en:e.dataset.es);
@@ -559,6 +552,8 @@ footer img{height:22px;width:auto}
 <script>
 // ---- "Pruébalo ya": live demo with the platform experience "ejemplo" (César's account, Pro plan). If it does not
 // exist, the section keeps only the animation. Computer: a QR to scan and the image to point at. Phone: open the camera.
+// explainer video: drop it at assets/video-ra.mp4 and it appears in the section
+fetch("assets/video-ra.mp4",{method:"HEAD"}).then(r=>{ if(r.ok) document.getElementById("mkvideo").hidden=false; }).catch(()=>{});
 (async()=>{
   const DEMO="ejemplo";
   let ok=false; try{ ok=(await fetch(`api/exp/${DEMO}`,{cache:"no-store"})).ok; }catch(e){}
