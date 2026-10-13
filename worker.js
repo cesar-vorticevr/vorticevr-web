@@ -3,7 +3,7 @@
 //  - Plataforma de RA (vorticevr.mx/crear/):
 //      nombre.vorticevr.mx  y  /e/nombre/   → visor /x/
 //      /api/*                                 → cuentas (registro, sesión), publicar, consultar
-//      /m/<slug>/<video|target|image>         → archivos de la experiencia en R2 (con Range)
+//      /m/<slug>/<video|target|image|model>   → archivos de la experiencia en R2 (con Range; model = GLB)
 //    Requiere bindings DB (D1) y MEDIA (R2); secretos RESEND_API_KEY y SESSION_SECRET.
 //    Sin bindings, el sitio funciona igual y la API responde 503.
 
@@ -16,13 +16,13 @@ const LIMITS = { imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, code
 // year = price of a year (default 10 months). seats = team accounts the owner can create (Empresarial): the owner hands
 // each one part of the plan's experiences (users.quota); what is not handed out stays for the owner.
 // legacy = no longer offered (only kept for accounts that have it). Paid plans can also be set by an admin in /admin/.
-// Videos stay ≤ 50 MB: the Worker reads the whole upload in memory (128 MB).
+// Videos stay ≤ 50 MB and 3D models (GLB, modelMB) ≤ 30 MB: the Worker reads the whole upload in memory (128 MB).
 const PLANS = {
-  gratis:  { name: "Gratis",  exp: 1,    days: 15, videoMB: 25, price: 0, views: 1000 },
-  basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 25, price: 199, year: 1990 },
-  pro:     { name: "Pro",     exp: 50,   days: 0,  videoMB: 50, price: 499, year: 4990 },
-  empresarial: { name: "Empresarial", exp: 150, seats: 15, days: 0, videoMB: 50, price: 999, year: 9999 },
-  escuela: { name: "Escuela", exp: 1000, days: 0,  videoMB: 50, price: 1500, year: 15000, legacy: true },
+  gratis:  { name: "Gratis",  exp: 1,    days: 15, videoMB: 25, modelMB: 15, price: 0, views: 1000 },
+  basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 25, modelMB: 15, price: 199, year: 1990 },
+  pro:     { name: "Pro",     exp: 50,   days: 0,  videoMB: 50, modelMB: 30, price: 499, year: 4990 },
+  empresarial: { name: "Empresarial", exp: 150, seats: 15, days: 0, videoMB: 50, modelMB: 30, price: 999, year: 9999 },
+  escuela: { name: "Escuela", exp: 1000, days: 0,  videoMB: 50, modelMB: 30, price: 1500, year: 15000, legacy: true },
 };
 const yearPrice = plan => PLANS[plan].year || PLANS[plan].price * YEAR_MONTHS;
 const FAR = 253402300799000; // expires of an experience on a paid plan: "while the plan is active" (year 9999)
@@ -31,6 +31,7 @@ const ADMINS_DEFAULT = "lad.cesargarcia@gmail.com";
 const REF = { plans: ["pro", "empresarial"], rate: 0.10, discount: 10, holdDays: 30, minPayout: 50000 /* centavos: $500 */, coupon: "VVR_REF10" };
 const ADMIN_SLUGS = new Set(["ejemplo"]); // only an admin can take these (the home page demo uses "ejemplo")
 const VIDEO = /\.(mp4|m4v|webm|mov)$/i;
+const MEDIA_KEYS = ["video", "target", "image", "model", "qr"]; // R2 files of an experience: exp/<slug>/<key>
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])$/;
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i;
 const BUTTONS = ["whatsapp", "facebook", "instagram", "youtube", "x", "tiktok", "web"];
@@ -55,7 +56,7 @@ export default {
     // expired experiences: files in bulk (one R2 call per 1000 keys), then the rows
     const now = Date.now();
     const { results } = await env.DB.prepare("SELECT slug FROM experiences WHERE expires < ? LIMIT 2000").bind(now).all();
-    const keys = results.flatMap(r => ["video", "target", "image", "qr"].map(k => `exp/${r.slug}/${k}`));
+    const keys = results.flatMap(r => MEDIA_KEYS.map(k => `exp/${r.slug}/${k}`));
     for (let i = 0; i < keys.length; i += 1000) await env.MEDIA.delete(keys.slice(i, i + 1000));
     if (results.length) await env.DB.prepare("DELETE FROM experiences WHERE slug IN (SELECT slug FROM experiences WHERE expires < ? LIMIT 2000)").bind(now).run();
     await env.DB.prepare("DELETE FROM otp WHERE expires < ?").bind(Date.now() - 864e5).run();
@@ -140,7 +141,7 @@ function rangeFromBuffer(request, baseHeaders, buf) {
 
 // ---------- experience files from R2 ----------
 async function media(request, env, url) {
-  const m = url.pathname.match(/^\/m\/([a-z0-9-]+)\/(video|target|image)$/);
+  const m = url.pathname.match(/^\/m\/([a-z0-9-]+)\/(video|target|image|model)$/);
   if (!m || !env.MEDIA || !env.DB) return new Response("No encontrado", { status: 404 });
   const [, slug, kind] = m;
   await schema(env);
@@ -176,7 +177,7 @@ function mediaHeaders(obj) {
   return h;
 }
 async function deleteMedia(env, slug) {
-  await env.MEDIA.delete(["video", "target", "image", "qr"].map(k => `exp/${slug}/${k}`));
+  await env.MEDIA.delete(MEDIA_KEYS.map(k => `exp/${slug}/${k}`));
 }
 
 // ---------- API ----------
@@ -357,10 +358,15 @@ async function api(request, env, ctx, url) {
     if (!st.ok) return json({ error: st.reason }, 400);
     const data = cleanMeta(meta);
     if (data.error) return json({ error: data.error }, 400);
-    const video = form.get("video"), image = form.get("image"), target = form.get("target"), qr = form.get("qr");
+    const video = form.get("video"), image = form.get("image"), target = form.get("target"), qr = form.get("qr"), model = form.get("model");
     const isNew = !mine;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
-    if (isNew && (!video || !image || !target)) return json({ error: "Faltan la imagen o el video." }, 400);
+    if (isNew && (!image || !target || (data.video && !video) || (data.model && !model))) return json({ error: "Faltan la imagen, el video o el objeto 3D." }, 400);
+    // keeping the current video or model while editing: it has to be there
+    for (const [k, want, file] of [["video", data.video, video], ["model", data.model, model]])
+      if (mine && want && !file && !(await env.MEDIA.head(`exp/${mine.slug}/${k}`))) return json({ error: k === "video" ? "Falta el video." : "Falta el objeto 3D." }, 400);
+    if (model && model.size > P.modelMB * 1048576) return json({ error: `El objeto 3D debe pesar máximo ${P.modelMB} MB.` }, 400);
+    if (model && new TextDecoder().decode(new Uint8Array(await model.slice(0, 4).arrayBuffer())) !== "glTF") return json({ error: "El objeto 3D debe ser un archivo GLB." }, 400);
     if (video && (video.size > P.videoMB * 1048576 || !/^video\/(mp4|webm|quicktime)$/.test(video.type))) return json({ error: `El video debe ser MP4, WebM o MOV de máximo ${P.videoMB} MB.` }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
     if (target && target.size > LIMITS.targetBytes) return json({ error: "La imagen no se pudo preparar. Intenta con otra." }, 400);
@@ -371,8 +377,8 @@ async function api(request, env, ctx, url) {
     }
     // changing the name moves the files
     if (mine && mine.slug !== slug) {
-      for (const k of ["video", "target", "image"]) {
-        const isReplaced = (k === "video" && video) || (k === "image" && image) || (k === "target" && target);
+      for (const k of ["video", "target", "image", "model"]) {
+        const isReplaced = (k === "video" && video) || (k === "image" && image) || (k === "target" && target) || (k === "model" && model);
         if (!isReplaced) { const o = await env.MEDIA.get(`exp/${mine.slug}/${k}`); if (o) await env.MEDIA.put(`exp/${slug}/${k}`, o.body, { httpMetadata: o.httpMetadata }); }
       }
       await deleteMedia(env, mine.slug);
@@ -381,6 +387,10 @@ async function api(request, env, ctx, url) {
     if (video) await env.MEDIA.put(`exp/${slug}/video`, video, { httpMetadata: { contentType: video.type } });
     if (image) await env.MEDIA.put(`exp/${slug}/image`, await image.arrayBuffer(), { httpMetadata: { contentType: image.type } });
     if (target) await env.MEDIA.put(`exp/${slug}/target`, await target.arrayBuffer(), { httpMetadata: { contentType: "application/octet-stream" } });
+    if (model) await env.MEDIA.put(`exp/${slug}/model`, await model.arrayBuffer(), { httpMetadata: { contentType: "model/gltf-binary" } });
+    // removed while editing (an experience can have the video, the 3D object or both)
+    const gone = [!data.video && "video", !data.model && "model"].filter(Boolean);
+    if (gone.length) await env.MEDIA.delete(gone.map(k => `exp/${slug}/${k}`));
     const now = Date.now();
     const created = mine ? mine.created : now;
     const expires = mine ? mine.expires : P.days ? now + P.days * 864e5 : FAR;
@@ -642,7 +652,7 @@ async function api(request, env, ctx, url) {
 
 function publicExp(row) {
   const d = JSON.parse(row.data || "{}");
-  return { slug: row.slug, title: row.title, fit: d.fit, img: d.img, video: d.video, buttons: d.buttons, expires: row.expires };
+  return { slug: row.slug, title: row.title, fit: d.fit, img: d.img, video: d.video || null, model: d.model || null, buttons: d.buttons, expires: row.expires };
 }
 function ownerExp(row, request, env) {
   return { ...publicExp(row), url: expUrl(row.slug, request, env), created: row.created, updated: row.updated, views: row.views, paused: !!row.paused, forever: row.expires >= FAR };
@@ -668,8 +678,17 @@ function cleanMeta(m) {
   const fit = ["width", "height", "fill"].includes(m.fit) ? m.fit : "width";
   const num = (v, a, b) => { v = Number(v); return Number.isFinite(v) && v >= a && v <= b ? Math.round(v) : null; };
   const img = { w: num(m.img && m.img.w, 50, 8000), h: num(m.img && m.img.h, 50, 8000) };
-  const video = { w: num(m.video && m.video.w, 16, 8000), h: num(m.video && m.video.h, 16, 8000) };
-  if (!img.w || !img.h || !video.w || !video.h) return { error: "Faltan las medidas de la imagen o el video." };
+  const video = m.video ? { w: num(m.video.w, 16, 8000), h: num(m.video.h, 16, 8000) } : null;
+  if (!img.w || !img.h || (video && (!video.w || !video.h))) return { error: "Faltan las medidas de la imagen o el video." };
+  // 3D object (GLB) placed on the image, in image units (the image is 1 wide, centered; x right, y up, z toward the camera).
+  // o = "pie": stands up out of the image (image on a table) · "frente": upright facing the viewer (image on a wall).
+  // s = size of its largest side, r = turn in degrees around its own vertical axis, z = lift off the image.
+  let model = null;
+  if (m.model) {
+    const f = (v, a, b, d) => { v = Number(v); return Number.isFinite(v) ? Math.round(Math.min(b, Math.max(a, v)) * 1e4) / 1e4 : d; };
+    model = { o: m.model.o === "frente" ? "frente" : "pie", x: f(m.model.x, -2, 2, 0), y: f(m.model.y, -2, 2, 0), z: f(m.model.z, -1, 2, 0), s: f(m.model.s, 0.05, 3, 0.6), r: f(m.model.r, -360, 360, 0) };
+  }
+  if (!video && !model) return { error: "Agrega un video o un objeto 3D." };
   const buttons = {};
   for (const k of BUTTONS) {
     let v = String((m.buttons && m.buttons[k]) || "").trim().slice(0, 300);
@@ -683,7 +702,7 @@ function cleanMeta(m) {
     else { if (!/^https?:\/\//i.test(v)) v = "https://" + v; try { const u = new URL(v); if (!/^https?:$/.test(u.protocol)) throw 0; v = u.href; } catch { return { error: `El enlace de ${LABELS[k]} no es válido.` }; } }
     buttons[k] = v;
   }
-  return { title, fit, img, video, buttons };
+  return { title, fit, img, video, model, buttons };
 }
 
 // ---------- helpers ----------

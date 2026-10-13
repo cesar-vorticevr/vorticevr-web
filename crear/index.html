@@ -93,6 +93,22 @@ header .acts{display:flex;align-items:center;gap:14px}
 .stage video{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);object-fit:fill;opacity:.92;box-shadow:0 0 0 2px rgba(255,190,85,.9),0 10px 30px rgba(0,0,0,.6)}
 .stage .box::after{content:"";position:absolute;inset:0;border:2px dashed rgba(255,255,255,.95);border-radius:2px;pointer-events:none;z-index:2;box-shadow:0 0 0 9999px rgba(5,2,11,.35)}
 .stage .empty{color:var(--mute);font-size:.9rem;padding:30px;text-align:center}
+/* 3D editor: the image, the video and the object; drag the object to move it */
+.stage3d{position:relative;margin:12px auto 0;border-radius:10px;overflow:hidden;aspect-ratio:1/1;background:radial-gradient(80% 70% at 50% 35%,#2a1450,#0a0418 75%);touch-action:none;cursor:grab}
+.stage3d canvas{display:block;width:100%!important;height:100%!important}
+.stage3d.drag{cursor:grabbing}
+.stage3d .tip{position:absolute;left:8px;right:8px;bottom:8px;font-size:.75rem;color:var(--mute);background:rgba(5,2,11,.7);border-radius:8px;padding:6px 10px;pointer-events:none;text-align:center}
+.stage3d .load{position:absolute;inset:0;display:grid;place-items:center;color:var(--mute);font-size:.9rem}
+.views{display:flex;gap:6px;margin-top:10px}
+.views button{flex:1;font:600 .78rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:7px 10px;cursor:pointer}
+.views button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
+.ctl{display:grid;grid-template-columns:auto 1fr auto;gap:10px 12px;align-items:center;margin-top:14px}
+.ctl label{font-size:.8rem;font-family:var(--fd);letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.ctl output{font-family:var(--fm);font-size:.82rem;color:var(--lav);min-width:4.5ch;text-align:right}
+input[type=range]{width:100%;accent-color:var(--sun)}
+.fmt{font-size:.85rem;color:var(--mute);margin-top:10px;border-left:3px solid var(--sun);padding:6px 0 6px 12px}
+.fmt b{color:var(--ink)}
+.linkbtn{background:none;border:0;color:var(--lav);font:inherit;font-size:.85rem;text-decoration:underline;cursor:pointer;padding:0;margin-top:8px}
 .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:.78rem;color:var(--mute)}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
 
@@ -105,6 +121,12 @@ header .acts{display:flex;align-items:center;gap:14px}
 .mine{border:1px solid rgba(255,190,85,.5);background:rgba(255,190,85,.07);border-radius:12px;padding:12px 14px;margin-top:12px;font-size:.92rem}
 .legal{font-size:.8rem;color:var(--mute);margin-top:10px}
 </style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
 </head>
 <body>
 <header><a href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a class="mybtn" href="../cuenta/" style="text-decoration:none">Mi cuenta</a><a class="back" href="../">← Sitio</a></div></header>
@@ -134,8 +156,9 @@ header .acts{display:flex;align-items:center;gap:14px}
       <section class="step" id="s2">
         <h2><span class="n" id="n2">2</span>Tu video</h2>
         <p class="hint" id="vidHint">Hasta 25 MB. MP4 funciona en todos los celulares.</p>
-        <label class="drop" id="dVid"><input type="file" id="fVid" accept="video/mp4,video/webm,video/quicktime"><video class="thumb" id="tVid" muted playsinline hidden></video><span><b id="lVid">Elegir video</b><small>MP4, WebM o MOV</small></span></label>
+        <label class="drop" id="dVid"><input type="file" id="fVid" accept="video/mp4,video/webm,video/quicktime"><video class="thumb" id="tVid" muted playsinline hidden></video><span><b id="lVid">Elegir video</b><small>MP4, WebM o MOV · opcional si pones un objeto 3D</small></span></label>
         <div class="msg" id="mVid"></div>
+        <button class="linkbtn" id="noVid" type="button" hidden>Quitar el video (dejar solo el objeto 3D)</button>
       </section>
 
       <section class="step" id="s3">
@@ -149,8 +172,31 @@ header .acts{display:flex;align-items:center;gap:14px}
         <p class="note" id="fitNote" style="margin:10px 0 0"></p>
       </section>
 
+      <section class="step" id="s5">
+        <h2><span class="n" id="n5">4</span>Objeto 3D <small style="font:500 .8rem var(--fb);color:var(--mute);letter-spacing:0">(opcional)</small></h2>
+        <p class="hint">Un modelo 3D que aparece sobre tu imagen: un producto, un personaje, un logo en 3D. Si tiene animación, se reproduce sola.</p>
+        <label class="drop" id="dMod"><input type="file" id="fMod" accept=".glb,model/gltf-binary"><span class="thumb" style="display:grid;place-items:center;font:700 1.1rem var(--fd);color:var(--lav)">3D</span><span><b id="lMod">Elegir objeto 3D</b><small id="modHint">Archivo GLB · hasta 15 MB</small></span></label>
+        <div class="msg" id="mMod"></div>
+        <p class="fmt" id="fmt">Usa <b>GLB</b> (glTF binario): es el formato que abren todos los celulares e incluye las texturas y la animación en un solo archivo. ¿Tienes FBX u OBJ? Ábrelo en Blender (gratis) y ve a <b>Archivo → Exportar → glTF 2.0</b>, formato <b>.glb</b>.</p>
+        <div id="modCtl" hidden>
+          <label class="f">Cómo aparece</label>
+          <div class="seg" id="ori">
+            <button type="button" data-o="pie" aria-pressed="true">De pie sobre la imagen</button>
+            <button type="button" data-o="frente" aria-pressed="false">De frente (paralelo a la imagen)</button>
+          </div>
+          <p class="note" id="oriNote" style="margin:8px 0 0"></p>
+          <div class="ctl">
+            <label for="mS">Tamaño</label><input type="range" id="mS" min="5" max="300" step="1"><output id="oS"></output>
+            <label for="mR">Giro</label><input type="range" id="mR" min="-180" max="180" step="1"><output id="oR"></output>
+            <label for="mZ">Altura</label><input type="range" id="mZ" min="-50" max="100" step="1"><output id="oZ"></output>
+          </div>
+          <p class="note" style="margin:12px 0 0">En la vista previa: <b>arrastra el objeto</b> para moverlo sobre la imagen; con la rueda del mouse encima de él cambias su tamaño. Arrastra el fondo para ver desde otro ángulo.</p>
+          <div class="row"><button class="btn" id="mReset" type="button">Restablecer</button><button class="btn danger" id="mDel" type="button">Quitar objeto</button></div>
+        </div>
+      </section>
+
       <section class="step" id="s4">
-        <h2><span class="n" id="n4">4</span>Datos y botones</h2>
+        <h2><span class="n" id="n4">5</span>Datos y botones</h2>
         <label class="f" for="title">Título</label>
         <input type="text" id="title" maxlength="80" placeholder="Ej. Conoce nuestra nueva colección">
         <label class="f" for="slug">Tu link</label>
@@ -161,7 +207,7 @@ header .acts{display:flex;align-items:center;gap:14px}
       </section>
 
       <section class="step" id="s6">
-        <h2><span class="n" id="n6">5</span>Publicar</h2>
+        <h2><span class="n" id="n6">6</span>Publicar</h2>
         <div class="mine" id="mine" hidden style="margin:0 0 12px"></div>
         <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
         <button class="btn primary" id="publish" type="button" disabled>Publicar mi experiencia</button>
@@ -176,7 +222,9 @@ header .acts{display:flex;align-items:center;gap:14px}
         <div class="stage" id="stage"><div class="empty" id="empty">Sube tu imagen y tu video para ver cómo queda.</div>
           <div class="box" id="box" hidden><img id="pImg" alt="Tu imagen"><video id="pVid" muted loop playsinline autoplay></video></div>
         </div>
-        <div class="legend"><span><i style="border:2px dashed #fff"></i>Borde de tu imagen</span><span><i style="background:var(--sun)"></i>Borde del video</span></div>
+        <div class="legend" id="legend"><span><i style="border:2px dashed #fff"></i>Borde de tu imagen</span><span><i style="background:var(--sun)"></i>Borde del video</span></div>
+        <div class="stage3d" id="stage3d" hidden><div class="load" id="load3d">Cargando el objeto 3D…</div><div class="tip">Arrastra el objeto para moverlo · rueda: tamaño · arrastra el fondo para girar la vista</div></div>
+        <div class="views" id="views" hidden><button type="button" data-v="3d" aria-pressed="true">Vista 3D</button><button type="button" data-v="2d" aria-pressed="false">Vista plana</button></div>
       </div>
     </aside>
   </div>
@@ -192,7 +240,7 @@ $("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
 let MAX_MB=25;   // from the account's plan (see start); the video is limited by size, not duration
 const IMG_MAX=1000;
 
-const S={img:null,imgBlob:null,imgW:0,imgH:0,target:null,compiling:false,video:null,vidW:0,vidH:0,fit:"width",token:null,email:null,mine:null,keepImg:false,keepVid:false};
+const S={img:null,imgBlob:null,imgW:0,imgH:0,target:null,compiling:false,video:null,vidW:0,vidH:0,fit:"width",token:null,email:null,mine:null,keepImg:false,keepVid:false,noVideo:false,modelFile:null,keepModel:false,mcfg:null};
 
 // ---------- social buttons ----------
 const SOC=[["whatsapp","WhatsApp","","993 123 4567","tel"],["facebook","Facebook","facebook.com/","tu-pagina","text"],["instagram","Instagram","instagram.com/","tu_usuario","text"],["youtube","YouTube","youtube.com/@","tu-canal","text"],["x","X","x.com/","tu_usuario","text"],["tiktok","TikTok","tiktok.com/@","tu_usuario","text"],["web","Sitio web","","tusitio.com","text"]];
@@ -250,10 +298,10 @@ function onVideo(file){
   const url=URL.createObjectURL(file), v=document.createElement("video"); v.muted=true; v.preload="metadata"; v.src=url;
   v.onloadedmetadata=()=>{
     if(!v.videoWidth){ m.className="msg bad"; m.textContent="Este navegador no puede reproducir ese formato. Expórtalo como MP4 (H.264)."; return; }
-    S.video=file; S.vidW=v.videoWidth; S.vidH=v.videoHeight; S.keepVid=false;
+    S.video=file; S.vidW=v.videoWidth; S.vidH=v.videoHeight; S.keepVid=false; S.noVideo=false;
     $("tVid").src=url; $("tVid").hidden=false; $("pVid").src=url; $("pVid").play().catch(()=>{}); $("lVid").textContent=file.name;
     m.className="msg ok"; m.textContent=`Video listo · ${Math.round(v.duration)} s · ${(file.size/1048576).toFixed(1)} MB`; $("n2").classList.add("done");
-    updatePreview(); check();
+    updatePreview(); syncModel(); check();
   };
   v.onerror=()=>{ m.className="msg bad"; m.textContent="No pude abrir ese video. Expórtalo como MP4 (H.264)."; };
 }
@@ -269,7 +317,7 @@ document.querySelectorAll("#fit button").forEach(b=>b.addEventListener("click",(
 function updatePreview(){
   $("fitNote").textContent=FITNOTE[S.fit];
   const has=S.imgW&&S.vidW; $("box").hidden=!S.imgW; $("empty").hidden=!!S.imgW;
-  if(!S.imgW) return;
+  if(!S.imgW||$("stage").hidden){ syncScene(); return; }
   const st=$("stage"), sw=st.clientWidth-40, sh=st.clientHeight-40;
   const k=Math.min(sw/S.imgW, sh/S.imgH), bw=S.imgW*k, bh=S.imgH*k;   // the image box
   $("box").style.width=bw+"px"; $("box").style.height=bh+"px";
@@ -278,8 +326,117 @@ function updatePreview(){
   if(S.fit==="height"){ h=bh; w=bh*va; } else if(S.fit==="fill"){ w=bw; h=bh; }
   v.style.width=w+"px"; v.style.height=h+"px";
   $("n3").classList.add("done");
+  syncScene();
 }
 addEventListener("resize",updatePreview);
+
+// ---------- step 4: 3D object (GLB), placed on the image in a 3D preview ----------
+// The same math as the viewer (assets/modelo3d.js): image 1 wide and centered, x right, y up, z toward the camera.
+// "pie": the preview shows the image lying on a table; "frente": the image on a wall.
+let MAX_MODEL_MB=15;
+const ORINOTE={pie:"Para imágenes sobre una mesa (tarjetas, folletos, portadas): el objeto sale de pie, hacia arriba de la imagen.",frente:"Para imágenes en una pared (pósters, lonas): el objeto se ve de frente, paralelo a la imagen."};
+const E={on:false,view:"3d"};   // the editor: three.js scene, created the first time a model is loaded
+async function onModel(file){
+  if(!file) return; const m=$("mMod"); m.className="msg"; m.textContent="";
+  if(/\.(fbx|obj|gltf|stl|dae|blend|3ds|usdz)$/i.test(file.name)){ m.className="msg bad"; m.textContent="Ese formato no se puede ver en el celular. Conviértelo a GLB (abajo te decimos cómo)."; return; }
+  if(file.size>MAX_MODEL_MB*1048576){ m.className="msg bad"; m.textContent=`El objeto pesa ${(file.size/1048576).toFixed(1)} MB. El máximo es ${MAX_MODEL_MB} MB.`; return; }
+  const buf=await file.arrayBuffer();
+  if(new TextDecoder().decode(new Uint8Array(buf,0,4))!=="glTF"){ m.className="msg bad"; m.textContent="Ese archivo no es un GLB. Expórtalo como glTF 2.0 en formato .glb."; return; }
+  m.textContent="Abriendo el objeto 3D…";
+  try{ await setModel(buf.slice(0)); }catch(e){ console.error(e); m.className="msg bad"; m.textContent="No pude abrir ese objeto 3D. Revisa que sea un GLB válido."; return; }
+  S.modelFile=file; S.keepModel=false; if(!S.mcfg) S.mcfg={...E.M3D.DEFAULT};
+  $("lMod").textContent=file.name;
+  m.className="msg ok"; m.textContent=`Objeto listo · ${(file.size/1048576).toFixed(1)} MB${E.model.animated?" · con animación":""}`;
+  syncModel(); check();
+}
+async function editor(){
+  if(E.on) return; E.on=true;
+  const [THREE,{OrbitControls},M3D]=await Promise.all([import("three"),import("three/addons/controls/OrbitControls.js"),import("../assets/modelo3d.js")]);
+  Object.assign(E,{THREE,M3D});
+  const box=$("stage3d"), renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2)); renderer.outputColorSpace=THREE.SRGBColorSpace; box.prepend(renderer.domElement);
+  const scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(40,1,0.01,50);
+  M3D.light(renderer,scene);
+  const world=new THREE.Group(); scene.add(world);   // the image's space; tilted flat for "pie"
+  const imgMat=new THREE.MeshBasicMaterial({color:0x222222,toneMapped:false}), img=new THREE.Mesh(new THREE.PlaneGeometry(1,1),imgMat); world.add(img);
+  const edge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(1,1)),new THREE.LineBasicMaterial({color:0xffffff})); world.add(edge);
+  const vtex=new THREE.VideoTexture($("pVid")); vtex.colorSpace=THREE.SRGBColorSpace;
+  const vplane=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:vtex,toneMapped:false,transparent:true,opacity:.92})); vplane.position.z=0.004; world.add(vplane);
+  const ring=new THREE.Mesh(new THREE.RingGeometry(0.47,0.5,64),new THREE.MeshBasicMaterial({color:0xffbe55,transparent:true,opacity:.85,side:THREE.DoubleSide,depthTest:false})); world.add(ring);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.MeshBasicMaterial({visible:false})); world.add(floor);   // for dragging
+  const controls=new OrbitControls(camera,renderer.domElement); controls.enableDamping=true; controls.enablePan=false; controls.minDistance=.4; controls.maxDistance=6;
+  Object.assign(E,{renderer,scene,camera,world,img,imgMat,edge,vtex,vplane,ring,floor,controls});
+  const ro=new ResizeObserver(()=>{ const w=box.clientWidth, h=box.clientHeight; if(!w||!h) return; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }); ro.observe(box);
+  // drag the object over the image; the wheel over it changes its size
+  const ray=new THREE.Raycaster(), ptr=new THREE.Vector2(), grab=new THREE.Vector3(); let dragging=null;
+  const cast=(e,objs)=>{ const r=renderer.domElement.getBoundingClientRect(); ptr.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1); ray.setFromCamera(ptr,camera); return ray.intersectObjects(objs,true)[0]; };
+  const onImagePlane=e=>{ const h=cast(e,[floor]); return h?world.worldToLocal(h.point.clone()):null; };
+  const hitModel=e=>E.model&&cast(e,[E.model.root,ring]);
+  renderer.domElement.addEventListener("pointerdown",e=>{ if(!hitModel(e)) return; const p=onImagePlane(e); if(!p) return;
+    dragging=e.pointerId; grab.set(p.x-S.mcfg.x,p.y-S.mcfg.y,0); controls.enabled=false; box.classList.add("drag"); renderer.domElement.setPointerCapture(e.pointerId); e.preventDefault(); e.stopImmediatePropagation(); },{capture:true});   // before OrbitControls: grabbing the object never turns the view
+  renderer.domElement.addEventListener("pointermove",e=>{ if(dragging!==e.pointerId) return; const p=onImagePlane(e); if(!p) return;
+    const IH=S.imgH/S.imgW||1, cl=(v,a)=>Math.round(Math.max(-a,Math.min(a,v))*1000)/1000;
+    S.mcfg.x=cl(p.x-grab.x,.5+.25); S.mcfg.y=cl(p.y-grab.y,IH/2+.25); syncModel(); });
+  const stop=e=>{ if(dragging!==e.pointerId) return; dragging=null; controls.enabled=true; box.classList.remove("drag"); };
+  renderer.domElement.addEventListener("pointerup",stop); renderer.domElement.addEventListener("pointercancel",stop);
+  renderer.domElement.addEventListener("wheel",e=>{ if(!hitModel(e)) return; e.preventDefault(); e.stopImmediatePropagation();
+    S.mcfg.s=Math.round(Math.max(.05,Math.min(3,S.mcfg.s*Math.pow(1.0015,-e.deltaY)))*1000)/1000; syncModel(); },{passive:false,capture:true});
+  const clock=new THREE.Clock();
+  renderer.setAnimationLoop(()=>{ const dt=clock.getDelta(); if(box.hidden) return;
+    if(E.model&&E.model.mixer) E.model.mixer.update(dt);
+    if(vplane.visible&&$("pVid").readyState>=2) vtex.needsUpdate=true;
+    controls.update(); renderer.render(scene,camera); });
+}
+async function setModel(src){
+  $("stage3d").hidden=false; $("load3d").hidden=false; E.view="3d";
+  await editor();
+  const m=await E.M3D.loadModel(src);
+  if(E.model){ E.world.remove(E.model.root); }
+  E.model=m; E.world.add(m.root); $("load3d").hidden=true;
+}
+function syncScene(){   // the image and the video in the 3D preview
+  if(!E.on) return;
+  const IH=S.imgW?S.imgH/S.imgW:2/3;
+  E.img.scale.set(1,IH,1); E.edge.scale.set(1,IH,1);
+  const u=$("pImg").currentSrc||$("pImg").src;
+  if(u&&E.imgUrl!==u){ E.imgUrl=u; new E.THREE.TextureLoader().load(u,t=>{ t.colorSpace=E.THREE.SRGBColorSpace; E.imgMat.map=t; E.imgMat.color.set(0xffffff); E.imgMat.needsUpdate=true; }); }
+  const hasV=!!S.vidW&&!S.noVideo; E.vplane.visible=hasV;
+  if(hasV){ const va=S.vidW/S.vidH; let w=1,h=1/va; if(S.fit==="height"){ h=IH; w=IH*va; } else if(S.fit==="fill"){ w=1; h=IH; } E.vplane.scale.set(w,h,1); }
+}
+let lastO=null;
+function syncModel(){
+  const has=!!E.model&&!!S.mcfg;
+  $("modCtl").hidden=!has; $("fmt").hidden=has; $("n5").classList.toggle("done",has);
+  $("views").hidden=!has; $("noVid").hidden=!(has&&S.vidW&&!S.noVideo);
+  const show3d=has&&E.view==="3d";
+  $("stage3d").hidden=!show3d; $("stage").hidden=show3d; $("legend").hidden=show3d;
+  document.querySelectorAll("#views button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===E.view)));
+  if(!has) return;
+  const c=S.mcfg;
+  E.world.rotation.x=c.o==="pie"?-Math.PI/2:0;
+  if(lastO!==c.o){ lastO=c.o; c.o==="pie"?E.camera.position.set(0,1.35,1.6):E.camera.position.set(.4,.15,2.1); E.controls.target.set(0,c.o==="pie"?.15:0,0); E.controls.update(); }
+  E.M3D.place(E.model,c);
+  E.ring.position.set(c.x,c.y,.003); E.ring.scale.setScalar(c.s*Math.max(.35,Math.hypot(E.model.size.x,E.model.size.z)/2)*1.25*2); E.ring.visible=c.o==="pie";
+  document.querySelectorAll("#ori button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.o===c.o))); $("oriNote").textContent=ORINOTE[c.o];
+  $("mS").value=Math.round(c.s*100); $("oS").textContent=Math.round(c.s*100)+"%";
+  $("mR").value=Math.round(((c.r+540)%360)-180); $("oR").textContent=Math.round(((c.r+540)%360)-180)+"°";
+  $("mZ").value=Math.round(c.z*100); $("oZ").textContent=Math.round(c.z*100)+"%";
+  syncScene();
+}
+$("fMod").addEventListener("change",e=>onModel(e.target.files[0]));
+{ const d=$("dMod"); d.addEventListener("dragover",e=>{e.preventDefault();d.classList.add("over");}); d.addEventListener("dragleave",()=>d.classList.remove("over"));
+  d.addEventListener("drop",e=>{e.preventDefault();d.classList.remove("over");onModel(e.dataTransfer.files[0]);}); }
+document.querySelectorAll("#ori button").forEach(b=>b.addEventListener("click",()=>{ S.mcfg.o=b.dataset.o; syncModel(); }));
+document.querySelectorAll("#views button").forEach(b=>b.addEventListener("click",()=>{ E.view=b.dataset.v; syncModel(); updatePreview(); }));
+$("mS").addEventListener("input",e=>{ S.mcfg.s=e.target.value/100; syncModel(); });
+$("mR").addEventListener("input",e=>{ S.mcfg.r=Number(e.target.value); syncModel(); });
+$("mZ").addEventListener("input",e=>{ S.mcfg.z=e.target.value/100; syncModel(); });
+$("mReset").addEventListener("click",()=>{ S.mcfg={...E.M3D.DEFAULT,o:S.mcfg.o}; lastO=null; syncModel(); });
+$("mDel").addEventListener("click",()=>{ if(E.model) E.world.remove(E.model.root); E.model=null; S.mcfg=null; S.modelFile=null; S.keepModel=false; $("fMod").value=""; $("lMod").textContent="Elegir objeto 3D"; $("mMod").textContent="";
+  if(S.noVideo){ S.noVideo=false; }   // without an object the video is required again
+  syncModel(); updatePreview(); check(); });
+$("noVid").addEventListener("click",()=>{ S.noVideo=true; S.video=null; S.keepVid=false; S.vidW=S.vidH=0; $("pVid").removeAttribute("src"); $("tVid").hidden=true; $("lVid").textContent="Elegir video"; $("fVid").value="";
+  $("mVid").className="msg"; $("mVid").textContent="Sin video: solo el objeto 3D."; $("n2").classList.remove("done"); syncModel(); updatePreview(); check(); });
 
 // ---------- step 4: name ----------
 const slugIn=$("slug"); let slugOk=false, slugTimer=0;
@@ -305,27 +462,32 @@ function prefill(exp){
   for(const [k] of SOC){ const el=$("b_"+k); if(!el.value&&exp.buttons&&exp.buttons[k]) el.value=k==="whatsapp"?exp.buttons[k].replace(/^52(?=\d{10}$)/,""):toHandle(k,exp.buttons[k]); }
   S.fit=exp.fit||"width"; document.querySelectorAll("#fit button").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.fit===S.fit)));
   if(!S.imgBlob){ S.keepImg=true; S.imgW=exp.img.w; S.imgH=exp.img.h; const u=`${API}/m/${exp.slug}/image`; $("pImg").src=u; $("tImg").src=u; $("tImg").hidden=false; $("lImg").textContent="Imagen actual (puedes cambiarla)"; $("n1").classList.add("done"); }
-  if(!S.video){ S.keepVid=true; S.vidW=exp.video.w; S.vidH=exp.video.h; const u=`${API}/m/${exp.slug}/video`; $("pVid").src=u; $("pVid").play().catch(()=>{}); $("tVid").src=u; $("tVid").hidden=false; $("lVid").textContent="Video actual (puedes cambiarlo)"; $("n2").classList.add("done"); }
+  if(!S.video&&exp.video){ S.keepVid=true; S.vidW=exp.video.w; S.vidH=exp.video.h; const u=`${API}/m/${exp.slug}/video`; $("pVid").src=u; $("pVid").play().catch(()=>{}); $("tVid").src=u; $("tVid").hidden=false; $("lVid").textContent="Video actual (puedes cambiarlo)"; $("n2").classList.add("done"); }
+  if(exp.model&&!S.modelFile&&!S.mcfg){ S.keepModel=true; S.mcfg={...exp.model}; $("lMod").textContent="Objeto 3D actual (puedes cambiarlo)";
+    setModel(`${API}/m/${exp.slug}/model`).then(()=>{ syncModel(); check(); }).catch(e=>{ console.error(e); $("mMod").className="msg bad"; $("mMod").textContent="No pude abrir el objeto 3D actual."; }); }
+  if(!exp.video&&exp.model) S.noVideo=true;
   updatePreview();
 }
 
 // ---------- step 6: publish ----------
 function check(){
   const imgOk=(!!S.target&&!!S.imgBlob)||(S.keepImg&&!!S.mine);
-  const vidOk=!!S.video||(S.keepVid&&!!S.mine);
-  const ok=imgOk&&vidOk&&$("title").value.trim()&&slugOk&&S.token&&!S.compiling;
+  const modOk=!S.mcfg||!!S.modelFile||(S.keepModel&&!!S.mine&&!!E.model);
+  const vidOk=(!!S.video||(S.keepVid&&!!S.mine))||(!!S.mcfg&&modOk);
+  const ok=imgOk&&vidOk&&modOk&&$("title").value.trim()&&slugOk&&S.token&&!S.compiling;
   $("n4").classList.toggle("done",!!($("title").value.trim()&&slugOk));
   $("publish").disabled=!ok;
   $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link a ${S.email}.`:
-    S.compiling?"Estamos preparando tu imagen…":!imgOk?"Falta tu imagen.":!vidOk?"Falta tu video.":!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
+    S.compiling?"Estamos preparando tu imagen…":!imgOk?"Falta tu imagen.":!modOk?"Estamos abriendo tu objeto 3D…":!vidOk?"Falta tu video o un objeto 3D.":!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
 }
 $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Subiendo…"; bar.hidden=false; $("publish").disabled=true;
-  const meta={original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),fit:S.fit,img:{w:S.imgW,h:S.imgH},video:{w:S.vidW,h:S.vidH},buttons:{}};
+  const meta={original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),fit:S.fit,img:{w:S.imgW,h:S.imgH},video:S.vidW&&!S.noVideo?{w:S.vidW,h:S.vidH}:null,model:S.mcfg||null,buttons:{}};
   for(const [k] of SOC){ const v=toHandle(k,$("b_"+k).value); if(v) meta.buttons[k]=v; }
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
   if(S.imgBlob&&S.target){ fd.append("image",S.imgBlob,"image.jpg"); fd.append("target",S.target,"target.mind"); }
   if(S.video) fd.append("video",S.video,S.video.name);
+  if(S.mcfg&&S.modelFile) fd.append("model",S.modelFile,"model.glb");
   const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc, linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/");
   const qrBlob=await new Promise(r=>qrc.toBlob(r,"image/png")); fd.append("qr",qrBlob,"qr.png");
   const xhr=new XMLHttpRequest(); xhr.open("POST",`${API}/api/publish`); xhr.setRequestHeader("Authorization","Bearer "+S.token);
@@ -348,7 +510,7 @@ $("publish").addEventListener("click",async()=>{
     const r=await VVR.call("me"); S.email=r.user.email;
     const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1,days:30,videoMB:25};
     const LIM=r.limit??P.exp, member=r.team&&r.team.role==="member", more=member?"pide más a quien administra tu equipo":"mejora tu plan";
-    MAX_MB=P.videoMB;
+    MAX_MB=P.videoMB; MAX_MODEL_MB=P.modelMB||15; $("modHint").textContent=`Archivo GLB · hasta ${MAX_MODEL_MB} MB`;
     $("vidHint").textContent=`Hasta ${P.videoMB} MB. MP4 funciona en todos los celulares.`;
     if(P.id!=="gratis"){ $("kick").textContent=member?`Equipo ${P.name} · ${LIM.toLocaleString("es-MX")} experiencias para ti`:`Plan ${P.name} · hasta ${LIM.toLocaleString("es-MX")} experiencias`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
     const active=r.experiences.filter(x=>!x.paused);

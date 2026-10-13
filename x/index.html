@@ -117,7 +117,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 <header id="brand"><a href="https://vorticevr.mx/" aria-label="Vórtice VR"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a></header>
 
 <div id="intro">
-  <span class="k">Esta imagen tiene un video</span>
+  <span class="k" id="kick">Esta imagen tiene un video</span>
   <h1 id="title">Cargando…</h1>
   <img class="thumb" id="thumb" alt="Imagen que debes enfocar con la cámara" hidden>
   <ol class="steps"><li><span>Toca <b>Abrir la cámara</b> y, si te lo pregunta, <b>Permitir</b>.</span></li><li><span>Apunta a esta imagen.</span></li><li><span>Mira cómo cobra vida.</span></li></ol>
@@ -161,8 +161,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 <script type="module">
 // The 3D/AR libraries load when the camera starts (and are warmed up in the background), so the page shows
 // its title and image right away even if a browser is slow or strict with third-party scripts.
-let THREE=null, MindARThree=null;
-const libs=()=>Promise.all([import("three"),import("mindar-image-three")]).then(([t,m])=>{ THREE=t; MindARThree=m.MindARThree; });
+let THREE=null, MindARThree=null, M3D=null;
+const libs=()=>Promise.all([import("three"),import("mindar-image-three"),CFG.model?import("/assets/modelo3d.js"):null]).then(([t,m,d])=>{ THREE=t; MindARThree=m.MindARThree; M3D=d; });
 let libsP=null;
 
 const $=id=>document.getElementById(id);
@@ -199,11 +199,12 @@ async function load(){
   if(!r.ok){ message("Experiencia no encontrada","Revisa que el link esté completo."); return; }
   CFG=await r.json(); CFG.base=base;
   const m=`${base}/m/${CFG.slug}/`;
-  CFG.media={video:m+"video",target:m+"target",image:m+"image"};
+  CFG.media={video:m+"video",target:m+"target",image:m+"image",model:m+"model"};
   document.title=(CFG.title||"Realidad aumentada")+" · Vórtice VR";
   $("title").textContent=CFG.title||"Realidad aumentada";
+  $("kick").textContent=CFG.model&&CFG.video?"Esta imagen cobra vida":CFG.model?"Esta imagen tiene un objeto 3D":"Esta imagen tiene un video";
   $("thumb").src=CFG.media.image; $("thumb").hidden=false; $("guideImg").src=CFG.media.image;
-  vid.src=CFG.media.video;
+  if(CFG.video) vid.src=CFG.media.video;
   const soc=$("social"); soc.replaceChildren();
   for(const k of ORDER){ const v=CFG.buttons&&CFG.buttons[k]; if(!v) continue;
     const a=document.createElement("a"); a.href=socialHref(k,v); a.target="_blank"; a.rel="noopener"; a.setAttribute("aria-label",LABEL[k]);
@@ -285,9 +286,9 @@ function setupAudio(){ try{ const AC=window.AudioContext||window.webkitAudioCont
   const dest=ac.createMediaStreamDestination(); src.connect(ac.destination); src.connect(dest); AUDIO.ac=ac; AUDIO.dest=dest; ac.resume&&ac.resume(); }catch(e){} }
 
 async function start(){
-  vid.muted=false; vid.play().then(()=>vid.pause()).catch(()=>{}); setupAudio();       // unlock sound inside the tap (iOS)
+  if(CFG.video){ vid.muted=false; vid.play().then(()=>vid.pause()).catch(()=>{}); setupAudio(); }      // unlock sound inside the tap (iOS)
   startBtn.disabled=true; startBtn.textContent="Cargando…"; $("err").hidden=true;
-  try{ await (libsP||libs()); if(!THREE||!MindARThree) throw 0; }
+  try{ await (libsP||libs()); if(!THREE||!MindARThree||(CFG.model&&!M3D)) throw 0; }
   catch(e){ startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false;
     $("err").textContent="No se pudo cargar la realidad aumentada. Revisa tu conexión; si estás en navegación privada, ábrelo en una pestaña normal."; return; }
   try{
@@ -295,15 +296,26 @@ async function start(){
     const {renderer,scene,camera}=mind; renderer.outputColorSpace=THREE.SRGBColorSpace;
     const anchor=mind.addAnchor(0);
     // the image is 1 wide and IH tall, centered; the video is sized by the creator's fit mode
-    const IH=CFG.img.h/CFG.img.w, VA=CFG.video.w/CFG.video.h;
-    let pw=1, ph=1/VA;
-    if(CFG.fit==="height"){ ph=IH; pw=IH*VA; } else if(CFG.fit==="fill"){ pw=1; ph=IH; }
-    const vtex=new THREE.VideoTexture(vid); vtex.colorSpace=THREE.SRGBColorSpace;
-    const vplane=new THREE.Mesh(new THREE.PlaneGeometry(pw,ph),new THREE.MeshBasicMaterial({map:vtex,toneMapped:false,transparent:true,opacity:0}));
-    vplane.position.z=0.004;
-    // Steadier video: the plane does not ride the anchor directly. It lives in its own group that follows the anchor
+    // Steadier video and 3D object: they do not ride the anchor directly. They live in their own group that follows the anchor
     // with an adaptive low-pass filter: tiny movements (tracking jitter) are damped hard, real movements are followed fast.
-    const steady=new THREE.Group(); steady.matrixAutoUpdate=false; steady.visible=false; scene.add(steady); steady.add(vplane);
+    const steady=new THREE.Group(); steady.matrixAutoUpdate=false; steady.visible=false; scene.add(steady);
+    const show=new THREE.Group(); steady.add(show);   // grows in when the image is found
+    const IH=CFG.img.h/CFG.img.w;
+    let vtex=null, vplane=null;
+    if(CFG.video){
+      const VA=CFG.video.w/CFG.video.h;
+      let pw=1, ph=1/VA;
+      if(CFG.fit==="height"){ ph=IH; pw=IH*VA; } else if(CFG.fit==="fill"){ pw=1; ph=IH; }
+      vtex=new THREE.VideoTexture(vid); vtex.colorSpace=THREE.SRGBColorSpace;
+      vplane=new THREE.Mesh(new THREE.PlaneGeometry(pw,ph),new THREE.MeshBasicMaterial({map:vtex,toneMapped:false,transparent:true,opacity:0}));
+      vplane.position.z=0.004; show.add(vplane);
+    }
+    let model=null;
+    if(CFG.model){
+      M3D.light(renderer,scene);
+      try{ model=await M3D.loadModel(CFG.media.model); M3D.place(model,CFG.model); show.add(model.root); }
+      catch(e){ console.error(e); if(!CFG.video) throw new Error("model"); }   // with a video, the experience still works without it
+    }
     const tP=new THREE.Vector3(), tQ=new THREE.Quaternion(), tS=new THREE.Vector3(), sP=new THREE.Vector3(), sQ=new THREE.Quaternion(), sS=new THREE.Vector3();
     let steadyOn=false;
     const SMOOTH=new URLSearchParams(location.search).get("suave")!=="0";   // ?suave=0 turns it off, to compare
@@ -324,7 +336,8 @@ async function start(){
     setMode=()=>{ const full=vbox.classList.contains("full"), onScreen=started&&(!found||full);
       vbox.classList.toggle("on",onScreen); vbox.setAttribute("aria-hidden",String(!onScreen));
       guide.classList.toggle("off",found&&!full); guide.classList.toggle("mini",started&&!found); };
-    anchor.onTargetFound=()=>{ found=true; if(!started){ started=true; vid.currentTime=0; $("vctl").hidden=false; } if(!userPaused) playVid(); setMode(); };
+    if(!CFG.video) setMode=()=>{ guide.classList.toggle("off",found); guide.classList.toggle("mini",started&&!found); };
+    anchor.onTargetFound=()=>{ found=true; if(!started){ started=true; if(CFG.video){ vid.currentTime=0; $("vctl").hidden=false; } } if(CFG.video&&!userPaused) playVid(); setMode(); };
     anchor.onTargetLost=()=>{ found=false; setMode(); };
 
     const capture=setupCapture(mind);
@@ -332,8 +345,10 @@ async function start(){
     $("intro").hidden=true; guide.hidden=false; $("controls").hidden=false; $("social").hidden=!$("social").children.length; showCtl(); setMode();
     const clock=new THREE.Clock(); let appear=0;
     renderer.setAnimationLoop(()=>{ const dt=clock.getDelta(); appear=found?Math.min(1,appear+dt*2.4):0; follow(dt);
-      vplane.material.opacity=1-Math.pow(1-appear,3); vplane.scale.setScalar(.9+.1*vplane.material.opacity);
-      if(found&&vid.readyState>=2) vtex.needsUpdate=true; // a hidden <video> is not painted, so its frame callback stops (iPhone): push frames ourselves
+      const a=1-Math.pow(1-appear,3);
+      if(vplane){ vplane.material.opacity=a; vplane.scale.setScalar(.9+.1*a); }
+      if(model){ model.root.visible=a>0; model.root.scale.setScalar(CFG.model.s*(.6+.4*a)); if(model.mixer) model.mixer.update(dt); }
+      if(vtex&&found&&vid.readyState>=2) vtex.needsUpdate=true; // a hidden <video> is not painted, so its frame callback stops (iPhone): push frames ourselves
       renderer.render(scene,camera); capture.afterRender(); });
   }catch(e){
     console.error(e); startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false;

@@ -5,12 +5,13 @@
 (function () {
   const KEY = "vvr-tutorial";
   const STEPS = [
-    { title: "¡Vamos a crear tu realidad aumentada!", text: "Te guío en 5 pasos rápidos. En un par de minutos tendrás tu link y tu código QR listos para compartir." },
+    { title: "¡Vamos a crear tu realidad aumentada!", text: "Te guío en 6 pasos rápidos. En un par de minutos tendrás tu link y tu código QR listos para compartir." },
     { sel: "#s1", title: "1 · Tu imagen", text: "Sube la imagen que la gente va a enfocar con su celular: tu tarjeta, un cartel, una portada. Te diremos con estrellas qué tan bien se va a reconocer." },
-    { sel: "#s2", title: "2 · Tu video", text: "Elige el video que aparecerá encima de tu imagen. MP4 funciona en todos los celulares." },
+    { sel: "#s2", title: "2 · Tu video", text: "Elige el video que aparecerá encima de tu imagen. MP4 funciona en todos los celulares. Si vas a poner solo un objeto 3D, puedes saltarte este paso." },
     { sel: "#s3", title: "3 · Acomódalo", text: "Escoge cómo se ajusta el video sobre la imagen. En la vista previa ves cómo va a quedar." },
-    { sel: "#s4", title: "4 · Título, link y botones", text: "Ponle un título, elige tu link y, si quieres, agrega tu WhatsApp, tu sitio o tus redes como botones." },
-    { sel: "#s6", title: "5 · ¡Publica!", text: "Al publicar recibes tu link y tu QR, también por correo. Imprime el QR junto a tu imagen y listo." },
+    { sel: "#s5", title: "4 · Un objeto 3D (opcional)", text: "También puedes poner un objeto 3D sobre tu imagen. En la vista previa lo arrastras para moverlo y lo haces más grande o más chico; elige si sale de pie o de frente." },
+    { sel: "#s4", title: "5 · Título, link y botones", text: "Ponle un título, elige tu link y, si quieres, agrega tu WhatsApp, tu sitio o tus redes como botones." },
+    { sel: "#s6", title: "6 · ¡Publica!", text: "Al publicar recibes tu link y tu QR, también por correo. Imprime el QR junto a tu imagen y listo." },
   ];
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const css = document.createElement("style");
