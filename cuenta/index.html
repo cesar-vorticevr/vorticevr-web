@@ -363,10 +363,10 @@ function refCode(){ try{ const r=JSON.parse(localStorage.getItem(REFKEY)||"null"
   if(r.ok){ const b=$("rInvite"); b.hidden=false; b.innerHTML=`✦ <b>${esc(r.name)}</b> te invitó: tendrás <b>${r.discount}% de descuento</b> todo tu primer año en cualquier plan.`; } }catch(e){} })();
 const NEXT=Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":null;
 // public plans: [id, name, monthly price, yearly price, what it includes] (a year is ~10 months; IVA included)
-const PLANS=[["gratis","Gratis",0,0,"Para probar la magia",["<b>1</b> imagen con video","Activa <b>15 días</b>","Hasta <b>1,000</b> vistas","Videos de hasta 25 MB"]],
-  ["basico","Básico",199,1990,"Para tu negocio",["<b>5</b> imágenes con video","Cámbialas cuando quieras","Sin vencimiento mientras pagues","Vistas ilimitadas","Videos de hasta 25 MB"]],
-  ["pro","Pro",499,4990,"Para crecer en grande",["<b>50</b> imágenes con video","Cámbialas cuando quieras","Sin vencimiento mientras pagues","Vistas ilimitadas","Videos de hasta <b>50 MB</b>"]],
-  ["empresarial","Empresarial",999,9999,"Para escuelas y empresas",["<b>150</b> imágenes con video","Hasta <b>15 cuentas</b> para tu equipo","Tú repartes las imágenes de cada cuenta","Vistas ilimitadas","Soporte prioritario"]]];
+const PLANS=[["gratis","Gratis",0,0,"Para probar la magia",["<b>1</b> imagen con video","Hasta <b>3</b> elementos: video, foto, texto o 3D","Activa <b>15 días</b>","Hasta <b>1,000</b> vistas","Videos de hasta 25 MB"]],
+  ["basico","Básico",199,1990,"Para tu negocio",["<b>5</b> imágenes con video","Hasta <b>6</b> elementos por imagen","Cámbialas cuando quieras","Sin vencimiento mientras pagues","Vistas ilimitadas","Videos de hasta 25 MB"]],
+  ["pro","Pro",499,4990,"Para crecer en grande",["<b>50</b> imágenes con video","Hasta <b>15</b> elementos por imagen","Cámbialas cuando quieras","Sin vencimiento mientras pagues","Vistas ilimitadas","Videos de hasta <b>50 MB</b>"]],
+  ["empresarial","Empresarial",999,9999,"Para escuelas y empresas",["<b>150</b> imágenes con video","Hasta <b>15</b> elementos por imagen","Hasta <b>15 cuentas</b> para tu equipo","Tú repartes las imágenes de cada cuenta","Vistas ilimitadas","Soporte prioritario"]]];
 const LEGACY={escuela:["escuela","Escuela",1500,15000,"Tu plan actual",["<b>1,000</b> imágenes con video","Cámbialas cuando quieras","Videos de hasta 50 MB"]]};
 const VIEWS=["vEntrar","vRegistro","vCodigo","vOlvide","vPanel"];
 function view(v){ VIEWS.forEach(x=>$(x).hidden=x!==v); scrollTo(0,0); const f=$(v).querySelector("input"); if(f&&v!=="vPanel") setTimeout(()=>f.focus(),50); }

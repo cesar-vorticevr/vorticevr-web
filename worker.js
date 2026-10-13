@@ -3,7 +3,8 @@
 //  - Plataforma de RA (vorticevr.mx/crear/):
 //      nombre.vorticevr.mx  y  /e/nombre/   → visor /x/
 //      /api/*                                 → cuentas (registro, sesión), publicar, consultar
-//      /m/<slug>/<video|target|image|model>   → archivos de la experiencia en R2 (con Range; model = GLB)
+//      /m/<slug>/<target|image|i/<id>>         → archivos de la experiencia en R2 (con Range); i/<id> = archivo de un elemento
+//                                              (video, imagen o GLB). video y model: experiencias de antes de los elementos.
 //    Requiere bindings DB (D1) y MEDIA (R2); secretos RESEND_API_KEY y SESSION_SECRET.
 //    Sin bindings, el sitio funciona igual y la API responde 503.
 
@@ -16,13 +17,14 @@ const LIMITS = { imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, code
 // year = price of a year (default 10 months). seats = team accounts the owner can create (Empresarial): the owner hands
 // each one part of the plan's experiences (users.quota); what is not handed out stays for the owner.
 // legacy = no longer offered (only kept for accounts that have it). Paid plans can also be set by an admin in /admin/.
-// Videos stay ≤ 50 MB and 3D models (GLB, modelMB) ≤ 30 MB: the Worker reads the whole upload in memory (128 MB).
+// Elements (video, image, text, 3D) per experience: items = how many, totalMB = weight of all its files together
+// (each video ≤ videoMB, each GLB ≤ modelMB). The Worker reads the whole upload in memory (128 MB): keep totalMB ≤ 60.
 const PLANS = {
-  gratis:  { name: "Gratis",  exp: 1,    days: 15, videoMB: 25, modelMB: 15, price: 0, views: 1000 },
-  basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 25, modelMB: 15, price: 199, year: 1990 },
-  pro:     { name: "Pro",     exp: 50,   days: 0,  videoMB: 50, modelMB: 30, price: 499, year: 4990 },
-  empresarial: { name: "Empresarial", exp: 150, seats: 15, days: 0, videoMB: 50, modelMB: 30, price: 999, year: 9999 },
-  escuela: { name: "Escuela", exp: 1000, days: 0,  videoMB: 50, modelMB: 30, price: 1500, year: 15000, legacy: true },
+  gratis:  { name: "Gratis",  exp: 1,    days: 15, videoMB: 25, modelMB: 15, items: 3, totalMB: 30, price: 0, views: 1000 },
+  basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 25, modelMB: 15, items: 6, totalMB: 40, price: 199, year: 1990 },
+  pro:     { name: "Pro",     exp: 50,   days: 0,  videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 499, year: 4990 },
+  empresarial: { name: "Empresarial", exp: 150, seats: 15, days: 0, videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 999, year: 9999 },
+  escuela: { name: "Escuela", exp: 1000, days: 0,  videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 1500, year: 15000, legacy: true },
 };
 const yearPrice = plan => PLANS[plan].year || PLANS[plan].price * YEAR_MONTHS;
 const FAR = 253402300799000; // expires of an experience on a paid plan: "while the plan is active" (year 9999)
@@ -31,7 +33,11 @@ const ADMINS_DEFAULT = "lad.cesargarcia@gmail.com";
 const REF = { plans: ["pro", "empresarial"], rate: 0.10, discount: 10, holdDays: 30, minPayout: 50000 /* centavos: $500 */, coupon: "VVR_REF10" };
 const ADMIN_SLUGS = new Set(["ejemplo"]); // only an admin can take these (the home page demo uses "ejemplo")
 const VIDEO = /\.(mp4|m4v|webm|mov)$/i;
-const MEDIA_KEYS = ["video", "target", "image", "model", "qr"]; // R2 files of an experience: exp/<slug>/<key>
+const MEDIA_KEYS = ["video", "target", "image", "model", "qr"]; // R2 files of an experience: exp/<slug>/<key> (+ i/<id> of its elements)
+const ITEM_TYPES = ["video", "image", "text", "model"];
+const ENTRANCES = ["aparecer", "crecer", "rebote", "girar", "subir", "ninguna"];
+const FONTS = ["Sora", "Bebas Neue", "Pacifico", "Playfair Display", "Permanent Marker", "IBM Plex Sans"];
+const ITEM_LIMITS = { videos: 2, scenes: 5, imageBytes: 5 * 1024 * 1024 };
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])$/;
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i;
 const BUTTONS = ["whatsapp", "facebook", "instagram", "youtube", "x", "tiktok", "web"];
@@ -55,8 +61,8 @@ export default {
     await env.DB.prepare("UPDATE commissions SET status = 'disponible' WHERE status = 'pendiente' AND available_at < ?").bind(Date.now()).run();
     // expired experiences: files in bulk (one R2 call per 1000 keys), then the rows
     const now = Date.now();
-    const { results } = await env.DB.prepare("SELECT slug FROM experiences WHERE expires < ? LIMIT 2000").bind(now).all();
-    const keys = results.flatMap(r => MEDIA_KEYS.map(k => `exp/${r.slug}/${k}`));
+    const { results } = await env.DB.prepare("SELECT slug, data FROM experiences WHERE expires < ? LIMIT 2000").bind(now).all();
+    const keys = results.flatMap(r => mediaKeys(r.slug, r.data));
     for (let i = 0; i < keys.length; i += 1000) await env.MEDIA.delete(keys.slice(i, i + 1000));
     if (results.length) await env.DB.prepare("DELETE FROM experiences WHERE slug IN (SELECT slug FROM experiences WHERE expires < ? LIMIT 2000)").bind(now).run();
     await env.DB.prepare("DELETE FROM otp WHERE expires < ?").bind(Date.now() - 864e5).run();
@@ -141,7 +147,7 @@ function rangeFromBuffer(request, baseHeaders, buf) {
 
 // ---------- experience files from R2 ----------
 async function media(request, env, url) {
-  const m = url.pathname.match(/^\/m\/([a-z0-9-]+)\/(video|target|image|model)$/);
+  const m = url.pathname.match(/^\/m\/([a-z0-9-]+)\/(video|target|image|model|i\/[a-z0-9]{6,16})$/);
   if (!m || !env.MEDIA || !env.DB) return new Response("No encontrado", { status: 404 });
   const [, slug, kind] = m;
   await schema(env);
@@ -176,8 +182,14 @@ function mediaHeaders(obj) {
   h.set("ETag", obj.httpEtag);
   return h;
 }
-async function deleteMedia(env, slug) {
-  await env.MEDIA.delete(MEDIA_KEYS.map(k => `exp/${slug}/${k}`));
+// every file an experience can have: the fixed ones and its elements' (data = the row's data column)
+function mediaKeys(slug, data) {
+  let d = {}; try { d = typeof data === "string" ? JSON.parse(data || "{}") : data || {}; } catch {}
+  const files = itemsOf(d).map(i => i.file).filter(Boolean);
+  return [...new Set([...MEDIA_KEYS, ...files])].map(k => `exp/${slug}/${k}`);
+}
+async function deleteMedia(env, slug, data) {
+  await env.MEDIA.delete(mediaKeys(slug, data));
 }
 
 // ---------- API ----------
@@ -332,9 +344,9 @@ async function api(request, env, ctx, url) {
   m = path.match(/^\/api\/experience\/([a-z0-9-]+)$/);
   if (m && M === "DELETE") {
     if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
-    const exp = await env.DB.prepare("SELECT slug FROM experiences WHERE slug = ? AND email = ?").bind(m[1], who).first();
+    const exp = await env.DB.prepare("SELECT slug, data FROM experiences WHERE slug = ? AND email = ?").bind(m[1], who).first();
     if (!exp) return json({ error: "No encontramos esa experiencia en tu cuenta." }, 404);
-    await deleteMedia(env, exp.slug); await env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(exp.slug).run();
+    await deleteMedia(env, exp.slug, exp.data); await env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(exp.slug).run();
     return json({ ok: true });
   }
 
@@ -356,41 +368,62 @@ async function api(request, env, ctx, url) {
     const slug = String(meta.slug || "").toLowerCase();
     const st = await slugStatus(env, slug, who, mine && mine.slug, isAdmin(env, me));
     if (!st.ok) return json({ error: st.reason }, 400);
-    const data = cleanMeta(meta);
+    const data = cleanMeta(meta, P);
     if (data.error) return json({ error: data.error }, 400);
-    const video = form.get("video"), image = form.get("image"), target = form.get("target"), qr = form.get("qr"), model = form.get("model");
+    const image = form.get("image"), target = form.get("target"), qr = form.get("qr");
     const isNew = !mine;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
-    if (isNew && (!image || !target || (data.video && !video) || (data.model && !model))) return json({ error: "Faltan la imagen, el video o el objeto 3D." }, 400);
-    // keeping the current video or model while editing: it has to be there
-    for (const [k, want, file] of [["video", data.video, video], ["model", data.model, model]])
-      if (mine && want && !file && !(await env.MEDIA.head(`exp/${mine.slug}/${k}`))) return json({ error: k === "video" ? "Falta el video." : "Falta el objeto 3D." }, 400);
-    if (model && model.size > P.modelMB * 1048576) return json({ error: `El objeto 3D debe pesar máximo ${P.modelMB} MB.` }, 400);
-    if (model && new TextDecoder().decode(new Uint8Array(await model.slice(0, 4).arrayBuffer())) !== "glTF") return json({ error: "El objeto 3D debe ser un archivo GLB." }, 400);
-    if (video && (video.size > P.videoMB * 1048576 || !/^video\/(mp4|webm|quicktime)$/.test(video.type))) return json({ error: `El video debe ser MP4, WebM o MOV de máximo ${P.videoMB} MB.` }, 400);
+    if (isNew && (!image || !target)) return json({ error: "Falta la imagen." }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
     if (target && target.size > LIMITS.targetBytes) return json({ error: "La imagen no se pudo preparar. Intenta con otra." }, 400);
+    // each element's file: uploaded now (field f_<id>) or kept from the version being edited (same id and type)
+    const oldItems = mine ? itemsOf(JSON.parse(mine.data || "{}")) : [];
+    const oldById = new Map(oldItems.map(i => [i.id, i]));
+    const uploads = [];
+    let total = 0;
+    for (const it of data.items) {
+      if (it.type === "text") continue;
+      const file = form.get("f_" + it.id);
+      if (file && typeof file !== "string") {
+        if (it.type === "video" && (file.size > P.videoMB * 1048576 || !/^video\/(mp4|webm|quicktime)$/.test(file.type))) return json({ error: `Cada video debe ser MP4, WebM o MOV de máximo ${P.videoMB} MB.` }, 400);
+        if (it.type === "image" && (file.size > ITEM_LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(file.type))) return json({ error: "Cada imagen debe ser JPG, PNG o WebP de máximo 5 MB." }, 400);
+        if (it.type === "model") {
+          if (file.size > P.modelMB * 1048576) return json({ error: `Cada objeto 3D debe pesar máximo ${P.modelMB} MB.` }, 400);
+          if (new TextDecoder().decode(new Uint8Array(await file.slice(0, 4).arrayBuffer())) !== "glTF") return json({ error: "Los objetos 3D deben ser archivos GLB." }, 400);
+        }
+        it.file = "i/" + it.id; it.bytes = file.size;
+        uploads.push([it.file, file, it.type === "model" ? "model/gltf-binary" : file.type]);
+      } else {
+        const o = oldById.get(it.id);
+        if (!o || !o.file || o.type !== it.type) return json({ error: "Falta el archivo de uno de tus elementos. Vuelve a subirlo." }, 400);
+        it.file = o.file; it.bytes = o.bytes || 0;
+      }
+      total += it.bytes;
+    }
+    if (total > P.totalMB * 1048576) return json({ error: `Tus elementos pesan ${(total / 1048576).toFixed(1)} MB. Tu plan ${P.name} permite ${P.totalMB} MB por experiencia.` }, 400);
     // an expired row with this slug that the cron has not deleted yet (anyone's): clear it first
     if (!mine || mine.slug !== slug) {
-      const stale = await env.DB.prepare("SELECT slug FROM experiences WHERE slug = ?").bind(slug).first();
-      if (stale) { await deleteMedia(env, slug); await env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(slug).run(); }
+      const stale = await env.DB.prepare("SELECT slug, data FROM experiences WHERE slug = ?").bind(slug).first();
+      if (stale) { await deleteMedia(env, slug, stale.data); await env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(slug).run(); }
     }
-    // changing the name moves the files
+    // changing the name moves the files that stay
     if (mine && mine.slug !== slug) {
-      for (const k of ["video", "target", "image", "model"]) {
-        const isReplaced = (k === "video" && video) || (k === "image" && image) || (k === "target" && target) || (k === "model" && model);
-        if (!isReplaced) { const o = await env.MEDIA.get(`exp/${mine.slug}/${k}`); if (o) await env.MEDIA.put(`exp/${slug}/${k}`, o.body, { httpMetadata: o.httpMetadata }); }
-      }
-      await deleteMedia(env, mine.slug);
+      const moving = new Set(data.items.map(i => i.file).filter(Boolean));
+      if (!image) moving.add("image"); if (!target) moving.add("target");
+      for (const u of uploads) moving.delete(u[0]);
+      for (const k of moving) { const o = await env.MEDIA.get(`exp/${mine.slug}/${k}`); if (o) await env.MEDIA.put(`exp/${slug}/${k}`, o.body, { httpMetadata: o.httpMetadata }); }
+      await deleteMedia(env, mine.slug, mine.data);
       await env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(mine.slug).run();
     }
-    if (video) await env.MEDIA.put(`exp/${slug}/video`, video, { httpMetadata: { contentType: video.type } });
     if (image) await env.MEDIA.put(`exp/${slug}/image`, await image.arrayBuffer(), { httpMetadata: { contentType: image.type } });
     if (target) await env.MEDIA.put(`exp/${slug}/target`, await target.arrayBuffer(), { httpMetadata: { contentType: "application/octet-stream" } });
-    if (model) await env.MEDIA.put(`exp/${slug}/model`, await model.arrayBuffer(), { httpMetadata: { contentType: "model/gltf-binary" } });
-    // removed while editing (an experience can have the video, the 3D object or both)
-    const gone = [!data.video && "video", !data.model && "model"].filter(Boolean);
-    if (gone.length) await env.MEDIA.delete(gone.map(k => `exp/${slug}/${k}`));
+    for (const [k, file, type] of uploads) await env.MEDIA.put(`exp/${slug}/${k}`, file, { httpMetadata: { contentType: type } });
+    // files of elements that were removed (and the old single video / 3D object once they are no longer used)
+    if (mine && mine.slug === slug) {
+      const keep = new Set(["target", "image", "qr", ...data.items.map(i => i.file).filter(Boolean)]);
+      const gone = mediaKeys(slug, mine.data).filter(k => !keep.has(k.slice(`exp/${slug}/`.length)));
+      if (gone.length) await env.MEDIA.delete(gone);
+    }
     const now = Date.now();
     const created = mine ? mine.created : now;
     const expires = mine ? mine.expires : P.days ? now + P.days * 864e5 : FAR;
@@ -652,7 +685,7 @@ async function api(request, env, ctx, url) {
 
 function publicExp(row) {
   const d = JSON.parse(row.data || "{}");
-  return { slug: row.slug, title: row.title, fit: d.fit, img: d.img, video: d.video || null, model: d.model || null, buttons: d.buttons, expires: row.expires };
+  return { slug: row.slug, title: row.title, img: d.img, place: d.place || "mesa", scenes: d.scenes || 1, items: itemsOf(d), buttons: d.buttons, expires: row.expires };
 }
 function ownerExp(row, request, env) {
   return { ...publicExp(row), url: expUrl(row.slug, request, env), created: row.created, updated: row.updated, views: row.views, paused: !!row.paused, forever: row.expires >= FAR };
@@ -672,23 +705,78 @@ async function slugStatus(env, slug, owner, own, admin) {
   if (row && row.expires > Date.now()) return { ok: false, reason: owner && row.email === owner ? "Ya tienes otra experiencia con ese link." : "Ese nombre ya está ocupado." };
   return { ok: true };
 }
-function cleanMeta(m) {
+// Experiences made before elements had one video (fit) and/or one 3D object: the same thing as elements.
+function itemsOf(d) {
+  if (Array.isArray(d.items)) return d.items;
+  const out = [];
+  if (d.video && d.video.w) {
+    const IH = d.img ? d.img.h / d.img.w : 1, VA = d.video.w / d.video.h;
+    const v = { id: "video", type: "video", file: "video", w: d.video.w, h: d.video.h, x: 0, y: 0, z: 0, s: 1, r: 0, o: "frente", in: "aparecer", scene: 0, sound: true, chroma: null };
+    if (d.fit === "height") v.s = IH * VA; else if (d.fit === "fill") v.ar = 1 / IH;
+    out.push(v);
+  }
+  if (d.model) out.push({ id: "model", type: "model", file: "model", ...d.model, anim: 0, in: "aparecer", scene: 0 });
+  return out;
+}
+const HEX = /^#[0-9a-f]{6}$/i;
+// a link to open when an element is tapped: a web address, or a phone number (opens WhatsApp)
+function cleanLink(v) {
+  v = String(v || "").trim().slice(0, 300);
+  if (!v) return null;
+  if (/^\+?[\d\s().-]{8,}$/.test(v)) { let d = v.replace(/\D/g, ""); if (d.length === 10) d = "52" + d; return d.length >= 10 ? "https://wa.me/" + d : undefined; }
+  if (!/^https?:\/\//i.test(v)) v = "https://" + v;
+  try { const u = new URL(v); if (!/^https?:$/.test(u.protocol) || !u.hostname.includes(".")) return undefined; return u.href; } catch { return undefined; }
+}
+// Elements on the image (see assets/escena.js for what each field means). Files are filled in by /api/publish.
+function cleanItems(list, P) {
+  const f = (v, a, b, d) => { v = Number(v); return Number.isFinite(v) ? Math.round(Math.min(b, Math.max(a, v)) * 1e4) / 1e4 : d; };
+  const int = (v, a, b) => { v = Math.round(Number(v)); return Number.isFinite(v) && v >= a && v <= b ? v : null; };
+  if (!Array.isArray(list) || !list.length) return { error: "Agrega al menos un elemento: un video, una imagen, un texto o un objeto 3D." };
+  if (list.length > P.items) return { error: `Tu plan ${P.name} permite hasta ${P.items} elementos por experiencia.` };
+  const out = [], ids = new Set();
+  let sound = false, videos = 0;
+  for (const m of list) {
+    const id = String(m && m.id || "");
+    if (!/^(video|model|[a-z0-9]{6,16})$/.test(id) || ids.has(id) || !ITEM_TYPES.includes(m.type)) return { error: "Uno de tus elementos no es válido." };
+    ids.add(id);
+    const it = { id, type: m.type, x: f(m.x, -2, 2, 0), y: f(m.y, -2, 2, 0), z: f(m.z, -1, 2, 0), s: f(m.s, 0.02, 4, 0.6), r: f(m.r, -360, 360, 0),
+      o: m.o === "pie" ? "pie" : "frente", in: ENTRANCES.includes(m.in) ? m.in : "aparecer", scene: int(m.scene, 0, ITEM_LIMITS.scenes - 1) || 0 };
+    const name = String(m.name || "").trim().slice(0, 60); if (name) it.name = name;
+    const link = cleanLink(m.link);
+    if (link === undefined) return { error: `El enlace de "${name || "un elemento"}" no es válido. Escribe una dirección web o un número de WhatsApp.` };
+    if (link) it.link = link;
+    if (m.type === "video" || m.type === "image") {
+      it.w = int(m.w, 1, 8000); it.h = int(m.h, 1, 8000);
+      if (!it.w || !it.h) return { error: "Faltan las medidas de un video o una imagen." };
+    }
+    if (m.type === "video") {
+      if (++videos > ITEM_LIMITS.videos) return { error: `Puedes poner hasta ${ITEM_LIMITS.videos} videos por experiencia.` };
+      const ar = f(m.ar, 0.05, 20, null); if (ar) it.ar = ar;
+      it.sound = !!m.sound && !sound; sound = sound || it.sound;   // only one video plays with sound
+      it.chroma = m.chroma && HEX.test(m.chroma.color) ? { color: m.chroma.color.toLowerCase(), tol: f(m.chroma.tol, 0.05, 0.9, 0.3) } : null;
+    }
+    if (m.type === "text") {
+      it.text = String(m.text || "").replace(/\r/g, "").trim().slice(0, 300);
+      if (!it.text) return { error: "Uno de tus textos está vacío." };
+      it.font = FONTS.includes(m.font) ? m.font : "Sora";
+      it.color = HEX.test(m.color) ? m.color : "#ffffff";
+      it.stroke = HEX.test(m.stroke) ? m.stroke : null;
+    }
+    if (m.type === "model") it.anim = int(m.anim, -1, 99) ?? 0;
+    out.push(it);
+  }
+  return { items: out };
+}
+function cleanMeta(m, P) {
   const title = String(m.title || "").trim().slice(0, 80);
   if (!title) return { error: "Escribe un título." };
-  const fit = ["width", "height", "fill"].includes(m.fit) ? m.fit : "width";
   const num = (v, a, b) => { v = Number(v); return Number.isFinite(v) && v >= a && v <= b ? Math.round(v) : null; };
   const img = { w: num(m.img && m.img.w, 50, 8000), h: num(m.img && m.img.h, 50, 8000) };
-  const video = m.video ? { w: num(m.video.w, 16, 8000), h: num(m.video.h, 16, 8000) } : null;
-  if (!img.w || !img.h || (video && (!video.w || !video.h))) return { error: "Faltan las medidas de la imagen o el video." };
-  // 3D object (GLB) placed on the image, in image units (the image is 1 wide, centered; x right, y up, z toward the camera).
-  // o = "pie": stands up out of the image (image on a table) · "frente": upright facing the viewer (image on a wall).
-  // s = size of its largest side, r = turn in degrees around its own vertical axis, z = lift off the image.
-  let model = null;
-  if (m.model) {
-    const f = (v, a, b, d) => { v = Number(v); return Number.isFinite(v) ? Math.round(Math.min(b, Math.max(a, v)) * 1e4) / 1e4 : d; };
-    model = { o: m.model.o === "frente" ? "frente" : "pie", x: f(m.model.x, -2, 2, 0), y: f(m.model.y, -2, 2, 0), z: f(m.model.z, -1, 2, 0), s: f(m.model.s, 0.05, 3, 0.6), r: f(m.model.r, -360, 360, 0) };
-  }
-  if (!video && !model) return { error: "Agrega un video o un objeto 3D." };
+  if (!img.w || !img.h) return { error: "Faltan las medidas de la imagen." };
+  const ci = cleanItems(m.items, P);
+  if (ci.error) return ci;
+  const items = ci.items, scenes = Math.min(ITEM_LIMITS.scenes, Math.max(1, num(m.scenes, 1, ITEM_LIMITS.scenes) || 1, ...items.map(i => i.scene + 1)));
+  const place = m.place === "pared" ? "pared" : "mesa";   // how the editor shows the image (on a table or on a wall)
   const buttons = {};
   for (const k of BUTTONS) {
     let v = String((m.buttons && m.buttons[k]) || "").trim().slice(0, 300);
@@ -702,7 +790,7 @@ function cleanMeta(m) {
     else { if (!/^https?:\/\//i.test(v)) v = "https://" + v; try { const u = new URL(v); if (!/^https?:$/.test(u.protocol)) throw 0; v = u.href; } catch { return { error: `El enlace de ${LABELS[k]} no es válido.` }; } }
     buttons[k] = v;
   }
-  return { title, fit, img, video, model, buttons };
+  return { title, img, place, scenes, items, buttons };
 }
 
 // ---------- helpers ----------

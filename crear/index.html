@@ -83,34 +83,76 @@ header .acts{display:flex;align-items:center;gap:14px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
 .note{font-size:.85rem;color:var(--mute)}
 
-/* preview */
-.pv{border:1px solid var(--line2);border-radius:18px;background:#120826;padding:16px}
-.pv h3{margin:0 0 4px;font-family:var(--fd);font-size:1rem}
-.stage{position:relative;margin:12px auto 0;background:#000;border-radius:10px;overflow:hidden;display:grid;place-items:center;aspect-ratio:3/2}
-.stage .img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:.45}
-.stage .box{position:relative;overflow:visible}
-.stage .box>img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill}
-.stage video{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);object-fit:fill;opacity:.92;box-shadow:0 0 0 2px rgba(255,190,85,.9),0 10px 30px rgba(0,0,0,.6)}
-.stage .box::after{content:"";position:absolute;inset:0;border:2px dashed rgba(255,255,255,.95);border-radius:2px;pointer-events:none;z-index:2;box-shadow:0 0 0 9999px rgba(5,2,11,.35)}
-.stage .empty{color:var(--mute);font-size:.9rem;padding:30px;text-align:center}
-/* 3D editor: the image, the video and the object; drag the object to move it */
-.stage3d{position:relative;margin:12px auto 0;border-radius:10px;overflow:hidden;aspect-ratio:1/1;background:radial-gradient(80% 70% at 50% 35%,#2a1450,#0a0418 75%);touch-action:none;cursor:grab}
-.stage3d canvas{display:block;width:100%!important;height:100%!important}
-.stage3d.drag{cursor:grabbing}
-.stage3d .tip{position:absolute;left:8px;right:8px;bottom:8px;font-size:.75rem;color:var(--mute);background:rgba(5,2,11,.7);border-radius:8px;padding:6px 10px;pointer-events:none;text-align:center}
-.stage3d .load{position:absolute;inset:0;display:grid;place-items:center;color:var(--mute);font-size:.9rem}
-.views{display:flex;gap:6px;margin-top:10px}
-.views button{flex:1;font:600 .78rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:7px 10px;cursor:pointer}
-.views button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
-.ctl{display:grid;grid-template-columns:auto 1fr auto;gap:10px 12px;align-items:center;margin-top:14px}
-.ctl label{font-size:.8rem;font-family:var(--fd);letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+/* step 2: content = elements on the image (video, image, text, 3D) */
+.adds{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:480px){.adds{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.add{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 6px;border:1.5px dashed var(--line2);border-radius:12px;background:rgba(5,2,11,.5);color:var(--ink);font:600 .85rem var(--fd);cursor:pointer;transition:border-color .2s,background .2s}
+.add:hover,.adds.over .add{border-color:var(--lav);background:rgba(139,63,214,.15)}
+.add svg{width:24px;height:24px;fill:var(--lav)}
+.weight{margin-top:12px;font-size:.8rem;color:var(--mute)}
+.weight .wtop{display:flex;justify-content:space-between;gap:8px;font-family:var(--fm)}
+.weight .bar{margin-top:6px}
+.weight.over{color:var(--bad)} .weight.over .bar i{background:var(--bad)}
+.layers{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}
+.layers li{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:5px 5px 5px 8px;background:rgba(5,2,11,.5);cursor:pointer}
+.layers li.on{border-color:var(--sun);background:rgba(255,190,85,.08)}
+.layers li.other{opacity:.45}
+.ico{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:rgba(139,63,214,.3);flex:none}
+.ico svg{width:16px;height:16px;fill:var(--lav)}
+.layers .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9rem}
+.layers .nm small{color:var(--mute);margin-left:6px}
+.layers button{width:30px;height:30px;flex:none;border-radius:8px;border:1px solid transparent;background:none;color:var(--mute);cursor:pointer;font-size:.95rem}
+.layers button:hover{border-color:var(--line2);color:var(--ink)}
+.props{margin-top:12px;border:1px solid rgba(255,190,85,.45);border-radius:12px;padding:14px;background:rgba(255,190,85,.05)}
+.props h4{margin:0;font-family:var(--fd);font-size:1rem;display:flex;align-items:center;gap:10px}
+.props textarea,.props select,.props input[type=text]{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:9px 11px}
+.props textarea{min-height:64px;resize:vertical}
+.props .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:0 12px}
+.chk{display:flex;align-items:center;gap:8px;font-size:.9rem;margin-top:10px;cursor:pointer}
+.chk input{accent-color:var(--sun);width:18px;height:18px;flex:none}
+input[type=color]{width:44px;height:34px;border:1px solid var(--line2);border-radius:8px;background:none;padding:2px;cursor:pointer;flex:none}
+.props details{margin-top:12px;font-size:.88rem;color:var(--mute)}
+.props details summary{cursor:pointer}
+.xy{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:8px;align-items:center;margin-top:8px}
+.xy input{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:8px;padding:6px 8px}
+.ctl{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px 12px;align-items:center;margin-top:14px}
+.ctl label{font-size:.78rem;font-family:var(--fd);letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
 .ctl output{font-family:var(--fm);font-size:.82rem;color:var(--lav);min-width:4.5ch;text-align:right}
 input[type=range]{width:100%;accent-color:var(--sun)}
-.fmt{font-size:.85rem;color:var(--mute);margin-top:10px;border-left:3px solid var(--sun);padding:6px 0 6px 12px}
+.fmt{font-size:.85rem;color:var(--mute);margin-top:12px;border-left:3px solid var(--sun);padding:6px 0 6px 12px}
 .fmt b{color:var(--ink)}
-.linkbtn{background:none;border:0;color:var(--lav);font:inherit;font-size:.85rem;text-decoration:underline;cursor:pointer;padding:0;margin-top:8px}
-.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:.78rem;color:var(--mute)}
-.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+.btn.sm{padding:8px 14px;font-size:.75rem}
+.mob{display:none;margin-top:12px;width:100%}
+@media (max-width:920px){.mob{display:flex}}
+
+/* preview = 3D editor (assets/editor-ra.js) */
+.pv{border:1px solid var(--line2);border-radius:18px;background:#120826;padding:14px}
+.pvhead{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pv h3{margin:0;font-family:var(--fd);font-size:1rem}
+.tb{font:600 .75rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:7px 11px;cursor:pointer;white-space:nowrap}
+.tb[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
+.tb small{opacity:.75;margin-left:4px}
+.tools{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px}
+.tg{display:flex;gap:4px;flex-wrap:wrap}
+.stage3d{position:relative;margin-top:10px;border-radius:10px;overflow:hidden;aspect-ratio:1/1;background:radial-gradient(80% 70% at 50% 35%,#2a1450,#0a0418 75%);touch-action:none;cursor:grab}
+.stage3d canvas{display:block;width:100%!important;height:100%!important}
+.stage3d.drag{cursor:grabbing}
+.stage3d .empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--mute);font-size:.9rem;text-align:center;padding:30px}
+.stage3d .tip{position:absolute;left:8px;right:8px;bottom:8px;font-size:.74rem;color:var(--mute);background:rgba(5,2,11,.72);border-radius:8px;padding:6px 10px;pointer-events:none;text-align:center}
+.scenes{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center}
+/* full screen editor: the preview with the content panel beside it (below it on a phone) */
+.pv.full{position:fixed;inset:0;z-index:300;border-radius:0;border:0;display:grid;grid-template-columns:minmax(0,1fr) min(420px,40vw);grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"head panel" "tools panel" "stage panel" "scenes panel";gap:0 16px;padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(12px + env(safe-area-inset-bottom,0px));background:#0b0518}
+.pv.full .pvhead{grid-area:head}.pv.full .tools{grid-area:tools}.pv.full .scenes{grid-area:scenes}
+.pv.full .stage3d{grid-area:stage;aspect-ratio:auto;min-height:0}
+.pv.full>.step{grid-area:panel;overflow:auto;margin:0;min-height:0}
+.pv.full .mob{display:none}
+@media (max-width:820px){.pv.full{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto 44vh auto minmax(0,1fr);grid-template-areas:"head" "tools" "stage" "scenes" "panel"}.pv.full>.step{margin-top:10px}}
+body.edfull{overflow:hidden}
+/* in full screen the selected element comes first, then the list, then the buttons to add */
+.pv.full>.step{display:flex;flex-direction:column}
+.pv.full>.step>h2{order:-5}.pv.full #props{order:-4;margin:0 0 12px}.pv.full #mAdd{order:-3}.pv.full #layers{order:-2;margin:0 0 12px}
+.pv.full>.step>.hint,.pv.full>.step>.fmt{display:none}
+@media (max-width:820px){.pv.full .tools{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}.pv.full .tg{flex-wrap:nowrap}.pv.full .tip{display:none}.pv.full h3{display:none}}
 
 /* result */
 .result{border:1px solid var(--ok);background:linear-gradient(170deg,rgba(116,232,186,.12),rgba(20,9,40,.7));border-radius:16px;padding:22px;margin-bottom:16px}
@@ -134,7 +176,7 @@ input[type=range]{width:100%;accent-color:var(--sun)}
   <div class="hero">
     <span class="kick" id="kick">Gratis · prueba de 15 días</span>
     <h1>Crea tu realidad aumentada</h1>
-    <p>Sube una imagen y un video. Cuando alguien apunte su celular a la imagen, el video aparecerá encima. Recibes un link propio y un código QR para compartir.</p>
+    <p>Sube una imagen y ponle encima videos, fotos, textos u objetos 3D. Cuando alguien apunte su celular a la imagen, todo cobra vida. Recibes un link propio y un código QR para compartir.</p>
     <button class="tutlink" id="tutBtn" type="button">✦ Ver tutorial</button>
   </div>
 
@@ -154,49 +196,25 @@ input[type=range]{width:100%;accent-color:var(--sun)}
       </section>
 
       <section class="step" id="s2">
-        <h2><span class="n" id="n2">2</span>Tu video</h2>
-        <p class="hint" id="vidHint">Hasta 25 MB. MP4 funciona en todos los celulares.</p>
-        <label class="drop" id="dVid"><input type="file" id="fVid" accept="video/mp4,video/webm,video/quicktime"><video class="thumb" id="tVid" muted playsinline hidden></video><span><b id="lVid">Elegir video</b><small>MP4, WebM o MOV · opcional si pones un objeto 3D</small></span></label>
-        <div class="msg" id="mVid"></div>
-        <button class="linkbtn" id="noVid" type="button" hidden>Quitar el video (dejar solo el objeto 3D)</button>
-      </section>
-
-      <section class="step" id="s3">
-        <h2><span class="n" id="n3">3</span>Ajusta el video sobre la imagen</h2>
-        <p class="hint">Así se verá encima de tu imagen. Elige cómo se escala:</p>
-        <div class="seg" id="fit">
-          <button type="button" data-fit="width" aria-pressed="true">Al ancho de la imagen</button>
-          <button type="button" data-fit="height" aria-pressed="false">Al alto de la imagen</button>
-          <button type="button" data-fit="fill" aria-pressed="false">Toda la imagen</button>
+        <h2><span class="n" id="n2">2</span>Tu contenido</h2>
+        <p class="hint">Lo que aparece sobre tu imagen. Agrega uno o varios elementos y acomódalos en la vista previa: arrástralos, cámbiales el tamaño y gíralos.</p>
+        <div class="adds" id="adds">
+          <button type="button" class="add" data-add="video"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h11a2 2 0 0 1 2 2v2.5l4-2.5v10l-4-2.5V17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg>Video</button>
+          <button type="button" class="add" data-add="image"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 13h16l-5-6-4 5-3-3zM8 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>Imagen</button>
+          <button type="button" class="add" data-add="text"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v4h-2V6h-5v12h2v2H9v-2h2V6H6v2H4z"/></svg>Texto</button>
+          <button type="button" class="add" data-add="model"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.7 8 12 11.7 5.3 8zM5 9.7l6 3.3v6.7l-6-3.3zm8 10V13l6-3.3v6.7z"/></svg>Objeto 3D</button>
         </div>
-        <p class="note" id="fitNote" style="margin:10px 0 0"></p>
-      </section>
-
-      <section class="step" id="s5">
-        <h2><span class="n" id="n5">4</span>Objeto 3D <small style="font:500 .8rem var(--fb);color:var(--mute);letter-spacing:0">(opcional)</small></h2>
-        <p class="hint">Un modelo 3D que aparece sobre tu imagen: un producto, un personaje, un logo en 3D. Si tiene animación, se reproduce sola.</p>
-        <label class="drop" id="dMod"><input type="file" id="fMod" accept=".glb,model/gltf-binary"><span class="thumb" style="display:grid;place-items:center;font:700 1.1rem var(--fd);color:var(--lav)">3D</span><span><b id="lMod">Elegir objeto 3D</b><small id="modHint">Archivo GLB · hasta 15 MB</small></span></label>
-        <div class="msg" id="mMod"></div>
-        <p class="fmt" id="fmt">Usa <b>GLB</b> (glTF binario): es el formato que abren todos los celulares e incluye las texturas y la animación en un solo archivo. ¿Tienes FBX u OBJ? Ábrelo en Blender (gratis) y ve a <b>Archivo → Exportar → glTF 2.0</b>, formato <b>.glb</b>.</p>
-        <div id="modCtl" hidden>
-          <label class="f">Cómo aparece</label>
-          <div class="seg" id="ori">
-            <button type="button" data-o="pie" aria-pressed="true">De pie sobre la imagen</button>
-            <button type="button" data-o="frente" aria-pressed="false">De frente (paralelo a la imagen)</button>
-          </div>
-          <p class="note" id="oriNote" style="margin:8px 0 0"></p>
-          <div class="ctl">
-            <label for="mS">Tamaño</label><input type="range" id="mS" min="5" max="300" step="1"><output id="oS"></output>
-            <label for="mR">Giro</label><input type="range" id="mR" min="-180" max="180" step="1"><output id="oR"></output>
-            <label for="mZ">Altura</label><input type="range" id="mZ" min="-50" max="100" step="1"><output id="oZ"></output>
-          </div>
-          <p class="note" style="margin:12px 0 0">En la vista previa: <b>arrastra el objeto</b> para moverlo sobre la imagen; con la rueda del mouse encima de él cambias su tamaño. Arrastra el fondo para ver desde otro ángulo.</p>
-          <div class="row"><button class="btn" id="mReset" type="button">Restablecer</button><button class="btn danger" id="mDel" type="button">Quitar objeto</button></div>
-        </div>
+        <input type="file" id="fAdd" hidden>
+        <div class="msg" id="mAdd"></div>
+        <div class="weight" id="weight"><div class="wtop"><span id="wTxt"></span><span id="wCnt"></span></div><div class="bar"><i id="wBar"></i></div></div>
+        <ol class="layers" id="layers" aria-label="Elementos (el de arriba se ve al frente)"></ol>
+        <div class="props" id="props" hidden></div>
+        <button class="btn primary mob" id="fsBtn2" type="button">Editar en pantalla completa</button>
+        <p class="fmt">Videos MP4. Imágenes PNG con fondo transparente para logos y calcomanías. Objetos 3D en <b>GLB</b> (glTF binario), el formato que abren todos los celulares; si tienes FBX u OBJ, ábrelo en Blender (gratis) y ve a <b>Archivo → Exportar → glTF 2.0</b>, formato <b>.glb</b>.</p>
       </section>
 
       <section class="step" id="s4">
-        <h2><span class="n" id="n4">5</span>Datos y botones</h2>
+        <h2><span class="n" id="n4">3</span>Datos y botones</h2>
         <label class="f" for="title">Título</label>
         <input type="text" id="title" maxlength="80" placeholder="Ej. Conoce nuestra nueva colección">
         <label class="f" for="slug">Tu link</label>
@@ -207,24 +225,37 @@ input[type=range]{width:100%;accent-color:var(--sun)}
       </section>
 
       <section class="step" id="s6">
-        <h2><span class="n" id="n6">6</span>Publicar</h2>
+        <h2><span class="n" id="n6">4</span>Publicar</h2>
         <div class="mine" id="mine" hidden style="margin:0 0 12px"></div>
         <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
         <button class="btn primary" id="publish" type="button" disabled>Publicar mi experiencia</button>
         <div class="bar" id="bPub" hidden><i></i></div><div class="msg" id="mPub"></div>
-        <p class="legal">Al publicar confirmas que tienes derecho a usar la imagen y el video. Vórtice VR puede retirar contenido inapropiado (<a href="../terminos/">términos</a>). <span id="legalDays">La experiencia se borra a los 15 días; puedes editarla o borrarla desde tu cuenta.</span></p>
+        <p class="legal">Al publicar confirmas que tienes derecho a usar la imagen y todo lo que le pongas. Vórtice VR puede retirar contenido inapropiado (<a href="../terminos/">términos</a>). <span id="legalDays">La experiencia se borra a los 15 días; puedes editarla o borrarla desde tu cuenta.</span></p>
       </section>
     </div>
 
     <aside class="side">
-      <div class="pv">
-        <h3>Vista previa</h3>
-        <div class="stage" id="stage"><div class="empty" id="empty">Sube tu imagen y tu video para ver cómo queda.</div>
-          <div class="box" id="box" hidden><img id="pImg" alt="Tu imagen"><video id="pVid" muted loop playsinline autoplay></video></div>
+      <div class="pv" id="pv">
+        <div class="pvhead"><h3>Vista previa</h3><button class="tb" id="fsBtn" type="button">⛶ Pantalla completa</button></div>
+        <div class="tools" id="tools" hidden>
+          <div class="tg" id="modes" role="group" aria-label="Herramienta">
+            <button class="tb" type="button" data-mode="mano" aria-pressed="true" title="Toca para elegir, arrastra para mover">✋ Mano</button>
+            <button class="tb" type="button" data-mode="mover" aria-pressed="false" title="Flechas para mover">✥ Mover</button>
+            <button class="tb" type="button" data-mode="girar" aria-pressed="false" title="Círculo para girar">⟳ Girar</button>
+            <button class="tb" type="button" data-mode="escalar" aria-pressed="false" title="Cambiar tamaño">⤢ Tamaño</button>
+          </div>
+          <div class="tg" id="places" role="group" aria-label="Dónde va la imagen">
+            <button class="tb" type="button" data-place="mesa" aria-pressed="true" title="La imagen sobre una mesa">Mesa</button>
+            <button class="tb" type="button" data-place="pared" aria-pressed="false" title="La imagen en una pared">Pared</button>
+          </div>
+          <div class="tg">
+            <button class="tb" type="button" data-v="frente" title="Ver la imagen de frente">⌖ De frente</button>
+            <button class="tb" type="button" data-v="inicio" title="Vista inicial">↺</button>
+            <button class="tb" type="button" data-v="play" title="Ver las animaciones de entrada">▶ Animación</button>
+          </div>
         </div>
-        <div class="legend" id="legend"><span><i style="border:2px dashed #fff"></i>Borde de tu imagen</span><span><i style="background:var(--sun)"></i>Borde del video</span></div>
-        <div class="stage3d" id="stage3d" hidden><div class="load" id="load3d">Cargando el objeto 3D…</div><div class="tip">Arrastra el objeto para moverlo · rueda: tamaño · arrastra el fondo para girar la vista</div></div>
-        <div class="views" id="views" hidden><button type="button" data-v="3d" aria-pressed="true">Vista 3D</button><button type="button" data-v="2d" aria-pressed="false">Vista plana</button></div>
+        <div class="stage3d" id="stage3d"><div class="empty" id="empty">Sube tu imagen para empezar.</div><div class="tip" id="tip" hidden></div></div>
+        <div class="scenes" id="scenes" hidden></div>
       </div>
     </aside>
   </div>
@@ -237,10 +268,10 @@ const $=id=>document.getElementById(id);
 const API=VVR.api;      // the API lives on the same site
 const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
 $("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
-let MAX_MB=25;   // from the account's plan (see start); the video is limited by size, not duration
 const IMG_MAX=1000;
 
-const S={img:null,imgBlob:null,imgW:0,imgH:0,target:null,compiling:false,video:null,vidW:0,vidH:0,fit:"width",token:null,email:null,mine:null,keepImg:false,keepVid:false,noVideo:false,modelFile:null,keepModel:false,mcfg:null};
+const S={imgBlob:null,imgW:0,imgH:0,target:null,compiling:false,token:null,email:null,mine:null,keepImg:false,
+  items:[],sel:null,scene:0,scenes:1,place:"mesa",ESC:null,plan:{name:"Gratis",items:3,totalMB:30,videoMB:25,modelMB:15}};
 
 // ---------- social buttons ----------
 const SOC=[["whatsapp","WhatsApp","","993 123 4567","tel"],["facebook","Facebook","facebook.com/","tu-pagina","text"],["instagram","Instagram","instagram.com/","tu_usuario","text"],["youtube","YouTube","youtube.com/@","tu-canal","text"],["x","X","x.com/","tu_usuario","text"],["tiktok","TikTok","tiktok.com/@","tu_usuario","text"],["web","Sitio web","","tusitio.com","text"]];
@@ -277,8 +308,8 @@ async function onImage(file){
   const k=Math.min(1,IMG_MAX/Math.max(bmp.width,bmp.height)), w=Math.round(bmp.width*k), h=Math.round(bmp.height*k);
   const cv=document.createElement("canvas"); cv.width=w; cv.height=h; cv.getContext("2d").drawImage(bmp,0,0,w,h);
   S.imgBlob=await new Promise(r=>cv.toBlob(r,"image/jpeg",.88)); S.imgW=w; S.imgH=h; S.keepImg=false; S.target=null;
-  const url=URL.createObjectURL(S.imgBlob); $("tImg").src=url; $("tImg").hidden=false; $("pImg").src=url; $("lImg").textContent=file.name;
-  updatePreview(); check();
+  const url=URL.createObjectURL(S.imgBlob); $("tImg").src=url; $("tImg").hidden=false; $("lImg").textContent=file.name;
+  ensureEditor().then(ed=>ed.setImage(url,w,h)); check();
   // compile
   S.compiling=true; const bar=$("bImg"); bar.hidden=false; bar.firstElementChild.style.width="2%"; m.textContent="Preparando la imagen para la realidad aumentada…";
   try{
@@ -291,152 +322,228 @@ async function onImage(file){
   }catch(e){ console.error(e); m.className="msg bad"; m.textContent="No pude preparar esta imagen. Prueba con otra con más detalles."; }
   S.compiling=false; bar.hidden=true; check();
 }
-// ---------- step 2: video → checks ----------
-function onVideo(file){
-  if(!file) return; const m=$("mVid"); m.className="msg"; m.textContent="";
-  if(file.size>MAX_MB*1048576){ m.className="msg bad"; m.textContent=`El video pesa ${(file.size/1048576).toFixed(1)} MB. El máximo es ${MAX_MB} MB.`; return; }
-  const url=URL.createObjectURL(file), v=document.createElement("video"); v.muted=true; v.preload="metadata"; v.src=url;
-  v.onloadedmetadata=()=>{
-    if(!v.videoWidth){ m.className="msg bad"; m.textContent="Este navegador no puede reproducir ese formato. Expórtalo como MP4 (H.264)."; return; }
-    S.video=file; S.vidW=v.videoWidth; S.vidH=v.videoHeight; S.keepVid=false; S.noVideo=false;
-    $("tVid").src=url; $("tVid").hidden=false; $("pVid").src=url; $("pVid").play().catch(()=>{}); $("lVid").textContent=file.name;
-    m.className="msg ok"; m.textContent=`Video listo · ${Math.round(v.duration)} s · ${(file.size/1048576).toFixed(1)} MB`; $("n2").classList.add("done");
-    updatePreview(); syncModel(); check();
-  };
-  v.onerror=()=>{ m.className="msg bad"; m.textContent="No pude abrir ese video. Expórtalo como MP4 (H.264)."; };
+$("fImg").addEventListener("change",e=>onImage(e.target.files[0]));
+{ const d=$("dImg"); d.addEventListener("dragover",e=>{e.preventDefault();d.classList.add("over");}); d.addEventListener("dragleave",()=>d.classList.remove("over"));
+  d.addEventListener("drop",e=>{e.preventDefault();d.classList.remove("over");onImage(e.dataTransfer.files[0]);}); }
+
+// ---------- step 2: content (elements on the image; the 3D editor is assets/editor-ra.js) ----------
+let ED=null, edP=null;
+const IC={video:'<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',image:'<svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zm2 2v8l4-4 3 3 2-2 3 3V7z"/></svg>',text:'<svg viewBox="0 0 24 24"><path d="M5 4h14v4h-2V6h-4v12h2v2H9v-2h2V6H7v2H5z"/></svg>',model:'<svg viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.7 8 12 11.7 5.3 8zM5 9.7l6 3.3v6.7l-6-3.3zm8 10V13l6-3.3v6.7z"/></svg>'};
+const TYPE={video:"Video",image:"Imagen",text:"Texto",model:"Objeto 3D"};
+const ACCEPT={video:"video/mp4,video/webm,video/quicktime",image:"image/png,image/jpeg,image/webp",model:".glb,model/gltf-binary"};
+const TIPS={mano:"Toca un elemento para elegirlo · arrástralo para moverlo · rueda o pellizco: tamaño · arrastra el fondo para girar la vista",mover:"Arrastra una flecha para moverlo en esa dirección; la que apunta hacia afuera de la imagen lo despega",girar:"Arrastra el círculo para girarlo",escalar:"Arrastra el cuadro del centro para cambiar su tamaño"};
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const uid=()=>Array.from(crypto.getRandomValues(new Uint8Array(10)),b=>"abcdefghijklmnopqrstuvwxyz0123456789"[b%36]).join("");
+const IH=()=>S.imgW?S.imgH/S.imgW:2/3;
+const nameOf=it=>it.type==="text"?((it.text||"Texto").split("\n")[0].slice(0,40)||"Texto"):(it.name||TYPE[it.type]);
+const bytesOf=it=>it._file?it._file.size:(it.bytes||0);
+const srcOf=it=>({url:it._url||(S.mine&&it.file?`${API}/m/${S.mine.slug}/${it.file}`:null),buffer:it._buffer});
+const sel=()=>S.items.find(i=>i.id===S.sel);
+const msgAdd=(cls,t)=>{ const m=$("mAdd"); m.className="msg "+(cls||""); m.textContent=t||""; };
+
+function ensureEditor(){
+  return edP||=(async()=>{
+    const [{createEditor},ESC]=await Promise.all([import("../assets/editor-ra.js"),import("../assets/escena.js")]); S.ESC=ESC;
+    if(!document.getElementById("fonts")) document.head.appendChild(Object.assign(document.createElement("link"),{id:"fonts",rel:"stylesheet",href:ESC.FONT_CSS}));
+    ED=await createEditor($("stage3d"),{items:()=>S.items,src:srcOf,change:it=>syncProps(it),
+      select:id=>{ S.sel=id; renderLayers(); renderProps(); },
+      loaded:(it,n)=>{ it._loading=false; it._clips=n.clips; renderLayers(); if(S.sel===it.id) renderProps(); check(); }});
+    ED.setPlace(S.place); ED.setScene(S.scene);
+    $("empty").hidden=true; $("tools").hidden=false; $("scenes").hidden=false; $("tip").hidden=false; $("tip").textContent=TIPS.mano;
+    press("#places",document.querySelector(`#places [data-place="${S.place}"]`)); renderScenes();
+    return ED;
+  })();
 }
-for(const [inp,drop,fn] of [["fImg","dImg",onImage],["fVid","dVid",onVideo]]){
-  $(inp).addEventListener("change",e=>fn(e.target.files[0]));
-  const d=$(drop); d.addEventListener("dragover",e=>{e.preventDefault();d.classList.add("over");}); d.addEventListener("dragleave",()=>d.classList.remove("over"));
-  d.addEventListener("drop",e=>{e.preventDefault();d.classList.remove("over");fn(e.dataTransfer.files[0]);});
+const press=(grp,b)=>document.querySelectorAll(grp+" button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+
+// ---- adding elements ----
+function canAdd(t){
+  if(!S.imgW){ msgAdd("bad","Primero sube tu imagen (paso 1)."); return false; }
+  if(S.items.length>=S.plan.items){ msgAdd("bad",`Tu plan ${S.plan.name} permite hasta ${S.plan.items} elementos por experiencia.`); return false; }
+  if(t==="video"&&S.items.filter(i=>i.type==="video").length>=2){ msgAdd("bad","Puedes poner hasta 2 videos por experiencia."); return false; }
+  msgAdd(); return true;
+}
+document.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()=>{ const t=b.dataset.add; if(!canAdd(t)) return;
+  if(t==="text") return addItem({type:"text",text:"Tu texto",font:"Bebas Neue",color:"#ffffff",stroke:"#5a1f8f",s:.6,y:Math.round((IH()/2-.12)*1000)/1000});
+  const inp=$("fAdd"); inp.value=""; inp.accept=ACCEPT[t]; inp.onchange=()=>fromFile(t,inp.files[0]); inp.click(); }));
+{ const d=$("adds"); d.addEventListener("dragover",e=>{e.preventDefault();d.classList.add("over");}); d.addEventListener("dragleave",()=>d.classList.remove("over"));
+  d.addEventListener("drop",e=>{ e.preventDefault(); d.classList.remove("over"); const file=e.dataTransfer.files[0]; if(!file) return;
+    const t=/^video\//.test(file.type)?"video":/^image\//.test(file.type)?"image":/\.glb$/i.test(file.name)?"model":null;
+    if(!t){ msgAdd("bad","Ese tipo de archivo no se puede usar. Videos MP4, imágenes PNG/JPG o objetos 3D GLB."); return; }
+    if(canAdd(t)) fromFile(t,file); }); }
+async function fromFile(t,file){
+  if(!file) return; msgAdd("","Abriendo "+file.name+"…");
+  if(t==="video"){
+    if(file.size>S.plan.videoMB*1048576) return msgAdd("bad",`El video pesa ${(file.size/1048576).toFixed(1)} MB. El máximo es ${S.plan.videoMB} MB.`);
+    const url=URL.createObjectURL(file), v=document.createElement("video"); v.muted=true; v.preload="metadata"; v.src=url;
+    const ok=await new Promise(r=>{ v.onloadedmetadata=()=>r(!!v.videoWidth); v.onerror=()=>r(false); });
+    if(!ok) return msgAdd("bad","No pude abrir ese video. Expórtalo como MP4 (H.264).");
+    // the video goes over the whole width of the image; then it can be moved and resized
+    addItem({type:"video",name:file.name,w:v.videoWidth,h:v.videoHeight,s:1,sound:!S.items.some(i=>i.type==="video"&&i.sound),chroma:null,_file:file,_url:url,_fname:file.name});
+  } else if(t==="image"){
+    if(!/^image\/(png|jpeg|webp)$/.test(file.type)) return msgAdd("bad","Usa una imagen PNG, JPG o WebP.");
+    const bmp=await createImageBitmap(file).catch(()=>null); if(!bmp) return msgAdd("bad","No pude abrir esa imagen.");
+    const k=Math.min(1,1024/Math.max(bmp.width,bmp.height)), w=Math.round(bmp.width*k), h=Math.round(bmp.height*k);
+    const cv=document.createElement("canvas"); cv.width=w; cv.height=h; cv.getContext("2d").drawImage(bmp,0,0,w,h);
+    let blob=await new Promise(r=>cv.toBlob(r,"image/webp",.9)); if(!blob||blob.type!=="image/webp") blob=await new Promise(r=>cv.toBlob(r,"image/png"));
+    if(blob.size>5*1048576) return msgAdd("bad","La imagen es demasiado pesada.");
+    addItem({type:"image",name:file.name,w,h,s:.4,_file:blob,_url:URL.createObjectURL(blob),_fname:"imagen."+(blob.type==="image/webp"?"webp":"png")});
+  } else {
+    if(/\.(fbx|obj|gltf|stl|dae|blend|3ds|usdz)$/i.test(file.name)) return msgAdd("bad","Ese formato no se puede ver en el celular. Conviértelo a GLB (abajo te decimos cómo).");
+    if(file.size>S.plan.modelMB*1048576) return msgAdd("bad",`El objeto pesa ${(file.size/1048576).toFixed(1)} MB. El máximo es ${S.plan.modelMB} MB.`);
+    const buf=await file.arrayBuffer();
+    if(new TextDecoder().decode(new Uint8Array(buf,0,4))!=="glTF") return msgAdd("bad","Ese archivo no es un GLB. Expórtalo como glTF 2.0 en formato .glb.");
+    addItem({type:"model",name:file.name.replace(/\.glb$/i,""),s:.6,o:S.place==="mesa"?"pie":"frente",anim:0,_file:file,_buffer:buf,_fname:"modelo.glb"});
+  }
+}
+async function addItem(p){
+  const it={id:uid(),x:0,y:0,z:0,s:.6,r:0,o:"frente",in:"aparecer",scene:S.scene,...p};
+  S.items.push(it); it._loading=it.type!=="text"; S.sel=it.id;
+  renderLayers(); renderProps(); check();
+  try{ const ed=await ensureEditor(); await ed.add(it); ed.select(it.id); msgAdd("ok",`${TYPE[it.type]} ${it.type==="image"?"agregada":"agregado"}. Acomódalo en la vista previa.`); }
+  catch(e){ console.error(e); removeItem(it.id); msgAdd("bad",it.type==="model"?"No pude abrir ese objeto 3D. Revisa que sea un GLB válido.":"No pude abrir ese archivo."); }
+}
+function removeItem(id){
+  S.items=S.items.filter(i=>i.id!==id); if(ED) ED.remove(id); if(S.sel===id) S.sel=null;
+  if(!S.items.some(i=>i.type==="video"&&i.sound)){ const v=S.items.find(i=>i.type==="video"); if(v) v.sound=true; }   // the first video keeps the sound
+  renderLayers(); renderProps(); check();
+}
+async function dupItem(it){
+  if(S.items.length>=S.plan.items) return msgAdd("bad",`Tu plan ${S.plan.name} permite hasta ${S.plan.items} elementos por experiencia.`);
+  if(it.type==="video"&&S.items.filter(i=>i.type==="video").length>=2) return msgAdd("bad","Puedes poner hasta 2 videos por experiencia.");
+  const c={...it}; delete c.id; delete c.file; delete c.bytes; delete c._t; c.x=Math.round((it.x+.06)*1000)/1000; c.y=Math.round((it.y-.06)*1000)/1000; if(c.type==="video") c.sound=false;
+  if(it.type!=="text"&&!it._file){ msgAdd("","Copiando…"); const b=await (await fetch(srcOf(it).url)).blob(); c._file=b; c._url=URL.createObjectURL(b); if(it.type==="model") c._buffer=await b.arrayBuffer(); }
+  addItem(c);
+}
+function moveItem(it,d){   // d=+1: toward the front (later in the list)
+  const i=S.items.indexOf(it), j=i+d; if(j<0||j>=S.items.length) return;
+  [S.items[i],S.items[j]]=[S.items[j],S.items[i]]; ED&&ED.updateAll(); renderLayers();
 }
 
-// ---------- step 3: preview with the same geometry as the viewer ----------
-const FITNOTE={width:"El video ocupa todo el ancho de la imagen; su alto depende de su proporción.",height:"El video ocupa todo el alto de la imagen; su ancho depende de su proporción.",fill:"El video se estira para cubrir exactamente toda la imagen (puede deformarse si las proporciones son distintas)."};
-document.querySelectorAll("#fit button").forEach(b=>b.addEventListener("click",()=>{ S.fit=b.dataset.fit; document.querySelectorAll("#fit button").forEach(x=>x.setAttribute("aria-pressed",String(x===b))); updatePreview(); }));
-function updatePreview(){
-  $("fitNote").textContent=FITNOTE[S.fit];
-  const has=S.imgW&&S.vidW; $("box").hidden=!S.imgW; $("empty").hidden=!!S.imgW;
-  if(!S.imgW||$("stage").hidden){ syncScene(); return; }
-  const st=$("stage"), sw=st.clientWidth-40, sh=st.clientHeight-40;
-  const k=Math.min(sw/S.imgW, sh/S.imgH), bw=S.imgW*k, bh=S.imgH*k;   // the image box
-  $("box").style.width=bw+"px"; $("box").style.height=bh+"px";
-  const v=$("pVid"); v.hidden=!has; if(!has) return;
-  const va=S.vidW/S.vidH; let w=bw, h=bw/va;
-  if(S.fit==="height"){ h=bh; w=bh*va; } else if(S.fit==="fill"){ w=bw; h=bh; }
-  v.style.width=w+"px"; v.style.height=h+"px";
-  $("n3").classList.add("done");
-  syncScene();
+// ---- the list (the one on top is in front) ----
+function renderLayers(){
+  const ol=$("layers"); ol.replaceChildren();
+  [...S.items].reverse().forEach(it=>{
+    const li=document.createElement("li"); li.className=(it.id===S.sel?"on":"")+((it.scene||0)!==S.scene?" other":"");
+    li.innerHTML=`<span class="ico">${IC[it.type]}</span><span class="nm"></span><button type="button" data-a="up" title="Al frente" aria-label="Pasar al frente">↑</button><button type="button" data-a="down" title="Atrás" aria-label="Pasar atrás">↓</button><button type="button" data-a="dup" title="Duplicar" aria-label="Duplicar">⧉</button><button type="button" data-a="del" title="Quitar" aria-label="Quitar">✕</button>`;
+    const nm=li.querySelector(".nm"); nm.textContent=nameOf(it);
+    const extra=[it._loading?"cargando…":"",S.scenes>1?`escena ${(it.scene||0)+1}`:"",it.type==="video"&&it.sound?"🔊":"",it.link?"🔗":""].filter(Boolean).join(" · ");
+    if(extra) nm.insertAdjacentHTML("beforeend",`<small>${esc(extra)}</small>`);
+    li.addEventListener("click",e=>{ const a=e.target.closest("button")?.dataset.a;
+      if(a==="up") moveItem(it,1); else if(a==="down") moveItem(it,-1); else if(a==="dup") dupItem(it); else if(a==="del") removeItem(it.id);
+      else { if((it.scene||0)!==S.scene) setScene(it.scene||0); S.sel=it.id; ED&&ED.select(it.id); renderLayers(); renderProps(); } });
+    ol.appendChild(li);
+  });
+  weight();
 }
-addEventListener("resize",updatePreview);
+function weight(){
+  const P=S.plan, tot=S.items.reduce((a,i)=>a+bytesOf(i),0), max=P.totalMB*1048576;
+  $("wTxt").textContent=`${(tot/1048576).toFixed(1)} MB de ${P.totalMB} MB`; $("wCnt").textContent=`${S.items.length} de ${P.items} elementos`;
+  $("wBar").style.width=Math.min(100,tot/max*100)+"%";
+  const ok=tot<=max&&S.items.length<=P.items; $("weight").classList.toggle("over",!ok); return ok;
+}
 
-// ---------- step 4: 3D object (GLB), placed on the image in a 3D preview ----------
-// The same math as the viewer (assets/modelo3d.js): image 1 wide and centered, x right, y up, z toward the camera.
-// "pie": the preview shows the image lying on a table; "frente": the image on a wall.
-let MAX_MODEL_MB=15;
-const ORINOTE={pie:"Para imágenes sobre una mesa (tarjetas, folletos, portadas): el objeto sale de pie, hacia arriba de la imagen.",frente:"Para imágenes en una pared (pósters, lonas): el objeto se ve de frente, paralelo a la imagen."};
-const E={on:false,view:"3d"};   // the editor: three.js scene, created the first time a model is loaded
-async function onModel(file){
-  if(!file) return; const m=$("mMod"); m.className="msg"; m.textContent="";
-  if(/\.(fbx|obj|gltf|stl|dae|blend|3ds|usdz)$/i.test(file.name)){ m.className="msg bad"; m.textContent="Ese formato no se puede ver en el celular. Conviértelo a GLB (abajo te decimos cómo)."; return; }
-  if(file.size>MAX_MODEL_MB*1048576){ m.className="msg bad"; m.textContent=`El objeto pesa ${(file.size/1048576).toFixed(1)} MB. El máximo es ${MAX_MODEL_MB} MB.`; return; }
-  const buf=await file.arrayBuffer();
-  if(new TextDecoder().decode(new Uint8Array(buf,0,4))!=="glTF"){ m.className="msg bad"; m.textContent="Ese archivo no es un GLB. Expórtalo como glTF 2.0 en formato .glb."; return; }
-  m.textContent="Abriendo el objeto 3D…";
-  try{ await setModel(buf.slice(0)); }catch(e){ console.error(e); m.className="msg bad"; m.textContent="No pude abrir ese objeto 3D. Revisa que sea un GLB válido."; return; }
-  S.modelFile=file; S.keepModel=false; if(!S.mcfg) S.mcfg={...E.M3D.DEFAULT};
-  $("lMod").textContent=file.name;
-  m.className="msg ok"; m.textContent=`Objeto listo · ${(file.size/1048576).toFixed(1)} MB${E.model.animated?" · con animación":""}`;
-  syncModel(); check();
+// ---- the selected element's panel ----
+let fresh=null;   // which panel is on screen, so typing does not rebuild it
+function renderProps(){
+  const it=sel(), box=$("props");
+  if(!it){ box.hidden=true; box.innerHTML=""; fresh=null; return; }
+  box.hidden=false; fresh=it.id;
+  const ESC=S.ESC, fonts=ESC?ESC.FONTS:["Sora"], ent=ESC?ESC.ENTRADAS:[["aparecer","Aparecer"]], plane=it.type!=="model";
+  const O=plane?[["frente","Sobre la imagen"],["pie","De pie"]]:[["pie","De pie"],["frente","De frente"]];
+  let h=`<h4><span class="ico">${IC[it.type]}</span><span>${esc(TYPE[it.type])}</span></h4>`;
+  if(it.type==="text") h+=`<label class="f" for="pText">Texto</label><textarea id="pText" maxlength="300"></textarea>
+    <div class="two"><div><label class="f" for="pFont">Letra</label><select id="pFont">${fonts.map(f=>`<option style="font-family:'${f}'">${f}</option>`).join("")}</select></div>
+    <div><label class="f">Color</label><div class="row" style="margin:0"><input type="color" id="pColor" aria-label="Color del texto"><label class="chk" style="margin:0"><input type="checkbox" id="pStrokeOn">Contorno</label><input type="color" id="pStroke" aria-label="Color del contorno"></div></div></div>`;
+  if(it.type==="video") h+=`<label class="chk"><input type="checkbox" id="pSound">Con sonido <small class="note">(solo un video puede tener sonido)</small></label>
+    <label class="chk"><input type="checkbox" id="pChroma">Quitar el fondo de color (pantalla verde)</label>
+    <div class="ctl" id="pChromaBox"><label for="pKey">Color</label><input type="color" id="pKey"><span></span><label for="pTol">Tolerancia</label><input type="range" id="pTol" min="5" max="90"><output id="oTol"></output></div>`;
+  if(it.type==="model") h+=`<label class="f" for="pAnim">Animación</label><select id="pAnim"><option value="-1">Sin animación</option>${(it._clips||[]).map((c,i)=>`<option value="${i}">${esc(c)}</option>`).join("")}</select>`;
+  h+=`<label class="f">Cómo aparece</label><div class="seg" id="pO">${O.map(([v,l])=>`<button type="button" data-o="${v}">${l}</button>`).join("")}</div>
+    <div class="ctl"><label for="pS">Tamaño</label><input type="range" id="pS" min="2" max="300"><output id="oS"></output>
+    <label for="pR">Giro</label><input type="range" id="pR" min="-180" max="180"><output id="oR"></output>
+    <label for="pZ">Altura</label><input type="range" id="pZ" min="-50" max="100"><output id="oZ"></output></div>`;
+  if(plane&&it.type!=="text") h+=`<div class="row"><button class="tb" type="button" data-fit="w">Al ancho de la imagen</button><button class="tb" type="button" data-fit="h">Al alto</button>${it.type==="video"?`<button class="tb" type="button" data-fit="fill">Toda la imagen</button>`:""}<button class="tb" type="button" data-fit="c">Centrar</button></div>`;
+  else h+=`<div class="row"><button class="tb" type="button" data-fit="c">Centrar</button></div>`;
+  h+=`<div class="two"><div><label class="f" for="pIn">Al aparecer</label><select id="pIn">${ent.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></div>
+    <div ${S.scenes>1?"":"hidden"}><label class="f" for="pScene">Escena</label><select id="pScene">${Array.from({length:S.scenes},(_,i)=>`<option value="${i}">Escena ${i+1}</option>`).join("")}</select></div></div>
+    <label class="f" for="pLink">Al tocarlo, abrir (opcional)</label><input type="text" id="pLink" maxlength="300" placeholder="tusitio.com o un WhatsApp: 993 123 4567" autocapitalize="off" autocomplete="off" spellcheck="false">
+    <details><summary>Posición exacta</summary><div class="xy"><label for="pX">X</label><input type="number" id="pX" step="1"><label for="pY">Y</label><input type="number" id="pY" step="1"></div><p class="note" style="margin:6px 0 0">En % del ancho de la imagen, desde el centro (X a la derecha, Y hacia arriba).</p></details>
+    <div class="row"><button class="btn sm" type="button" id="pDup">Duplicar</button><button class="btn sm danger" type="button" id="pDel">Quitar</button></div>`;
+  box.innerHTML=h;
+  const on=(id,ev,fn)=>{ const el=$(id); if(el) el.addEventListener(ev,fn); };
+  if(it.type==="text"){
+    $("pText").value=it.text; $("pFont").value=it.font; $("pColor").value=it.color; $("pStrokeOn").checked=!!it.stroke; $("pStroke").value=it.stroke||"#5a1f8f";
+    const t=()=>{ it.text=$("pText").value; it.font=$("pFont").value; it.color=$("pColor").value; it.stroke=$("pStrokeOn").checked?$("pStroke").value:null; rebuild(it); renderLayers(); check(); };
+    ["pText","pFont","pColor","pStrokeOn","pStroke"].forEach(id=>on(id,"input",t));
+  }
+  if(it.type==="video"){
+    $("pSound").checked=!!it.sound; $("pChroma").checked=!!it.chroma; $("pChromaBox").hidden=!it.chroma;
+    $("pKey").value=it.chroma?it.chroma.color:"#00ff00"; $("pTol").value=Math.round((it.chroma?it.chroma.tol:.3)*100); $("oTol").textContent=$("pTol").value+"%";
+    on("pSound","change",()=>{ const v=$("pSound").checked; S.items.forEach(x=>{ if(x.type==="video") x.sound=false; }); it.sound=v; renderLayers(); });
+    const ck=()=>{ it.chroma=$("pChroma").checked?{color:$("pKey").value,tol:$("pTol").value/100}:null; $("pChromaBox").hidden=!it.chroma; $("oTol").textContent=$("pTol").value+"%"; rebuild(it); };
+    on("pChroma","change",ck); on("pKey","input",ck); on("pTol","input",ck);
+  }
+  if(it.type==="model"){ $("pAnim").value=String(it.anim??0); on("pAnim","change",()=>{ it.anim=Number($("pAnim").value); const n=ED&&ED.nodeOf(it.id); if(n&&n.setAnim) n.setAnim(it.anim); }); }
+  box.querySelectorAll("#pO button").forEach(b=>b.addEventListener("click",()=>{ it.o=b.dataset.o; moved(it); }));
+  on("pS","input",e=>{ it.s=e.target.value/100; moved(it); });
+  on("pR","input",e=>{ it.r=Number(e.target.value); moved(it); });
+  on("pZ","input",e=>{ it.z=e.target.value/100; moved(it); });
+  on("pX","input",e=>{ const v=Number(e.target.value); if(Number.isFinite(v)){ it.x=Math.max(-2,Math.min(2,v/100)); moved(it); } });
+  on("pY","input",e=>{ const v=Number(e.target.value); if(Number.isFinite(v)){ it.y=Math.max(-2,Math.min(2,v/100)); moved(it); } });
+  box.querySelectorAll("[data-fit]").forEach(b=>b.addEventListener("click",()=>{
+    const f=b.dataset.fit, had=!!it.ar; it.x=0; it.y=0;
+    if(f==="w"){ delete it.ar; it.s=1; } else if(f==="h"){ delete it.ar; it.s=Math.round(IH()*(it.w/it.h)*1000)/1000; } else if(f==="fill"){ it.s=1; it.ar=1/IH(); }
+    if(had||it.ar) rebuild(it,0); moved(it); }));
+  $("pIn").value=it.in||"aparecer"; on("pIn","change",()=>{ it.in=$("pIn").value; ED&&ED.play(); });
+  $("pScene").value=String(it.scene||0); on("pScene","change",()=>{ it.scene=Number($("pScene").value); setScene(it.scene); });
+  $("pLink").value=it.link?it.link.replace(/^https:\/\/wa\.me\/52(\d{10})$/,"$1").replace(/^https:\/\/wa\.me\//,"+"):""; on("pLink","input",()=>{ it.link=$("pLink").value.trim()||undefined; renderLayers(); });
+  on("pDup","click",()=>dupItem(it)); on("pDel","click",()=>removeItem(it.id));
+  syncProps(it);
 }
-async function editor(){
-  if(E.on) return; E.on=true;
-  const [THREE,{OrbitControls},M3D]=await Promise.all([import("three"),import("three/addons/controls/OrbitControls.js"),import("../assets/modelo3d.js")]);
-  Object.assign(E,{THREE,M3D});
-  const box=$("stage3d"), renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
-  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2)); renderer.outputColorSpace=THREE.SRGBColorSpace; box.prepend(renderer.domElement);
-  const scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(40,1,0.01,50);
-  M3D.light(renderer,scene);
-  const world=new THREE.Group(); scene.add(world);   // the image's space; tilted flat for "pie"
-  const imgMat=new THREE.MeshBasicMaterial({color:0x222222,toneMapped:false}), img=new THREE.Mesh(new THREE.PlaneGeometry(1,1),imgMat); world.add(img);
-  const edge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(1,1)),new THREE.LineBasicMaterial({color:0xffffff})); world.add(edge);
-  const vtex=new THREE.VideoTexture($("pVid")); vtex.colorSpace=THREE.SRGBColorSpace;
-  const vplane=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:vtex,toneMapped:false,transparent:true,opacity:.92})); vplane.position.z=0.004; world.add(vplane);
-  const ring=new THREE.Mesh(new THREE.RingGeometry(0.47,0.5,64),new THREE.MeshBasicMaterial({color:0xffbe55,transparent:true,opacity:.85,side:THREE.DoubleSide,depthTest:false})); world.add(ring);
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.MeshBasicMaterial({visible:false})); world.add(floor);   // for dragging
-  const controls=new OrbitControls(camera,renderer.domElement); controls.enableDamping=true; controls.enablePan=false; controls.minDistance=.4; controls.maxDistance=6;
-  Object.assign(E,{renderer,scene,camera,world,img,imgMat,edge,vtex,vplane,ring,floor,controls});
-  const ro=new ResizeObserver(()=>{ const w=box.clientWidth, h=box.clientHeight; if(!w||!h) return; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }); ro.observe(box);
-  // drag the object over the image; the wheel over it changes its size
-  const ray=new THREE.Raycaster(), ptr=new THREE.Vector2(), grab=new THREE.Vector3(); let dragging=null;
-  const cast=(e,objs)=>{ const r=renderer.domElement.getBoundingClientRect(); ptr.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1); ray.setFromCamera(ptr,camera); return ray.intersectObjects(objs,true)[0]; };
-  const onImagePlane=e=>{ const h=cast(e,[floor]); return h?world.worldToLocal(h.point.clone()):null; };
-  const hitModel=e=>E.model&&cast(e,[E.model.root,ring]);
-  renderer.domElement.addEventListener("pointerdown",e=>{ if(!hitModel(e)) return; const p=onImagePlane(e); if(!p) return;
-    dragging=e.pointerId; grab.set(p.x-S.mcfg.x,p.y-S.mcfg.y,0); controls.enabled=false; box.classList.add("drag"); renderer.domElement.setPointerCapture(e.pointerId); e.preventDefault(); e.stopImmediatePropagation(); },{capture:true});   // before OrbitControls: grabbing the object never turns the view
-  renderer.domElement.addEventListener("pointermove",e=>{ if(dragging!==e.pointerId) return; const p=onImagePlane(e); if(!p) return;
-    const IH=S.imgH/S.imgW||1, cl=(v,a)=>Math.round(Math.max(-a,Math.min(a,v))*1000)/1000;
-    S.mcfg.x=cl(p.x-grab.x,.5+.25); S.mcfg.y=cl(p.y-grab.y,IH/2+.25); syncModel(); });
-  const stop=e=>{ if(dragging!==e.pointerId) return; dragging=null; controls.enabled=true; box.classList.remove("drag"); };
-  renderer.domElement.addEventListener("pointerup",stop); renderer.domElement.addEventListener("pointercancel",stop);
-  renderer.domElement.addEventListener("wheel",e=>{ if(!hitModel(e)) return; e.preventDefault(); e.stopImmediatePropagation();
-    S.mcfg.s=Math.round(Math.max(.05,Math.min(3,S.mcfg.s*Math.pow(1.0015,-e.deltaY)))*1000)/1000; syncModel(); },{passive:false,capture:true});
-  const clock=new THREE.Clock();
-  renderer.setAnimationLoop(()=>{ const dt=clock.getDelta(); if(box.hidden) return;
-    if(E.model&&E.model.mixer) E.model.mixer.update(dt);
-    if(vplane.visible&&$("pVid").readyState>=2) vtex.needsUpdate=true;
-    controls.update(); renderer.render(scene,camera); });
+function moved(it){ if(ED) ED.update(it); syncProps(it); }
+// values on the panel follow what happens in the preview (dragging, pinching, arrows)
+function syncProps(it){
+  if(fresh!==it.id||!$("pS")) return;
+  const set=(id,v,out,txt)=>{ const el=$(id); if(document.activeElement!==el) el.value=v; if(out) $(out).textContent=txt; };
+  set("pS",Math.round(it.s*100),"oS",Math.round(it.s*100)+"%"); set("pR",Math.round(it.r||0),"oR",Math.round(it.r||0)+"°"); set("pZ",Math.round((it.z||0)*100),"oZ",Math.round((it.z||0)*100)+"%");
+  set("pX",Math.round(it.x*100)); set("pY",Math.round(it.y*100));
+  document.querySelectorAll("#pO button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.o===it.o)));
 }
-async function setModel(src){
-  $("stage3d").hidden=false; $("load3d").hidden=false; E.view="3d";
-  await editor();
-  const m=await E.M3D.loadModel(src);
-  if(E.model){ E.world.remove(E.model.root); }
-  E.model=m; E.world.add(m.root); $("load3d").hidden=true;
+function rebuild(it,ms=250){ clearTimeout(it._t); it._t=setTimeout(()=>{ if(ED&&S.items.includes(it)) ED.add(it).catch(e=>console.error(e)); },ms); }
+
+// ---- scenes (in the phone they change with arrows) ----
+function renderScenes(){
+  $("scenes").innerHTML=Array.from({length:S.scenes},(_,i)=>`<button type="button" class="tb" data-sc="${i}" aria-pressed="${i===S.scene}">Escena ${i+1}${i===S.scene&&S.scenes>1?` <small data-del="${i}" role="button" aria-label="Borrar la escena ${i+1}" title="Borrar escena">✕</small>`:""}</button>`).join("")
+    +(S.scenes<5?`<button type="button" class="tb" id="scAdd">+ Escena</button>`:"");
 }
-function syncScene(){   // the image and the video in the 3D preview
-  if(!E.on) return;
-  const IH=S.imgW?S.imgH/S.imgW:2/3;
-  E.img.scale.set(1,IH,1); E.edge.scale.set(1,IH,1);
-  const u=$("pImg").currentSrc||$("pImg").src;
-  if(u&&E.imgUrl!==u){ E.imgUrl=u; new E.THREE.TextureLoader().load(u,t=>{ t.colorSpace=E.THREE.SRGBColorSpace; E.imgMat.map=t; E.imgMat.color.set(0xffffff); E.imgMat.needsUpdate=true; }); }
-  const hasV=!!S.vidW&&!S.noVideo; E.vplane.visible=hasV;
-  if(hasV){ const va=S.vidW/S.vidH; let w=1,h=1/va; if(S.fit==="height"){ h=IH; w=IH*va; } else if(S.fit==="fill"){ w=1; h=IH; } E.vplane.scale.set(w,h,1); }
+$("scenes").addEventListener("click",e=>{ const d=e.target.closest("[data-del]"); if(d){ delScene(+d.dataset.del); return; }
+  const b=e.target.closest("[data-sc]"); if(b){ setScene(+b.dataset.sc); return; }
+  if(e.target.closest("#scAdd")){ S.scenes++; setScene(S.scenes-1); msgAdd("","Escena nueva: agrega sus elementos. En el celular se cambia de escena con flechas."); } });
+function setScene(k){ S.scene=k; if(ED) ED.setScene(k); const it=sel(); if(it&&(it.scene||0)!==k) S.sel=null; renderScenes(); renderLayers(); renderProps(); }
+function delScene(k){
+  const mine=S.items.filter(i=>(i.scene||0)===k);
+  if(mine.length&&!confirm(`¿Borrar la escena ${k+1} y sus ${mine.length} elementos?`)) return;
+  mine.forEach(i=>removeItem(i.id)); S.items.forEach(i=>{ if((i.scene||0)>k) i.scene--; }); S.scenes--; setScene(Math.min(k,S.scenes-1));
 }
-let lastO=null;
-function syncModel(){
-  const has=!!E.model&&!!S.mcfg;
-  $("modCtl").hidden=!has; $("fmt").hidden=has; $("n5").classList.toggle("done",has);
-  $("views").hidden=!has; $("noVid").hidden=!(has&&S.vidW&&!S.noVideo);
-  const show3d=has&&E.view==="3d";
-  $("stage3d").hidden=!show3d; $("stage").hidden=show3d; $("legend").hidden=show3d;
-  document.querySelectorAll("#views button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===E.view)));
-  if(!has) return;
-  const c=S.mcfg;
-  E.world.rotation.x=c.o==="pie"?-Math.PI/2:0;
-  if(lastO!==c.o){ lastO=c.o; c.o==="pie"?E.camera.position.set(0,1.35,1.6):E.camera.position.set(.4,.15,2.1); E.controls.target.set(0,c.o==="pie"?.15:0,0); E.controls.update(); }
-  E.M3D.place(E.model,c);
-  E.ring.position.set(c.x,c.y,.003); E.ring.scale.setScalar(c.s*Math.max(.35,Math.hypot(E.model.size.x,E.model.size.z)/2)*1.25*2); E.ring.visible=c.o==="pie";
-  document.querySelectorAll("#ori button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.o===c.o))); $("oriNote").textContent=ORINOTE[c.o];
-  $("mS").value=Math.round(c.s*100); $("oS").textContent=Math.round(c.s*100)+"%";
-  $("mR").value=Math.round(((c.r+540)%360)-180); $("oR").textContent=Math.round(((c.r+540)%360)-180)+"°";
-  $("mZ").value=Math.round(c.z*100); $("oZ").textContent=Math.round(c.z*100)+"%";
-  syncScene();
+
+// ---- tools over the preview ----
+$("tools").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b||!ED) return;
+  if(b.dataset.mode){ ED.setMode(b.dataset.mode); press("#modes",b); $("tip").textContent=TIPS[b.dataset.mode]; }
+  else if(b.dataset.place){ S.place=b.dataset.place; ED.setPlace(S.place); press("#places",b); }
+  else if(b.dataset.v==="play") ED.play(); else if(b.dataset.v) ED.view(b.dataset.v); });
+// full screen: the preview takes the screen and the content step goes beside it (below it on a phone)
+let home=null;
+function full(on){
+  const pv=$("pv"), s2=$("s2"); if(on===pv.classList.contains("full")) return;
+  if(on){ home=s2.nextElementSibling; pv.appendChild(s2); } else home.parentNode.insertBefore(s2,home);
+  pv.classList.toggle("full",on); document.body.classList.toggle("edfull",on); $("fsBtn").textContent=on?"✕ Cerrar":"⛶ Pantalla completa";
+  if(on&&!S.imgW) msgAdd("","Primero sube tu imagen (paso 1).");
 }
-$("fMod").addEventListener("change",e=>onModel(e.target.files[0]));
-{ const d=$("dMod"); d.addEventListener("dragover",e=>{e.preventDefault();d.classList.add("over");}); d.addEventListener("dragleave",()=>d.classList.remove("over"));
-  d.addEventListener("drop",e=>{e.preventDefault();d.classList.remove("over");onModel(e.dataTransfer.files[0]);}); }
-document.querySelectorAll("#ori button").forEach(b=>b.addEventListener("click",()=>{ S.mcfg.o=b.dataset.o; syncModel(); }));
-document.querySelectorAll("#views button").forEach(b=>b.addEventListener("click",()=>{ E.view=b.dataset.v; syncModel(); updatePreview(); }));
-$("mS").addEventListener("input",e=>{ S.mcfg.s=e.target.value/100; syncModel(); });
-$("mR").addEventListener("input",e=>{ S.mcfg.r=Number(e.target.value); syncModel(); });
-$("mZ").addEventListener("input",e=>{ S.mcfg.z=e.target.value/100; syncModel(); });
-$("mReset").addEventListener("click",()=>{ S.mcfg={...E.M3D.DEFAULT,o:S.mcfg.o}; lastO=null; syncModel(); });
-$("mDel").addEventListener("click",()=>{ if(E.model) E.world.remove(E.model.root); E.model=null; S.mcfg=null; S.modelFile=null; S.keepModel=false; $("fMod").value=""; $("lMod").textContent="Elegir objeto 3D"; $("mMod").textContent="";
-  if(S.noVideo){ S.noVideo=false; }   // without an object the video is required again
-  syncModel(); updatePreview(); check(); });
-$("noVid").addEventListener("click",()=>{ S.noVideo=true; S.video=null; S.keepVid=false; S.vidW=S.vidH=0; $("pVid").removeAttribute("src"); $("tVid").hidden=true; $("lVid").textContent="Elegir video"; $("fVid").value="";
-  $("mVid").className="msg"; $("mVid").textContent="Sin video: solo el objeto 3D."; $("n2").classList.remove("done"); syncModel(); updatePreview(); check(); });
+$("fsBtn").addEventListener("click",()=>full(!$("pv").classList.contains("full")));
+$("fsBtn2").addEventListener("click",()=>full(true));
+addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("pv").classList.contains("full")&&!document.getElementById("vt-shade")&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) full(false); });
+function renderAll(){ renderLayers(); renderProps(); if(ED) renderScenes(); }
 
 // ---------- step 4: name ----------
 const slugIn=$("slug"); let slugOk=false, slugTimer=0;
@@ -460,34 +567,32 @@ function editing(exp){
 function prefill(exp){
   if(!$("title").value) $("title").value=exp.title; if(!slugIn.value){ slugIn.value=exp.slug; } checkSlug();
   for(const [k] of SOC){ const el=$("b_"+k); if(!el.value&&exp.buttons&&exp.buttons[k]) el.value=k==="whatsapp"?exp.buttons[k].replace(/^52(?=\d{10}$)/,""):toHandle(k,exp.buttons[k]); }
-  S.fit=exp.fit||"width"; document.querySelectorAll("#fit button").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.fit===S.fit)));
-  if(!S.imgBlob){ S.keepImg=true; S.imgW=exp.img.w; S.imgH=exp.img.h; const u=`${API}/m/${exp.slug}/image`; $("pImg").src=u; $("tImg").src=u; $("tImg").hidden=false; $("lImg").textContent="Imagen actual (puedes cambiarla)"; $("n1").classList.add("done"); }
-  if(!S.video&&exp.video){ S.keepVid=true; S.vidW=exp.video.w; S.vidH=exp.video.h; const u=`${API}/m/${exp.slug}/video`; $("pVid").src=u; $("pVid").play().catch(()=>{}); $("tVid").src=u; $("tVid").hidden=false; $("lVid").textContent="Video actual (puedes cambiarlo)"; $("n2").classList.add("done"); }
-  if(exp.model&&!S.modelFile&&!S.mcfg){ S.keepModel=true; S.mcfg={...exp.model}; $("lMod").textContent="Objeto 3D actual (puedes cambiarlo)";
-    setModel(`${API}/m/${exp.slug}/model`).then(()=>{ syncModel(); check(); }).catch(e=>{ console.error(e); $("mMod").className="msg bad"; $("mMod").textContent="No pude abrir el objeto 3D actual."; }); }
-  if(!exp.video&&exp.model) S.noVideo=true;
-  updatePreview();
+  S.place=exp.place||"mesa"; S.scenes=exp.scenes||1;
+  if(!S.imgBlob){ S.keepImg=true; S.imgW=exp.img.w; S.imgH=exp.img.h; const u=`${API}/m/${exp.slug}/image`; $("tImg").src=u; $("tImg").hidden=false; $("lImg").textContent="Imagen actual (puedes cambiarla)"; $("n1").classList.add("done"); }
+  if(!S.items.length) S.items=(exp.items||[]).map(it=>({...it,_loading:it.type!=="text"}));
+  renderAll(); check();
+  ensureEditor().then(ed=>{ if(!S.imgBlob) ed.setImage(`${API}/m/${exp.slug}/image`,exp.img.w,exp.img.h);
+    for(const it of S.items) ed.add(it).catch(e=>{ console.error(e); it._loading=false; renderLayers(); msgAdd("bad",`No pude abrir "${nameOf(it)}". Quítalo o vuelve a subirlo.`); check(); }); });
 }
 
 // ---------- step 6: publish ----------
 function check(){
   const imgOk=(!!S.target&&!!S.imgBlob)||(S.keepImg&&!!S.mine);
-  const modOk=!S.mcfg||!!S.modelFile||(S.keepModel&&!!S.mine&&!!E.model);
-  const vidOk=(!!S.video||(S.keepVid&&!!S.mine))||(!!S.mcfg&&modOk);
-  const ok=imgOk&&vidOk&&modOk&&$("title").value.trim()&&slugOk&&S.token&&!S.compiling;
+  const loading=S.items.some(i=>i._loading), wOk=weight(), textOk=S.items.every(i=>i.type!=="text"||String(i.text||"").trim());
+  const ok=imgOk&&S.items.length&&!loading&&wOk&&textOk&&$("title").value.trim()&&slugOk&&S.token&&!S.compiling;
+  $("n2").classList.toggle("done",S.items.length>0&&!loading);
   $("n4").classList.toggle("done",!!($("title").value.trim()&&slugOk));
   $("publish").disabled=!ok;
   $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link a ${S.email}.`:
-    S.compiling?"Estamos preparando tu imagen…":!imgOk?"Falta tu imagen.":!modOk?"Estamos abriendo tu objeto 3D…":!vidOk?"Falta tu video o un objeto 3D.":!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
+    S.compiling?"Estamos preparando tu imagen…":!imgOk?"Falta tu imagen.":!S.items.length?"Agrega al menos un elemento: un video, una imagen, un texto o un objeto 3D.":loading?"Estamos abriendo tus elementos…":!wOk?`Tus elementos pasan lo que permite tu plan ${S.plan.name} (${S.plan.totalMB} MB y ${S.plan.items} elementos).`:!textOk?"Uno de tus textos está vacío.":!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
 }
 $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Subiendo…"; bar.hidden=false; $("publish").disabled=true;
-  const meta={original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),fit:S.fit,img:{w:S.imgW,h:S.imgH},video:S.vidW&&!S.noVideo?{w:S.vidW,h:S.vidH}:null,model:S.mcfg||null,buttons:{}};
+  const meta={original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),img:{w:S.imgW,h:S.imgH},place:S.place,scenes:S.scenes,items:S.items,buttons:{}};
   for(const [k] of SOC){ const v=toHandle(k,$("b_"+k).value); if(v) meta.buttons[k]=v; }
-  const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
+  const fd=new FormData(); fd.append("meta",JSON.stringify(meta,(k,v)=>k.startsWith("_")?undefined:v));   // _x = only for this page
   if(S.imgBlob&&S.target){ fd.append("image",S.imgBlob,"image.jpg"); fd.append("target",S.target,"target.mind"); }
-  if(S.video) fd.append("video",S.video,S.video.name);
-  if(S.mcfg&&S.modelFile) fd.append("model",S.modelFile,"model.glb");
+  for(const it of S.items) if(it._file) fd.append("f_"+it.id,it._file,it._fname||"archivo");
   const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc, linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/");
   const qrBlob=await new Promise(r=>qrc.toBlob(r,"image/png")); fd.append("qr",qrBlob,"qr.png");
   const xhr=new XMLHttpRequest(); xhr.open("POST",`${API}/api/publish`); xhr.setRequestHeader("Authorization","Bearer "+S.token);
@@ -510,8 +615,7 @@ $("publish").addEventListener("click",async()=>{
     const r=await VVR.call("me"); S.email=r.user.email;
     const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1,days:30,videoMB:25};
     const LIM=r.limit??P.exp, member=r.team&&r.team.role==="member", more=member?"pide más a quien administra tu equipo":"mejora tu plan";
-    MAX_MB=P.videoMB; MAX_MODEL_MB=P.modelMB||15; $("modHint").textContent=`Archivo GLB · hasta ${MAX_MODEL_MB} MB`;
-    $("vidHint").textContent=`Hasta ${P.videoMB} MB. MP4 funciona en todos los celulares.`;
+    S.plan={...P,items:P.items||3,totalMB:P.totalMB||30,videoMB:P.videoMB||25,modelMB:P.modelMB||15};
     if(P.id!=="gratis"){ $("kick").textContent=member?`Equipo ${P.name} · ${LIM.toLocaleString("es-MX")} experiencias para ti`:`Plan ${P.name} · hasta ${LIM.toLocaleString("es-MX")} experiencias`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
     const active=r.experiences.filter(x=>!x.paused);
     const exp=ed?r.experiences.find(x=>x.slug===ed):null;
@@ -525,7 +629,7 @@ $("publish").addEventListener("click",async()=>{
       : block("Ya usaste todas tus experiencias",`${tiene}. Edita o borra una desde tu cuenta, o ${more}.`,null);
     else tour=true;   // creating a new one: the first time, the guided tour
   }catch(e){ if(e.status===401){ toLogin(); return; } }
-  check(); updatePreview();
+  check(); renderAll();
   if(tour){ const go=()=>window.vvrTutorial&&vvrTutorial.maybeStart(); window.vvrTutorial?setTimeout(go,500):addEventListener("load",()=>setTimeout(go,500)); }
 })();
 $("tutBtn").addEventListener("click",()=>window.vvrTutorial&&vvrTutorial.start());

@@ -10,7 +10,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 /* Visor de experiencias creadas en vorticevr.mx/crear/. Pantalla completa sobre la cámara:
-   logo de Vórtice VR arriba, controles del video a la derecha, redes y captura abajo. */
+   logo de Vórtice VR arriba, controles del video principal a la derecha, escenas, redes y captura abajo.
+   Los elementos (video, imagen, texto, 3D) se arman con /assets/escena.js, igual que en el editor. */
 :root{--void:#05020b;--ink:#f2ecff;--mute:#b9addb;--vortex:#8b3fd6;--lav:#d2b8ff;--sun:#ffbe55;--glass:rgba(10,4,22,.62);
   --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;color-scheme:dark}
 *{box-sizing:border-box}
@@ -70,6 +71,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 #vctl{position:fixed;right:12px;top:calc(64px + env(safe-area-inset-top,0px));z-index:58;display:flex;flex-direction:column;gap:10px}
 .ic{width:44px;height:44px;border-radius:50%;border:0;background:var(--glass);display:grid;place-items:center;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .ic svg{width:22px;height:22px;fill:#fff}
+
+/* scenes */
+#scenes{position:fixed;left:50%;transform:translateX(-50%);z-index:21;bottom:calc(206px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;background:var(--glass);border-radius:999px;padding:4px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#scenes .ic{width:38px;height:38px;background:rgba(255,255,255,.12);font-size:1.3rem;line-height:1}
+#scenes span{font:700 .82rem var(--fd);letter-spacing:.08em;min-width:7ch;text-align:center}
+#vids{position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none;overflow:hidden}
 
 /* social buttons */
 #social{position:fixed;left:0;right:0;z-index:20;bottom:calc(150px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;flex-wrap:wrap;gap:10px;padding:0 16px}
@@ -140,6 +147,9 @@ button{font:inherit;color:inherit;cursor:pointer}
   <button class="ic" id="fs" type="button" aria-label="Ver video en pantalla completa"><svg viewBox="0 0 24 24"><path d="M4 4h6v2H6v4H4V4zm10 0h6v6h-2V6h-4V4zM4 14h2v4h4v2H4v-6zm14 0h2v6h-6v-2h4v-4z"/></svg></button>
 </div>
 
+<nav id="scenes" aria-label="Escenas" hidden><button class="ic" id="sPrev" type="button" aria-label="Escena anterior">‹</button><span id="sLbl"></span><button class="ic" id="sNext" type="button" aria-label="Escena siguiente">›</button></nav>
+<div id="vids" aria-hidden="true"></div>
+
 <nav id="social" aria-label="Redes" hidden></nav>
 
 <div id="controls" hidden>
@@ -161,8 +171,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 <script type="module">
 // The 3D/AR libraries load when the camera starts (and are warmed up in the background), so the page shows
 // its title and image right away even if a browser is slow or strict with third-party scripts.
-let THREE=null, MindARThree=null, M3D=null;
-const libs=()=>Promise.all([import("three"),import("mindar-image-three"),CFG.model?import("/assets/modelo3d.js"):null]).then(([t,m,d])=>{ THREE=t; MindARThree=m.MindARThree; M3D=d; });
+let THREE=null, MindARThree=null, ESC=null;
+const libs=()=>Promise.all([import("three"),import("mindar-image-three"),import("/assets/escena.js")]).then(([t,m,e])=>{ THREE=t; MindARThree=m.MindARThree; ESC=e;
+  if(CFG.items.some(i=>i.type==="text")&&!document.getElementById("fonts")) document.head.appendChild(Object.assign(document.createElement("link"),{id:"fonts",rel:"stylesheet",href:ESC.FONT_CSS})); });
 let libsP=null;
 
 const $=id=>document.getElementById(id);
@@ -177,6 +188,8 @@ function slugFromUrl(){
 }
 const slug=slugFromUrl();
 let CFG=null;
+// Videos: the main one (the one with sound, or the first) is #vid and goes on screen when the image is lost; the rest play muted.
+let PRIMARY=null; const VIDS=new Map();
 function message(t,p){ $("intro").hidden=true; $("msgT").textContent=t; $("msgP").textContent=p; $("msg").hidden=false; }
 
 const ICONS={
@@ -199,12 +212,20 @@ async function load(){
   if(!r.ok){ message("Experiencia no encontrada","Revisa que el link esté completo."); return; }
   CFG=await r.json(); CFG.base=base;
   const m=`${base}/m/${CFG.slug}/`;
-  CFG.media={video:m+"video",target:m+"target",image:m+"image",model:m+"model"};
+  CFG.media={target:m+"target",image:m+"image"};
+  CFG.items=CFG.items||[];
   document.title=(CFG.title||"Realidad aumentada")+" · Vórtice VR";
   $("title").textContent=CFG.title||"Realidad aumentada";
-  $("kick").textContent=CFG.model&&CFG.video?"Esta imagen cobra vida":CFG.model?"Esta imagen tiene un objeto 3D":"Esta imagen tiene un video";
+  const types=new Set(CFG.items.map(i=>i.type));
+  $("kick").textContent=types.size===1&&types.has("video")?"Esta imagen tiene un video":types.size===1&&types.has("model")?"Esta imagen tiene un objeto 3D":"Esta imagen cobra vida";
   $("thumb").src=CFG.media.image; $("thumb").hidden=false; $("guideImg").src=CFG.media.image;
-  if(CFG.video) vid.src=CFG.media.video;
+  const videos=CFG.items.filter(i=>i.type==="video");
+  PRIMARY=videos.find(i=>i.sound)||videos[0]||null;
+  for(const it of videos){
+    const v=it===PRIMARY?vid:document.createElement("video");
+    if(v!==vid){ v.playsInline=true; v.setAttribute("webkit-playsinline",""); v.loop=true; v.preload="auto"; v.crossOrigin="anonymous"; $("vids").appendChild(v); }
+    v.muted=!it.sound; v.src=m+it.file; VIDS.set(it.id,v);
+  }
   const soc=$("social"); soc.replaceChildren();
   for(const k of ORDER){ const v=CFG.buttons&&CFG.buttons[k]; if(!v) continue;
     const a=document.createElement("a"); a.href=socialHref(k,v); a.target="_blank"; a.rel="noopener"; a.setAttribute("aria-label",LABEL[k]);
@@ -286,36 +307,30 @@ function setupAudio(){ try{ const AC=window.AudioContext||window.webkitAudioCont
   const dest=ac.createMediaStreamDestination(); src.connect(ac.destination); src.connect(dest); AUDIO.ac=ac; AUDIO.dest=dest; ac.resume&&ac.resume(); }catch(e){} }
 
 async function start(){
-  if(CFG.video){ vid.muted=false; vid.play().then(()=>vid.pause()).catch(()=>{}); setupAudio(); }      // unlock sound inside the tap (iOS)
+  if(PRIMARY){ vid.muted=!PRIMARY.sound; vid.play().then(()=>vid.pause()).catch(()=>{}); if(PRIMARY.sound) setupAudio(); }   // unlock sound inside the tap (iOS)
+  for(const v of VIDS.values()) if(v!==vid) v.play().then(()=>v.pause()).catch(()=>{});
   startBtn.disabled=true; startBtn.textContent="Cargando…"; $("err").hidden=true;
-  try{ await (libsP||libs()); if(!THREE||!MindARThree||(CFG.model&&!M3D)) throw 0; }
+  try{ await (libsP||libs()); if(!THREE||!MindARThree||!ESC) throw 0; }
   catch(e){ startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false;
     $("err").textContent="No se pudo cargar la realidad aumentada. Revisa tu conexión; si estás en navegación privada, ábrelo en una pestaña normal."; return; }
   try{
     const mind=new MindARThree({container:$("ar"),imageTargetSrc:CFG.media.target,uiLoading:"no",uiScanning:"no",uiError:"no",filterMinCF:0.0001,filterBeta:0.001});
     const {renderer,scene,camera}=mind; renderer.outputColorSpace=THREE.SRGBColorSpace;
     const anchor=mind.addAnchor(0);
-    // the image is 1 wide and IH tall, centered; the video is sized by the creator's fit mode
-    // Steadier video and 3D object: they do not ride the anchor directly. They live in their own group that follows the anchor
+    // Steadier elements: they do not ride the anchor directly. They live in their own group that follows the anchor
     // with an adaptive low-pass filter: tiny movements (tracking jitter) are damped hard, real movements are followed fast.
     const steady=new THREE.Group(); steady.matrixAutoUpdate=false; steady.visible=false; scene.add(steady);
-    const show=new THREE.Group(); steady.add(show);   // grows in when the image is found
-    const IH=CFG.img.h/CFG.img.w;
-    let vtex=null, vplane=null;
-    if(CFG.video){
-      const VA=CFG.video.w/CFG.video.h;
-      let pw=1, ph=1/VA;
-      if(CFG.fit==="height"){ ph=IH; pw=IH*VA; } else if(CFG.fit==="fill"){ pw=1; ph=IH; }
-      vtex=new THREE.VideoTexture(vid); vtex.colorSpace=THREE.SRGBColorSpace;
-      vplane=new THREE.Mesh(new THREE.PlaneGeometry(pw,ph),new THREE.MeshBasicMaterial({map:vtex,toneMapped:false,transparent:true,opacity:0}));
-      vplane.position.z=0.004; show.add(vplane);
-    }
-    let model=null;
-    if(CFG.model){
-      M3D.light(renderer,scene);
-      try{ model=await M3D.loadModel(CFG.media.model); M3D.place(model,CFG.model); show.add(model.root); }
-      catch(e){ console.error(e); if(!CFG.video) throw new Error("model"); }   // with a video, the experience still works without it
-    }
+    if(CFG.items.some(i=>i.type==="model")) await ESC.light(renderer,scene);
+    const base=`${CFG.base}/m/${CFG.slug}/`;
+    const nodes=(await Promise.all(CFG.items.map(async(it,i)=>{
+      try{ const n=await ESC.build(it,{url:base+it.file,video:VIDS.get(it.id)}); n.order=i; steady.add(n.root); return n; }
+      catch(e){ console.error(e); return null; }   // one element that fails does not stop the rest
+    }))).filter(Boolean);
+    if(!nodes.length) throw new Error("items");
+    const scenes=Math.max(1,CFG.scenes||1,...nodes.map(n=>(n.it.scene||0)+1));
+    for(let k=0;k<scenes;k++) nodes.filter(n=>(n.it.scene||0)===k).forEach((n,i)=>n.si=i);   // entrance order within its scene
+    let cur=0, sceneT=0;
+    const inScene=n=>(n.it.scene||0)===cur;
     const tP=new THREE.Vector3(), tQ=new THREE.Quaternion(), tS=new THREE.Vector3(), sP=new THREE.Vector3(), sQ=new THREE.Quaternion(), sS=new THREE.Vector3();
     let steadyOn=false;
     const SMOOTH=new URLSearchParams(location.search).get("suave")!=="0";   // ?suave=0 turns it off, to compare
@@ -333,25 +348,42 @@ async function start(){
     };
 
     let found=false, started=false;
-    setMode=()=>{ const full=vbox.classList.contains("full"), onScreen=started&&(!found||full);
-      vbox.classList.toggle("on",onScreen); vbox.setAttribute("aria-hidden",String(!onScreen));
+    const primaryHere=()=>PRIMARY&&(PRIMARY.scene||0)===cur;
+    // videos of the scene on view play; the main one keeps playing on screen while the image is out of view
+    const playScene=()=>{ for(const [id,v] of VIDS){ const n=nodes.find(x=>x.it.id===id), on=!!n&&inScene(n);
+      if(v===vid){ if(!on) v.pause(); else if(found&&!userPaused) playVid(); }
+      else if(on&&found) v.play().catch(()=>{}); else v.pause(); } };
+    setMode=()=>{ const here=primaryHere(), full=vbox.classList.contains("full"), onScreen=!!here&&!PRIMARY.chroma&&started&&(!found||full);
+      vbox.classList.toggle("on",onScreen); vbox.setAttribute("aria-hidden",String(!onScreen)); $("vctl").hidden=!(here&&started);
       guide.classList.toggle("off",found&&!full); guide.classList.toggle("mini",started&&!found); };
-    if(!CFG.video) setMode=()=>{ guide.classList.toggle("off",found); guide.classList.toggle("mini",started&&!found); };
-    anchor.onTargetFound=()=>{ found=true; if(!started){ started=true; if(CFG.video){ vid.currentTime=0; $("vctl").hidden=false; } } if(CFG.video&&!userPaused) playVid(); setMode(); };
-    anchor.onTargetLost=()=>{ found=false; setMode(); };
+    anchor.onTargetFound=()=>{ found=true; if(!started){ started=true; if(PRIMARY) vid.currentTime=0; } sceneT=0; playScene(); setMode(); };
+    anchor.onTargetLost=()=>{ found=false; playScene(); setMode(); };
+    // scenes: arrows at the bottom
+    const go=k=>{ cur=(k+scenes)%scenes; sceneT=0; $("sLbl").textContent=`Escena ${cur+1} de ${scenes}`; playScene(); setMode(); };
+    $("sPrev").addEventListener("click",()=>go(cur-1)); $("sNext").addEventListener("click",()=>go(cur+1)); go(0);
+    // tapping an element with a link opens it
+    const ray=new THREE.Raycaster(), ptr=new THREE.Vector2();
+    $("ar").addEventListener("click",e=>{ if(!found) return; const linked=nodes.filter(n=>n.it.link&&inScene(n)); if(!linked.length) return;
+      const r=renderer.domElement.getBoundingClientRect(); ptr.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1); ray.setFromCamera(ptr,camera);
+      const hit=ray.intersectObjects(linked.map(n=>n.root),true)[0]; if(!hit) return;
+      const n=linked.find(n=>{ for(let o=hit.object;o;o=o.parent) if(o===n.root) return true; return false; });
+      if(n) window.open(n.it.link,"_blank","noopener"); });
 
     const capture=setupCapture(mind);
     await mind.start();
-    $("intro").hidden=true; guide.hidden=false; $("controls").hidden=false; $("social").hidden=!$("social").children.length; showCtl(); setMode();
-    const clock=new THREE.Clock(); let appear=0;
-    renderer.setAnimationLoop(()=>{ const dt=clock.getDelta(); appear=found?Math.min(1,appear+dt*2.4):0; follow(dt);
-      const a=1-Math.pow(1-appear,3);
-      if(vplane){ vplane.material.opacity=a; vplane.scale.setScalar(.9+.1*a); }
-      if(model){ model.root.visible=a>0; model.root.scale.setScalar(CFG.model.s*(.6+.4*a)); if(model.mixer) model.mixer.update(dt); }
-      if(vtex&&found&&vid.readyState>=2) vtex.needsUpdate=true; // a hidden <video> is not painted, so its frame callback stops (iPhone): push frames ourselves
+    $("intro").hidden=true; guide.hidden=false; $("controls").hidden=false; $("social").hidden=!$("social").children.length; $("scenes").hidden=scenes<2; showCtl(); setMode();
+    const clock=new THREE.Clock(); let time=0;
+    renderer.setAnimationLoop(()=>{ const dt=clock.getDelta(); time+=dt; follow(dt); sceneT=found?sceneT+dt:0;
+      for(const n of nodes){
+        if(!inScene(n)||!found){ n.root.visible=false; continue; }
+        ESC.place(n,n.it,(sceneT-n.si*ESC.STAGGER)/ESC.DURATION,n.order);
+        if(n.it.link) n.root.scale.multiplyScalar(1+0.03*Math.sin(time*4));   // elements you can tap breathe a little
+        n.update(dt);
+      }
       renderer.render(scene,camera); capture.afterRender(); });
   }catch(e){
     console.error(e); startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false;
+    if(e&&e.message==="items"){ $("err").textContent="No se pudieron cargar los elementos de esta experiencia. Revisa tu conexión e intenta de nuevo."; return; }
     $("err").textContent=(e&&(e.name==="NotAllowedError"||/Permission/i.test(e.message||"")))?"No se dio permiso a la cámara. Actívalo en los ajustes del navegador y vuelve a intentar.":"No se pudo iniciar la cámara. Abre este link en Chrome o Safari (no dentro de Instagram o WhatsApp).";
   }
 }
