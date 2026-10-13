@@ -29,7 +29,8 @@ export async function createEditor(box, cb) {
   const sel = new THREE.BoxHelper(undefined, 0xffbe55); sel.material.depthTest = false; sel.material.transparent = true; sel.material.opacity = 0.7; sel.renderOrder = 10; sel.visible = false; scene.add(sel);
   const orbit = new OrbitControls(camera, renderer.domElement); orbit.enableDamping = true; orbit.enablePan = false; orbit.minDistance = 0.4; orbit.maxDistance = 6;
   const tc = new TransformControls(camera, renderer.domElement); tc.size = 1.1; scene.add(tc);
-  tc.addEventListener("dragging-changed", e => { orbit.enabled = !e.value; if (!e.value) done(); });
+  let startS = 1;   // size when a handle drag started: the scale handles move one axis, the size follows that one
+  tc.addEventListener("dragging-changed", e => { orbit.enabled = !e.value; if (e.value) startS = itemOf(selected)?.s ?? 1; else done(); });
 
   const nodes = new Map(), videos = new Map();
   let IH = 2 / 3, place = "mesa", mode = "mover", selected = null, scene_ = 0, playT = -1, imgUrl = null;
@@ -98,7 +99,7 @@ export async function createEditor(box, cb) {
     const it = itemOf(selected), n = nodes.get(selected); if (!it || !n) return;
     if (mode === "mover") { it.x = r3(clamp(n.root.position.x, -2, 2)); it.y = r3(clamp(n.root.position.y, -2, 2)); it.z = r3(clamp(n.root.position.z - n.front, -1, 2)); }
     else if (mode === "girar") { const e = n.root.rotation; it.rx = deg(e.x); it.ry = deg(e.y); it.rz = deg(e.z); }
-    else { const sc = n.root.scale, s = [sc.x, sc.y, sc.z].reduce((b, v) => Math.abs(v - it.s) > Math.abs(b - it.s) ? v : b, it.s); it.s = r3(clamp(s, 0.02, 4)); }
+    else { const sc = n.root.scale, s = [sc.x, sc.y, sc.z].reduce((b, v) => Math.abs(v - startS) > Math.abs(b - startS) ? v : b, startS); it.s = r3(clamp(s, 0.02, 4)); }
     update(it); cb.change(it);
   });
 
