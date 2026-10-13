@@ -112,7 +112,7 @@ async function load(q=""){
 function userCard(u){
   const el=document.createElement("article"); el.className="card user";
   const P=PLANS[u.effective]||PLANS.gratis, lapsed=u.plan&&u.plan!=="gratis"&&u.effective==="gratis";
-  el.innerHTML=`<div class="uhead"><div><h2>${esc(u.name||"(sin nombre)")} <span class="tag ${u.effective}">${esc(P.name)}</span>${u.verified?"":' <span class="tag warn">Sin confirmar</span>'}${lapsed?' <span class="tag warn">Venció</span>':""}</h2><div class="em">${esc(u.email)}</div></div>
+  el.innerHTML=`<div class="uhead"><div><h2>${esc(u.name||"(sin nombre)")} <span class="tag ${u.effective}">${esc(P.name)}</span>${u.verified?"":' <span class="tag warn">Sin confirmar</span>'}${lapsed?' <span class="tag warn">Venció</span>':""}${["active","trialing"].includes(u.stripe_status)?` <span class="tag pro">Stripe${u.stripe_mode==="test"?" (prueba)":""}</span>`:u.stripe_status==="past_due"?' <span class="tag warn">Pago pendiente</span>':""}</h2><div class="em">${esc(u.email)}</div></div>
       <div class="acts2"><button class="btn sm primary" data-a="plan">Cambiar plan</button><button class="btn sm" data-a="exps">Ver experiencias</button></div></div>
     <div class="meta"><span><b>${u.active}</b> de ${P.exp.toLocaleString("es-MX")} activas</span>${u.paused?`<span><b>${u.paused}</b> pausadas</span>`:""}<span><b>${Number(u.views||0).toLocaleString("es-MX")}</b> vistas</span>
       ${u.plan_until&&u.effective!=="gratis"?`<span>Pagado hasta <b>${fmt(u.plan_until)}</b></span>`:""}<span>Cuenta desde ${fmt(u.created)}</span>${u.plan_note?`<span>Nota: ${esc(u.plan_note)}</span>`:""}</div>`;

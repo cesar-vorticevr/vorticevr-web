@@ -233,6 +233,19 @@ async function api(request, env, ctx, url) {
     return json(await sessionFor(env, request, { ...user, verified: 1 }));
   }
 
+  // ---- Stripe webhook (signed by Stripe, no session) ----
+  if (path === "/api/billing/webhook" && M === "POST") {
+    const raw = await request.text();
+    if (!(await stripeVerify(env, raw, request.headers.get("Stripe-Signature")))) return json({ error: "Firma inválida" }, 400);
+    const ev = JSON.parse(raw), o = (ev.data && ev.data.object) || {};
+    let sub = null;
+    if (ev.type === "checkout.session.completed" && o.mode === "subscription") sub = o.subscription;
+    else if (/^customer\.subscription\./.test(ev.type)) sub = o.id;
+    else if (/^invoice\.(paid|payment_failed)$/.test(ev.type)) sub = o.subscription || (o.parent && o.parent.subscription_details && o.parent.subscription_details.subscription);
+    if (sub) await stripeSync(env, ctx, typeof sub === "string" ? sub : sub.id);
+    return json({ received: true });
+  }
+
   // ---- signed-in ----
   const me = await auth(request, env);
   const who = me && me.email;
@@ -316,6 +329,39 @@ async function api(request, env, ctx, url) {
     return json({ ok: true, experience: out });
   }
 
+  // ---- payments: start a subscription (Stripe Checkout) or manage it (Customer Portal) ----
+  if ((path === "/api/billing/checkout" || path === "/api/billing/portal") && M === "POST") {
+    if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
+    const bi = billingInfo(env, me);
+    if (!bi.enabled) return json({ error: env.STRIPE_SECRET_KEY ? "Los pagos en línea están en modo de prueba." : "El pago en línea todavía no está disponible." }, 503);
+    const mode = stripeMode(env), origin = new URL(request.url).origin;
+    let customer = me.stripe_mode === mode ? me.stripe_customer : null;
+    if (path === "/api/billing/portal" || bi.subscribed) {   // already paying: switching plan or cancelling happens in the portal
+      if (!customer) return json({ error: "No encontramos tu suscripción." }, 404);
+      const s = await stripe(env, "POST", "billing_portal/sessions", { customer, return_url: `${origin}/cuenta/`, configuration: await stripePortalConfig(env) });
+      return json({ url: s.url, portal: true });
+    }
+    const b = await request.json().catch(() => ({}));
+    if (!STRIPE_PRICES[b.plan]) return json({ error: "Plan inválido." }, 400);
+    const price = await stripePrice(env, b.plan);
+    const newCustomer = async () => {
+      const c = await stripe(env, "POST", "customers", { email: me.email, name: me.name, metadata: { user_id: me.id } });
+      await env.DB.prepare("UPDATE users SET stripe_customer = ?, stripe_mode = ? WHERE id = ?").bind(c.id, mode, me.id).run();
+      return c.id;
+    };
+    if (!customer) customer = await newCustomer();
+    const session = c => stripe(env, "POST", "checkout/sessions", {
+      mode: "subscription", customer: c, client_reference_id: me.id, locale: "es-419", allow_promotion_codes: "true",
+      line_items: [{ price: price.id, quantity: 1 }],
+      subscription_data: { metadata: { user_id: me.id, plan: b.plan } },
+      success_url: `${origin}/cuenta/?pago=ok`, cancel_url: `${origin}/cuenta/?pago=cancelado#planes`,
+    });
+    let s;
+    try { s = await session(customer); }
+    catch (e) { if (e.code !== "resource_missing") throw e; s = await session(await newCustomer()); } // the customer was deleted in Stripe
+    return json({ url: s.url });
+  }
+
   // ---- admin (ADMIN_EMAILS; by default César): plans are activated by hand, schools pay outside the site ----
   if (path.startsWith("/api/admin/")) {
     if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
@@ -323,7 +369,7 @@ async function api(request, env, ctx, url) {
     const now = Date.now();
     if (path === "/api/admin/users" && M === "GET") {
       const q = (url.searchParams.get("q") || "").trim().toLowerCase().slice(0, 80);
-      const { results } = await env.DB.prepare(`SELECT u.id, u.email, u.name, u.verified, u.created, u.plan, u.plan_until, u.plan_note,
+      const { results } = await env.DB.prepare(`SELECT u.id, u.email, u.name, u.verified, u.created, u.plan, u.plan_until, u.plan_note, u.stripe_status, u.stripe_mode,
           (SELECT COUNT(*) FROM experiences e WHERE e.email = u.email AND e.paused = 0 AND e.expires > ?1) AS active,
           (SELECT COUNT(*) FROM experiences e WHERE e.email = u.email AND e.paused = 1 AND e.expires > ?1) AS paused,
           (SELECT COALESCE(SUM(views), 0) FROM experiences e WHERE e.email = u.email) AS views
@@ -440,6 +486,10 @@ async function migrate(env) {
     env.DB.prepare("DROP TABLE experiences"),
     env.DB.prepare("ALTER TABLE experiences_new RENAME TO experiences"));
   if (steps.length) { try { await env.DB.batch(steps); } catch (e) { console.error("migración", e); /* another instance migrated first */ } }
+  if (!/\bstripe_mode\b/.test(sql.users)) {   // Stripe subscription of the account (test or live keys: never mix their ids)
+    try { await env.DB.batch(["stripe_customer", "stripe_sub", "stripe_status", "stripe_mode"].map(c => env.DB.prepare(`ALTER TABLE users ADD COLUMN ${c} TEXT`))); }
+    catch (e) { console.error("migración stripe", e); }
+  }
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS experiences_email ON experiences (email)").run();
 }
 async function limit(env, key, max, windowMs) {
@@ -493,13 +543,13 @@ async function sessionFor(env, request, user) {
 async function auth(request, env) {
   const t = bearer(request);
   if (!t) return null;
-  const row = await env.DB.prepare("SELECT u.id, u.email, u.name, u.verified, u.plan, u.plan_until, s.expires FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?").bind(await sha256hex(t)).first();
+  const row = await env.DB.prepare("SELECT u.id, u.email, u.name, u.verified, u.plan, u.plan_until, u.stripe_customer, u.stripe_sub, u.stripe_status, u.stripe_mode, s.expires FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?").bind(await sha256hex(t)).first();
   return row && row.expires > Date.now() && row.verified ? row : null;
 }
 async function account(env, request, user) {
   const { results } = await env.DB.prepare("SELECT * FROM experiences WHERE email = ? AND expires > ? ORDER BY paused, created DESC").bind(user.email, Date.now()).all();
   const plan = planOf(user);
-  return { user: { name: user.name, email: user.email }, experiences: results.map(r => ownerExp(r, request, env)), plan, limit: plan.exp, admin: isAdmin(env, user) || undefined };
+  return { user: { name: user.name, email: user.email }, experiences: results.map(r => ownerExp(r, request, env)), plan, limit: plan.exp, admin: isAdmin(env, user) || undefined, billing: billingInfo(env, user) };
 }
 
 // ---------- plans ----------
@@ -524,6 +574,104 @@ async function applyPlan(env, user, plan, until, note) {
       FROM (SELECT slug, ROW_NUMBER() OVER (ORDER BY paused, updated DESC, slug) AS rn FROM experiences WHERE email = ?6 AND expires > ?7) AS r
       WHERE experiences.slug = r.slug`).bind(P.exp, P.days, FAR, now + P.days * 864e5, now + LIMITS.pausedDays * 864e5, user.email, now),
   ]);
+}
+
+// ---------- payments: Stripe subscriptions for Básico and Pro (monthly, IVA included) ----------
+// Secrets STRIPE_SECRET_KEY (sk_test_ in the preview, sk_live_ in production) and STRIPE_WEBHOOK_SECRET.
+// Products and prices are created in Stripe on first use (found again by lookup_key). Stripe Checkout takes the payment,
+// the webhook keeps users.plan in sync, and the Customer Portal lets people change card, switch plan or cancel.
+// A paid month is "paid until" the period end + STRIPE_GRACE_DAYS; if a renewal fails and Stripe gives up, the daily
+// cron moves the account back to Gratis on its own. With test keys only admins can pay (the preview shares the database).
+const STRIPE_PRICES = { basico: "vvr_basico_mes", pro: "vvr_pro_mes" };
+const STRIPE_GRACE_DAYS = 7;
+const STRIPE_LIVE = ["active", "trialing", "past_due"];
+const stripeMode = env => String(env.STRIPE_SECRET_KEY || "").startsWith("sk_live_") ? "live" : "test";
+function billingInfo(env, user) {
+  if (!env.STRIPE_SECRET_KEY) return { enabled: false };
+  const mode = stripeMode(env), mine = user.stripe_mode === mode;
+  return { enabled: mode === "live" || isAdmin(env, user), test: mode === "test", subscribed: mine && STRIPE_LIVE.includes(user.stripe_status), pastDue: mine && user.stripe_status === "past_due" };
+}
+async function stripe(env, method, path, params) {
+  const qs = params ? new URLSearchParams(flatParams(params)).toString() : "";
+  const r = await fetch(`${env.STRIPE_API || "https://api.stripe.com"}/v1/${path}${method === "GET" && qs ? "?" + qs : ""}`, {
+    method,
+    headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, "Stripe-Version": "2024-06-20", ...(method === "GET" ? {} : { "Content-Type": "application/x-www-form-urlencoded" }) },
+    body: method === "GET" ? undefined : qs,
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error((j.error && j.error.message) || `Stripe ${r.status}`); e.code = j.error && j.error.code; throw e; }
+  return j;
+}
+// {a: {b: 1}, c: ["x"]} → a[b]=1&c[0]=x (Stripe's form encoding)
+function flatParams(o, pre = "", out = []) {
+  for (const [k, v] of Object.entries(o)) {
+    if (v === undefined || v === null) continue;
+    const key = pre ? `${pre}[${k}]` : k;
+    if (typeof v === "object") flatParams(v, key, out); else out.push([key, String(v)]);
+  }
+  return out;
+}
+const priceCache = {};
+// the plan's monthly price; created if missing, and replaced if PLANS changed its amount
+async function stripePrice(env, plan) {
+  const key = STRIPE_PRICES[plan], ck = stripeMode(env) + key, amount = PLANS[plan].price * 100;
+  if (priceCache[ck]) return priceCache[ck];
+  const found = (await stripe(env, "GET", "prices", { lookup_keys: [key], active: "true", limit: 1 })).data[0];
+  let price = found && found.unit_amount === amount && found.currency === "mxn" ? found : null;
+  if (!price) {
+    const product = found ? found.product : (await stripe(env, "POST", "products", { name: `Vórtice VR · Plan ${PLANS[plan].name}`, description: `${expCount(PLANS[plan].exp)} de realidad aumentada`, metadata: { plan } })).id;
+    price = await stripe(env, "POST", "prices", { product, currency: "mxn", unit_amount: amount, tax_behavior: "inclusive", recurring: { interval: "month" }, lookup_key: key, transfer_lookup_key: "true", metadata: { plan } });
+  }
+  return (priceCache[ck] = { id: price.id, product: typeof price.product === "string" ? price.product : price.product.id });
+}
+// Customer Portal settings (made once by the API): card, invoices, cancel at period end, switch between Básico and Pro
+async function stripePortalConfig(env) {
+  const list = await stripe(env, "GET", "billing_portal/configurations", { active: "true", limit: 100 });
+  const prices = await Promise.all(Object.keys(STRIPE_PRICES).map(p => stripePrice(env, p)));
+  const want = prices.map(p => p.id).sort().join(",");
+  const mine = list.data.find(c => c.metadata && c.metadata.app === "vvr" && c.metadata.prices === want);
+  if (mine) return mine.id;
+  return (await stripe(env, "POST", "billing_portal/configurations", {
+    business_profile: { headline: "Vórtice VR · Realidad aumentada" },
+    features: {
+      payment_method_update: { enabled: "true" },
+      invoice_history: { enabled: "true" },
+      subscription_cancel: { enabled: "true", mode: "at_period_end" },
+      subscription_update: { enabled: "true", default_allowed_updates: ["price"], proration_behavior: "create_prorations", products: prices.map(p => ({ product: p.product, prices: [p.id] })) },
+    },
+    metadata: { app: "vvr", prices: want },
+  })).id;
+}
+// Stripe-Signature: t=…,v1=… with HMAC-SHA256(secret, "t.body"); at most 5 minutes old
+async function stripeVerify(env, raw, header) {
+  if (!env.STRIPE_WEBHOOK_SECRET || !header) return false;
+  const t = (/(?:^|,)t=(\d+)/.exec(header) || [])[1];
+  const sigs = [...header.matchAll(/(?:^|,)v1=([0-9a-f]+)/g)].map(m => m[1]);
+  if (!t || !sigs.length || Math.abs(Date.now() / 1000 - Number(t)) > 300) return false;
+  const key = await crypto.subtle.importKey("raw", enc.encode(env.STRIPE_WEBHOOK_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const mac = [...new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode(`${t}.${raw}`)))].map(b => b.toString(16).padStart(2, "0")).join("");
+  return sigs.some(s => s.length === mac.length && [...s].reduce((d, c, i) => d | (c.charCodeAt(0) ^ mac.charCodeAt(i)), 0) === 0);
+}
+// Reads the subscription from Stripe (never trusts the event's copy) and applies its plan to the account.
+async function stripeSync(env, ctx, subId) {
+  const sub = await stripe(env, "GET", `subscriptions/${subId}`);
+  const uid = Number(sub.metadata && sub.metadata.user_id);
+  let user = uid ? await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(uid).first() : null;
+  if (!user) user = await env.DB.prepare("SELECT * FROM users WHERE stripe_customer = ?").bind(sub.customer).first();
+  if (!user) { console.error("Stripe: suscripción sin cuenta", subId); return; }
+  const item = sub.items && sub.items.data[0], price = item && item.price;
+  const plan = Object.keys(STRIPE_PRICES).find(p => price && STRIPE_PRICES[p] === price.lookup_key) || (price && price.metadata && price.metadata.plan) || (sub.metadata && sub.metadata.plan);
+  const live = STRIPE_LIVE.includes(sub.status);
+  if (!live && user.stripe_sub && user.stripe_sub !== sub.id) return; // an old subscription ending must not undo the current one
+  await env.DB.prepare("UPDATE users SET stripe_customer = ?, stripe_sub = ?, stripe_status = ?, stripe_mode = ? WHERE id = ?").bind(sub.customer, sub.id, sub.status, sub.livemode ? "live" : "test", user.id).run();
+  if (live && STRIPE_PRICES[plan]) {
+    const end = (sub.current_period_end || (item && item.current_period_end) || 0) * 1000;
+    const before = planOf(user).id;
+    await applyPlan(env, user, plan, Math.max(end, Date.now()) + STRIPE_GRACE_DAYS * 864e5, `Stripe · ${sub.id}`);
+    if (before !== plan) ctx.waitUntil(sendMail(env, user.email, `Tu plan ${PLANS[plan].name} de Vórtice VR está activo`, planMail(user, plan, null)));
+  } else if (!live && STRIPE_PRICES[user.plan]) {
+    await applyPlan(env, user, "gratis", null, null);
+  }
 }
 // one-time codes by email: confirm the account once, or reset the password
 async function sendCode(env, em, purpose) {
