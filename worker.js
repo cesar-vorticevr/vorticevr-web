@@ -13,14 +13,18 @@ const LIMITS = { imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, code
 // Plans. exp = active experiences; days = how long each one lasts (0 = while the plan is active);
 // views = most times each experience can be opened (Gratis only, so a viral free QR cannot run up costs);
 // brand = the viewer opens with the "Creado con Vórtice VR" screen. Video: limited by size only, not duration.
-// Paid plans are activated by an admin in /admin/ (escuela always; basico/pro until Stripe is connected).
+// year = price of a year (default 10 months). seats = team accounts the owner can create (Empresarial): the owner hands
+// each one part of the plan's experiences (users.quota); what is not handed out stays for the owner.
+// legacy = no longer offered (only kept for accounts that have it). Paid plans can also be set by an admin in /admin/.
 // Videos stay ≤ 50 MB: the Worker reads the whole upload in memory (128 MB).
 const PLANS = {
   gratis:  { name: "Gratis",  exp: 1,    days: 30, videoMB: 25, brand: true,  price: 0, views: 1000 },
-  basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 25, brand: true,  price: 199 },
-  pro:     { name: "Pro",     exp: 50,   days: 0,  videoMB: 50, brand: false, price: 499 },
-  escuela: { name: "Escuela", exp: 1000, days: 0,  videoMB: 50, brand: false, price: 1500 },
+  basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 25, brand: true,  price: 199, year: 1990 },
+  pro:     { name: "Pro",     exp: 50,   days: 0,  videoMB: 50, brand: false, price: 499, year: 4990 },
+  empresarial: { name: "Empresarial", exp: 150, seats: 15, days: 0, videoMB: 50, brand: true,  price: 999, year: 9999 },
+  escuela: { name: "Escuela", exp: 1000, days: 0,  videoMB: 50, brand: false, price: 1500, year: 15000, legacy: true },
 };
+const yearPrice = plan => PLANS[plan].year || PLANS[plan].price * YEAR_MONTHS;
 const FAR = 253402300799000; // expires of an experience on a paid plan: "while the plan is active" (year 9999)
 const ADMINS_DEFAULT = "lad.cesargarcia@gmail.com";
 const ADMIN_SLUGS = new Set(["ejemplo"]); // only an admin can take these (the home page demo uses "ejemplo")
@@ -182,7 +186,7 @@ async function api(request, env, ctx, url) {
   // public: one experience's settings
   let m = path.match(/^\/api\/exp\/([a-z0-9-]+)$/);
   if (m && M === "GET") {
-    const row = await env.DB.prepare("SELECT e.*, u.plan, u.plan_until FROM experiences e LEFT JOIN users u ON u.email = e.email WHERE e.slug = ?").bind(m[1]).first();
+    const row = await env.DB.prepare("SELECT e.*, u.plan, u.plan_until, u.owner_id, u.quota, o.plan AS o_plan, o.plan_until AS o_until FROM experiences e LEFT JOIN users u ON u.email = e.email LEFT JOIN users o ON o.id = u.owner_id WHERE e.slug = ?").bind(m[1]).first();
     if (!row) return json({ error: "No existe" }, 404);
     if (row.expires < Date.now()) return json({ error: "Expiró" }, 410);
     if (row.paused) return json({ error: "Pausada", paused: true }, 410);
@@ -303,7 +307,7 @@ async function api(request, env, ctx, url) {
     if (String(b.password || "").length < 8) return json({ error: "La nueva contraseña debe tener al menos 8 caracteres." }, 400);
     const user = await env.DB.prepare("SELECT pass FROM users WHERE id = ?").bind(me.id).first();
     if (!(await verifyPassword(String(b.current || ""), user.pass))) return json({ error: "Tu contraseña actual no es correcta." }, 401);
-    await env.DB.prepare("UPDATE users SET pass = ? WHERE id = ?").bind(await hashPassword(String(b.password)), me.id).run();
+    await env.DB.prepare("UPDATE users SET pass = ?, temp_pw = 0 WHERE id = ?").bind(await hashPassword(String(b.password)), me.id).run();
     return json({ ok: true });
   }
   m = path.match(/^\/api\/experience\/([a-z0-9-]+)$/);
@@ -318,17 +322,17 @@ async function api(request, env, ctx, url) {
   if (path === "/api/publish" && M === "POST") {
     if (!who) return json({ error: "Inicia sesión de nuevo." }, 401);
     if (!(await limit(env, "pub:" + who, 30, 3600e3))) return json({ error: "Demasiadas publicaciones seguidas. Espera un rato." }, 429);
-    const P = planOf(me);
+    const P = planOf(me), LIM = await limitOf(env, me, P);
     const form = await request.formData();
     let meta; try { meta = JSON.parse(form.get("meta") || "{}"); } catch { return json({ error: "Datos inválidos." }, 400); }
     // editing: meta.original is the experience's current slug (it can move to a new one)
     const original = String(meta.original || "").toLowerCase();
     const mine = original ? await env.DB.prepare("SELECT * FROM experiences WHERE slug = ? AND email = ? AND expires > ?").bind(original, who, Date.now()).first() : null;
     if (original && !mine) return json({ error: "No encontramos esa experiencia en tu cuenta." }, 404);
-    if (mine && mine.paused) return json({ error: `Esta experiencia está pausada: tu plan ${P.name} incluye ${expCount(P.exp)}. Mejora tu plan para reactivarla.` }, 403);
+    if (mine && mine.paused) return json({ error: `Esta experiencia está pausada: excede las experiencias que tienes disponibles. Borra otra o ${P.member ? "pide más a quien administra tu equipo" : "mejora tu plan"} para reactivarla.` }, 403);
     if (!mine) {
       const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM experiences WHERE email = ? AND paused = 0 AND expires > ?").bind(who, Date.now()).first();
-      if (n.n >= P.exp) return json({ error: `Tu plan ${P.name} incluye ${expCount(P.exp)}. Borra una o mejora tu plan para crear otra.` }, 403);
+      if (n.n >= LIM) return json({ error: P.member ? `Tienes ${expCount(LIM)} asignadas por tu equipo. Borra una o pide más a quien administra tu equipo.` : `Tu plan ${P.name} incluye ${expCount(LIM)}${P.seats ? " para tu cuenta (el resto está repartido en tu equipo)" : ""}. Borra una o mejora tu plan para crear otra.` }, 403);
     }
     const slug = String(meta.slug || "").toLowerCase();
     const st = await slugStatus(env, slug, who, mine && mine.slug, isAdmin(env, me));
@@ -374,6 +378,7 @@ async function api(request, env, ctx, url) {
   if (path === "/api/coupon" && M === "POST") {
     if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
     if (!(await limit(env, "coupon:" + me.id, 10, 3600e3))) return json({ error: "Demasiados intentos. Espera un rato." }, 429);
+    if (planOf(me).member) return json({ error: "Tu cuenta es parte de un equipo; quien lo administra maneja el plan." }, 409);
     const code = String((await request.json().catch(() => ({}))).code || "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 40);
     const c = code && await env.DB.prepare("SELECT * FROM coupons WHERE code = ?").bind(code).first();
     const now = Date.now();
@@ -392,6 +397,55 @@ async function api(request, env, ctx, url) {
     await applyPlan(env, me, c.plan, until, `Cupón ${code}`);
     ctx.waitUntil(sendMail(env, me.email, `Tu cortesía del plan ${PLANS[c.plan].name} está activa`, planMail(me, c.plan, until)));
     return json({ ok: true, plan: PLANS[c.plan].name, until });
+  }
+
+  // ---- Empresarial team: the owner creates accounts for its people and hands each part of the plan's experiences ----
+  if (path === "/api/team" || path.startsWith("/api/team/")) {
+    if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
+    const P = planOf(me);
+    if (!P.seats || P.member) return json({ error: "Los equipos son del plan Empresarial." }, 403);
+    const now = Date.now();
+    const { results: members } = await env.DB.prepare(`SELECT u.id, u.name, u.email, u.quota, u.created, u.temp_pw,
+        (SELECT COUNT(*) FROM experiences e WHERE e.email = u.email AND e.paused = 0 AND e.expires > ?2) AS active
+      FROM users u WHERE u.owner_id = ?1 ORDER BY u.created`).bind(me.id, now).all();
+    const handed = members.reduce((n, x) => n + (x.quota || 0), 0);
+    const ownActive = (await env.DB.prepare("SELECT COUNT(*) AS n FROM experiences WHERE email = ? AND paused = 0 AND expires > ?").bind(me.email, now).first()).n;
+    const free = P.exp - handed - ownActive;   // experiences nobody is using yet
+    const tempPw = () => { const A = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", r = crypto.getRandomValues(new Uint8Array(10)); return [...r].map(x => A[x % A.length]).join("").replace(/^(.{5})/, "$1-"); };
+    if (path === "/api/team" && M === "GET") return json({ seats: P.seats, total: P.exp, handed, ownActive, free, members: members.map(x => ({ ...x, temp_pw: !!x.temp_pw })) });
+    if (path === "/api/team" && M === "POST") {
+      const b = await request.json().catch(() => ({}));
+      const em = normEmail(b.email), name = String(b.name || "").trim().slice(0, 60), quota = Math.max(0, Math.round(Number(b.quota) || 0));
+      if (!name || !em) return json({ error: "Escribe el nombre y un correo válido." }, 400);
+      if (members.length >= P.seats) return json({ error: `Tu plan incluye hasta ${P.seats} cuentas en tu equipo.` }, 403);
+      if (quota > free) return json({ error: `Solo tienes ${expCount(Math.max(0, free))} libres para repartir.` }, 400);
+      if (await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(em).first()) return json({ error: "Ya existe una cuenta con ese correo. Usa otro correo para tu equipo." }, 409);
+      if (!(await limit(env, "team:" + me.id, 30, 3600e3))) return json({ error: "Demasiadas cuentas seguidas. Espera un rato." }, 429);
+      const pw = tempPw();
+      await env.DB.prepare("INSERT INTO users (email, name, pass, verified, created, plan, owner_id, quota, extra_exp, temp_pw) VALUES (?, ?, ?, 1, ?, 'gratis', ?, ?, 0, 1)")
+        .bind(em, name, await hashPassword(pw), now, me.id, quota).run();
+      if (b.notify) ctx.waitUntil(sendMail(env, em, `${me.name || "Tu equipo"} te dio acceso a Vórtice VR`, teamMail(me, name, em, pw, quota, new URL(request.url).origin)));
+      return json({ ok: true, email: em, password: pw });
+    }
+    const tm = path.match(/^\/api\/team\/(\d+)(\/password)?$/);
+    const member = tm && members.find(x => x.id === Number(tm[1]));
+    if (!member) return json({ error: "No encontramos esa cuenta en tu equipo." }, 404);
+    if (tm[2] && M === "POST") {   // new temporary password (to hand over again)
+      const pw = tempPw();
+      await env.DB.batch([env.DB.prepare("UPDATE users SET pass = ?, temp_pw = 1 WHERE id = ?").bind(await hashPassword(pw), member.id), env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(member.id)]);
+      return json({ ok: true, password: pw });
+    }
+    if (M === "POST") {   // change its experiences: less than it uses pauses the rest
+      const quota = Math.max(0, Math.round(Number((await request.json().catch(() => ({}))).quota) || 0));
+      if (quota - (member.quota || 0) > free) return json({ error: `Solo tienes ${expCount(Math.max(0, free))} libres para repartir.` }, 400);
+      await env.DB.batch([env.DB.prepare("UPDATE users SET quota = ? WHERE id = ?").bind(quota, member.id), fitExperiences(env, member.email, quota, 0)]);
+      return json({ ok: true });
+    }
+    if (M === "DELETE") {   // leaves the team: becomes a free account of its own
+      await env.DB.batch([env.DB.prepare("UPDATE users SET owner_id = NULL, quota = NULL WHERE id = ?").bind(member.id), fitExperiences(env, member.email, PLANS.gratis.exp, PLANS.gratis.days)]);
+      return json({ ok: true });
+    }
+    return json({ error: "No encontrado" }, 404);
   }
 
   // ---- support from the dashboard: the message goes with the account details; paid plans are marked first ----
@@ -455,16 +509,18 @@ async function api(request, env, ctx, url) {
     if (path === "/api/admin/users" && M === "GET") {
       const q = (url.searchParams.get("q") || "").trim().toLowerCase().slice(0, 80);
       const { results } = await env.DB.prepare(`SELECT u.id, u.email, u.name, u.verified, u.created, u.plan, u.plan_until, u.plan_note, u.stripe_status, u.stripe_mode,
+          u.owner_id, u.quota, u.extra_exp, o.plan AS o_plan, o.plan_until AS o_until, o.name AS o_name, o.email AS o_email,
+          (SELECT COUNT(*) FROM users t WHERE t.owner_id = u.id) AS team,
           (SELECT COUNT(*) FROM experiences e WHERE e.email = u.email AND e.paused = 0 AND e.expires > ?1) AS active,
           (SELECT COUNT(*) FROM experiences e WHERE e.email = u.email AND e.paused = 1 AND e.expires > ?1) AS paused,
           (SELECT COALESCE(SUM(views), 0) FROM experiences e WHERE e.email = u.email) AS views
-        FROM users u WHERE (?2 = '' OR instr(lower(u.email), ?2) > 0 OR instr(lower(u.name), ?2) > 0)
+        FROM users u LEFT JOIN users o ON o.id = u.owner_id WHERE (?2 = '' OR instr(lower(u.email), ?2) > 0 OR instr(lower(u.name), ?2) > 0)
         ORDER BY (COALESCE(u.plan, 'gratis') != 'gratis') DESC, u.created DESC LIMIT 300`).bind(now, q).all();
       const totals = await env.DB.prepare(`SELECT (SELECT COUNT(*) FROM users WHERE verified = 1) AS users,
           (SELECT COUNT(*) FROM users WHERE COALESCE(plan, 'gratis') != 'gratis') AS paid,
           (SELECT COUNT(*) FROM experiences WHERE paused = 0 AND expires > ?1) AS experiences,
           (SELECT COALESCE(SUM(views), 0) FROM experiences) AS views`).bind(now).first();
-      return json({ users: results.map(u => ({ ...u, effective: planOf(u).id })), totals, plans: PLANS });
+      return json({ users: results.map(u => { const P = planOf(u); return { ...u, effective: P.id, limit: P.exp }; }), totals, plans: PLANS });
     }
     if (path === "/api/admin/experiences" && M === "GET") {
       const { results } = await env.DB.prepare("SELECT * FROM experiences WHERE email = ? AND expires > ? ORDER BY paused, updated DESC LIMIT 1000").bind(normEmail(url.searchParams.get("email")), now).all();
@@ -476,7 +532,7 @@ async function api(request, env, ctx, url) {
     }
     if (path === "/api/admin/coupons" && M === "POST") {
       const b = await request.json().catch(() => ({}));
-      if (!["basico", "pro", "escuela"].includes(b.plan)) return json({ error: "Elige el plan del cupón." }, 400);
+      if (!["basico", "pro", "empresarial"].includes(b.plan)) return json({ error: "Elige el plan del cupón." }, 400);
       const months = Math.round(Number(b.months)), uses = Math.round(Number(b.max_uses));
       if (!(months >= 1 && months <= 24)) return json({ error: "Los meses deben ser de 1 a 24." }, 400);
       if (!(uses >= 1 && uses <= 10000)) return json({ error: "Las veces de uso deben ser de 1 a 10,000." }, 400);
@@ -510,6 +566,9 @@ async function api(request, env, ctx, url) {
         until = Date.UTC(+d[1], +d[2] - 1, +d[3], 23, 59, 59) + 6 * 3600e3; // end of that day in Mexico (UTC−6)
         if (until < now) return json({ error: "Esa fecha ya pasó." }, 400);
       }
+      if (user.owner_id) return json({ error: "Esa cuenta es parte de un equipo Empresarial; su plan lo da su equipo." }, 409);
+      const extra = Math.max(0, Math.min(100000, Math.round(Number(b.extra) || 0)));
+      await env.DB.prepare("UPDATE users SET extra_exp = ? WHERE id = ?").bind(extra, user.id).run();
       await applyPlan(env, user, plan, until, String(b.note || "").trim().slice(0, 300));
       if (b.notify && plan !== "gratis") ctx.waitUntil(sendMail(env, user.email, `Tu plan ${PLANS[plan].name} de Vórtice VR está activo`, planMail(user, plan, until)));
       return json({ ok: true });
@@ -603,6 +662,10 @@ async function migrate(env) {
     env.DB.prepare("DROP TABLE experiences"),
     env.DB.prepare("ALTER TABLE experiences_new RENAME TO experiences"));
   if (steps.length) { try { await env.DB.batch(steps); } catch (e) { console.error("migración", e); /* another instance migrated first */ } }
+  if (!/\bowner_id\b/.test(sql.users)) {   // Empresarial teams: member → owner, experiences handed to it, extras, temporary password
+    try { await env.DB.batch(["owner_id INTEGER", "quota INTEGER", "extra_exp INTEGER DEFAULT 0", "temp_pw INTEGER DEFAULT 0"].map(c => env.DB.prepare(`ALTER TABLE users ADD COLUMN ${c}`))); }
+    catch (e) { console.error("migración equipos", e); }
+  }
   if (!/\bstripe_mode\b/.test(sql.users)) {   // Stripe subscription of the account (test or live keys: never mix their ids)
     try { await env.DB.batch(["stripe_customer", "stripe_sub", "stripe_status", "stripe_mode"].map(c => env.DB.prepare(`ALTER TABLE users ADD COLUMN ${c} TEXT`))); }
     catch (e) { console.error("migración stripe", e); }
@@ -660,20 +723,24 @@ async function sessionFor(env, request, user) {
 async function auth(request, env) {
   const t = bearer(request);
   if (!t) return null;
-  const row = await env.DB.prepare("SELECT u.id, u.email, u.name, u.verified, u.plan, u.plan_until, u.plan_note, u.stripe_customer, u.stripe_sub, u.stripe_status, u.stripe_mode, s.expires FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?").bind(await sha256hex(t)).first();
+  const row = await env.DB.prepare(`SELECT u.id, u.email, u.name, u.verified, u.plan, u.plan_until, u.plan_note, u.stripe_customer, u.stripe_sub, u.stripe_status, u.stripe_mode,
+      u.owner_id, u.quota, u.extra_exp, u.temp_pw, o.plan AS o_plan, o.plan_until AS o_until, o.name AS o_name, o.email AS o_email, s.expires
+    FROM sessions s JOIN users u ON u.id = s.user_id LEFT JOIN users o ON o.id = u.owner_id WHERE s.token = ?`).bind(await sha256hex(t)).first();
   return row && row.expires > Date.now() && row.verified ? row : null;
 }
 async function account(env, request, user) {
   const { results } = await env.DB.prepare("SELECT * FROM experiences WHERE email = ? AND expires > ? ORDER BY paused, created DESC").bind(user.email, Date.now()).all();
-  const plan = planOf(user);
-  return { user: { name: user.name, email: user.email }, experiences: results.map(r => ownerExp(r, request, env)), plan, limit: plan.exp, admin: isAdmin(env, user) || undefined, billing: billingInfo(env, user) };
+  const plan = planOf(user), lim = await limitOf(env, user, plan);
+  const team = plan.member ? { role: "member", owner: plan.owner } : plan.seats ? { role: "owner", seats: plan.seats, total: plan.exp, mine: lim } : undefined;
+  return { user: { name: user.name, email: user.email }, experiences: results.map(r => ownerExp(r, request, env)), plan, limit: lim, team,
+    tempPassword: !!user.temp_pw || undefined, admin: isAdmin(env, user) || undefined, billing: billingInfo(env, user) };
 }
 
 // ---------- daily stats and admin analytics ----------
 const today = () => new Date(Date.now() - 6 * 3600e3).toISOString().slice(0, 10);   // Mexico (UTC−6)
 const bump = (env, field) => env.DB.prepare(`INSERT INTO stats (day, ${field}) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET ${field} = ${field} + 1`).bind(today());
 function addMonths(t, n) { const d = new Date(t); d.setUTCMonth(d.getUTCMonth() + n); return d.getTime(); }
-const PLAN_RANK = { gratis: 0, basico: 1, pro: 2, escuela: 3 };
+const PLAN_RANK = { gratis: 0, basico: 1, pro: 2, empresarial: 3, escuela: 3 };
 // What matters to run the platform: accounts and growth, paying plans and monthly income, experiences and views,
 // a 30-day daily series, and the most viewed experiences. About 10 queries.
 async function adminStats(env, request) {
@@ -688,17 +755,17 @@ async function adminStats(env, request) {
   ]);
   const a = acc.results[0], e = exps.results[0];
   // paying accounts by plan; monthly income: Stripe (yearly ÷ 12) + plans activated by hand; courtesy codes are $0
-  const byPlan = { basico: 0, pro: 0, escuela: 0 }, kind = { stripe: 0, manual: 0, cortesia: 0 }; let mrr = 0;
+  const byPlan = { basico: 0, pro: 0, empresarial: 0, escuela: 0 }, kind = { stripe: 0, manual: 0, cortesia: 0 }; let mrr = 0;
   for (const u of plans.results) {
     if (!PLANS[u.plan]) continue; byPlan[u.plan] = (byPlan[u.plan] || 0) + 1;
     const note = u.plan_note || "";
     if (/^Cupón/.test(note)) { kind.cortesia++; continue; }
-    if (/^Stripe/.test(note) && ["active", "trialing", "past_due"].includes(u.stripe_status)) { kind.stripe++; mrr += /· anual$/.test(note) ? PLANS[u.plan].price * YEAR_MONTHS / 12 : PLANS[u.plan].price; }
+    if (/^Stripe/.test(note) && ["active", "trialing", "past_due"].includes(u.stripe_status)) { kind.stripe++; mrr += /· anual$/.test(note) ? yearPrice(u.plan) / 12 : PLANS[u.plan].price; }
     else { kind.manual++; mrr += PLANS[u.plan].price; }
   }
   const series = []; const map = Object.fromEntries(days.results.map(r => [r.day, r]));
   for (let i = 29; i >= 0; i--) { const day = new Date(now - 6 * 3600e3 - i * 864e5).toISOString().slice(0, 10), r = map[day] || {}; series.push({ day, views: r.views || 0, signups: r.signups || 0, publishes: r.publishes || 0, contacts: r.contacts || 0 }); }
-  const paid = byPlan.basico + byPlan.pro + byPlan.escuela;
+  const paid = byPlan.basico + byPlan.pro + byPlan.empresarial + byPlan.escuela;
   return {
     users: a.users || 0, new7: a.new7 || 0, new30: a.new30 || 0, paid, byPlan, kind, mrr: Math.round(mrr),
     conversion: a.users ? Math.round(1000 * (paid - kind.cortesia) / a.users) / 10 : 0,
@@ -711,9 +778,22 @@ async function adminStats(env, request) {
 
 // ---------- plans ----------
 // the plan in effect: a paid plan whose "paid until" date passed counts as free (the daily cron then applies it)
+// A team member (owner_id) has its owner's plan while it lasts, with the experiences handed to it (quota).
+// exp of an owner here is the plan total; what the owner can use itself is limitOf().
 function planOf(user) {
-  const id = PLANS[user.plan] && (!user.plan_until || user.plan_until > Date.now()) ? user.plan : "gratis";
-  return { id, ...PLANS[id], until: id === "gratis" ? null : user.plan_until || null };
+  const live = (p, until) => PLANS[p] && (!until || until > Date.now());
+  if (user.owner_id) {
+    if (live(user.o_plan, user.o_until) && PLANS[user.o_plan].seats) return { id: user.o_plan, ...PLANS[user.o_plan], exp: user.quota || 0, until: user.o_until || null, member: true, owner: user.o_name || user.o_email || "" };
+    return { id: "gratis", ...PLANS.gratis, until: null, member: true, owner: user.o_name || user.o_email || "" };
+  }
+  const id = live(user.plan, user.plan_until) ? user.plan : "gratis";
+  return { id, ...PLANS[id], exp: PLANS[id].exp + (id === "gratis" ? 0 : user.extra_exp || 0), until: id === "gratis" ? null : user.plan_until || null };
+}
+// experiences the account itself can have active: a team owner keeps what it has not handed out
+async function limitOf(env, user, P) {
+  if (!P.seats || P.member) return P.exp;
+  const r = await env.DB.prepare("SELECT COALESCE(SUM(quota), 0) AS q FROM users WHERE owner_id = ?").bind(user.id).first();
+  return Math.max(0, P.exp - r.q);
 }
 const expCount = n => n === 1 ? "1 experiencia" : `${n.toLocaleString("es-MX")} experiencias`;
 const isAdmin = (env, user) => !!user && (env.ADMIN_EMAILS || ADMINS_DEFAULT).split(",").map(s => s.trim().toLowerCase()).includes(user.email);
@@ -722,16 +802,28 @@ const isAdmin = (env, user) => !!user && (env.ADMIN_EMAILS || ADMINS_DEFAULT).sp
 // 30 days (or what they had left). The rest are paused: on a paid plan they are kept; on the free plan they are deleted
 // after 30 days unless the plan goes up again.
 async function applyPlan(env, user, plan, until, note) {
-  const P = PLANS[plan], now = Date.now();
+  const P = PLANS[plan];
+  const [{ results: [u] }, { results: members }] = await env.DB.batch([
+    env.DB.prepare("SELECT extra_exp FROM users WHERE id = ?").bind(user.id),
+    env.DB.prepare("SELECT id, email, quota FROM users WHERE owner_id = ?").bind(user.id),
+  ]);
+  const total = P.exp + (plan === "gratis" ? 0 : (u && u.extra_exp) || 0), handed = members.reduce((n, x) => n + (x.quota || 0), 0);
+  // a team plan: each member keeps its quota and the owner the rest; any other plan: members fall back to Gratis (1)
   await env.DB.batch([
     env.DB.prepare("UPDATE users SET plan = ?, plan_until = ?, plan_note = ? WHERE id = ?").bind(plan, until, note || null, user.id),
-    env.DB.prepare(`UPDATE experiences SET
+    fitExperiences(env, user.email, P.seats ? Math.max(0, total - handed) : total, P.days),
+    ...members.map(x => P.seats ? fitExperiences(env, x.email, x.quota || 0, 0) : fitExperiences(env, x.email, PLANS.gratis.exp, PLANS.gratis.days)),
+  ]);
+}
+// The first `limit` experiences (active first, most recently edited) stay active; the rest are paused (see applyPlan).
+function fitExperiences(env, email, limit, days) {
+  const now = Date.now();
+  return env.DB.prepare(`UPDATE experiences SET
         paused = CASE WHEN r.rn <= ?1 THEN 0 ELSE 1 END,
         expires = CASE WHEN r.rn <= ?1 THEN (CASE WHEN ?2 = 0 THEN ?3 WHEN experiences.paused = 0 AND experiences.expires < ?3 THEN experiences.expires ELSE ?4 END)
                        WHEN ?2 = 0 THEN ?3 WHEN experiences.paused = 1 AND experiences.expires < ?3 THEN experiences.expires ELSE ?5 END
       FROM (SELECT slug, ROW_NUMBER() OVER (ORDER BY paused, updated DESC, slug) AS rn FROM experiences WHERE email = ?6 AND expires > ?7) AS r
-      WHERE experiences.slug = r.slug`).bind(P.exp, P.days, FAR, now + P.days * 864e5, now + LIMITS.pausedDays * 864e5, user.email, now),
-  ]);
+      WHERE experiences.slug = r.slug`).bind(limit, days, FAR, now + days * 864e5, now + LIMITS.pausedDays * 864e5, email, now);
 }
 
 // ---------- payments: Stripe subscriptions for Básico and Pro (monthly or yearly, IVA included) ----------
@@ -741,7 +833,7 @@ async function applyPlan(env, user, plan, until, note) {
 // A paid month is "paid until" the period end + STRIPE_GRACE_DAYS; if a renewal fails and Stripe gives up, the daily
 // cron moves the account back to Gratis on its own. With test keys only admins can pay (the preview shares the database).
 // lookup keys per plan and period; a year costs 10 months (2 months free)
-const STRIPE_PRICES = { basico: { mes: "vvr_basico_mes", anio: "vvr_basico_anual" }, pro: { mes: "vvr_pro_mes", anio: "vvr_pro_anual" } };
+const STRIPE_PRICES = { basico: { mes: "vvr_basico_mes", anio: "vvr_basico_anual" }, pro: { mes: "vvr_pro_mes", anio: "vvr_pro_anual" }, empresarial: { mes: "vvr_empresarial_mes", anio: "vvr_empresarial_anual" } };
 const YEAR_MONTHS = 10;
 const STRIPE_PERIODS = { mes: "month", anio: "year" };
 const stripeKeys = () => Object.entries(STRIPE_PRICES).flatMap(([plan, k]) => Object.entries(k).map(([period, key]) => ({ plan, period, key })));
@@ -749,7 +841,7 @@ const STRIPE_GRACE_DAYS = 7;
 const STRIPE_LIVE = ["active", "trialing", "past_due"];
 const stripeMode = env => String(env.STRIPE_SECRET_KEY || "").startsWith("sk_live_") ? "live" : "test";
 function billingInfo(env, user) {
-  if (!env.STRIPE_SECRET_KEY) return { enabled: false };
+  if (!env.STRIPE_SECRET_KEY || user.owner_id) return { enabled: false };   // team members do not pay: their owner does
   const mode = stripeMode(env), mine = user.stripe_mode === mode;
   return { enabled: mode === "live" || isAdmin(env, user), test: mode === "test", subscribed: mine && STRIPE_LIVE.includes(user.stripe_status), pastDue: mine && user.stripe_status === "past_due", period: /· anual$/.test(user.plan_note || "") ? "anio" : "mes", yearMonths: YEAR_MONTHS };
 }
@@ -776,7 +868,7 @@ function flatParams(o, pre = "", out = []) {
 const priceCache = {};
 // the plan's price for a period (mes | anio); created if missing, and replaced if PLANS changed its amount
 async function stripePrice(env, plan, period = "mes") {
-  const key = STRIPE_PRICES[plan][period], ck = stripeMode(env) + key, amount = PLANS[plan].price * (period === "anio" ? YEAR_MONTHS : 1) * 100;
+  const key = STRIPE_PRICES[plan][period], ck = stripeMode(env) + key, amount = (period === "anio" ? yearPrice(plan) : PLANS[plan].price) * 100;
   if (priceCache[ck]) return priceCache[ck];
   const found = (await stripe(env, "GET", "prices", { lookup_keys: [key], active: "true", limit: 1 })).data[0];
   // the product is shared by both periods of a plan: reuse the one of the other period if it exists
@@ -895,6 +987,11 @@ const linkMail = e => shell(`<h1 style="font-size:20px">¡Tu experiencia de real
 <p>Para editarla o borrarla entra a tu cuenta en <a href="https://vorticevr.mx/cuenta/" style="color:#d2b8ff">vorticevr.mx/cuenta</a>.</p>
 <p style="color:#a99bcb">${e.forever ? "Disponible mientras tu plan esté activo." : `Disponible hasta el ${fecha(e.expires)}.`}</p>`);
 const fecha = t => new Date(t).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
+const teamMail = (owner, name, email, pw, quota, origin) => shell(`<h1 style="font-size:20px">¡Hola, ${esc(name)}! Ya tienes tu cuenta</h1>
+<p><b>${esc(owner.name || owner.email)}</b> te agregó a su equipo en Vórtice VR para que crees experiencias de realidad aumentada${quota ? ` (tienes ${expCount(quota)} disponibles)` : ""}.</p>
+<p>Entra en <a href="${esc(origin)}/cuenta/" style="color:#ffbe55;font-weight:700">${esc(origin.replace(/^https?:\/\//, ""))}/cuenta</a> con:</p>
+<p style="background:#1b0a36;border-radius:10px;padding:14px;font-size:16px">Correo: <b>${esc(email)}</b><br>Contraseña temporal: <b style="font-family:monospace;letter-spacing:.06em">${esc(pw)}</b></p>
+<p>Al entrar, cámbiala por una tuya en Mi cuenta → Cambiar contraseña.</p>`);
 const planMail = (user, plan, until) => shell(`<h1 style="font-size:20px">¡Tu plan ${PLANS[plan].name} está activo!</h1>
 <p>Hola ${esc(user.name || "")}, ya puedes tener hasta <b>${expCount(PLANS[plan].exp)}</b> activas al mismo tiempo, con videos de hasta ${PLANS[plan].videoMB} MB, sin fecha de vencimiento mientras tu plan esté vigente${PLANS[plan].brand ? "" : " y sin la pantalla de Vórtice VR al abrirlas"}.</p>
 ${until ? `<p>Pagado hasta el <b>${fecha(until)}</b>.</p>` : ""}

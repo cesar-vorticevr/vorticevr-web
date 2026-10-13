@@ -347,19 +347,20 @@ $("publish").addEventListener("click",async()=>{
   try{
     const r=await VVR.call("me"); S.email=r.user.email;
     const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1,days:30,videoMB:25};
+    const LIM=r.limit??P.exp, member=r.team&&r.team.role==="member", more=member?"pide más a quien administra tu equipo":"mejora tu plan";
     MAX_MB=P.videoMB;
     $("vidHint").textContent=`Hasta ${P.videoMB} MB. MP4 funciona en todos los celulares.`;
-    if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name} · hasta ${P.exp.toLocaleString("es-MX")} experiencias`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
+    if(P.id!=="gratis"){ $("kick").textContent=member?`Equipo ${P.name} · ${LIM.toLocaleString("es-MX")} experiencias para ti`:`Plan ${P.name} · hasta ${LIM.toLocaleString("es-MX")} experiencias`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
     const active=r.experiences.filter(x=>!x.paused);
     const exp=ed?r.experiences.find(x=>x.slug===ed):null;
     const block=(title,text,editSlug)=>{ document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); $("full").hidden=false; document.querySelector(".side").hidden=true;
       $("fullTitle").textContent=title; $("fullText").textContent=text; $("fullEdit").hidden=!editSlug; if(editSlug) $("fullEdit").href="?editar="+encodeURIComponent(editSlug); };
-    const inc=P.exp===1?"una experiencia a la vez":`${P.exp.toLocaleString("es-MX")} experiencias activas`;
-    if(exp&&exp.paused) block("Esta experiencia está pausada",`Tu plan ${P.name} incluye ${inc}. Mejora tu plan para reactivarla, o bórrala desde tu cuenta.`,null);
+    const inc=LIM===1?"una experiencia a la vez":`${LIM.toLocaleString("es-MX")} experiencias activas`, tiene=member?`Tu equipo te asignó ${inc}`:`Tu plan ${P.name} incluye ${inc}`;
+    if(exp&&exp.paused) block("Esta experiencia está pausada",`${tiene}. Borra otra o ${more} para reactivarla.`,null);
     else if(exp) editing(exp);
-    else if(active.length>=P.exp) P.exp===1
-      ? block("Ya tienes tu experiencia",`Tu plan ${P.name} incluye ${inc}. Puedes editarla, borrarla para crear otra, o mejorar tu plan.`,active[0].slug)
-      : block("Ya usaste todas tus experiencias",`Tu plan ${P.name} incluye ${inc}. Edita o borra una desde tu cuenta, o mejora tu plan.`,null);
+    else if(active.length>=LIM) LIM===1
+      ? block("Ya tienes tu experiencia",`${tiene}. Puedes editarla, borrarla para crear otra, o ${more}.`,active[0]&&active[0].slug)
+      : block("Ya usaste todas tus experiencias",`${tiene}. Edita o borra una desde tu cuenta, o ${more}.`,null);
     else tour=true;   // creating a new one: the first time, the guided tour
   }catch(e){ if(e.status===401){ toLogin(); return; } }
   check(); updatePreview();

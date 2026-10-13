@@ -48,7 +48,7 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
 .meta{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:.85rem;color:var(--mute);margin-top:8px}
 .meta b{color:var(--ink)}
 .tag{display:inline-block;font-family:var(--fd);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;border-radius:999px;padding:3px 10px;border:1px solid var(--line2);color:var(--mute);vertical-align:middle}
-.tag.basico{border-color:var(--lav);color:var(--lav)} .tag.pro{border-color:var(--sun);color:var(--sun)} .tag.escuela{border-color:var(--ok);color:var(--ok)}
+.tag.basico{border-color:var(--lav);color:var(--lav)} .tag.pro{border-color:var(--sun);color:var(--sun)} .tag.empresarial{border-color:var(--ok);color:var(--ok)} .tag.escuela{border-color:var(--ok);color:var(--ok)}
 .tag.warn{border-color:var(--bad);color:var(--bad)}
 .acts2{display:flex;gap:8px;flex-wrap:wrap}
 .form{border-top:1px solid var(--line);margin-top:14px;padding-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px;align-items:end}
@@ -127,7 +127,7 @@ table.top td.n{text-align:right;font-variant-numeric:tabular-nums}
         <h2>Crear cupón de cortesía</h2>
         <p class="note">Da el plan que elijas por los meses que elijas. Cada cuenta lo puede usar una vez; tú decides cuántas cuentas en total. Se canjea en Mi cuenta → "Tengo un código". Al terminar la cortesía, la cuenta regresa sola a Gratis.</p>
         <form class="form cform" id="fCoupon">
-          <label>Plan<select name="plan"><option value="basico">Básico</option><option value="pro" selected>Pro</option><option value="escuela">Escuela</option></select></label>
+          <label>Plan<select name="plan"><option value="basico">Básico</option><option value="pro" selected>Pro</option><option value="empresarial">Empresarial</option></select></label>
           <label>Meses gratis<input name="months" type="number" min="1" max="24" value="1" required></label>
           <label>Veces que se puede usar<input name="max_uses" type="number" min="1" max="10000" value="10" required></label>
           <label>Código (opcional)<input name="code" maxlength="30" placeholder="Se genera solo" autocapitalize="characters"></label>
@@ -144,9 +144,9 @@ table.top td.n{text-align:right;font-variant-numeric:tabular-nums}
     <div class="stats" id="stats"></div>
 
     <details class="card how">
-      <summary><b>Cómo activar un plan pagado por fuera (escuelas, transferencias)</b></summary>
+      <summary><b>Cómo activar un plan pagado por fuera (transferencias, escuelas, empresas)</b></summary>
       <ol>
-        <li>La persona responsable crea su cuenta en <b>vorticevr.mx/cuenta</b> con el correo de la escuela y la confirma con el código.</li>
+        <li>La persona responsable crea su cuenta en <b>vorticevr.mx/cuenta</b> con su correo y la confirma con el código. En el plan Empresarial, después ella misma crea las cuentas de su equipo en Mi cuenta → Mi equipo.</li>
         <li>Recibes el pago (transferencia, efectivo, factura).</li>
         <li>Aquí búscala por correo → <b>Cambiar plan</b> → elige el plan → <b>Pagado hasta</b> (+1 mes o +1 año) → escribe una nota (cómo pagó, factura) → <b>Guardar</b>.</li>
         <li>Le llega un correo de aviso (si dejas la casilla marcada). Sus experiencias quedan activas sin vencimiento hasta esa fecha.</li>
@@ -181,11 +181,11 @@ async function load(q=""){
 function userCard(u){
   const el=document.createElement("article"); el.className="card user";
   const P=PLANS[u.effective]||PLANS.gratis, lapsed=u.plan&&u.plan!=="gratis"&&u.effective==="gratis";
-  el.innerHTML=`<div class="uhead"><div><h2>${esc(u.name||"(sin nombre)")} <span class="tag ${u.effective}">${esc(P.name)}</span>${u.verified?"":' <span class="tag warn">Sin confirmar</span>'}${lapsed?' <span class="tag warn">Venció</span>':""}${["active","trialing"].includes(u.stripe_status)?` <span class="tag pro">Stripe${u.stripe_mode==="test"?" (prueba)":""}</span>`:u.stripe_status==="past_due"?' <span class="tag warn">Pago pendiente</span>':""}</h2><div class="em">${esc(u.email)}</div></div>
-      <div class="acts2"><button class="btn sm primary" data-a="plan">Cambiar plan</button><button class="btn sm" data-a="exps">Ver experiencias</button></div></div>
-    <div class="meta"><span><b>${u.active}</b> de ${P.exp.toLocaleString("es-MX")} activas</span>${u.paused?`<span><b>${u.paused}</b> pausadas</span>`:""}<span><b>${Number(u.views||0).toLocaleString("es-MX")}</b> vistas</span>
+  el.innerHTML=`<div class="uhead"><div><h2>${esc(u.name||"(sin nombre)")} <span class="tag ${u.effective}">${esc(P.name)}</span>${u.verified?"":' <span class="tag warn">Sin confirmar</span>'}${lapsed?' <span class="tag warn">Venció</span>':""}${["active","trialing"].includes(u.stripe_status)?` <span class="tag pro">Stripe${u.stripe_mode==="test"?" (prueba)":""}</span>`:u.stripe_status==="past_due"?' <span class="tag warn">Pago pendiente</span>':""}${u.owner_id?` <span class="tag">Equipo de ${esc(u.o_name||u.o_email||"")}</span>`:""}${u.team?` <span class="tag empresarial">Equipo: ${u.team} cuentas</span>`:""}</h2><div class="em">${esc(u.email)}</div></div>
+      <div class="acts2">${u.owner_id?"":`<button class="btn sm primary" data-a="plan">Cambiar plan</button>`}<button class="btn sm" data-a="exps">Ver experiencias</button></div></div>
+    <div class="meta"><span><b>${u.active}</b> de ${Number(u.limit??P.exp).toLocaleString("es-MX")} activas</span>${u.extra_exp?`<span>+${u.extra_exp} extra</span>`:""}${u.paused?`<span><b>${u.paused}</b> pausadas</span>`:""}<span><b>${Number(u.views||0).toLocaleString("es-MX")}</b> vistas</span>
       ${u.plan_until&&u.effective!=="gratis"?`<span>Pagado hasta <b>${fmt(u.plan_until)}</b></span>`:""}<span>Cuenta desde ${fmt(u.created)}</span>${u.plan_note?`<span>Nota: ${esc(u.plan_note)}</span>`:""}</div>`;
-  el.querySelector("[data-a=plan]").addEventListener("click",()=>toggleForm(el,u));
+  const pb=el.querySelector("[data-a=plan]"); if(pb) pb.addEventListener("click",()=>toggleForm(el,u));
   el.querySelector("[data-a=exps]").addEventListener("click",()=>toggleExps(el,u));
   return el;
 }
@@ -194,7 +194,8 @@ function toggleForm(el,u){
   const old=el.querySelector(".form"); if(old){ old.remove(); return; }
   const f=document.createElement("div"); f.className="form";
   const until=u.plan_until&&u.plan_until>Date.now()?ymd(new Date(u.plan_until)):"";
-  f.innerHTML=`<label>Plan<select data-k="plan">${Object.entries(PLANS).map(([id,p])=>`<option value="${id}" ${id===u.effective?"selected":""}>${esc(p.name)} · ${p.exp.toLocaleString("es-MX")} exp.${p.price?" · $"+p.price.toLocaleString("es-MX"):""}</option>`).join("")}</select></label>
+  f.innerHTML=`<label>Plan<select data-k="plan">${Object.entries(PLANS).filter(([id,p])=>!p.legacy||id===u.effective).map(([id,p])=>`<option value="${id}" ${id===u.effective?"selected":""}>${esc(p.name)} · ${p.exp.toLocaleString("es-MX")} exp.${p.seats?" · "+p.seats+" cuentas":""}${p.price?" · $"+p.price.toLocaleString("es-MX"):""}</option>`).join("")}</select></label>
+    <label>Experiencias extra<input type="number" min="0" data-k="extra" value="${u.extra_exp||0}"></label>
     <label>Pagado hasta<input type="date" data-k="until" value="${until}"></label>
     <div class="quick"><button class="btn sm" type="button" data-m="1">+1 mes</button><button class="btn sm" type="button" data-m="12">+1 año</button><button class="btn sm" type="button" data-m="0">Sin fecha</button></div>
     <label class="wide">Nota (cómo pagó, factura, contacto)<input type="text" data-k="note" maxlength="300" value="${esc(u.plan_note||"")}"></label>
@@ -203,12 +204,12 @@ function toggleForm(el,u){
   const k=n=>f.querySelector(`[data-k=${n}]`), msg=(t,c)=>{ k("msg").className="msg "+(c||""); k("msg").textContent=t; };
   f.querySelectorAll("[data-m]").forEach(b=>b.addEventListener("click",()=>{ const m=+b.dataset.m; if(!m) k("until").value="";
     else { const base=k("until").value?new Date(k("until").value+"T12:00"):new Date(); base.setMonth(base.getMonth()+m); k("until").value=ymd(base); } warn(); }));
-  const warn=()=>{ const p=PLANS[k("plan").value]; const extra=u.active-p.exp;
+  const warn=()=>{ const p=PLANS[k("plan").value]; const extra=u.active-p.exp-(k("plan").value==="gratis"?0:+k("extra").value||0);
     msg(extra>0?`Se pausarán ${extra} de sus experiencias (las menos recientes).`:k("plan").value!=="gratis"&&!k("until").value?"Sin fecha: el plan queda activo hasta que lo cambies.":"", extra>0?"bad":""); };
-  k("plan").addEventListener("change",warn); k("until").addEventListener("change",warn); warn();
+  k("plan").addEventListener("change",warn); k("until").addEventListener("change",warn); k("extra").addEventListener("input",warn); warn();
   k("plan").addEventListener("change",()=>{ k("notify").checked=k("plan").value!=="gratis"; });
   f.querySelector("[data-a=save]").addEventListener("click",async e=>{ e.target.disabled=true; msg("Guardando…");
-    try{ await VVR.call("admin/plan",{json:{email:u.email,plan:k("plan").value,until:k("plan").value==="gratis"?null:k("until").value||null,note:k("note").value,notify:k("notify").checked}});
+    try{ await VVR.call("admin/plan",{json:{email:u.email,plan:k("plan").value,until:k("plan").value==="gratis"?null:k("until").value||null,note:k("note").value,extra:+k("extra").value||0,notify:k("notify").checked}});
       msg("Listo.","ok"); setTimeout(()=>load($("q").value.trim()),700); }
     catch(err){ msg(err.message,"bad"); e.target.disabled=false; } });
   el.appendChild(f);
@@ -240,7 +241,7 @@ function drawCharts(s){
 async function loadStats(){
   const s=lastStats=await VVR.call("admin/stats");
   const k=[[nf(s.users),"cuentas confirmadas",`+${nf(s.new7)} en 7 días · +${nf(s.new30)} en 30`],
-    [nf(s.paid),"con plan pagado",`Básico ${s.byPlan.basico} · Pro ${s.byPlan.pro} · Escuela ${s.byPlan.escuela}`],
+    [nf(s.paid),"con plan pagado",`Básico ${s.byPlan.basico} · Pro ${s.byPlan.pro} · Empresarial ${s.byPlan.empresarial||0}${s.byPlan.escuela?" · Escuela "+s.byPlan.escuela:""}`],
     ["$"+nf(s.mrr),"ingreso mensual estimado",`Stripe ${s.kind.stripe} · a mano ${s.kind.manual} · cortesías ${s.kind.cortesia}`],
     [s.conversion+"%","de cuentas que pagan","sin contar cortesías"],
     [nf(s.experiences.active),"experiencias activas",`${nf(s.experiences.new30)} nuevas en 30 días · ${nf(s.experiences.paused)} pausadas`],

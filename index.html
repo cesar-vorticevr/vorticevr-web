@@ -110,8 +110,7 @@ header.top nav a:hover{color:var(--ink)}
 .uses{display:flex;flex-direction:column;gap:14px;margin-bottom:52px}
 .uses .chips{display:flex;flex-wrap:wrap;gap:10px}
 .uses .chip{font-size:.9rem;padding:9px 16px}
-.mkplans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:16px}
-@media (max-width:820px){.mkplans{grid-template-columns:minmax(0,1fr)}}
+.mkplans{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:16px;margin-bottom:16px}
 .mkplan{padding:22px;border-radius:16px;border:1px solid var(--line);background:linear-gradient(170deg,rgba(40,16,74,.5),rgba(12,5,26,.6))}
 /* Pro: a rotating gold-violet border and a breathing glow, so it is the one that catches the eye */
 @property --pa{syntax:"<angle>";initial-value:0deg;inherits:false}
@@ -410,8 +409,9 @@ footer .legal a:hover{color:var(--ink)}
       <div class="mkplan reveal"><h3 data-en="Free">Gratis</h3><div class="price">$0</div><p data-en="1 image with video · lasts 30 days · up to 1,000 views">1 imagen con video · dura 30 días · hasta 1,000 vistas</p></div>
       <div class="mkplan reveal"><h3 data-en="Basic">Básico</h3><div class="price pm">$199 <small data-en="MXN / month, VAT included">MXN al mes, IVA incluido</small></div><div class="price pa">$1,990 <small data-en="MXN / year, VAT included">MXN al año, IVA incluido</small></div><p class="save pa" data-en="Like $166 a month · you save $398">Equivale a $166 al mes · ahorras $398</p><p data-en="5 images · change them whenever you want · no expiration while you pay">5 imágenes · cámbialas cuando quieras · sin vencimiento mientras pagues</p></div>
       <div class="mkplan reveal hot"><span class="pop" data-en="Most popular">Más popular</span><h3>Pro</h3><div class="price pm">$499 <small data-en="MXN / month, VAT included">MXN al mes, IVA incluido</small></div><div class="price pa">$4,990 <small data-en="MXN / year, VAT included">MXN al año, IVA incluido</small></div><p class="save pa" data-en="Like $416 a month · you save $998">Equivale a $416 al mes · ahorras $998</p><p data-en="50 images · bigger videos · opens straight to your experience, without the Vórtice VR screen">50 imágenes · videos más grandes · abre directo tu experiencia, sin la pantalla de Vórtice VR</p></div>
+      <div class="mkplan reveal"><h3 data-en="Business">Empresarial</h3><div class="price pm">$999 <small data-en="MXN / month, VAT included">MXN al mes, IVA incluido</small></div><div class="price pa">$9,999 <small data-en="MXN / year, VAT included">MXN al año, IVA incluido</small></div><p class="save pa" data-en="Like $833 a month · you save $1,989">Equivale a $833 al mes · ahorras $1,989</p><p data-en="150 images to share · up to 15 accounts for your team, you decide how many each one gets · for schools and companies">150 imágenes para repartir · hasta 15 cuentas para tu equipo, tú decides cuántas tiene cada una · para escuelas y empresas</p></div>
     </div>
-    <p class="mknote" data-en="School or company? &lt;a href=&quot;#contacto&quot; data-tema=&quot;escuela&quot;&gt;Ask us about a plan for you&lt;/a&gt;.">¿Escuela o empresa? <a href="#contacto" data-tema="escuela">Pregúntanos por un plan a tu medida</a>.</p>
+    <p class="mknote" data-en="Need something bigger? &lt;a href=&quot;#contacto&quot; data-tema=&quot;empresa&quot;&gt;Ask us about a custom plan&lt;/a&gt;.">¿Necesitas algo más grande? <a href="#contacto" data-tema="empresa">Pregúntanos por un plan a tu medida</a>.</p>
   </div></section>
 
   <section id="experiencias"><div class="wrap">

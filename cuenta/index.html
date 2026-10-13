@@ -77,6 +77,27 @@ input:focus{border-color:var(--lav);outline:none}
 #passBox{max-width:440px;margin-bottom:18px}
 #helpBox{max-width:560px;margin-bottom:18px}
 #codeBox{max-width:440px;margin-bottom:18px}
+#teamBox{margin-bottom:18px}
+.tsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0 16px}
+.tsum div{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:rgba(5,2,11,.5)}
+.tsum b{display:block;font-family:var(--fd);font-size:1.35rem}
+.tsum span{font-size:.78rem;color:var(--mute)}
+.tm{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;padding:12px 0;border-top:1px solid var(--line)}
+.tm .who{flex:1 1 200px;min-width:0}
+.tm .who b{display:block;overflow-wrap:anywhere}
+.tm .who span{font-size:.82rem;color:var(--mute);overflow-wrap:anywhere}
+.tm .q{display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--mute)}
+.tm .q input{width:80px;padding:8px 10px}
+.tm .btn{padding:8px 12px;font-size:.7rem}
+.tm .tag{font-size:.65rem}
+.tsub{font-family:var(--fd);font-size:1rem;margin:18px 0 4px}
+.tform{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:4px 12px;align-items:end}
+.tform label.f{display:flex;flex-direction:column;margin:8px 0 0}
+.tform .chk{display:flex;gap:8px;align-items:center;font-size:.9rem;color:var(--ink);margin:12px 0 4px}
+.tform .chk input{width:auto}
+.tform .btn{margin-top:10px}
+.pwshow{margin-top:12px;padding:14px 16px;border-radius:12px;border:1px solid rgba(255,190,85,.6);background:rgba(255,190,85,.08)}
+.pwshow code{font-family:var(--fm);font-size:1.05rem;color:var(--sun);letter-spacing:.05em}
 #cCodeIn{text-transform:uppercase;letter-spacing:.08em;font-family:var(--fm)}
 select,textarea{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:12px}
 textarea{resize:vertical}
@@ -158,6 +179,7 @@ dialog .row{justify-content:space-between}
         <button type="button" id="pUpgrade">Cambiar de plan</button>
         <button type="button" id="pManage" hidden>Administrar suscripción</button>
         <a id="pAdmin" href="../admin/" hidden>Administración</a>
+        <button type="button" id="pTeamBtn" hidden>Mi equipo</button>
         <button type="button" id="pCodeBtn">Tengo un código</button>
         <button type="button" id="pHelpBtn">Ayuda y soporte</button>
         <button type="button" id="pPassBtn">Cambiar contraseña</button>
@@ -234,6 +256,22 @@ dialog .row{justify-content:space-between}
       <p class="note" id="pNote"></p>
     </section>
 
+    <section class="card" id="teamBox" hidden>
+      <div class="phead"><h2>Mi equipo</h2><button class="btn sm" id="teamClose" type="button">Cerrar</button></div>
+      <div class="tsum" id="teamSum"></div>
+      <div id="teamList"></div>
+      <h3 class="tsub">Agregar una cuenta</h3>
+      <form id="fTeam" class="tform">
+        <label class="f">Nombre<input name="name" maxlength="60" required placeholder="Ej. Maestra Ana López"></label>
+        <label class="f">Correo<input name="email" type="email" maxlength="190" required placeholder="ana@tuescuela.mx"></label>
+        <label class="f">Experiencias para esta cuenta<input name="quota" type="number" min="0" value="5" required></label>
+        <label class="chk"><input name="notify" type="checkbox" checked> Enviarle su acceso por correo</label>
+        <button class="btn sun" type="submit">Crear cuenta</button>
+      </form>
+      <div class="msg" id="mTeam"></div>
+      <div class="pwshow" id="teamPw" hidden></div>
+    </section>
+
     <section class="card" id="codeBox" hidden>
       <div class="phead"><h2>Tengo un código</h2><button class="btn sm" id="codeClose" type="button">Cerrar</button></div>
       <p class="note">Si te dieron un código de cortesía, escríbelo aquí para activar tu plan.</p>
@@ -283,8 +321,12 @@ dialog .row{justify-content:space-between}
 const $=id=>document.getElementById(id);
 const Q=new URLSearchParams(location.search);
 const NEXT=Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":null;
-// public plans (Escuela is sold in person and activated from /admin/)
-const PLANS=[["gratis","Gratis",0,["1 experiencia","Videos de hasta 25 MB","Dura 30 días","Hasta 1,000 vistas","Abre con la pantalla de Vórtice VR"]],["basico","Básico",199,["5 experiencias","Cámbialas cuando quieras","Videos de hasta 25 MB","Sin vencimiento mientras pagues","Abre con la pantalla de Vórtice VR"]],["pro","Pro",499,["50 experiencias","Cámbialas cuando quieras","Videos de hasta 50 MB","Sin vencimiento mientras pagues","Sin la pantalla de Vórtice VR: abre directo tu experiencia"]]];
+// public plans: [id, name, monthly price, yearly price, what it includes] (a year is ~10 months; IVA included)
+const PLANS=[["gratis","Gratis",0,0,["1 experiencia","Videos de hasta 25 MB","Dura 30 días","Hasta 1,000 vistas","Abre con la pantalla de Vórtice VR"]],
+  ["basico","Básico",199,1990,["5 experiencias","Cámbialas cuando quieras","Videos de hasta 25 MB","Sin vencimiento mientras pagues","Abre con la pantalla de Vórtice VR"]],
+  ["pro","Pro",499,4990,["50 experiencias","Cámbialas cuando quieras","Videos de hasta 50 MB","Sin vencimiento mientras pagues","Sin la pantalla de Vórtice VR: abre directo tu experiencia"]],
+  ["empresarial","Empresarial",999,9999,["150 experiencias para repartir","Hasta 15 cuentas para tu equipo","Tú decides cuántas tiene cada cuenta","Videos de hasta 50 MB","Soporte prioritario"]]];
+const LEGACY={escuela:["escuela","Escuela",1500,15000,["1,000 experiencias","Cámbialas cuando quieras","Videos de hasta 50 MB"]]};
 const VIEWS=["vEntrar","vRegistro","vCodigo","vOlvide","vPanel"];
 function view(v){ VIEWS.forEach(x=>$(x).hidden=x!==v); scrollTo(0,0); const f=$(v).querySelector("input"); if(f&&v!=="vPanel") setTimeout(()=>f.focus(),50); }
 function msg(id,t,kind){ const m=$(id); m.className="msg"+(kind?" "+kind:""); m.textContent=t||""; }
@@ -356,39 +398,42 @@ function showPanel(data){
   // account menu (header): name, email, plan and settings, only when opened
   $("me").hidden=false; $("mName").textContent=user.name||""; $("mEmail").textContent=user.email;
   $("meAv").textContent=String(user.name||user.email||"?").trim().charAt(0).toUpperCase();
-  const active=experiences.filter(x=>!x.paused).length, full=active>=P.exp;
-  $("pPlanName").textContent=P.name; $("pAdmin").hidden=!data.admin; $("pManage").hidden=!B.subscribed;
-  $("pUse").textContent=`${nf(active)}/${nf(P.exp)} experiencias en uso`;
-  $("pMeter").classList.toggle("full",full); $("pMeter").firstElementChild.style.width=Math.min(100,Math.max(2,active/P.exp*100))+"%";
-  $("pPlan").textContent=`Videos de hasta ${P.videoMB} MB · `
+  const T=data.team||{}, member=T.role==="member", owner=T.role==="owner", lim=data.limit??P.exp;
+  const active=experiences.filter(x=>!x.paused).length, full=active>=lim;
+  $("pPlanName").textContent=member?`${P.name} · equipo`:P.name; $("pAdmin").hidden=!data.admin; $("pManage").hidden=!B.subscribed;
+  $("pUse").textContent=`${nf(active)}/${nf(lim)} experiencias en uso`+(owner?` (de ${nf(T.total)} del plan)`:"");
+  $("pMeter").classList.toggle("full",full); $("pMeter").firstElementChild.style.width=Math.min(100,Math.max(2,lim?active/lim*100:100))+"%";
+  $("pPlan").textContent=member?`Tu cuenta es parte del equipo de ${T.owner}; ellos manejan el plan.`:`Videos de hasta ${P.videoMB} MB · `
     +(P.id==="gratis"?`cada experiencia dura 30 días y hasta ${nf(P.views||1000)} vistas.`:B.subscribed?(B.period==="anio"?"pago anual automático.":"pago mensual automático."):P.until?`pagado hasta el ${fmtD(P.until)}.`:"sin vencimiento.");
-  $("pUpgrade").hidden=P.id==="escuela"; $("pUpgrade").textContent=P.id==="gratis"?"Mejorar plan":"Cambiar de plan";
+  $("pUpgrade").hidden=P.id==="escuela"||member; $("pUpgrade").textContent=P.id==="gratis"?"Mejorar plan":"Cambiar de plan";
+  $("pCodeBtn").hidden=member; $("pTeamBtn").hidden=!owner;
+  if(data.tempPassword) banner("Estás usando una contraseña temporal. Cámbiala por una tuya en Mi cuenta → Cambiar contraseña.","warn");
   // the main action; at the limit it explains instead
   $("pCreate").classList.toggle("full",full); $("pCreate").href=full?"#planes":"../crear/";
-  $("pCreateT").textContent=full?`Llegaste a tu límite (${nf(active)}/${nf(P.exp)})`:"+ Crear experiencia";
-  $("pCreateS").textContent=full?(P.id==="escuela"?"Borra una experiencia para crear otra.":"Borra una experiencia o mejora tu plan para crear más."):"Sube una imagen y un video, y obtén tu link y tu QR";
+  $("pCreateT").textContent=full?`Llegaste a tu límite (${nf(active)}/${nf(lim)})`:"+ Crear experiencia";
+  $("pCreateS").textContent=full?(member?"Borra una experiencia o pide más a quien administra tu equipo.":owner?"Borra una, quita experiencias a tu equipo o mejora tu plan.":P.id==="escuela"?"Borra una experiencia para crear otra.":"Borra una experiencia o mejora tu plan para crear más."):"Sube una imagen y un video, y obtén tu link y tu QR";
   // plans: pay online with Stripe when it is on (billing.enabled); otherwise "Lo quiero" opens the contact form
   renderPlans();
   $("pNote").innerHTML=(B.enabled?(B.test?"Modo de prueba (solo lo ves tú como administrador): se paga con la tarjeta de prueba de Stripe 4242 4242 4242 4242. ":"Pago seguro con tarjeta a través de Stripe. Se cobra automáticamente cada mes o cada año, según elijas, y cancelas cuando quieras. ")
-    :"El pago con tarjeta en línea llega pronto; por ahora escríbenos y activamos tu plan. ")+'¿Escuela o empresa? <a href="../?tema=escuela#contacto">Pregúntanos por un plan a tu medida</a>.';
-  if(location.hash==="#planes"&&P.id!=="escuela") openPlans(true);
+    :"El pago con tarjeta en línea llega pronto; por ahora escríbenos y activamos tu plan. ")+'¿Necesitas más? <a href="../?tema=empresa#contacto">Pregúntanos por un plan a tu medida</a>.';
+  if(location.hash==="#planes"&&P.id!=="escuela"&&!member) openPlans(true);
   if(B.pastDue) banner("No pudimos cobrar tu última mensualidad. Actualiza tu tarjeta en “Administrar suscripción” para que tu plan siga activo.","warn");
   renderList();
   const pub=Q.get("publicada"); if(pub&&experiences.some(x=>x.slug===pub)){ banner("¡Listo! Tu experiencia está publicada. También te enviamos el link y el QR por correo."); history.replaceState(null,"",location.pathname); }
   view("vPanel");
 }
-// plan cards for the chosen period (a year costs 10 months); pay online with Stripe when billing.enabled, otherwise the contact form
+// plan cards for the chosen period; pay online with Stripe when billing.enabled, otherwise the contact form
 let PERIOD="mes";
-const YEAR=10;
 function renderPlans(){
   const {user}=DATA, P=DATA.plan||{id:"gratis"}, B=DATA.billing||{enabled:false}, yr=PERIOD==="anio";
   document.querySelectorAll("#pPeriod button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.period===PERIOD)));
-  $("pPlans").innerHTML=PLANS.map(([id,name,price,items])=>{ const cur=id===P.id;
-    const amount=price*(yr?YEAR:1);
+  const shown=LEGACY[P.id]?[...PLANS,LEGACY[P.id]]:PLANS;
+  $("pPlans").innerHTML=shown.map(([id,name,price,year,items])=>{ const cur=id===P.id;
+    const amount=yr?year:price;
     return `<div class="plan${cur?" cur":""}${id==="pro"?" hot":""}">${id==="pro"?'<span class="pop">Más popular</span>':""}<h3>${name} ${cur?'<span class="tag">Tu plan</span>':""}</h3><div class="price">${price?"$"+nf(amount)+` <small>MXN al ${yr?"año":"mes"} · IVA incluido</small>`:"$0"}</div>`
-      +(price&&yr?`<p class="save">Equivale a $${nf(Math.round(amount/12))} al mes · ahorras $${nf(price*(12-YEAR))}</p>`:"")
+      +(price&&yr?`<p class="save">Equivale a ${nf(Math.round(amount/12))} al mes · ahorras ${nf(price*12-year)}</p>`:"")
       +`<ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul>`
-      +(price&&(!cur||(B.subscribed&&PERIOD!==B.period))?(B.enabled?`<button class="btn sun" type="button" data-plan="${id}">${cur?(yr?"Pasar a pago anual":"Pasar a pago mensual"):B.subscribed?"Cambiar a este plan":"Contratar"}</button>`:`<a class="btn sun" href="../?tema=plataforma#contacto">Lo quiero</a>`):"")+`</div>`; }).join("");
+      +(price&&!LEGACY[id]&&(!cur||(B.subscribed&&PERIOD!==B.period))?(B.enabled?`<button class="btn sun" type="button" data-plan="${id}">${cur?(yr?"Pasar a pago anual":"Pasar a pago mensual"):B.subscribed?"Cambiar a este plan":"Contratar"}</button>`:`<a class="btn sun" href="../?tema=plataforma#contacto">Lo quiero</a>`):"")+`</div>`; }).join("");
   $("pPlans").querySelectorAll("[data-plan]").forEach(b=>b.addEventListener("click",()=>pay("billing/checkout",{plan:b.dataset.plan,period:PERIOD},b)));
 }
 document.querySelectorAll("#pPeriod button").forEach(b=>b.addEventListener("click",()=>{ PERIOD=b.dataset.period; renderPlans(); }));
@@ -405,6 +450,39 @@ $("pHelpBtn").addEventListener("click",()=>{ menu(false);
   $("helpLead").textContent=`Cuéntanos qué pasó y te respondemos a ${DATA.user.email}${DATA.plan&&DATA.plan.id!=="gratis"?" lo antes posible (tu plan "+DATA.plan.name+" tiene prioridad)":""}.`;
   $("helpBox").hidden=false; $("helpBox").scrollIntoView({behavior:"smooth",block:"start"}); setTimeout(()=>$("hMsg").focus(),300); });
 $("helpClose").addEventListener("click",()=>{ $("helpBox").hidden=true; });
+// ---- Mi equipo (Empresarial owner): accounts for its people, each with part of the plan's experiences (see /api/team)
+$("pTeamBtn").addEventListener("click",()=>{ menu(false); openTeam(); });
+$("teamClose").addEventListener("click",()=>{ $("teamBox").hidden=true; });
+async function openTeam(){ $("teamBox").hidden=false; $("teamPw").hidden=true; await loadTeam(); $("teamBox").scrollIntoView({behavior:"smooth",block:"start"}); }
+function showPw(email,pw,sent){ const b=$("teamPw"); b.hidden=false;
+  b.innerHTML=`<b>Acceso de ${esc(email)}</b><br>Contraseña temporal: <code>${esc(pw)}</code> <button class="btn sm" type="button" id="pwCopy">Copiar</button><p class="note" style="margin:6px 0 0">${sent?"También se la enviamos por correo. ":""}Guárdala o pásasela: por seguridad no se vuelve a mostrar. Al entrar podrá cambiarla.</p>`;
+  $("pwCopy").onclick=async e=>{ try{ await navigator.clipboard.writeText(`Correo: ${email}\nContraseña temporal: ${pw}\nEntra en ${location.origin}/cuenta/`); e.target.textContent="¡Copiado!"; }catch(_){ prompt("Copia el acceso:",pw); } }; }
+async function loadTeam(){
+  let t; try{ t=await VVR.call("team"); }catch(e){ $("teamList").textContent=e.message; return; }
+  $("teamSum").innerHTML=[[nf(t.total),"experiencias en tu plan"],[nf(t.handed),"repartidas a tu equipo"],[nf(t.ownActive),"en uso en tu cuenta"],[nf(Math.max(0,t.free)),"libres para repartir"],[`${t.members.length}/${t.seats}`,"cuentas en tu equipo"]]
+    .map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join("");
+  $("fTeam").hidden=t.members.length>=t.seats; $("fTeam").quota.max=Math.max(0,t.free);
+  const list=$("teamList"); list.replaceChildren();
+  if(!t.members.length){ list.innerHTML='<p class="note">Todavía no hay cuentas en tu equipo. Agrega la primera abajo: tú le das su correo, una contraseña temporal y cuántas experiencias puede usar.</p>'; return; }
+  for(const m of t.members){ const el=document.createElement("div"); el.className="tm";
+    el.innerHTML=`<div class="who"><b>${esc(m.name||"")}</b><span>${esc(m.email)}</span> ${m.temp_pw?'<span class="tag">Contraseña temporal</span>':""}</div>
+      <label class="q">Usa ${nf(m.active)} de <input type="number" min="0" value="${m.quota||0}" aria-label="Experiencias de ${esc(m.name||m.email)}"></label>
+      <button class="btn sun" type="button" data-a="save">Guardar</button><button class="btn" type="button" data-a="pw">Nueva contraseña</button><button class="btn danger" type="button" data-a="del">Quitar</button>`;
+    const q=el.querySelector("input");
+    el.querySelector("[data-a=save]").onclick=async()=>{ const v=+q.value;
+      if(v<m.active&&!confirm(`${m.name||m.email} usa ${m.active}. Con ${v}, se pausarán ${m.active-v} de sus experiencias. ¿Continuar?`)) return;
+      try{ await VVR.call("team/"+m.id,{json:{quota:v}}); msg("mTeam","Guardado.","ok"); loadTeam(); load(); }catch(e){ msg("mTeam",e.message,"bad"); } };
+    el.querySelector("[data-a=pw]").onclick=async()=>{ if(!confirm(`¿Crear una contraseña temporal nueva para ${m.email}? La actual dejará de funcionar.`)) return;
+      try{ const r=await VVR.call("team/"+m.id+"/password",{json:{}}); showPw(m.email,r.password,false); loadTeam(); }catch(e){ msg("mTeam",e.message,"bad"); } };
+    el.querySelector("[data-a=del]").onclick=async()=>{ if(!confirm(`¿Quitar a ${m.email} de tu equipo? Su cuenta seguirá existiendo, pero en el plan Gratis, y sus experiencias de más se pausarán.`)) return;
+      try{ await VVR.call("team/"+m.id,{method:"DELETE"}); msg("mTeam","Se quitó del equipo.","ok"); loadTeam(); }catch(e){ msg("mTeam",e.message,"bad"); } };
+    list.appendChild(el); }
+}
+$("fTeam").addEventListener("submit",e=>{ e.preventDefault(); const f=e.target; busy(f,async()=>{ msg("mTeam","Creando la cuenta…");
+  try{ const r=await VVR.call("team",{json:{name:f.elements.name.value,email:f.email.value,quota:+f.quota.value,notify:f.notify.checked}});
+    msg("mTeam","¡Cuenta creada!","ok"); showPw(r.email,r.password,f.notify.checked); f.elements.name.value=""; f.email.value=""; loadTeam(); if(window.vvrSparkle) vvrSparkle(innerWidth/2,innerHeight/2); }
+  catch(err){ msg("mTeam",err.message,"bad"); } }); });
+
 // courtesy code (see /api/coupon): the plan for some months, then back to Gratis on its own
 $("pCodeBtn").addEventListener("click",()=>{ menu(false); $("codeBox").hidden=false; $("codeBox").scrollIntoView({behavior:"smooth",block:"start"}); setTimeout(()=>$("cCodeIn").focus(),300); });
 $("codeClose").addEventListener("click",()=>{ $("codeBox").hidden=true; });
@@ -416,7 +494,8 @@ $("fCode").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,asyn
 $("fHelp").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,async()=>{ msg("mHelp","Enviando…");
   try{ await VVR.call("support",{json:{message:$("hMsg").value,slug:$("hExp").value}}); msg("mHelp","¡Listo! Te respondemos por correo pronto.","ok"); $("hMsg").value=""; }
   catch(err){ msg("mHelp",err.message,"bad"); } }); });
-$("pCreate").addEventListener("click",e=>{ if(!e.currentTarget.classList.contains("full")) return; e.preventDefault(); if(DATA.plan&&DATA.plan.id!=="escuela") openPlans(true); });
+$("pCreate").addEventListener("click",e=>{ if(!e.currentTarget.classList.contains("full")) return; e.preventDefault(); const T=DATA.team||{};
+  if(T.role==="owner") openTeam(); else if(T.role!=="member"&&DATA.plan&&DATA.plan.id!=="escuela") openPlans(true); });
 function openPlans(on){ $("plansBox").hidden=!on; if(on) setTimeout(()=>$("plansBox").scrollIntoView({behavior:"smooth",block:"start"}),30); }
 $("pUpgrade").addEventListener("click",()=>{ menu(false); openPlans(true); });
 $("plansClose").addEventListener("click",()=>openPlans(false));
@@ -425,7 +504,7 @@ $("plansClose").addEventListener("click",()=>openPlans(false));
 function renderList(){
   const exps=DATA.experiences, list=$("pList"); list.replaceChildren();
   const paused=exps.filter(x=>x.paused).length, pausedOnly=$("pPausedOnly").getAttribute("aria-pressed")==="true";
-  const lim=(DATA.plan&&DATA.plan.exp)||1, act=exps.length-paused;
+  const lim=DATA.limit??((DATA.plan&&DATA.plan.exp)||1), act=exps.length-paused;
   $("pCount").textContent=`${nf(act)}/${nf(lim)}`; $("pSearch").hidden=$("pSort").hidden=exps.length<2;
   $("pPausedOnly").hidden=!paused; $("pPausedOnly").textContent=`Pausadas (${paused})`;
   if(!exps.length){ $("pMore").hidden=true;
