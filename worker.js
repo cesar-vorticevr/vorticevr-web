@@ -12,17 +12,17 @@ const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear",
 const LIMITS = { imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, codeMinutes: 10, codeTries: 5, sessionDays: 30, pausedDays: 30 };
 // Plans. exp = active experiences; days = how long each one lasts (0 = while the plan is active);
 // views = most times each experience can be opened (Gratis only, so a viral free QR cannot run up costs);
-// brand = the viewer opens with the "Creado con Vórtice VR" screen. Video: limited by size only, not duration.
+// Every experience shows the Vórtice VR logo on top (no other branding). Video: limited by size only, not duration.
 // year = price of a year (default 10 months). seats = team accounts the owner can create (Empresarial): the owner hands
 // each one part of the plan's experiences (users.quota); what is not handed out stays for the owner.
 // legacy = no longer offered (only kept for accounts that have it). Paid plans can also be set by an admin in /admin/.
 // Videos stay ≤ 50 MB: the Worker reads the whole upload in memory (128 MB).
 const PLANS = {
-  gratis:  { name: "Gratis",  exp: 1,    days: 15, videoMB: 25, brand: true,  price: 0, views: 1000 },
-  basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 25, brand: true,  price: 199, year: 1990 },
-  pro:     { name: "Pro",     exp: 50,   days: 0,  videoMB: 50, brand: false, price: 499, year: 4990 },
-  empresarial: { name: "Empresarial", exp: 150, seats: 15, days: 0, videoMB: 50, brand: true,  price: 999, year: 9999 },
-  escuela: { name: "Escuela", exp: 1000, days: 0,  videoMB: 50, brand: false, price: 1500, year: 15000, legacy: true },
+  gratis:  { name: "Gratis",  exp: 1,    days: 15, videoMB: 25, price: 0, views: 1000 },
+  basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 25, price: 199, year: 1990 },
+  pro:     { name: "Pro",     exp: 50,   days: 0,  videoMB: 50, price: 499, year: 4990 },
+  empresarial: { name: "Empresarial", exp: 150, seats: 15, days: 0, videoMB: 50, price: 999, year: 9999 },
+  escuela: { name: "Escuela", exp: 1000, days: 0,  videoMB: 50, price: 1500, year: 15000, legacy: true },
 };
 const yearPrice = plan => PLANS[plan].year || PLANS[plan].price * YEAR_MONTHS;
 const FAR = 253402300799000; // expires of an experience on a paid plan: "while the plan is active" (year 9999)
@@ -193,7 +193,7 @@ async function api(request, env, ctx, url) {
     const P = planOf(row);
     if (P.views && row.views >= P.views) return json({ error: "Límite de vistas", limit: true }, 410);
     ctx.waitUntil(env.DB.batch([env.DB.prepare("UPDATE experiences SET views = views + 1 WHERE slug = ?").bind(row.slug), bump(env, "views")]));
-    return json({ ...publicExp(row), brand: planOf(row).brand }, 200, { "Cache-Control": "no-store" });
+    return json(publicExp(row), 200, { "Cache-Control": "no-store" });
   }
 
   // contact form of the home page → email to CONTACT_TO (hola@vorticevr.mx); reply goes straight to the person
@@ -993,6 +993,6 @@ const teamMail = (owner, name, email, pw, quota, origin) => shell(`<h1 style="fo
 <p style="background:#1b0a36;border-radius:10px;padding:14px;font-size:16px">Correo: <b>${esc(email)}</b><br>Contraseña temporal: <b style="font-family:monospace;letter-spacing:.06em">${esc(pw)}</b></p>
 <p>Al entrar, cámbiala por una tuya en Mi cuenta → Cambiar contraseña.</p>`);
 const planMail = (user, plan, until) => shell(`<h1 style="font-size:20px">¡Tu plan ${PLANS[plan].name} está activo!</h1>
-<p>Hola ${esc(user.name || "")}, ya puedes tener hasta <b>${expCount(PLANS[plan].exp)}</b> activas al mismo tiempo, con videos de hasta ${PLANS[plan].videoMB} MB, sin fecha de vencimiento mientras tu plan esté vigente${PLANS[plan].brand ? "" : " y sin la pantalla de Vórtice VR al abrirlas"}.</p>
+<p>Hola ${esc(user.name || "")}, ya puedes tener hasta <b>${expCount(PLANS[plan].exp)}</b> activas al mismo tiempo, con videos de hasta ${PLANS[plan].videoMB} MB, sin fecha de vencimiento mientras tu plan esté vigente.</p>
 ${until ? `<p>Pagado hasta el <b>${fecha(until)}</b>.</p>` : ""}
 <p>Entra a <a href="https://vorticevr.mx/cuenta/" style="color:#ffbe55;font-weight:700">vorticevr.mx/cuenta</a> para crear tus experiencias.</p>`);

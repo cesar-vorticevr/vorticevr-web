@@ -322,9 +322,9 @@ const $=id=>document.getElementById(id);
 const Q=new URLSearchParams(location.search);
 const NEXT=Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":null;
 // public plans: [id, name, monthly price, yearly price, what it includes] (a year is ~10 months; IVA included)
-const PLANS=[["gratis","Gratis",0,0,["1 experiencia","Videos de hasta 25 MB","Dura 15 días","Hasta 1,000 vistas","Abre con la pantalla de Vórtice VR"]],
-  ["basico","Básico",199,1990,["5 experiencias","Cámbialas cuando quieras","Videos de hasta 25 MB","Sin vencimiento mientras pagues","Abre con la pantalla de Vórtice VR"]],
-  ["pro","Pro",499,4990,["50 experiencias","Cámbialas cuando quieras","Videos de hasta 50 MB","Sin vencimiento mientras pagues","Sin la pantalla de Vórtice VR: abre directo tu experiencia"]],
+const PLANS=[["gratis","Gratis",0,0,["1 experiencia","Videos de hasta 25 MB","Dura 15 días","Hasta 1,000 vistas"]],
+  ["basico","Básico",199,1990,["5 experiencias","Cámbialas cuando quieras","Videos de hasta 25 MB","Sin vencimiento mientras pagues"]],
+  ["pro","Pro",499,4990,["50 experiencias","Cámbialas cuando quieras","Videos de hasta 50 MB","Sin vencimiento mientras pagues"]],
   ["empresarial","Empresarial",999,9999,["150 experiencias para repartir","Hasta 15 cuentas para tu equipo","Tú decides cuántas tiene cada cuenta","Videos de hasta 50 MB","Soporte prioritario"]]];
 const LEGACY={escuela:["escuela","Escuela",1500,15000,["1,000 experiencias","Cámbialas cuando quieras","Videos de hasta 50 MB"]]};
 const VIEWS=["vEntrar","vRegistro","vCodigo","vOlvide","vPanel"];
