@@ -110,8 +110,9 @@ header.top nav a:hover{color:var(--ink)}
 .uses{display:flex;flex-direction:column;gap:14px;margin-bottom:52px}
 .uses .chips{display:flex;flex-wrap:wrap;gap:10px}
 .uses .chip{font-size:.9rem;padding:9px 16px}
-.mkplans{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:16px;margin-bottom:16px}
-.mkplan{padding:22px;border-radius:16px;border:1px solid var(--line);background:linear-gradient(170deg,rgba(40,16,74,.5),rgba(12,5,26,.6))}
+.mkplans{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:18px;margin-bottom:18px;align-items:stretch}
+.mkplan{position:relative;display:flex;flex-direction:column;padding:26px 24px 24px;border-radius:20px;border:1px solid var(--line);background:linear-gradient(170deg,rgba(40,16,74,.55),rgba(12,5,26,.7));transition:transform .3s var(--ease),border-color .3s}
+.mkplans .mkplan:hover{transform:translateY(-4px);border-color:var(--line2)}
 /* Pro: a rotating gold-violet border and a breathing glow, so it is the one that catches the eye */
 @property --pa{syntax:"<angle>";initial-value:0deg;inherits:false}
 .mkplan.hot{position:relative;isolation:isolate;border-color:transparent!important;animation:proglow 3.2s ease-in-out infinite}
@@ -121,20 +122,28 @@ header.top nav a:hover{color:var(--ink)}
 @keyframes proglow{0%,100%{box-shadow:0 0 26px rgba(255,190,85,.22)}50%{box-shadow:0 0 54px rgba(255,190,85,.5),0 0 90px rgba(139,63,214,.3)}}
 .pop{position:absolute;top:-12px;right:16px;font-family:var(--fd);font-size:.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 12px;border-radius:999px;color:#1a0d00;background:linear-gradient(110deg,#ffd27f,#ffbe55,#ff9f3a);box-shadow:0 0 18px rgba(255,190,85,.6)}
 @media (prefers-reduced-motion:reduce){.mkplan.hot,.mkplan.hot::before{animation:none}}
-.mkplan h3{margin:0;font-family:var(--fd);font-size:1.15rem}
-.mkplan .price{font-family:var(--fd);font-weight:700;font-size:2.2rem;line-height:1.2;margin:4px 0 6px}
-.mkplan .price small{font-size:.85rem;font-weight:500;color:var(--mute)}
-.mkplan p{margin:0;color:var(--mute);font-size:.95rem}
-.mknote{color:var(--mute);margin:0}
-.mkper{display:inline-flex;gap:4px;padding:4px;margin-bottom:16px;border-radius:999px;border:1px solid var(--line2);background:rgba(5,2,11,.6)}
-.mkper button{font:600 .9rem var(--fb);color:var(--mute);background:transparent;border:0;border-radius:999px;padding:9px 16px;cursor:pointer}
+.mkplan h3{margin:0;font-family:var(--fd);font-size:1.35rem;letter-spacing:.01em}
+.mkplan .tagline{margin:4px 0 18px;color:var(--mute);font-size:.92rem;min-height:1.4em}
+.mkplan .price{font-family:var(--fd);font-weight:700;font-size:2.8rem;line-height:1;letter-spacing:-.02em}
+.mkplan .price small{font-size:1rem;font-weight:500;color:var(--mute);letter-spacing:0;margin-left:4px}
+.mkplan .per{margin:8px 0 18px;color:var(--mute);font-size:.84rem;min-height:2.7em}
+.mkplan .per.save{color:#74e8ba}
+.mkplan .plancta{justify-content:center;width:100%;margin-bottom:22px;white-space:nowrap;padding-inline:14px;letter-spacing:.06em}
+.btn.ghost{background:rgba(139,63,214,.14)}
+.mkplan .feats{list-style:none;margin:0;padding:18px 0 0;border-top:1px solid var(--line);display:grid;gap:11px}
+.mkplan .feats li{position:relative;padding-left:28px;color:#ddd3f3;font-size:.94rem;line-height:1.4}
+.mkplan .feats li::before{content:"";position:absolute;left:0;top:.1em;width:18px;height:18px;border-radius:50%;background:rgba(116,232,186,.14) center/12px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%2374e8ba' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E")}
+.mkplan.hot .feats li::before{background-color:rgba(255,190,85,.16);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%23ffbe55' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E")}
+.mkplan .feats b{color:var(--ink);font-weight:600}
+.mkper{display:flex;width:max-content;max-width:100%;margin:0 auto 22px;gap:4px;padding:4px;border-radius:999px;border:1px solid var(--line2);background:rgba(5,2,11,.6)}
+.mkper button{font:600 .9rem var(--fb);color:var(--mute);background:transparent;border:0;border-radius:999px;padding:9px 18px;cursor:pointer}
 .mkper button[aria-pressed="true"]{background:var(--lav);color:#1a0d33}
 .mkper button b{font-size:.72rem;color:var(--sun);margin-left:4px}
 .mkper button[aria-pressed="true"] b{color:#6b279b}
-.mkplan .save{color:#74e8ba;font-size:.85rem;margin:-4px 0 6px}
 .mkplans .pa{display:none}
 .mkplans.yr .pa{display:block}
 .mkplans.yr .pm{display:none}
+.mknote{color:var(--mute);margin:0}
 .mknote a{color:var(--sun)}
 @media (prefers-reduced-motion:reduce){.mkdemo .poster::after,.mkdemo .vid,.mkdemo .vid i{animation:none}.mkdemo .vid img{animation:none}.mkdemo .vid img:first-child{opacity:1}}
 .lang{font:600 .78rem var(--fm);letter-spacing:.12em;min-width:46px;height:38px;padding:0 12px;border-radius:999px;border:1px solid var(--line2);background:transparent;color:var(--ink);cursor:pointer;transition:background .3s,border-color .3s}
@@ -406,10 +415,33 @@ footer .legal a:hover{color:var(--ink)}
 
     <div class="mkper reveal" role="group" aria-label="Forma de pago" data-en-aria="Billing period"><button type="button" data-per="m" aria-pressed="true" data-en="Monthly">Mensual</button><button type="button" data-per="a" aria-pressed="false" data-en="Yearly &lt;b&gt;2 months free&lt;/b&gt;">Anual <b>2 meses gratis</b></button></div>
     <div class="mkplans" id="mkplans">
-      <div class="mkplan reveal"><h3 data-en="Free">Gratis</h3><div class="price">$0</div><p data-en="1 image with video · lasts 15 days · up to 1,000 views">1 imagen con video · dura 15 días · hasta 1,000 vistas</p></div>
-      <div class="mkplan reveal"><h3 data-en="Basic">Básico</h3><div class="price pm">$199 <small data-en="MXN / month, VAT included">MXN al mes, IVA incluido</small></div><div class="price pa">$1,990 <small data-en="MXN / year, VAT included">MXN al año, IVA incluido</small></div><p class="save pa" data-en="Like $166 a month · you save $398">Equivale a $166 al mes · ahorras $398</p><p data-en="5 images · change them whenever you want · no expiration while you pay">5 imágenes · cámbialas cuando quieras · sin vencimiento mientras pagues</p></div>
-      <div class="mkplan reveal hot"><span class="pop" data-en="Most popular">Más popular</span><h3>Pro</h3><div class="price pm">$499 <small data-en="MXN / month, VAT included">MXN al mes, IVA incluido</small></div><div class="price pa">$4,990 <small data-en="MXN / year, VAT included">MXN al año, IVA incluido</small></div><p class="save pa" data-en="Like $416 a month · you save $998">Equivale a $416 al mes · ahorras $998</p><p data-en="50 images · change them whenever you want · bigger videos · no expiration while you pay">50 imágenes · cámbialas cuando quieras · videos más grandes · sin vencimiento mientras pagues</p></div>
-      <div class="mkplan reveal"><h3 data-en="Business">Empresarial</h3><div class="price pm">$999 <small data-en="MXN / month, VAT included">MXN al mes, IVA incluido</small></div><div class="price pa">$9,999 <small data-en="MXN / year, VAT included">MXN al año, IVA incluido</small></div><p class="save pa" data-en="Like $833 a month · you save $1,989">Equivale a $833 al mes · ahorras $1,989</p><p data-en="150 images to share · up to 15 accounts for your team, you decide how many each one gets · for schools and companies">150 imágenes para repartir · hasta 15 cuentas para tu equipo, tú decides cuántas tiene cada una · para escuelas y empresas</p></div>
+      <div class="mkplan reveal">
+        <h3 data-en="Free">Gratis</h3><p class="tagline" data-en="To try the magic">Para probar la magia</p>
+        <div class="price">$0</div><p class="per" data-en="Free to start, no card">Para siempre, sin tarjeta</p>
+        <a class="btn ghost plancta" href="cuenta/?siguiente=crear#registro" data-en="Start free">Crear gratis</a>
+        <ul class="feats"><li data-en="&lt;b&gt;1&lt;/b&gt; image with video"><b>1</b> imagen con video</li><li data-en="Active for &lt;b&gt;15 days&lt;/b&gt;">Activa <b>15 días</b></li><li data-en="Up to &lt;b&gt;1,000&lt;/b&gt; views">Hasta <b>1,000</b> vistas</li><li data-en="Videos up to 25 MB">Videos de hasta 25 MB</li><li data-en="Your own link and QR code">Link propio y código QR</li></ul>
+      </div>
+      <div class="mkplan reveal">
+        <h3 data-en="Basic">Básico</h3><p class="tagline" data-en="For your business">Para tu negocio</p>
+        <div class="price pm">$199<small data-en="/month">/mes</small></div><div class="price pa">$1,990<small data-en="/year">/año</small></div>
+        <p class="per pm" data-en="MXN, VAT included">MXN, IVA incluido</p><p class="per pa save" data-en="Like $166 a month · save $398">Equivale a $166 al mes · ahorras $398</p>
+        <a class="btn ghost plancta" href="cuenta/#planes" data-en="Choose Basic">Elegir Básico</a>
+        <ul class="feats"><li data-en="&lt;b&gt;5&lt;/b&gt; images with video"><b>5</b> imágenes con video</li><li data-en="Change them anytime">Cámbialas cuando quieras</li><li data-en="No expiration while you pay">Sin vencimiento mientras pagues</li><li data-en="Unlimited views">Vistas ilimitadas</li><li data-en="Videos up to 25 MB">Videos de hasta 25 MB</li></ul>
+      </div>
+      <div class="mkplan reveal hot"><span class="pop" data-en="Most popular">Más popular</span>
+        <h3 data-en="Pro">Pro</h3><p class="tagline" data-en="To grow big">Para crecer en grande</p>
+        <div class="price pm">$499<small data-en="/month">/mes</small></div><div class="price pa">$4,990<small data-en="/year">/año</small></div>
+        <p class="per pm" data-en="MXN, VAT included">MXN, IVA incluido</p><p class="per pa save" data-en="Like $416 a month · save $998">Equivale a $416 al mes · ahorras $998</p>
+        <a class="btn sun plancta" href="cuenta/#planes" data-en="Choose Pro">Elegir Pro</a>
+        <ul class="feats"><li data-en="&lt;b&gt;50&lt;/b&gt; images with video"><b>50</b> imágenes con video</li><li data-en="Change them anytime">Cámbialas cuando quieras</li><li data-en="No expiration while you pay">Sin vencimiento mientras pagues</li><li data-en="Unlimited views">Vistas ilimitadas</li><li data-en="Videos up to &lt;b&gt;50 MB&lt;/b&gt;">Videos de hasta <b>50 MB</b></li></ul>
+      </div>
+      <div class="mkplan reveal">
+        <h3 data-en="Business">Empresarial</h3><p class="tagline" data-en="For schools and companies">Para escuelas y empresas</p>
+        <div class="price pm">$999<small data-en="/month">/mes</small></div><div class="price pa">$9,999<small data-en="/year">/año</small></div>
+        <p class="per pm" data-en="MXN, VAT included">MXN, IVA incluido</p><p class="per pa save" data-en="Like $833 a month · save $1,989">Equivale a $833 al mes · ahorras $1,989</p>
+        <a class="btn ghost plancta" href="cuenta/#planes" data-en="Choose Business">Elegir Empresarial</a>
+        <ul class="feats"><li data-en="&lt;b&gt;150&lt;/b&gt; images with video"><b>150</b> imágenes con video</li><li data-en="Up to &lt;b&gt;15 accounts&lt;/b&gt; for your team">Hasta <b>15 cuentas</b> para tu equipo</li><li data-en="You decide how many each account gets">Tú repartes las imágenes de cada cuenta</li><li data-en="Unlimited views">Vistas ilimitadas</li><li data-en="Priority support">Soporte prioritario</li></ul>
+      </div>
     </div>
     <p class="mknote" data-en="Need something bigger? &lt;a href=&quot;#contacto&quot; data-tema=&quot;empresa&quot;&gt;Ask us about a custom plan&lt;/a&gt;.">¿Necesitas algo más grande? <a href="#contacto" data-tema="empresa">Pregúntanos por un plan a tu medida</a>.</p>
   </div></section>

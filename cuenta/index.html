@@ -114,8 +114,8 @@ select:focus,textarea:focus{border-color:var(--lav);outline:none}
 .seg button b{font-size:.7rem;color:var(--sun);margin-left:4px}
 .seg button[aria-pressed="true"] b{color:#6b279b}
 .plan .save{font-size:.82rem;color:var(--ok);margin:-2px 0 2px}
-.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin:14px 0 12px}
-.plan{border:1px solid var(--line);border-radius:14px;padding:16px;background:rgba(5,2,11,.5);display:flex;flex-direction:column;gap:6px}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:16px;margin:18px 0 14px;align-items:stretch}
+.plan{position:relative;border:1px solid var(--line);border-radius:18px;padding:22px 20px 20px;background:linear-gradient(170deg,rgba(40,16,74,.55),rgba(12,5,26,.7));display:flex;flex-direction:column}
 .plan.cur{border-color:var(--sun);box-shadow:0 0 0 1px var(--sun) inset}
 /* Pro: a rotating gold-violet border and a breathing glow, so it is the one that catches the eye */
 @property --pa{syntax:"<angle>";initial-value:0deg;inherits:false}
@@ -126,11 +126,20 @@ select:focus,textarea:focus{border-color:var(--lav);outline:none}
 @keyframes proglow{0%,100%{box-shadow:0 0 26px rgba(255,190,85,.22)}50%{box-shadow:0 0 54px rgba(255,190,85,.5),0 0 90px rgba(139,63,214,.3)}}
 .pop{position:absolute;top:-12px;right:16px;font-family:var(--fd);font-size:.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 12px;border-radius:999px;color:#1a0d00;background:linear-gradient(110deg,#ffd27f,#ffbe55,#ff9f3a);box-shadow:0 0 18px rgba(255,190,85,.6)}
 @media (prefers-reduced-motion:reduce){.plan.hot,.plan.hot::before{animation:none}}
-.plan h3{font-family:var(--fd);margin:0;font-size:1.1rem}
-.plan .price{font-family:var(--fd);font-size:1.6rem;font-weight:700}
-.plan .price small{font-size:.8rem;color:var(--mute);font-weight:500}
-.plan ul{margin:4px 0 10px;padding-left:18px;color:var(--mute);font-size:.9rem}
-.plan .btn{margin-top:auto;padding:10px 16px}
+.plan h3{font-family:var(--fd);margin:0;font-size:1.25rem}
+.plan .tagline{margin:3px 0 14px;color:var(--mute);font-size:.88rem}
+.plan .price{font-family:var(--fd);font-size:2.3rem;font-weight:700;line-height:1;letter-spacing:-.02em}
+.plan .price small{font-size:.95rem;color:var(--mute);font-weight:500;letter-spacing:0;margin-left:3px}
+.plan .per{margin:8px 0 14px;color:var(--mute);font-size:.8rem;min-height:2.6em}
+.plan .per.save{color:var(--ok)}
+.plan .feats{list-style:none;margin:16px 0 0;padding:16px 0 0;border-top:1px solid var(--line);display:grid;gap:10px}
+.plan .feats li{position:relative;padding-left:26px;color:#ddd3f3;font-size:.9rem;line-height:1.4}
+.plan .feats li::before{content:"";position:absolute;left:0;top:.1em;width:17px;height:17px;border-radius:50%;background:rgba(116,232,186,.14) center/11px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%2374e8ba' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E")}
+.plan.hot .feats li::before{background-color:rgba(255,190,85,.16);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%23ffbe55' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E")}
+.plan .feats b{color:var(--ink);font-weight:600}
+.btn.ghost{background:rgba(139,63,214,.14)}
+.btn.is-cur{border-color:var(--sun);color:var(--sun);cursor:default}
+.plan .btn{width:100%;padding:11px 16px}
 .tag{display:inline-block;font-family:var(--fd);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;border-radius:999px;padding:3px 10px;border:1px solid var(--sun);color:var(--sun)}
 .tag.bad{border-color:var(--bad);color:var(--bad)}
 .tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:26px 0 14px}
@@ -322,11 +331,11 @@ const $=id=>document.getElementById(id);
 const Q=new URLSearchParams(location.search);
 const NEXT=Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":null;
 // public plans: [id, name, monthly price, yearly price, what it includes] (a year is ~10 months; IVA included)
-const PLANS=[["gratis","Gratis",0,0,["1 experiencia","Videos de hasta 25 MB","Dura 15 días","Hasta 1,000 vistas"]],
-  ["basico","Básico",199,1990,["5 experiencias","Cámbialas cuando quieras","Videos de hasta 25 MB","Sin vencimiento mientras pagues"]],
-  ["pro","Pro",499,4990,["50 experiencias","Cámbialas cuando quieras","Videos de hasta 50 MB","Sin vencimiento mientras pagues"]],
-  ["empresarial","Empresarial",999,9999,["150 experiencias para repartir","Hasta 15 cuentas para tu equipo","Tú decides cuántas tiene cada cuenta","Videos de hasta 50 MB","Soporte prioritario"]]];
-const LEGACY={escuela:["escuela","Escuela",1500,15000,["1,000 experiencias","Cámbialas cuando quieras","Videos de hasta 50 MB"]]};
+const PLANS=[["gratis","Gratis",0,0,"Para probar la magia",["<b>1</b> imagen con video","Activa <b>15 días</b>","Hasta <b>1,000</b> vistas","Videos de hasta 25 MB"]],
+  ["basico","Básico",199,1990,"Para tu negocio",["<b>5</b> imágenes con video","Cámbialas cuando quieras","Sin vencimiento mientras pagues","Vistas ilimitadas","Videos de hasta 25 MB"]],
+  ["pro","Pro",499,4990,"Para crecer en grande",["<b>50</b> imágenes con video","Cámbialas cuando quieras","Sin vencimiento mientras pagues","Vistas ilimitadas","Videos de hasta <b>50 MB</b>"]],
+  ["empresarial","Empresarial",999,9999,"Para escuelas y empresas",["<b>150</b> imágenes con video","Hasta <b>15 cuentas</b> para tu equipo","Tú repartes las imágenes de cada cuenta","Vistas ilimitadas","Soporte prioritario"]]];
+const LEGACY={escuela:["escuela","Escuela",1500,15000,"Tu plan actual",["<b>1,000</b> imágenes con video","Cámbialas cuando quieras","Videos de hasta 50 MB"]]};
 const VIEWS=["vEntrar","vRegistro","vCodigo","vOlvide","vPanel"];
 function view(v){ VIEWS.forEach(x=>$(x).hidden=x!==v); scrollTo(0,0); const f=$(v).querySelector("input"); if(f&&v!=="vPanel") setTimeout(()=>f.focus(),50); }
 function msg(id,t,kind){ const m=$(id); m.className="msg"+(kind?" "+kind:""); m.textContent=t||""; }
@@ -428,12 +437,14 @@ function renderPlans(){
   const {user}=DATA, P=DATA.plan||{id:"gratis"}, B=DATA.billing||{enabled:false}, yr=PERIOD==="anio";
   document.querySelectorAll("#pPeriod button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.period===PERIOD)));
   const shown=LEGACY[P.id]?[...PLANS,LEGACY[P.id]]:PLANS;
-  $("pPlans").innerHTML=shown.map(([id,name,price,year,items])=>{ const cur=id===P.id;
+  $("pPlans").innerHTML=shown.map(([id,name,price,year,tagline,items])=>{ const cur=id===P.id;
     const amount=yr?year:price;
-    return `<div class="plan${cur?" cur":""}${id==="pro"?" hot":""}">${id==="pro"?'<span class="pop">Más popular</span>':""}<h3>${name} ${cur?'<span class="tag">Tu plan</span>':""}</h3><div class="price">${price?"$"+nf(amount)+` <small>MXN al ${yr?"año":"mes"} · IVA incluido</small>`:"$0"}</div>`
-      +(price&&yr?`<p class="save">Equivale a ${nf(Math.round(amount/12))} al mes · ahorras ${nf(price*12-year)}</p>`:"")
-      +`<ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul>`
-      +(price&&!LEGACY[id]&&(!cur||(B.subscribed&&PERIOD!==B.period))?(B.enabled?`<button class="btn sun" type="button" data-plan="${id}">${cur?(yr?"Pasar a pago anual":"Pasar a pago mensual"):B.subscribed?"Cambiar a este plan":"Contratar"}</button>`:`<a class="btn sun" href="../?tema=plataforma#contacto">Lo quiero</a>`):"")+`</div>`; }).join("");
+    const btn=price&&!LEGACY[id]&&(!cur||(B.subscribed&&PERIOD!==B.period))
+      ?(B.enabled?`<button class="btn ${id==="pro"?"sun":"ghost"}" type="button" data-plan="${id}">${cur?(yr?"Pasar a pago anual":"Pasar a pago mensual"):B.subscribed?"Cambiar a "+name:"Elegir "+name}</button>`:`<a class="btn ${id==="pro"?"sun":"ghost"}" href="../?tema=plataforma#contacto">Elegir ${name}</a>`)
+      :cur?`<span class="btn ghost is-cur">Tu plan actual</span>`:`<span class="btn ghost" style="visibility:hidden" aria-hidden="true">·</span>`;
+    return `<div class="plan${cur?" cur":""}${id==="pro"?" hot":""}">${id==="pro"?'<span class="pop">Más popular</span>':""}<h3>${name}</h3><p class="tagline">${tagline}</p>`
+      +(price?`<div class="price">$${nf(amount)}<small>/${yr?"año":"mes"}</small></div><p class="per${yr?" save":""}">${yr?`Equivale a $${nf(Math.round(amount/12))} al mes · ahorras $${nf(price*12-year)}`:"MXN, IVA incluido"}</p>`:`<div class="price">$0</div><p class="per">Para siempre, sin tarjeta</p>`)
+      +btn+`<ul class="feats">${items.map(i=>`<li>${i}</li>`).join("")}</ul></div>`; }).join("");
   $("pPlans").querySelectorAll("[data-plan]").forEach(b=>b.addEventListener("click",()=>pay("billing/checkout",{plan:b.dataset.plan,period:PERIOD},b)));
 }
 document.querySelectorAll("#pPeriod button").forEach(b=>b.addEventListener("click",()=>{ PERIOD=b.dataset.period; renderPlans(); }));
