@@ -322,7 +322,7 @@ const $=id=>document.getElementById(id);
 const Q=new URLSearchParams(location.search);
 const NEXT=Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":null;
 // public plans: [id, name, monthly price, yearly price, what it includes] (a year is ~10 months; IVA included)
-const PLANS=[["gratis","Gratis",0,0,["1 experiencia","Videos de hasta 25 MB","Dura 30 días","Hasta 1,000 vistas","Abre con la pantalla de Vórtice VR"]],
+const PLANS=[["gratis","Gratis",0,0,["1 experiencia","Videos de hasta 25 MB","Dura 15 días","Hasta 1,000 vistas","Abre con la pantalla de Vórtice VR"]],
   ["basico","Básico",199,1990,["5 experiencias","Cámbialas cuando quieras","Videos de hasta 25 MB","Sin vencimiento mientras pagues","Abre con la pantalla de Vórtice VR"]],
   ["pro","Pro",499,4990,["50 experiencias","Cámbialas cuando quieras","Videos de hasta 50 MB","Sin vencimiento mientras pagues","Sin la pantalla de Vórtice VR: abre directo tu experiencia"]],
   ["empresarial","Empresarial",999,9999,["150 experiencias para repartir","Hasta 15 cuentas para tu equipo","Tú decides cuántas tiene cada cuenta","Videos de hasta 50 MB","Soporte prioritario"]]];
@@ -404,7 +404,7 @@ function showPanel(data){
   $("pUse").textContent=`${nf(active)}/${nf(lim)} experiencias en uso`+(owner?` (de ${nf(T.total)} del plan)`:"");
   $("pMeter").classList.toggle("full",full); $("pMeter").firstElementChild.style.width=Math.min(100,Math.max(2,lim?active/lim*100:100))+"%";
   $("pPlan").textContent=member?`Tu cuenta es parte del equipo de ${T.owner}; ellos manejan el plan.`:`Videos de hasta ${P.videoMB} MB · `
-    +(P.id==="gratis"?`cada experiencia dura 30 días y hasta ${nf(P.views||1000)} vistas.`:B.subscribed?(B.period==="anio"?"pago anual automático.":"pago mensual automático."):P.until?`pagado hasta el ${fmtD(P.until)}.`:"sin vencimiento.");
+    +(P.id==="gratis"?`cada experiencia dura 15 días y hasta ${nf(P.views||1000)} vistas.`:B.subscribed?(B.period==="anio"?"pago anual automático.":"pago mensual automático."):P.until?`pagado hasta el ${fmtD(P.until)}.`:"sin vencimiento.");
   $("pUpgrade").hidden=P.id==="escuela"||member; $("pUpgrade").textContent=P.id==="gratis"?"Mejorar plan":"Cambiar de plan";
   $("pCodeBtn").hidden=member; $("pTeamBtn").hidden=!owner;
   if(data.tempPassword) banner("Estás usando una contraseña temporal. Cámbiala por una tuya en Mi cuenta → Cambiar contraseña.","warn");

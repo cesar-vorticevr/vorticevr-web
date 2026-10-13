@@ -18,7 +18,7 @@ const LIMITS = { imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, code
 // legacy = no longer offered (only kept for accounts that have it). Paid plans can also be set by an admin in /admin/.
 // Videos stay ≤ 50 MB: the Worker reads the whole upload in memory (128 MB).
 const PLANS = {
-  gratis:  { name: "Gratis",  exp: 1,    days: 30, videoMB: 25, brand: true,  price: 0, views: 1000 },
+  gratis:  { name: "Gratis",  exp: 1,    days: 15, videoMB: 25, brand: true,  price: 0, views: 1000 },
   basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 25, brand: true,  price: 199, year: 1990 },
   pro:     { name: "Pro",     exp: 50,   days: 0,  videoMB: 50, brand: false, price: 499, year: 4990 },
   empresarial: { name: "Empresarial", exp: 150, seats: 15, days: 0, videoMB: 50, brand: true,  price: 999, year: 9999 },
@@ -799,7 +799,7 @@ const expCount = n => n === 1 ? "1 experiencia" : `${n.toLocaleString("es-MX")} 
 const isAdmin = (env, user) => !!user && (env.ADMIN_EMAILS || ADMINS_DEFAULT).split(",").map(s => s.trim().toLowerCase()).includes(user.email);
 // Sets the plan and fits the user's experiences to it in one statement (the free Workers plan allows 50 queries per request).
 // The first `exp` (active first, most recently edited) stay active: on a paid plan with no end date, on the free plan for
-// 30 days (or what they had left). The rest are paused: on a paid plan they are kept; on the free plan they are deleted
+// 15 days (or what they had left). The rest are paused: on a paid plan they are kept; on the free plan they are deleted
 // after 30 days unless the plan goes up again.
 async function applyPlan(env, user, plan, until, note) {
   const P = PLANS[plan];
