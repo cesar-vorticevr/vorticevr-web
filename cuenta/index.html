@@ -78,6 +78,25 @@ input:focus{border-color:var(--lav);outline:none}
 #helpBox{max-width:560px;margin-bottom:18px}
 #codeBox{max-width:440px;margin-bottom:18px}
 #teamBox{margin-bottom:18px}
+#refBox{margin-bottom:18px;border-color:rgba(255,190,85,.45);background:linear-gradient(160deg,rgba(60,30,10,.35),rgba(20,9,40,.75))}
+.memenu .mlinks .refbtn{color:var(--sun);font-weight:600}
+.invite{border:1px solid rgba(255,190,85,.55);background:rgba(255,190,85,.1);color:var(--sun);border-radius:12px;padding:10px 14px;margin:0 0 6px;font-size:.92rem}
+.invite b{color:#ffd27f}
+.rgrid{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:20px;align-items:start;margin-top:10px}
+@media (max-width:760px){.rgrid{grid-template-columns:minmax(0,1fr)}}
+.rlead{font-size:1rem;color:var(--ink);margin:4px 0 14px}
+.rlead b{color:var(--sun)}
+.rlink{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.rlink code{font-family:var(--fm);font-size:.9rem;color:var(--sun);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;overflow-wrap:anywhere;flex:1 1 260px}
+.rcode{font-family:var(--fm);font-size:1.4rem;letter-spacing:.12em;color:var(--sun)}
+.rqr canvas{width:100%;height:auto;border-radius:12px;background:#fff;display:block}
+.rqr .btn{width:100%;margin-top:8px}
+.rtable{width:100%;border-collapse:collapse;font-size:.86rem;margin-top:10px}
+.rtable th,.rtable td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+.rtable th{color:var(--mute);font-weight:600}
+.rtable td.n{text-align:right;font-variant-numeric:tabular-nums}
+.st{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 9px;border:1px solid var(--line2);color:var(--mute);white-space:nowrap}
+.st.disponible{border-color:var(--ok);color:var(--ok)} .st.pagada{border-color:var(--lav);color:var(--lav)} .st.pendiente{border-color:var(--sun);color:var(--sun)} .st.cancelada{border-color:var(--bad);color:var(--bad)}
 .tsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0 16px}
 .tsum div{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:rgba(5,2,11,.5)}
 .tsum b{display:block;font-family:var(--fd);font-size:1.35rem}
@@ -188,6 +207,7 @@ dialog .row{justify-content:space-between}
         <button type="button" id="pUpgrade">Cambiar de plan</button>
         <button type="button" id="pManage" hidden>Administrar suscripción</button>
         <a id="pAdmin" href="../admin/" hidden>Administración</a>
+        <button type="button" id="pRefBtn" class="refbtn">✦ Recomienda y gana</button>
         <button type="button" id="pTeamBtn" hidden>Mi equipo</button>
         <button type="button" id="pCodeBtn">Tengo un código</button>
         <button type="button" id="pHelpBtn">Ayuda y soporte</button>
@@ -217,6 +237,7 @@ dialog .row{justify-content:space-between}
     <span class="kick">Gratis</span>
     <h1>Crea tu cuenta</h1>
     <p class="lead">Con tu cuenta haces realidad aumentada con tus imágenes y videos, y la compartes con un link y un código QR.</p>
+    <div class="invite" id="rInvite" hidden></div>
     <form id="fRegistro">
       <label class="f" for="rName">Nombre</label><input type="text" id="rName" autocomplete="name" maxlength="60" required>
       <label class="f" for="rEmail">Correo</label><input type="email" id="rEmail" autocomplete="email" required>
@@ -263,6 +284,11 @@ dialog .row{justify-content:space-between}
         <button class="btn sm" id="plansClose" type="button">Cerrar</button></div>
       <div class="plans" id="pPlans"></div>
       <p class="note" id="pNote"></p>
+    </section>
+
+    <section class="card" id="refBox" hidden>
+      <div class="phead"><h2>✦ Recomienda y gana</h2><button class="btn sm" id="refClose" type="button">Cerrar</button></div>
+      <div id="refBody"></div>
     </section>
 
     <section class="card" id="teamBox" hidden>
@@ -329,6 +355,12 @@ dialog .row{justify-content:space-between}
 <script>
 const $=id=>document.getElementById(id);
 const Q=new URLSearchParams(location.search);
+// referral: ?ref=CODE is kept 60 days in this browser, so the account opened later still counts
+const REFKEY="vvr-ref";
+function refCode(){ try{ const r=JSON.parse(localStorage.getItem(REFKEY)||"null"); return r&&Date.now()-r.t<60*864e5?r.code:""; }catch(e){ return ""; } }
+{ const c=(Q.get("ref")||"").toUpperCase().replace(/[^A-Z0-9-]/g,""); if(c){ try{ localStorage.setItem(REFKEY,JSON.stringify({code:c,t:Date.now()})); }catch(e){} } }
+(async()=>{ const c=refCode(); if(!c) return; try{ const r=await (await fetch(`${VVR.api}/api/ref/${encodeURIComponent(c)}`)).json();
+  if(r.ok){ const b=$("rInvite"); b.hidden=false; b.innerHTML=`✦ <b>${esc(r.name)}</b> te invitó: tendrás <b>${r.discount}% de descuento</b> todo tu primer año en cualquier plan.`; } }catch(e){} })();
 const NEXT=Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":null;
 // public plans: [id, name, monthly price, yearly price, what it includes] (a year is ~10 months; IVA included)
 const PLANS=[["gratis","Gratis",0,0,"Para probar la magia",["<b>1</b> imagen con video","Activa <b>15 días</b>","Hasta <b>1,000</b> vistas","Videos de hasta 25 MB"]],
@@ -354,7 +386,7 @@ $("fEntrar").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,as
 
 // ---- sign up ----
 $("fRegistro").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,async()=>{ msg("mRegistro","Creando tu cuenta…");
-  try{ const r=await VVR.call("register",{json:{name:$("rName").value,email:$("rEmail").value,password:$("rPass").value}}); askCode("verify",$("rEmail").value,r.dev_code); }
+  try{ const r=await VVR.call("register",{json:{name:$("rName").value,email:$("rEmail").value,password:$("rPass").value,ref:refCode()}}); askCode("verify",$("rEmail").value,r.dev_code); }
   catch(err){ msg("mRegistro",err.message,"bad"); if(err.status===409) setTimeout(()=>{ $("eEmail").value=$("rEmail").value; location.hash="#entrar"; },1500); } }); });
 
 // ---- code: confirm account, or reset password ----
@@ -415,7 +447,7 @@ function showPanel(data){
   $("pPlan").textContent=member?`Tu cuenta es parte del equipo de ${T.owner}; ellos manejan el plan.`:`Videos de hasta ${P.videoMB} MB · `
     +(P.id==="gratis"?`cada experiencia dura 15 días y hasta ${nf(P.views||1000)} vistas.`:B.subscribed?(B.period==="anio"?"pago anual automático.":"pago mensual automático."):P.until?`pagado hasta el ${fmtD(P.until)}.`:"sin vencimiento.");
   $("pUpgrade").hidden=P.id==="escuela"||member; $("pUpgrade").textContent=P.id==="gratis"?"Mejorar plan":"Cambiar de plan";
-  $("pCodeBtn").hidden=member; $("pTeamBtn").hidden=!owner;
+  $("pCodeBtn").hidden=member; $("pTeamBtn").hidden=!owner; $("pRefBtn").hidden=member;
   if(data.tempPassword) banner("Estás usando una contraseña temporal. Cámbiala por una tuya en Mi cuenta → Cambiar contraseña.","warn");
   // the main action; at the limit it explains instead
   $("pCreate").classList.toggle("full",full); $("pCreate").href=full?"#planes":"../crear/";
@@ -423,7 +455,7 @@ function showPanel(data){
   $("pCreateS").textContent=full?(member?"Borra una experiencia o pide más a quien administra tu equipo.":owner?"Borra una, quita experiencias a tu equipo o mejora tu plan.":P.id==="escuela"?"Borra una experiencia para crear otra.":"Borra una experiencia o mejora tu plan para crear más."):"Sube una imagen y un video, y obtén tu link y tu QR";
   // plans: pay online with Stripe when it is on (billing.enabled); otherwise "Lo quiero" opens the contact form
   renderPlans();
-  $("pNote").innerHTML=(B.enabled?(B.test?"Modo de prueba (solo lo ves tú como administrador): se paga con la tarjeta de prueba de Stripe 4242 4242 4242 4242. ":"Pago seguro con tarjeta a través de Stripe. Se cobra automáticamente cada mes o cada año, según elijas, y cancelas cuando quieras. ")
+  $("pNote").innerHTML=(data.referral&&data.referral.discount?`<b style="color:var(--sun)">✦ Tienes ${data.referral.discount}% de descuento todo tu primer año por invitación; se aplica al pagar.</b> `:"")+(B.enabled?(B.test?"Modo de prueba (solo lo ves tú como administrador): se paga con la tarjeta de prueba de Stripe 4242 4242 4242 4242. ":"Pago seguro con tarjeta a través de Stripe. Se cobra automáticamente cada mes o cada año, según elijas, y cancelas cuando quieras. ")
     :"El pago con tarjeta en línea llega pronto; por ahora escríbenos y activamos tu plan. ")+'¿Necesitas más? <a href="../?tema=empresa#contacto">Pregúntanos por un plan a tu medida</a>.';
   if(location.hash==="#planes"&&P.id!=="escuela"&&!member) openPlans(true);
   if(B.pastDue) banner("No pudimos cobrar tu última mensualidad. Actualiza tu tarjeta en “Administrar suscripción” para que tu plan siga activo.","warn");
@@ -461,6 +493,37 @@ $("pHelpBtn").addEventListener("click",()=>{ menu(false);
   $("helpLead").textContent=`Cuéntanos qué pasó y te respondemos a ${DATA.user.email}${DATA.plan&&DATA.plan.id!=="gratis"?" lo antes posible (tu plan "+DATA.plan.name+" tiene prioridad)":""}.`;
   $("helpBox").hidden=false; $("helpBox").scrollIntoView({behavior:"smooth",block:"start"}); setTimeout(()=>$("hMsg").focus(),300); });
 $("helpClose").addEventListener("click",()=>{ $("helpBox").hidden=true; });
+// ---- Recomienda y gana (see /api/referral): link, code and QR; report of referred accounts and commissions
+const money=n=>{ const v=Number(n||0); return "$"+v.toLocaleString("es-MX",{minimumFractionDigits:v%1?2:0,maximumFractionDigits:2}); };
+$("pRefBtn").addEventListener("click",()=>{ menu(false); openRef(); });
+$("refClose").addEventListener("click",()=>{ $("refBox").hidden=true; });
+async function openRef(){ $("refBox").hidden=false; $("refBody").innerHTML='<p class="note">Cargando…</p>'; $("refBox").scrollIntoView({behavior:"smooth",block:"start"});
+  let r; try{ r=await VVR.call("referral"); }catch(e){ $("refBody").textContent=e.message; return; }
+  const B=$("refBody");
+  if(!r.eligible){ B.innerHTML=`<p class="rlead">Gana <b>${r.rate}% de cada pago</b> de las personas y empresas que invites, todo el tiempo que ellas paguen su plan. Ellas reciben <b>${r.discount}% de descuento</b> todo su primer año.</p>
+      <p class="note">Recomienda y gana está disponible con los planes <b>Pro</b> y <b>Empresarial</b>: mientras tu plan esté activo, ganas por cada pago de tus recomendados.</p>
+      <button class="btn sun" type="button" id="refUp">Ver planes</button>`;
+    $("refUp").onclick=()=>{ $("refBox").hidden=true; openPlans(true); }; return; }
+  const ST={pendiente:"Pendiente",disponible:"Disponible",pagada:"Pagada",cancelada:"Cancelada"};
+  B.innerHTML=`<div class="rgrid"><div>
+      <p class="rlead">Comparte tu link: quien se registre con él tiene <b>${r.discount}% de descuento</b> su primer año, y tú ganas <b>${r.rate}% de cada pago</b> que haga, todo el tiempo que ambos tengan su plan.</p>
+      <div class="rlink"><code id="refLink">${esc(r.link)}</code><button class="btn" type="button" id="refCopy">Copiar link</button><button class="btn sun" type="button" id="refShare">Compartir</button></div>
+      <p class="note">O dales tu código: <span class="rcode">${esc(r.code)}</span></p>
+      <div class="tsum">${[[r.registered,"cuentas con tu código"],[r.paying,"pagando ahora"],[money(r.totals.pendiente),"pendiente"],[money(r.totals.disponible),"disponible"],[money(r.totals.pagada),"ya pagado"]].map(([v,l])=>`<div><b>${typeof v==="number"?nf(v):v}</b><span>${l}</span></div>`).join("")}</div>
+      <p class="note">Cada comisión queda <b>pendiente ${r.holdDays} días</b> (por si hay un reembolso) y luego <b>disponible</b>. Te transferimos cuando acumulas ${money(r.minPayout)} o más; te escribiremos al correo de tu cuenta para pedirte tus datos de pago.</p>
+    </div>
+    <div class="rqr"><canvas id="refQR" aria-label="Código QR de tu invitación"></canvas><button class="btn sun" type="button" id="refQRd">Descargar QR</button></div></div>
+    <h3 class="tsub">Tus comisiones</h3>
+    ${r.rows.length?`<div class="tablewrap" style="overflow-x:auto"><table class="rtable"><tr><th>Fecha</th><th>Cliente</th><th>Plan</th><th class="n">Pagó</th><th class="n">Tu 10%</th><th>Estado</th></tr>${r.rows.map(x=>`<tr><td>${fmtD(x.created)}</td><td>${esc(x.name)}</td><td>${esc(x.plan||"")}</td><td class="n">${money(x.amount)}</td><td class="n">${money(x.commission)}</td><td><span class="st ${x.status}">${ST[x.status]||x.status}</span></td></tr>`).join("")}</table></div>`
+      :'<p class="note">Todavía no hay comisiones. En cuanto alguien que invitaste pague su plan, aparecerá aquí.</p>'}
+    ${r.referred.length?`<h3 class="tsub">Cuentas que llegaron con tu código</h3><p class="note">${r.referred.map(x=>`${esc(x.name)} · ${esc(x.plan)}${x.paying?" ✓":""}`).join(" &nbsp;·&nbsp; ")}</p>`:""}`;
+  $("refCopy").onclick=async e=>{ try{ await navigator.clipboard.writeText(r.link); e.target.textContent="¡Copiado!"; }catch(_){ prompt("Copia tu link:",r.link); } };
+  const txt=`Crea tu realidad aumentada en Vórtice VR con ${r.discount}% de descuento tu primer año: ${r.link}`;
+  $("refShare").onclick=async()=>{ if(navigator.share){ try{ await navigator.share({title:"Vórtice VR",text:txt,url:r.link}); }catch(e){} } else location.href="https://wa.me/?text="+encodeURIComponent(txt); };
+  const cv=$("refQR"); VVR.iconReady.then(()=>VVR.drawQR(cv,r.link,`Crea tu cuenta con ${r.discount}% de descuento`));
+  $("refQRd").onclick=()=>VVR.downloadCanvas(cv,`invitacion-${r.code}.png`);
+}
+
 // ---- Mi equipo (Empresarial owner): accounts for its people, each with part of the plan's experiences (see /api/team)
 $("pTeamBtn").addEventListener("click",()=>{ menu(false); openTeam(); });
 $("teamClose").addEventListener("click",()=>{ $("teamBox").hidden=true; });

@@ -107,6 +107,7 @@ table.top td.n{text-align:right;font-variant-numeric:tabular-nums}
       <button type="button" role="tab" data-tab="resumen" aria-selected="true">Resumen</button>
       <button type="button" role="tab" data-tab="cuentas" aria-selected="false">Cuentas</button>
       <button type="button" role="tab" data-tab="cupones" aria-selected="false">Cupones</button>
+      <button type="button" role="tab" data-tab="comisiones" aria-selected="false">Comisiones</button>
     </nav>
 
     <!-- analytics -->
@@ -137,6 +138,15 @@ table.top td.n{text-align:right;font-variant-numeric:tabular-nums}
         </form>
       </div>
       <div id="couponList"></div>
+    </section>
+
+    <!-- commissions (Recomienda y gana) -->
+    <section id="t-comisiones" hidden>
+      <div class="kpis" id="cmKpis"></div>
+      <div class="card"><div class="uhead"><h2>A quién le debes</h2><button class="btn sm" id="cmCsv" type="button">Descargar reporte (Excel)</button></div>
+        <p class="note">Cada comisión es el 10% de un pago real cobrado por Stripe a un cliente recomendado, solo si quien lo recomendó tenía Pro o Empresarial ese día. Queda <b>pendiente 30 días</b> (si hay un reembolso se cancela sola) y luego <b>disponible</b>. Cuando le transfieras a alguien, pulsa <b>Marcar como pagado</b>.</p>
+        <div class="tablewrap"><table class="top" id="cmRef"></table></div></div>
+      <div class="card" style="margin-top:12px"><h2>Movimientos recientes</h2><div class="tablewrap"><table class="top" id="cmRows"></table></div></div>
     </section>
 
     <!-- accounts -->
@@ -226,8 +236,8 @@ async function toggleExps(el,u){
 // ---- tabs
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",String(x===b)));
-  ["resumen","cuentas","cupones"].forEach(t=>$("t-"+t).hidden=t!==b.dataset.tab);
-  if(b.dataset.tab==="cupones") loadCoupons(); if(b.dataset.tab==="resumen") loadStats(); }));
+  ["resumen","cuentas","cupones","comisiones"].forEach(t=>$("t-"+t).hidden=t!==b.dataset.tab);
+  if(b.dataset.tab==="cupones") loadCoupons(); if(b.dataset.tab==="comisiones") loadCommissions(); if(b.dataset.tab==="resumen") loadStats(); }));
 
 // ---- analytics
 const nf=n=>Number(n||0).toLocaleString("es-MX");
@@ -269,6 +279,21 @@ function bars(fig,title,sub,series,key,unit){
       el.querySelector(".barp")&&el.querySelector(".barp").setAttribute("fill","#c9a6ff"); });
     el.addEventListener("pointerleave",()=>{ tip.hidden=true; el.querySelector(".barp")&&el.querySelector(".barp").setAttribute("fill","#a774f2"); }); });
 }
+
+// ---- commissions
+const mx=n=>{ const v=Number(n||0); return "$"+v.toLocaleString("es-MX",{minimumFractionDigits:v%1?2:0,maximumFractionDigits:2}); };
+const STC={pendiente:"Pendiente",disponible:"Disponible",pagada:"Pagada",cancelada:"Cancelada"};
+async function loadCommissions(){
+  const r=await VVR.call("admin/commissions"), t=r.totals;
+  $("cmKpis").innerHTML=[[mx(t.disponible),"por pagar (disponible)","ya pasaron los 30 días"],[mx(t.pendiente),"pendiente","en sus primeros 30 días"],[mx(t.pagada),"ya pagado","transferido a recomendadores"],[mx(t.ventas),"ventas con código","lo que pagaron los clientes recomendados"]]
+    .map(([v,l,sm])=>`<div class="kpi"><b>${v}</b><span>${l}</span><small>${sm}</small></div>`).join("");
+  $("cmRef").innerHTML="<tr><th>Recomendó</th><th class='n'>Ventas</th><th class='n'>Pendiente</th><th class='n'>Disponible</th><th class='n'>Pagado</th><th></th></tr>"+(r.referrers.length?r.referrers.map(x=>`<tr><td><b>${esc(x.name||"")}</b><br><span class="note">${esc(x.email||"")}</span></td><td class="n">${mx(x.payments)}</td><td class="n">${mx(x.pendiente)}</td><td class="n"><b>${mx(x.disponible)}</b></td><td class="n">${mx(x.pagada)}</td><td>${x.disponible>0?`<button class="btn sm primary" data-pay="${x.referrer_id}" data-amt="${x.disponible}" data-name="${esc(x.name||x.email||"")}" type="button">Marcar como pagado</button>${x.disponible<r.minPayout?`<br><span class="note">menos de ${mx(r.minPayout)}</span>`:""}`:""}</td></tr>`).join(""):"<tr><td colspan='6'>Todavía no hay comisiones.</td></tr>");
+  $("cmRef").querySelectorAll("[data-pay]").forEach(b=>b.onclick=async()=>{ const note=prompt(`¿Ya le transferiste ${mx(b.dataset.amt)} a ${b.dataset.name}? Escribe una referencia (por ejemplo, el folio de la transferencia):`,"");
+    if(note===null) return; await VVR.call("admin/commissions/pay",{json:{referrer_id:+b.dataset.pay,note}}); loadCommissions(); });
+  $("cmRows").innerHTML="<tr><th>Fecha</th><th>Recomendó</th><th>Cliente</th><th>Plan</th><th class='n'>Pagó</th><th class='n'>10%</th><th>Estado</th></tr>"+(r.rows.length?r.rows.slice(0,100).map(x=>`<tr><td>${fmt(x.created)}</td><td>${esc(x.r_name||x.r_email||"")}</td><td>${esc(x.u_name||x.u_email||"")}</td><td>${esc((PLANS[x.plan]||{}).name||x.plan||"")}</td><td class="n">${mx(x.amount)}</td><td class="n">${mx(x.commission)}</td><td>${STC[x.status]||x.status}${x.note?`<br><span class="note">${esc(x.note)}</span>`:""}</td></tr>`).join(""):"<tr><td colspan='7'>Sin movimientos.</td></tr>");
+}
+$("cmCsv").addEventListener("click",async()=>{ const s=VVR.session(); const r=await fetch(VVR.api+"/api/admin/commissions?csv=1",{headers:{Authorization:"Bearer "+s.token}});
+  const b=await r.blob(), a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="comisiones-vorticevr.csv"; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); });
 
 // ---- coupons
 async function loadCoupons(){

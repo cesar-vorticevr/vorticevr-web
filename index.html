@@ -638,6 +638,8 @@ document.getElementById("cform").addEventListener("submit",async e=>{
   catch(err){ m.className="cmsg bad"; m.textContent=err.message||(en?"It could not be sent. Write to hola@vorticevr.mx.":"No se pudo enviar. Escríbenos a hola@vorticevr.mx."); }
   b.disabled=false;
 });
+// a ?ref=CODE link that lands here is remembered (60 days) for when the account is opened (see /cuenta/)
+{ const c=(new URLSearchParams(location.search).get("ref")||"").toUpperCase().replace(/[^A-Z0-9-]/g,""); if(c){ try{ localStorage.setItem("vvr-ref",JSON.stringify({code:c,t:Date.now()})); }catch(e){} } }
 // links with data-tema (and ?tema= from other pages) open the form with that topic chosen
 const pickTopic=t=>{ const s=document.querySelector("#cform select[name=topic]"); if(s&&[...s.options].some(o=>o.value===t)) s.value=t; };
 document.querySelectorAll("a[data-tema]").forEach(a=>a.addEventListener("click",()=>pickTopic(a.dataset.tema)));
