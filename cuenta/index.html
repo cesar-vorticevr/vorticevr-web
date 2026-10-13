@@ -46,30 +46,23 @@ input:focus{border-color:var(--lav);outline:none}
 .banner{border:1px solid var(--ok);background:rgba(116,232,186,.1);border-radius:12px;padding:12px 16px;margin-bottom:18px;color:var(--ok)}
 .banner.warn{border-color:var(--sun);background:rgba(255,190,85,.1);color:var(--sun)}
 
-/* dashboard */
-.dhead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:18px 0 22px}
+/* dashboard: plan strip (plans open on demand) → toolbar + grid of compact experience cards (QR in a dialog) → account settings */
+.dhead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:18px 0 20px}
 .dhead p{margin:0;color:var(--mute)}
-.exp{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:24px;align-items:start;margin-bottom:18px}
-@media (max-width:820px){.exp{grid-template-columns:minmax(0,1fr)}}
-.ehead{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-.ehead img{width:150px;max-width:40%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;border:1px solid var(--line2);background:#120826}
-.ehead h2{margin:4px 0 0}
-.link{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0}
-.link code{font-family:var(--fm);font-size:1rem;color:var(--sun);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;overflow-wrap:anywhere}
-.stats{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 14px}
-.stats div{flex:1 1 110px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:rgba(5,2,11,.5)}
-.stats b{display:block;font-family:var(--fd);font-size:1.25rem}
-.stats span{font-size:.78rem;color:var(--mute)}
-.qr canvas{width:100%;height:auto;border-radius:12px;background:#fff;display:block}
-.qr .btn{width:100%;margin-top:10px}
-.empty{text-align:center;padding:40px 24px}
-.empty p{color:var(--mute);margin:6px auto 20px;max-width:46ch}
-.acct{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px;margin-top:28px}
-.note{font-size:.85rem;color:var(--mute)}
-#planes{margin-top:10px}
-.phead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
-.phead h2{font-size:1.6rem;margin:4px 0}
-.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin:18px 0 12px}
+.strip{display:flex;align-items:center;gap:18px 28px;flex-wrap:wrap;padding:18px 22px;margin-bottom:14px}
+.strip .pname{display:flex;flex-direction:column;gap:2px;min-width:120px}
+.strip .pname b{font-family:var(--fd);font-size:1.5rem;line-height:1.1}
+.strip .use{flex:1 1 260px;display:flex;flex-direction:column;gap:6px}
+.strip .use span{font-size:.88rem;color:var(--mute)}
+.strip .use span b{color:var(--ink)}
+.meter{height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
+.meter i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--vortex),var(--lav))}
+.meter.full i{background:linear-gradient(90deg,#ff9f3a,var(--sun))}
+.strip .row{margin-left:auto}
+.btn.sm{padding:9px 16px;font-size:.75rem}
+#plansBox{margin-bottom:18px}
+#plansBox .phead{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin:14px 0 12px}
 .plan{border:1px solid var(--line);border-radius:14px;padding:16px;background:rgba(5,2,11,.5);display:flex;flex-direction:column;gap:6px}
 .plan.cur{border-color:var(--sun);box-shadow:0 0 0 1px var(--sun) inset}
 .plan h3{font-family:var(--fd);margin:0;font-size:1.1rem}
@@ -78,12 +71,44 @@ input:focus{border-color:var(--lav);outline:none}
 .plan ul{margin:4px 0 10px;padding-left:18px;color:var(--mute);font-size:.9rem}
 .plan .btn{margin-top:auto;padding:10px 16px}
 .tag{display:inline-block;font-family:var(--fd);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;border-radius:999px;padding:3px 10px;border:1px solid var(--sun);color:var(--sun)}
-.exp.paused{opacity:.75}
-.exp.paused .tag{border-color:var(--bad);color:var(--bad)}
+.tag.bad{border-color:var(--bad);color:var(--bad)}
+.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:26px 0 14px}
+.tools h2{margin:0 auto 0 0;font-size:1.3rem}
+.tools input,.tools select{width:auto;font:inherit;font-size:.9rem;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:999px;padding:9px 14px}
+.tools input{min-width:0;flex:0 1 240px}
+.chip{font:600 .78rem var(--fb);border:1px solid var(--line2);border-radius:999px;padding:8px 12px;background:transparent;color:var(--mute);cursor:pointer}
+.chip[aria-pressed="true"]{background:rgba(255,138,158,.12);border-color:var(--bad);color:var(--bad)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:14px}
+.ec{border:1px solid var(--line);background:var(--panel);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+.ec.paused{opacity:.7}
+.ec .th{position:relative;aspect-ratio:16/10;background:#120826}
+.ec .th img{width:100%;height:100%;object-fit:cover;display:block}
+.ec .th .tag{position:absolute;left:10px;top:10px;background:rgba(5,2,11,.75)}
+.ec .bd{padding:14px 14px 12px;display:flex;flex-direction:column;gap:8px;flex:1}
+.ec h3{margin:0;font-family:var(--fd);font-size:1.05rem;line-height:1.2;overflow-wrap:anywhere}
+.ec .url{font-family:var(--fm);font-size:.8rem;color:var(--sun);overflow-wrap:anywhere;text-decoration:none}
+.ec .meta{display:flex;gap:6px 12px;flex-wrap:wrap;font-size:.8rem;color:var(--mute)}
+.ec .meta b{color:var(--ink);font-weight:600}
+.ec .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
+.ec .acts .btn{padding:8px 12px;font-size:.7rem;letter-spacing:.08em}
+.ec .acts .del{margin-left:auto;border-color:transparent;color:var(--bad);background:transparent}
+.more{display:flex;justify-content:center;margin-top:16px}
+.none{color:var(--mute);text-align:center;padding:24px}
+.empty{text-align:center;padding:40px 24px}
+.empty p{color:var(--mute);margin:6px auto 20px;max-width:46ch}
+dialog{border:1px solid var(--line2);border-radius:18px;background:#0d0620;color:var(--ink);padding:22px;width:min(92vw,380px)}
+dialog::backdrop{background:rgba(5,2,11,.75)}
+dialog canvas{width:100%;height:auto;border-radius:12px;background:#fff;display:block;margin:12px 0}
+dialog h2{margin:0;font-size:1.1rem;overflow-wrap:anywhere}
+dialog .row{justify-content:space-between}
+details.settings{margin-top:34px}
+details.settings>summary{cursor:pointer;font-family:var(--fd);letter-spacing:.12em;text-transform:uppercase;font-size:.85rem;color:var(--mute);padding:8px 0}
+.acct{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px;margin-top:12px}
+.note{font-size:.85rem;color:var(--mute)}
 </style>
 </head>
 <body>
-<header><a href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a href="../crear/">Crear RA</a><a href="../">← Sitio</a></div></header>
+<header><a href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a href="../crear/">Crear</a><a href="../">← Sitio</a></div></header>
 <main>
 
   <!-- sign in -->
@@ -144,20 +169,50 @@ input:focus{border-color:var(--lav);outline:none}
     <div class="banner" id="pBanner" hidden></div>
     <div class="dhead"><div><span class="kick">Mi cuenta</span><h1 id="pHello">Hola</h1><p id="pEmail"></p></div>
       <a class="btn primary" id="pCreate" href="../crear/">+ Crear experiencia</a></div>
-    <div id="pList"></div>
-    <section class="card" id="planes">
-      <div class="phead"><div><span class="kick">Tu plan</span><h2 id="pPlanName">Gratis</h2><p class="note" id="pPlan"></p></div><div class="row"><button class="btn" id="pManage" type="button" hidden>Administrar suscripción</button><a class="btn" id="pAdmin" href="../admin/" hidden>Administración</a></div></div>
+
+    <!-- plan: one compact strip; the plan comparison opens only when asked -->
+    <section class="card strip" id="planes">
+      <div class="pname"><span class="kick">Tu plan</span><b id="pPlanName">Gratis</b></div>
+      <div class="use"><span id="pUse"></span><div class="meter" id="pMeter"><i></i></div><span id="pPlan"></span></div>
+      <div class="row">
+        <button class="btn sm sun" id="pUpgrade" type="button" hidden>Mejorar plan</button>
+        <button class="btn sm" id="pManage" type="button" hidden>Administrar suscripción</button>
+        <a class="btn sm" id="pAdmin" href="../admin/" hidden>Administración</a>
+      </div>
+    </section>
+    <section class="card" id="plansBox" hidden>
+      <div class="phead"><h2>Planes</h2><button class="btn sm" id="plansClose" type="button">Cerrar</button></div>
       <div class="plans" id="pPlans"></div>
       <p class="note" id="pNote"></p>
     </section>
-    <div class="acct">
-      <div class="card"><h2>Cambiar contraseña</h2>
-        <form id="fPass"><label class="f" for="aCur">Contraseña actual</label><input type="password" id="aCur" autocomplete="current-password" required>
-          <label class="f" for="aNew">Nueva contraseña</label><input type="password" id="aNew" autocomplete="new-password" minlength="8" required>
-          <button class="btn wide" type="submit">Guardar</button></form><div class="msg" id="mPass"></div></div>
-      <div class="card"><h2>Sesión</h2><p class="note">Tu sesión dura 30 días en este dispositivo.</p><button class="btn" id="pOut" type="button">Cerrar sesión</button></div>
+
+    <!-- experiences -->
+    <div class="tools" id="pTools" hidden>
+      <h2 id="pCount">Mis experiencias</h2>
+      <input type="search" id="pSearch" placeholder="Buscar por título o link" aria-label="Buscar experiencias">
+      <select id="pSort" aria-label="Ordenar"><option value="new">Más recientes</option><option value="views">Más vistas</option><option value="name">Nombre (A–Z)</option></select>
+      <button class="chip" id="pPausedOnly" type="button" aria-pressed="false" hidden></button>
     </div>
+    <div id="pList"></div>
+    <div class="more"><button class="btn sm" id="pMore" type="button" hidden>Mostrar más</button></div>
+
+    <details class="settings">
+      <summary>Configuración de la cuenta</summary>
+      <div class="acct">
+        <div class="card"><h2>Cambiar contraseña</h2>
+          <form id="fPass"><label class="f" for="aCur">Contraseña actual</label><input type="password" id="aCur" autocomplete="current-password" required>
+            <label class="f" for="aNew">Nueva contraseña</label><input type="password" id="aNew" autocomplete="new-password" minlength="8" required>
+            <button class="btn wide" type="submit">Guardar</button></form><div class="msg" id="mPass"></div></div>
+        <div class="card"><h2>Sesión</h2><p class="note">Tu sesión dura 30 días en este dispositivo.</p><button class="btn" id="pOut" type="button">Cerrar sesión</button></div>
+      </div>
+    </details>
   </section>
+
+  <dialog id="qrDlg">
+    <h2 id="qrTitle"></h2>
+    <canvas id="qrCanvas" aria-label="Código QR"></canvas>
+    <div class="row"><button class="btn sun" id="qrDown" type="button">Descargar QR</button><button class="btn" id="qrClose" type="button">Cerrar</button></div>
+  </dialog>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
@@ -217,54 +272,84 @@ $("fOlvide").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,as
   catch(err){ msg("mOlvide",err.message,"bad"); } }); });
 
 // ---- dashboard ----
+let DATA=null, shownN=24;
+const PAGE=24;
+const fmtD=t=>new Date(t).toLocaleDateString("es-MX",{day:"numeric",month:"long",year:"numeric"});
+const nf=n=>Number(n||0).toLocaleString("es-MX");
 function showPanel(data){
-  const {user,experiences}=data;
+  DATA=data; const {user,experiences}=data;
   const P=data.plan||{id:"gratis",name:"Gratis",exp:data.limit||1,days:30,videoMB:25};
+  const B=data.billing||{enabled:false};
   $("pHello").textContent=`Hola, ${user.name||"bienvenido"}`; $("pEmail").textContent=user.email;
   const active=experiences.filter(x=>!x.paused).length, full=active>=P.exp; $("pCreate").hidden=full;
-  $("pPlanName").textContent=P.name; $("pAdmin").hidden=!data.admin;
-  $("pPlan").textContent=`${active.toLocaleString("es-MX")} de ${P.exp.toLocaleString("es-MX")} ${P.exp===1?"experiencia":"experiencias"} en uso · videos de hasta ${P.videoMB} MB · `
-    +(P.id==="gratis"?"cada experiencia dura 30 días.":P.until?`pagado hasta el ${new Date(P.until).toLocaleDateString("es-MX",{day:"numeric",month:"long",year:"numeric"})}.`:"sin vencimiento.")
-    +(full?(P.exp===1?" Ya usaste tu experiencia: edítala, bórrala para crear otra o mejora tu plan.":" Ya usaste todas: edita o borra una, o mejora tu plan."):"");
+  // plan strip
+  $("pPlanName").textContent=P.name; $("pAdmin").hidden=!data.admin; $("pManage").hidden=!B.subscribed;
+  $("pUse").innerHTML=`<b>${nf(active)}</b> de ${nf(P.exp)} ${P.exp===1?"experiencia":"experiencias"} en uso`;
+  $("pMeter").classList.toggle("full",full); $("pMeter").firstElementChild.style.width=Math.min(100,Math.max(2,active/P.exp*100))+"%";
+  $("pPlan").textContent=`Videos de hasta ${P.videoMB} MB · `
+    +(P.id==="gratis"?"cada experiencia dura 30 días.":B.subscribed?"pago mensual automático con tarjeta.":P.until?`pagado hasta el ${fmtD(P.until)}.`:"sin vencimiento.")
+    +(full?(P.exp===1?" Ya usaste tu experiencia: edítala, bórrala o mejora tu plan.":" Ya usaste todas: edita o borra una, o mejora tu plan."):"");
+  $("pUpgrade").hidden=P.id==="escuela"; $("pUpgrade").textContent=P.id==="gratis"?"Mejorar plan":"Cambiar de plan";
   // plans: pay online with Stripe when it is on (billing.enabled); otherwise "Lo quiero" opens WhatsApp
-  const B=data.billing||{enabled:false};
-  const shown=P.id==="escuela"?[...PLANS,["escuela","Escuela",1500,["1,000 experiencias","Cámbialas cuando quieras","Videos de hasta 50 MB","Sin la pantalla de Vórtice VR"]]]:PLANS;
-  $("pPlans").innerHTML=shown.map(([id,name,price,items])=>{ const cur=id===P.id;
+  $("pPlans").innerHTML=PLANS.map(([id,name,price,items])=>{ const cur=id===P.id;
     const msg=encodeURIComponent(`Hola, quiero el plan ${name} de realidad aumentada para mi cuenta ${user.email}`);
-    const buy=!cur&&price&&id!=="escuela"&&P.id!=="escuela";
     return `<div class="plan${cur?" cur":""}"><h3>${name} ${cur?'<span class="tag">Tu plan</span>':""}</h3><div class="price">${price?"$"+price+" <small>MXN al mes · IVA incluido</small>":"$0"}</div><ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul>`
-      +(buy?(B.enabled?`<button class="btn sun" type="button" data-plan="${id}">${B.subscribed?"Cambiar a este plan":"Contratar"}</button>`:`<a class="btn sun" href="https://wa.me/${WA}?text=${msg}" target="_blank" rel="noopener">Lo quiero</a>`):"")+`</div>`; }).join("");
+      +(!cur&&price?(B.enabled?`<button class="btn sun" type="button" data-plan="${id}">${B.subscribed?"Cambiar a este plan":"Contratar"}</button>`:`<a class="btn sun" href="https://wa.me/${WA}?text=${msg}" target="_blank" rel="noopener">Lo quiero</a>`):"")+`</div>`; }).join("");
   $("pPlans").querySelectorAll("[data-plan]").forEach(b=>b.addEventListener("click",()=>pay("billing/checkout",{plan:b.dataset.plan},b)));
-  $("pManage").hidden=!B.subscribed;
-  $("pNote").textContent=(B.enabled?(B.test?"Modo de prueba: paga con la tarjeta 4242 4242 4242 4242, cualquier fecha futura y cualquier CVC. ":"Pago seguro con tarjeta a través de Stripe. Se cobra cada mes automáticamente y cancelas cuando quieras. ")
+  $("pNote").textContent=(B.enabled?(B.test?"Modo de prueba (solo lo ves tú como administrador): se paga con la tarjeta de prueba de Stripe 4242 4242 4242 4242. ":"Pago seguro con tarjeta a través de Stripe. Se cobra cada mes automáticamente y cancelas cuando quieras. ")
     :"El pago con tarjeta en línea llega pronto; por ahora escríbenos y activamos tu plan. ")+"¿Eres escuela? Pregúntanos por el plan Escuela.";
+  if(location.hash==="#planes"&&P.id!=="escuela") openPlans(true);
   if(B.pastDue) banner("No pudimos cobrar tu última mensualidad. Actualiza tu tarjeta en “Administrar suscripción” para que tu plan siga activo.","warn");
-  const list=$("pList"); list.replaceChildren();
-  if(!experiences.length){ list.innerHTML=`<div class="card empty"><h2>Todavía no tienes experiencias</h2><p>Sube una imagen y un video: cuando alguien apunte su celular a la imagen, el video aparecerá encima.</p><a class="btn primary" href="../crear/">Crear mi primera experiencia</a></div>`; }
-  for(const exp of experiences){
-    const days=Math.max(0,Math.ceil((exp.expires-Date.now())/864e5));
-    const el=document.createElement("article"); el.className="card exp"+(exp.paused?" paused":"");
-    const until=new Date(exp.expires).toLocaleDateString("es-MX",{day:"numeric",month:"short"});
-    const stats=exp.paused?`<div><b>${days}</b><span>días antes de borrarse</span></div><div><b>Pausada</b><span>tu plan ya no la incluye</span></div>`
-      :exp.forever?`<div><b>Activa</b><span>mientras tu plan esté vigente</span></div>`
-      :`<div><b>${days}</b><span>días restantes</span></div><div><b>${until}</b><span>disponible hasta</span></div>`;
-    el.innerHTML=`<div>
-        <div class="ehead"><img src="${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}" alt=""><div><span class="kick">Experiencia</span> ${exp.paused?'<span class="tag">Pausada</span>':""}<h2>${esc(exp.title)}</h2></div></div>
-        <div class="link"><code>${esc(exp.url.replace(/^https?:\/\//,"").replace(/\/$/,""))}</code><button class="btn" type="button" data-a="copy">Copiar link</button>${exp.paused?"":`<a class="btn primary" href="${esc(exp.url)}" target="_blank" rel="noopener">Abrir</a>`}</div>
-        <div class="stats"><div><b>${(exp.views||0).toLocaleString("es-MX")}</b><span>veces abierta</span></div>${stats}</div>
-        <div class="row">${exp.paused?`<a class="btn sun" href="#planes">Mejorar plan</a>`:`<a class="btn" href="../crear/?editar=${encodeURIComponent(exp.slug)}">Editar</a>`}<button class="btn danger" type="button" data-a="del">Borrar</button></div>
-      </div>
-      <div class="qr"><canvas aria-label="Código QR"></canvas><button class="btn sun" type="button" data-a="qr">Descargar QR</button></div>`;
-    list.appendChild(el);
-    const cv=el.querySelector("canvas"); VVR.iconReady.then(()=>VVR.drawQR(cv,exp.url));
-    el.querySelector("[data-a=copy]").addEventListener("click",async ev=>{ try{ await navigator.clipboard.writeText(exp.url); ev.target.textContent="¡Copiado!"; setTimeout(()=>ev.target.textContent="Copiar link",1600); }catch(e){ prompt("Copia tu link:",exp.url); } });
-    el.querySelector("[data-a=qr]").addEventListener("click",()=>VVR.downloadCanvas(cv,`QR-${exp.slug}.png`));
-    el.querySelector("[data-a=del]").addEventListener("click",async()=>{ if(!confirm(`¿Borrar “${exp.title}”? El link y el QR dejarán de funcionar.`)) return;
-      try{ await VVR.call("experience/"+exp.slug,{method:"DELETE"}); load(); }catch(e){ alert(e.message); } });
-  }
+  renderList();
   const pub=Q.get("publicada"); if(pub&&experiences.some(x=>x.slug===pub)){ banner("¡Listo! Tu experiencia está publicada. También te enviamos el link y el QR por correo."); history.replaceState(null,"",location.pathname); }
   view("vPanel");
 }
+function openPlans(on){ $("plansBox").hidden=!on; if(on) setTimeout(()=>$("plansBox").scrollIntoView({behavior:"smooth",block:"start"}),30); }
+$("pUpgrade").addEventListener("click",()=>openPlans($("plansBox").hidden));
+$("plansClose").addEventListener("click",()=>openPlans(false));
+
+// experiences: search, sort and a "paused" filter; 24 at a time
+function renderList(){
+  const exps=DATA.experiences, list=$("pList"); list.replaceChildren();
+  const paused=exps.filter(x=>x.paused).length, pausedOnly=$("pPausedOnly").getAttribute("aria-pressed")==="true";
+  $("pTools").hidden=exps.length<2; $("pCount").textContent=`Mis experiencias (${nf(exps.length)})`;
+  $("pPausedOnly").hidden=!paused; $("pPausedOnly").textContent=`Pausadas (${paused})`;
+  if(!exps.length){ $("pMore").hidden=true;
+    list.innerHTML=`<div class="card empty"><h2>Todavía no tienes experiencias</h2><p>Sube una imagen y un video: cuando alguien apunte su celular a la imagen, el video aparecerá encima.</p><a class="btn primary" href="../crear/">Crear mi primera experiencia</a></div>`; return; }
+  const q=$("pSearch").value.trim().toLowerCase(), sort=$("pSort").value;
+  const items=exps.filter(x=>(!pausedOnly||x.paused)&&(!q||x.title.toLowerCase().includes(q)||x.slug.includes(q)))
+    .sort((a,b)=>(a.paused-b.paused)||(sort==="views"?(b.views||0)-(a.views||0):sort==="name"?a.title.localeCompare(b.title,"es"):(b.updated||b.created)-(a.updated||a.created)));
+  if(!items.length){ list.innerHTML=`<p class="none">No hay experiencias con esa búsqueda.</p>`; $("pMore").hidden=true; return; }
+  const grid=document.createElement("div"); grid.className="grid";
+  items.slice(0,shownN).forEach(x=>grid.appendChild(card(x))); list.appendChild(grid);
+  $("pMore").hidden=items.length<=shownN; $("pMore").textContent=`Mostrar más (${nf(items.length-shownN)})`;
+}
+function card(exp){
+  const el=document.createElement("article"); el.className="ec"+(exp.paused?" paused":"");
+  const days=Math.max(0,Math.ceil((exp.expires-Date.now())/864e5)), short=exp.url.replace(/^https?:\/\//,"").replace(/\/$/,"");
+  const status=exp.paused?`se borra en ${days} días`:exp.forever?"Activa":`${days} días restantes`;
+  el.innerHTML=`<div class="th"><img loading="lazy" src="${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}" alt="">${exp.paused?'<span class="tag bad">Pausada</span>':""}</div>
+    <div class="bd"><h3>${esc(exp.title)}</h3>${exp.paused?`<span class="url">${esc(short)}</span>`:`<a class="url" href="${esc(exp.url)}" target="_blank" rel="noopener">${esc(short)}</a>`}
+      <div class="meta"><span><b>${nf(exp.views)}</b> ${exp.views===1?"vista":"vistas"}</span><span>${status}</span></div>
+      <div class="acts">${exp.paused?`<button class="btn sun" type="button" data-a="up">Mejorar plan</button>`
+        :`<a class="btn" href="../crear/?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="copy">Copiar link</button>`}
+        <button class="btn del" type="button" data-a="del" aria-label="Borrar ${esc(exp.title)}">Borrar</button></div></div>`;
+  const on=(a,f)=>{ const b=el.querySelector(`[data-a=${a}]`); if(b) b.addEventListener("click",f); };
+  on("up",()=>openPlans(true));
+  on("qr",()=>openQR(exp));
+  on("copy",async ev=>{ try{ await navigator.clipboard.writeText(exp.url); ev.target.textContent="¡Copiado!"; setTimeout(()=>ev.target.textContent="Copiar link",1600); }catch(e){ prompt("Copia tu link:",exp.url); } });
+  on("del",async()=>{ if(!confirm(`¿Borrar “${exp.title}”? El link y el QR dejarán de funcionar.`)) return;
+    try{ await VVR.call("experience/"+exp.slug,{method:"DELETE"}); load(); }catch(e){ alert(e.message); } });
+  return el;
+}
+let qrExp=null;
+function openQR(exp){ qrExp=exp; $("qrTitle").textContent=exp.title; VVR.iconReady.then(()=>VVR.drawQR($("qrCanvas"),exp.url)); $("qrDlg").showModal(); }
+$("qrDown").addEventListener("click",()=>VVR.downloadCanvas($("qrCanvas"),`QR-${qrExp.slug}.png`));
+$("qrClose").addEventListener("click",()=>$("qrDlg").close());
+$("pSearch").addEventListener("input",()=>{ shownN=PAGE; renderList(); });
+$("pSort").addEventListener("change",()=>{ shownN=PAGE; renderList(); });
+$("pPausedOnly").addEventListener("click",e=>{ e.target.setAttribute("aria-pressed",String(e.target.getAttribute("aria-pressed")!=="true")); shownN=PAGE; renderList(); });
+$("pMore").addEventListener("click",()=>{ shownN+=PAGE; renderList(); });
 function banner(t,kind){ const b=$("pBanner"); b.hidden=false; b.className="banner"+(kind?" "+kind:""); b.textContent=t; }
 // Stripe: Checkout to subscribe, Customer Portal to change card, switch plan or cancel
 async function pay(path,body,btn){ if(btn) btn.disabled=true;
