@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="75%"><stop offset="0" stop-color="#3b1d6e"/><stop offset="1" stop-color="#0b0518"/></radialGradient>
+    <linearGradient id="q" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a35cf0"/><stop offset="1" stop-color="#5a1f8f"/></linearGradient>
+    <linearGradient id="ok" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#47e29a"/><stop offset="1" stop-color="#159a5b"/></linearGradient>
+  </defs>
+  <rect width="320" height="200" fill="url(#bg)"/>
+  <rect x="70" y="16" width="180" height="44" rx="12" fill="url(#q)" stroke="#e8d6ff" stroke-width="2"/>
+  <text x="160" y="45" text-anchor="middle" font-family="Sora,Arial,sans-serif" font-weight="700" font-size="20" fill="#fff">¿Pregunta?</text>
+  <g transform="rotate(-10 160 150)">
+    <ellipse cx="160" cy="118" rx="30" ry="36" fill="#f2c7a5"/>
+    <path d="M130 110c2-26 58-28 60 0-7-13-52-14-60 0z" fill="#3a2a1f"/>
+    <circle cx="149" cy="119" r="3.5" fill="#2b1d14"/><circle cx="171" cy="119" r="3.5" fill="#2b1d14"/>
+    <path d="M150 134q10 8 20 0" stroke="#a5523f" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M128 200c3-16 16-22 32-22s29 6 32 22z" fill="#8b3fd6"/>
+  </g>
+  <rect x="18" y="130" width="92" height="40" rx="12" fill="url(#ok)" stroke="#fff" stroke-width="2"/>
+  <text x="64" y="156" text-anchor="middle" font-family="Sora,Arial,sans-serif" font-weight="700" font-size="17" fill="#fff">◀ Sí</text>
+  <rect x="210" y="130" width="92" height="40" rx="12" fill="#1a0c33" stroke="#d2b8ff" stroke-width="2"/>
+  <text x="256" y="156" text-anchor="middle" font-family="Sora,Arial,sans-serif" font-weight="700" font-size="17" fill="#fff">No ▶</text>
+  <text x="290" y="90" font-size="22">✨</text><text x="20" y="96" font-size="18">⭐</text>
+</svg>

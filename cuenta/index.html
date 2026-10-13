@@ -596,11 +596,11 @@ function card(exp){
   const days=Math.max(0,Math.ceil((exp.expires-Date.now())/864e5)), short=exp.url.replace(/^https?:\/\//,"").replace(/\/$/,"");
   const free=!DATA.plan||DATA.plan.id==="gratis", vlim=(DATA.plan&&DATA.plan.views)||1000;
   const status=exp.paused?(exp.forever?"Excede tu plan":`se borra en ${days} días`):exp.forever?"Activa":`${days} días restantes`;
-  el.innerHTML=`<div class="th"><img loading="lazy" src="${exp.thumb||`${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}`}" alt="">${exp.paused?'<span class="tag bad">Pausada</span>':""}</div>
+  el.innerHTML=`<div class="th"><img loading="lazy" src="${exp.thumb||(exp.kind==="trivia"?"../assets/trivia.svg":`${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}`)}" alt="">${exp.paused?'<span class="tag bad">Pausada</span>':""}</div>
     <div class="bd"><h3>${esc(exp.title)}</h3>${exp.paused?`<span class="url">${esc(short)}</span>`:`<a class="url" href="${esc(exp.url)}" target="_blank" rel="noopener">${esc(short)}</a>`}
       <div class="meta"><span><b>${nf(exp.views)}</b>${free?`/${nf(vlim)}`:""} ${exp.views===1&&!free?"vista":"vistas"}</span><span>${status}</span></div>
       <div class="acts">${exp.paused?`<button class="btn sun" type="button" data-a="up">Mejorar plan</button>`
-        :`<a class="btn" href="../crear/?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="copy">Copiar link</button>`}
+        :`<a class="btn" href="../crear/${exp.kind==="trivia"?"trivia/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="copy">Copiar link</button>`}
         <button class="btn del" type="button" data-a="del" aria-label="Borrar ${esc(exp.title)}">Borrar</button></div></div>`;
   const on=(a,f)=>{ const b=el.querySelector(`[data-a=${a}]`); if(b) b.addEventListener("click",f); };
   if(exp.demo){ // sample card: only the QR works; the rest explains itself

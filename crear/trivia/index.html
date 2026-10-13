@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Crea tu trivia con filtro · Vórtice VR</title>
+<meta name="description" content="Crea una trivia con filtro de rostro: de 1 a 5 preguntas que se contestan inclinando la cabeza. Comparte el link y el código QR.">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../../assets/icono.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Trivia maker: questions on the left, a phone that plays them on the right (below on a phone).
+   The game itself is assets/trivia.js (opened at the experience's link). */
+:root{--void:#05020b;--panel:rgba(20,9,40,.7);--line:rgba(190,150,255,.2);--line2:rgba(190,150,255,.45);--vortex:#8b3fd6;--vortex-d:#5a1f8f;--lav:#d2b8ff;--ink:#f2ecff;--mute:#a99bcb;--sun:#ffbe55;--ok:#74e8ba;--bad:#ff8a9e;
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55;min-height:100vh}
+a{color:var(--lav)}
+:focus-visible{outline:2px solid var(--lav);outline-offset:3px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1180px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 8px}
+header img{height:24px;display:block}
+header a.back{font-family:var(--fd);font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--mute)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+.hero{padding:28px 0 26px}
+.kick{font-family:var(--fd);font-size:.78rem;letter-spacing:.26em;text-transform:uppercase;color:var(--sun);font-weight:600}
+h1{font-family:var(--fd);font-size:clamp(2rem,5vw,3.2rem);line-height:1.02;margin:8px 0 10px;text-wrap:balance}
+.hero p{margin:0;color:var(--mute);max-width:62ch}
+.narrow{max-width:820px}
+.step{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:20px;margin-bottom:16px}
+.step h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font-family:var(--fd);font-size:1.2rem}
+.step h2 .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--fm);font-size:.85rem;background:rgba(139,63,214,.3);border:1px solid var(--line2);flex:none}
+.step h2 .n.done{background:var(--ok);color:#0b2a1e;border-color:var(--ok)}
+.step>p.hint{margin:0 0 14px;color:var(--mute);font-size:.92rem}
+.drop{display:flex;align-items:center;gap:14px;border:1.5px dashed var(--line2);border-radius:12px;padding:16px;cursor:pointer;transition:border-color .2s,background .2s}
+.drop:hover,.drop.over{border-color:var(--lav);background:rgba(139,63,214,.12)}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.drop .thumb{width:84px;height:64px;border-radius:8px;object-fit:cover;background:#120826;flex:none}
+.drop b{display:block}
+.drop small{color:var(--mute)}
+.bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--vortex),var(--sun));transition:width .2s}
+.msg{font-size:.88rem;margin-top:8px}
+.tutlink{margin-top:10px;font:600 .8rem var(--fd);letter-spacing:.1em;text-transform:uppercase;color:var(--sun);background:rgba(255,190,85,.08);border:1px solid rgba(255,190,85,.4);border-radius:999px;padding:8px 14px;cursor:pointer}
+.tutlink:hover{background:rgba(255,190,85,.16)}
+.quality{display:flex;gap:12px;align-items:flex-start;margin-top:10px;padding:12px 14px;border-radius:12px;border:1px solid var(--line2);background:rgba(5,2,11,.6);font-size:.9rem;color:var(--mute)}
+.quality b{display:block;color:var(--ink);font-family:var(--fd);font-size:.85rem;letter-spacing:.06em;margin-bottom:2px}
+.quality .stars{font-size:1.35rem;letter-spacing:2px;color:#ffbe55;text-shadow:0 0 12px rgba(255,190,85,.7);white-space:nowrap;line-height:1.2}
+.quality .stars i{font-style:normal;color:rgba(255,255,255,.15);text-shadow:none}
+.quality.q1 .stars,.quality.q2 .stars{color:#ff9f7a;text-shadow:0 0 10px rgba(255,138,120,.5)}
+.quality.q5{border-color:rgba(255,190,85,.6);box-shadow:0 0 24px rgba(255,190,85,.18)}
+.msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+label.f{display:block;font-size:.8rem;font-family:var(--fd);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:12px 0 6px}
+input[type=text],input[type=email],input[type=tel],input[type=url]{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:11px 12px}
+input:focus{border-color:var(--lav);outline:none}
+.slugrow{display:flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:rgba(5,2,11,.7);overflow:hidden}
+.slugrow input{border:0;background:transparent;border-radius:0;text-align:right;padding-right:2px;min-width:0}
+.slugrow span{padding:11px 12px 11px 0;color:var(--mute);white-space:nowrap;font-family:var(--fm);font-size:.9rem}
+.soc{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px}
+.soc label{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:4px 4px 4px 10px;background:rgba(5,2,11,.5)}
+.soc svg{width:20px;height:20px;fill:var(--lav);flex:none}
+.soc input{border:0!important;background:transparent!important;padding:8px 6px 8px 0!important;min-width:0}
+.soc .pre{font-family:var(--fm);font-size:.82rem;color:var(--mute);white-space:nowrap}
+header .acts{display:flex;align-items:center;gap:14px}
+.mybtn{font-family:var(--fd);font-weight:600;letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;border:1px solid var(--line2);border-radius:999px;padding:9px 14px;background:rgba(139,63,214,.2);color:var(--ink);cursor:pointer}
+.phead{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.phead img{width:150px;max-width:40%;border-radius:10px;border:1px solid var(--line2)}
+.phead h2{margin:4px 0 2px}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.stats div{flex:1 1 120px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:rgba(5,2,11,.5)}
+.stats b{display:block;font-family:var(--fd);font-size:1.25rem}
+.stats span{font-size:.78rem;color:var(--mute)}
+.btn.danger{border-color:rgba(255,138,158,.6);color:var(--bad)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{font:600 .85rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--fd);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:.85rem;border:1px solid var(--line2);border-radius:999px;padding:13px 22px;color:var(--ink);background:rgba(20,9,40,.6);cursor:pointer;text-decoration:none}
+.btn.primary{background:linear-gradient(135deg,var(--vortex),var(--vortex-d));border-color:var(--lav);box-shadow:0 0 26px rgba(139,63,214,.45)}
+.btn.sun{background:linear-gradient(135deg,#ffd27f,#ff9f3a);color:#1a0d00;border-color:var(--sun)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.note{font-size:.85rem;color:var(--mute)}
+
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,380px);gap:28px;align-items:start}
+.side{position:sticky;top:16px}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.side{position:static;order:-1}}
+.switch{display:inline-flex;gap:4px;padding:4px;border:1px solid var(--line2);border-radius:999px;background:rgba(5,2,11,.6);margin-top:14px}
+.switch a,.switch span{font:600 .82rem var(--fd);padding:8px 14px;border-radius:999px;text-decoration:none;color:var(--mute)}
+.switch span{background:var(--vortex);color:#fff}
+/* questions */
+.qs{display:grid;gap:12px}
+.q{border:1px solid var(--line2);border-radius:14px;padding:14px;background:rgba(5,2,11,.45);animation:qIn .35s cubic-bezier(.3,1.4,.5,1)}
+@keyframes qIn{from{transform:scale(.96);opacity:0}}
+.qh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.qh b{font:700 .8rem var(--fd);letter-spacing:.14em;text-transform:uppercase;color:var(--sun)}
+.qh button{width:30px;height:30px;border-radius:8px;border:1px solid transparent;background:none;color:var(--mute);cursor:pointer;font-size:1rem}
+.qh button:hover{border-color:var(--line2);color:var(--ink)}
+.q textarea{width:100%;font:600 1.02rem var(--fb);color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;resize:vertical;min-height:56px}
+.ans{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.an{border:1.5px solid var(--line);border-radius:12px;padding:8px;background:rgba(20,9,40,.6);transition:border-color .2s,background .2s}
+.an.ok{border-color:var(--ok);background:rgba(116,232,186,.08)}
+.an span{display:block;font:600 .72rem var(--fd);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:0 0 5px 2px}
+.an input{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:8px;padding:8px 10px}
+.an button{margin-top:6px;width:100%;font:600 .78rem var(--fb);border-radius:999px;padding:6px;border:1px solid var(--line2);background:none;color:var(--mute);cursor:pointer}
+.an.ok button{background:var(--ok);border-color:var(--ok);color:#0b2a1e}
+.addq{margin-top:12px;width:100%;border:1.5px dashed var(--line2);border-radius:12px;padding:12px;background:none;color:var(--lav);font:600 .9rem var(--fd);cursor:pointer}
+.addq:hover{border-color:var(--lav);background:rgba(139,63,214,.12)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{font:600 .85rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
+/* the phone preview: a face that leans toward the right answer */
+.pv{border:1px solid var(--line2);border-radius:18px;background:#120826;padding:16px}
+.pv h3{margin:0 0 10px;font-family:var(--fd);font-size:1rem;display:flex;justify-content:space-between;align-items:center}
+.pv h3 small{font:500 .78rem var(--fb);color:var(--mute)}
+.phone{position:relative;margin:0 auto;width:min(100%,300px);aspect-ratio:9/17;border-radius:34px;border:8px solid #1e1236;background:radial-gradient(90% 60% at 50% 55%,#3b2a58,#140b26);overflow:hidden;box-shadow:0 20px 60px -20px rgba(139,63,214,.7)}
+.phone .logo{position:absolute;top:12px;left:0;right:0;text-align:center}
+.phone .logo img{height:14px}
+.pq{position:absolute;left:8%;right:8%;top:11%;padding:12px 12px 14px;border-radius:16px;background:linear-gradient(135deg,#a35cf0,#5a1f8f);border:2px solid #e8d6ff;text-align:center;font:700 .95rem/1.2 var(--fd);color:#fff;box-shadow:0 0 22px rgba(139,63,214,.8)}
+.pq small{display:block;font-size:.6rem;letter-spacing:.14em;color:#ffe0a3;margin-bottom:4px}
+.face{position:absolute;left:50%;top:44%;width:44%;transform:translate(-50%,0);transform-origin:50% 100%}
+.face svg{width:100%;display:block}
+.pa{position:absolute;bottom:20%;width:40%;padding:10px 8px;border-radius:14px;background:rgba(12,5,26,.92);border:2px solid rgba(210,184,255,.8);color:#fff;font:700 .78rem/1.2 var(--fd);text-align:center;transition:transform .3s,background .3s,border-color .3s}
+.pa.l{left:5%}.pa.r{right:5%}
+.pa.hot{background:linear-gradient(135deg,#47e29a,#159a5b);border-color:#fff;transform:scale(1.12)}
+.pres{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:6px;text-align:center;background:rgba(10,4,22,.55)}
+.pres b{font:800 3rem var(--fd);color:#ffd27f;text-shadow:0 0 20px rgba(255,190,85,.8)}
+.pres span{font:700 .9rem var(--fd)}
+.pnav{display:flex;justify-content:center;gap:6px;margin-top:12px;flex-wrap:wrap}
+.pnav button{font:600 .75rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:6px 11px;cursor:pointer}
+.pnav button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
+@media (prefers-reduced-motion:reduce){.face{animation:none!important}}
+/* result */
+.result{border:1px solid var(--ok);background:linear-gradient(170deg,rgba(116,232,186,.12),rgba(20,9,40,.7));border-radius:16px;padding:22px;margin-bottom:16px}
+.result h2{margin:0 0 8px;font-family:var(--fd)}
+.link{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.link code{font-family:var(--fm);font-size:1.05rem;color:var(--sun);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;overflow-wrap:anywhere}
+#qr{width:220px;max-width:100%;height:auto;border-radius:12px;background:#fff;display:block;margin:12px 0}
+.mine{border:1px solid rgba(255,190,85,.5);background:rgba(255,190,85,.07);border-radius:12px;padding:12px 14px;margin-top:12px;font-size:.92rem}
+.legal{font-size:.8rem;color:var(--mute);margin-top:10px}
+
+</style>
+</head>
+<body>
+<header><a href="../../" aria-label="Vórtice VR, inicio"><img src="../../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a class="mybtn" href="../../cuenta/" style="text-decoration:none">Mi cuenta</a><a class="back" href="../../">← Sitio</a></div></header>
+<main class="wrap">
+  <div class="hero">
+    <span class="kick" id="kick">Gratis · prueba de 15 días</span>
+    <h1>Crea tu trivia con filtro</h1>
+    <p>Un juego con la cámara frontal: cada pregunta aparece sobre la cabeza y se contesta inclinándola hacia la respuesta. Al final sale cuántas acertaste, con confeti y estrellas. Comparte el link o el QR.</p>
+    <div class="switch"><a href="../">Imagen con realidad aumentada</a><span>Trivia con tu cara</span></div>
+  </div>
+  <div class="grid">
+    <div>
+      <section class="step" id="full" hidden>
+        <h2 id="fullTitle">Ya usaste todas tus experiencias</h2>
+        <p class="hint" id="fullText"></p>
+        <div class="row"><a class="btn" href="../../cuenta/#planes">Ver planes</a><a class="btn" href="../../cuenta/">Ir a mi cuenta</a></div>
+      </section>
+      <section class="step" id="s1">
+        <h2><span class="n" id="n1">1</span>Tus preguntas</h2>
+        <p class="hint">De 1 a 5 preguntas, cada una con dos respuestas: una a la izquierda y otra a la derecha. Marca cuál es la correcta.</p>
+        <div class="qs" id="qs"></div>
+        <button class="addq" id="addq" type="button">+ Agregar pregunta</button>
+      </section>
+      <section class="step" id="s2">
+        <h2><span class="n done" id="n2">2</span>Tiempo para contestar</h2>
+        <div class="seg" id="time">
+          <button type="button" data-t="0">Sin límite</button><button type="button" data-t="5">5 s</button><button type="button" data-t="10">10 s</button><button type="button" data-t="15">15 s</button><button type="button" data-t="20">20 s</button>
+        </div>
+      </section>
+      <section class="step" id="s4">
+        <h2><span class="n" id="n4">3</span>Título, link y botones</h2>
+        <label class="f" for="title">Título</label>
+        <input type="text" id="title" maxlength="80" placeholder="Ej. ¿Cuánto sabes del cacao?">
+        <label class="f" for="slug">Tu link</label>
+        <div class="slugrow"><input type="text" id="slug" maxlength="30" placeholder="tu-trivia" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="root">.vorticevr.mx</span></div>
+        <div class="msg" id="mSlug"></div>
+        <label class="f">Botones (opcionales)</label>
+        <div class="soc" id="soc"></div>
+      </section>
+      <section class="step" id="s6">
+        <h2><span class="n" id="n6">4</span>Publicar</h2>
+        <div class="mine" id="mine" hidden style="margin:0 0 12px"></div>
+        <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
+        <button class="btn primary" id="publish" type="button" disabled>Publicar mi trivia</button>
+        <div class="bar" id="bPub" hidden><i></i></div><div class="msg" id="mPub"></div>
+        <p class="legal">Al publicar confirmas que el contenido es tuyo o tienes derecho a usarlo. Vórtice VR puede retirar contenido inapropiado (<a href="../../terminos/">términos</a>). <span id="legalDays">La experiencia se borra a los 15 días; puedes editarla o borrarla desde tu cuenta.</span></p>
+      </section>
+    </div>
+    <aside class="side">
+      <div class="pv">
+        <h3>Vista previa <small id="pvTxt"></small></h3>
+        <div class="phone" id="phone">
+          <div class="logo"><img src="../../assets/logo-vorticevr-blanco.png" alt=""></div>
+          <div class="pq" id="pq"><small id="pqn"></small><span id="pqt"></span></div>
+          <div class="face" id="face"><svg viewBox="0 0 100 120" aria-hidden="true"><ellipse cx="50" cy="56" rx="36" ry="44" fill="#f2c7a5"/><path d="M14 46c2-30 70-34 72 0-8-16-62-18-72 0z" fill="#3a2a1f"/><circle cx="36" cy="58" r="4.5" fill="#2b1d14"/><circle cx="64" cy="58" r="4.5" fill="#2b1d14"/><path d="M38 78q12 10 24 0" stroke="#a5523f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M14 120c4-18 20-22 36-22s32 4 36 22z" fill="#8b3fd6"/></svg></div>
+          <div class="pa l" id="pa0"></div><div class="pa r" id="pa1"></div>
+          <div class="pres" id="pres" hidden><b id="presN"></b><span>¡Muy bien!</span></div>
+        </div>
+        <div class="pnav" id="pnav"></div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="../../assets/plataforma.js" data-api="../.."></script>
+<script type="module">
+const $=id=>document.getElementById(id);
+const API=VVR.api;
+const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
+$("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
+const MAX=5;
+const S={token:null,email:null,mine:null,qs:[{q:"",a:["",""],ok:0}],time:10,view:0};
+
+// ---------- social buttons (same as /crear/) ----------
+const SOC=[["whatsapp","WhatsApp","","993 123 4567","tel"],["facebook","Facebook","facebook.com/","tu-pagina","text"],["instagram","Instagram","instagram.com/","tu_usuario","text"],["youtube","YouTube","youtube.com/@","tu-canal","text"],["x","X","x.com/","tu_usuario","text"],["tiktok","TikTok","tiktok.com/@","tu_usuario","text"],["web","Sitio web","","tusitio.com","text"]];
+// accepts "usuario", "@usuario" or a pasted link, and keeps only the username for the social networks
+const BASES={facebook:"facebook.com",instagram:"instagram.com",youtube:"youtube.com",x:"x.com",tiktok:"tiktok.com"};
+function toHandle(k,v){ v=String(v||"").trim(); if(!BASES[k]||!v) return v;
+  if(/^https?:\/\//i.test(v)||v.includes("/")){ try{ const u=new URL(/^https?:/i.test(v)?v:"https://"+v); const seg=u.pathname.split("/").filter(Boolean)[0]||""; return decodeURIComponent(seg).replace(/^@/,""); }catch(e){ return v; } }
+  return v.replace(/^@/,""); }
+const ICON={whatsapp:'<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/>',facebook:'<path d="M20 2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8.6v-7.7H10v-3h2.6V9c0-2.6 1.6-4 3.9-4 1.1 0 2.1.1 2.3.1v2.7h-1.6c-1.3 0-1.5.6-1.5 1.5v1.9h3l-.4 3h-2.6V22H20a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>',instagram:'<path d="M7.8 2h8.4A5.8 5.8 0 0 1 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8A5.8 5.8 0 0 1 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2zm-.2 2A3.6 3.6 0 0 0 4 7.6v8.8A3.6 3.6 0 0 0 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6A3.6 3.6 0 0 0 16.4 4H7.6zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>',youtube:'<path d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4a2.5 2.5 0 0 0-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.8a2.5 2.5 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8c.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8zM10 15V9l5.2 3-5.2 3z"/>',x:'<path d="M17.8 3h3.1l-6.8 7.7L22 21h-6.2l-4.9-6.4L5.3 21H2.2l7.3-8.3L2 3h6.4l4.4 5.8L17.8 3zm-1.1 16.2h1.7L7.4 4.7H5.6l11.1 14.5z"/>',tiktok:'<path d="M16.6 3c.4 2.2 1.8 3.7 4 3.9v3a7.4 7.4 0 0 1-4-1.3v6.2A5.8 5.8 0 1 1 10.8 9v3.1a2.8 2.8 0 1 0 2.8 2.8V3h3z"/>',web:'<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm7.9 9h-3a15.6 15.6 0 0 0-1.3-5.5A8 8 0 0 1 19.9 11zM12 4c.9 1.1 1.8 3.6 2 7h-4c.2-3.4 1.1-5.9 2-7zM4.1 13h3c.1 2 .6 3.9 1.3 5.5A8 8 0 0 1 4.1 13zm3-2h-3a8 8 0 0 1 4.3-5.5A15.6 15.6 0 0 0 7.1 11zM12 20c-.9-1.1-1.8-3.6-2-7h4c-.2 3.4-1.1 5.9-2 7z"/>'};
+$("soc").innerHTML=SOC.map(([k,l,pre,ph,t])=>`<label title="${l}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>${pre?`<span class="pre">${pre}</span>`:""}<input type="${t}" id="b_${k}" placeholder="${ph}" aria-label="${l}${pre?" (solo tu usuario)":""}" autocapitalize="off" autocomplete="off" spellcheck="false"></label>`).join("");
+for(const [k] of SOC) if(BASES[k]) $("b_"+k).addEventListener("change",e=>{ e.target.value=toHandle(k,e.target.value); });
+
+// ---------- questions ----------
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function renderQs(){
+  $("qs").innerHTML=S.qs.map((q,i)=>`<div class="q" data-i="${i}">
+    <div class="qh"><b>Pregunta ${i+1}</b>${S.qs.length>1?`<button type="button" data-del="${i}" title="Quitar" aria-label="Quitar la pregunta ${i+1}">✕</button>`:""}</div>
+    <textarea maxlength="140" data-f="q" placeholder="Ej. ¿De qué planta sale el chocolate?" aria-label="Pregunta ${i+1}">${esc(q.q)}</textarea>
+    <div class="ans">${[0,1].map(s=>`<div class="an ${q.ok===s?"ok":""}"><span>${s===0?"◀ Izquierda":"Derecha ▶"}</span><input type="text" maxlength="40" data-f="a${s}" value="${esc(q.a[s])}" placeholder="${s===0?"Ej. Cacao":"Ej. Café"}" aria-label="Respuesta ${s===0?"izquierda":"derecha"} de la pregunta ${i+1}"><button type="button" data-ok="${s}">${q.ok===s?"✓ Correcta":"Marcar correcta"}</button></div>`).join("")}</div>
+  </div>`).join("");
+  $("addq").hidden=S.qs.length>=MAX; $("addq").textContent=`+ Agregar pregunta (${S.qs.length} de ${MAX})`;
+  renderNav(); preview(); check();
+}
+$("qs").addEventListener("input",e=>{ const box=e.target.closest(".q"), f=e.target.dataset.f; if(!box||!f) return; const q=S.qs[+box.dataset.i];
+  if(f==="q") q.q=e.target.value; else q.a[+f[1]]=e.target.value; S.view=+box.dataset.i; preview(); renderNav(); check(); });
+$("qs").addEventListener("focusin",e=>{ const box=e.target.closest(".q"); if(box&&S.view!==+box.dataset.i){ S.view=+box.dataset.i; preview(); renderNav(); } });
+$("qs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; const i=+b.closest(".q").dataset.i;
+  if(b.dataset.del){ S.qs.splice(i,1); S.view=Math.min(S.view,S.qs.length-1); renderQs(); }
+  else if(b.dataset.ok){ S.qs[i].ok=+b.dataset.ok; S.view=i; renderQs(); } });
+$("addq").addEventListener("click",()=>{ if(S.qs.length>=MAX) return; S.qs.push({q:"",a:["",""],ok:0}); S.view=S.qs.length-1; renderQs(); const t=document.querySelectorAll("#qs textarea"); t[t.length-1].focus(); });
+document.querySelectorAll("#time button").forEach(b=>b.addEventListener("click",()=>{ S.time=+b.dataset.t; pressTime(); preview(); }));
+const pressTime=()=>document.querySelectorAll("#time button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.t===S.time)));
+
+// ---------- phone preview: the face leans toward the right answer, then the result ----------
+let pvTimer=0;
+function renderNav(){ $("pnav").innerHTML=S.qs.map((_,i)=>`<button type="button" data-v="${i}" aria-pressed="${S.view===i}">${i+1}</button>`).join("")+`<button type="button" data-v="end" aria-pressed="${S.view==="end"}">Resultado</button>`; }
+$("pnav").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.view=b.dataset.v==="end"?"end":+b.dataset.v; renderNav(); preview(); });
+function preview(){
+  clearTimeout(pvTimer);
+  const end=S.view==="end", q=S.qs[end?0:S.view]||S.qs[0];
+  $("pres").hidden=!end; $("pq").hidden=end; $("pa0").hidden=$("pa1").hidden=end;
+  $("pvTxt").textContent=end?"al terminar":`pregunta ${S.view+1} de ${S.qs.length}${S.time?" · "+S.time+" s":""}`;
+  if(end){ $("presN").textContent=`${Math.max(1,S.qs.length-1)}/${S.qs.length}`; $("face").style.transform="translate(-50%,0)"; return; }
+  $("pqn").textContent=`PREGUNTA ${S.view+1} DE ${S.qs.length}`; $("pqt").textContent=q.q||"Tu pregunta";
+  [0,1].forEach(s=>{ $("pa"+s).textContent=(s===0?"◀ ":"")+(q.a[s]||(s===0?"Respuesta A":"Respuesta B"))+(s===1?" ▶":""); $("pa"+s).classList.remove("hot"); });
+  const face=$("face"); face.style.transition="none"; face.style.transform="translate(-50%,0) rotate(0deg)";
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches){ $("pa"+q.ok).classList.add("hot"); return; }
+  pvTimer=setTimeout(()=>{ face.style.transition="transform .6s cubic-bezier(.3,1.4,.5,1)"; face.style.transform=`translate(-50%,0) rotate(${q.ok===0?-18:18}deg)`;
+    pvTimer=setTimeout(()=>{ $("pa"+q.ok).classList.add("hot"); pvTimer=setTimeout(preview,1600); },550); },700);
+}
+
+// ---------- title and link ----------
+const slugIn=$("slug"); let slugOk=false, slugTimer=0;
+const toSlug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9-]+/g,"-").replace(/-+/g,"-").replace(/^-/,"").slice(0,30);
+slugIn.addEventListener("input",()=>{ const c=slugIn.selectionStart; slugIn.value=toSlug(slugIn.value); slugIn.setSelectionRange(c,c); checkSlug(); });
+$("title").addEventListener("input",()=>{ if(!slugIn.dataset.touched && !S.mine){ slugIn.value=toSlug($("title").value).replace(/-$/,""); checkSlug(); } check(); });
+slugIn.addEventListener("keydown",()=>slugIn.dataset.touched="1");
+function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false; check(); const s=slugIn.value.replace(/-$/,"");
+  if(s.length<3){ m.className="msg"; m.textContent=""; return; }
+  if(S.mine&&S.mine.slug===s){ slugOk=true; m.className="msg ok"; m.textContent="Es tu link actual."; check(); return; }
+  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
+const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
+
+// ---------- account and publishing ----------
+function check(){
+  const qsOk=S.qs.length&&S.qs.every(q=>q.q.trim()&&q.a[0].trim()&&q.a[1].trim());
+  $("n1").classList.toggle("done",!!qsOk); $("n4").classList.toggle("done",!!($("title").value.trim()&&slugOk));
+  const ok=qsOk&&$("title").value.trim()&&slugOk&&S.token;
+  $("publish").disabled=!ok;
+  const miss=S.qs.findIndex(q=>!q.q.trim()||!q.a[0].trim()||!q.a[1].trim());
+  $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link a ${S.email}.`:miss>=0?`Completa la pregunta ${miss+1} y sus dos respuestas.`:!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
+}
+$("publish").addEventListener("click",async()=>{
+  const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Publicando…"; bar.hidden=false; $("publish").disabled=true;
+  const meta={kind:"trivia",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),trivia:{questions:S.qs.map(q=>({q:q.q.trim(),a:q.a.map(a=>a.trim()),ok:q.ok})),time:S.time},buttons:{}};
+  for(const [k] of SOC){ const v=toHandle(k,$("b_"+k).value); if(v) meta.buttons[k]=v; }
+  const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
+  const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc, linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/");
+  fd.append("qr",await new Promise(r=>qrc.toBlob(r,"image/png")),"qr.png");
+  const xhr=new XMLHttpRequest(); xhr.open("POST",`${API}/api/publish`); xhr.setRequestHeader("Authorization","Bearer "+S.token);
+  xhr.upload.onprogress=e=>{ if(e.lengthComputable) bar.firstElementChild.style.width=(e.loaded/e.total*100)+"%"; };
+  xhr.onload=()=>{ bar.hidden=true; let j={}; try{ j=JSON.parse(xhr.responseText); }catch(e){}
+    if(xhr.status!==200){ m.className="msg bad"; m.textContent=j.error||"No se pudo publicar."; $("publish").disabled=false; if(xhr.status===401){ VVR.clearSession(); location.href="../../cuenta/?siguiente=crear"; } return; }
+    m.textContent="¡Publicada! Abriendo tu cuenta…"; location.href="../../cuenta/?publicada="+encodeURIComponent(j.experience.slug); };
+  xhr.onerror=()=>{ bar.hidden=true; m.className="msg bad"; m.textContent="Se cortó la conexión. Intenta de nuevo."; $("publish").disabled=false; };
+  xhr.send(fd);
+});
+(async()=>{
+  const ed=new URLSearchParams(location.search).get("editar");
+  const toLogin=()=>location.replace("../../cuenta/?siguiente=crear");
+  const sess=VVR.session(); if(!sess){ toLogin(); return; }
+  S.token=sess.token; S.email=sess.user&&sess.user.email;
+  try{
+    const r=await VVR.call("me"); S.email=r.user.email;
+    const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1}, LIM=r.limit??P.exp, member=r.team&&r.team.role==="member";
+    if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name}`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
+    const exp=ed?r.experiences.find(x=>x.slug===ed):null;
+    if(exp&&exp.kind!=="trivia"){ location.replace("../?editar="+encodeURIComponent(ed)); return; }
+    if(exp){
+      S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza.`;
+      S.qs=exp.trivia.questions.map(q=>({q:q.q,a:[...q.a],ok:q.ok})); S.time=exp.trivia.time;
+      $("title").value=exp.title; slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
+      for(const [k] of SOC){ const el=$("b_"+k); if(exp.buttons&&exp.buttons[k]) el.value=k==="whatsapp"?exp.buttons[k].replace(/^52(?=\d{10}$)/,""):toHandle(k,exp.buttons[k]); }
+      $("publish").textContent="Guardar cambios";
+    } else if(r.experiences.filter(x=>!x.paused).length>=LIM){
+      document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); document.querySelector(".side").hidden=true; $("full").hidden=false;
+      $("fullText").textContent=member?"Tu equipo te asignó todas las que puedes usar. Borra una o pide más a quien administra tu equipo.":`Tu plan ${P.name} incluye ${LIM.toLocaleString("es-MX")} ${LIM===1?"experiencia":"experiencias"}. Borra una desde tu cuenta o mejora tu plan para crear tu trivia.`;
+    }
+  }catch(e){ if(e.status===401){ toLogin(); return; } }
+  pressTime(); renderQs();
+})();
+</script>
+<script src="../../assets/magia.js" defer></script>
+</body>
+</html>

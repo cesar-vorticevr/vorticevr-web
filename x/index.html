@@ -109,13 +109,20 @@ button{font:inherit;color:inherit;cursor:pointer}
 #msg h1{font-family:var(--fd);margin:0;font-size:1.8rem}
 #msg p{margin:0;color:var(--mute);max-width:34ch;line-height:1.5}
 #msg a.big{text-decoration:none}
+/* trivia (assets/trivia.js) */
+#tvHint{position:fixed;left:50%;top:calc(58px + env(safe-area-inset-top,0px));transform:translate(-50%,-8px);z-index:30;background:var(--glass);padding:9px 16px;border-radius:999px;font-weight:700;font-size:.9rem;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis}
+#tvHint.on{opacity:1;transform:translate(-50%,0)}
+#tvHint:empty{display:none}
+#tvAgain{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(160px + env(safe-area-inset-bottom,0px));z-index:30;font-family:var(--fd);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:.95rem;border:1px solid #fff3d6;border-radius:999px;padding:15px 28px;color:#2b1300;background:linear-gradient(135deg,#ffd27f,#ff9f3a);box-shadow:0 0 30px rgba(255,190,85,.6);animation:tvPop .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes tvPop{from{transform:translateX(-50%) scale(.4);opacity:0}}
 @media (prefers-reduced-motion:reduce){#vbox,#guide{transition:none}}
 </style>
 <script type="importmap">
 {"imports":{
   "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
   "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-  "mindar-image-three":"https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+  "mindar-image-three":"https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js",
+  "mindar-face-three":"https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-three.prod.js"
 }}
 </script>
 </head>
@@ -127,7 +134,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   <span class="k" id="kick">Esta imagen tiene un video</span>
   <h1 id="title">Cargando…</h1>
   <img class="thumb" id="thumb" alt="Imagen que debes enfocar con la cámara" hidden>
-  <ol class="steps"><li><span>Toca <b>Abrir la cámara</b> y, si te lo pregunta, <b>Permitir</b>.</span></li><li><span>Apunta a esta imagen.</span></li><li><span>Mira cómo cobra vida.</span></li></ol>
+  <ol class="steps" id="steps"><li><span>Toca <b>Abrir la cámara</b> y, si te lo pregunta, <b>Permitir</b>.</span></li><li><span>Apunta a esta imagen.</span></li><li><span>Mira cómo cobra vida.</span></li></ol>
   <button class="big" id="start" type="button" disabled>Abrir la cámara</button>
   <div id="err" hidden></div>
 </div>
@@ -171,7 +178,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 <script type="module">
 // The 3D/AR libraries load when the camera starts (and are warmed up in the background), so the page shows
 // its title and image right away even if a browser is slow or strict with third-party scripts.
-let THREE=null, MindARThree=null, ESC=null;
+let THREE=null, MindARThree=null, ESC=null, TRIVIA=null;
+const triviaLibs=()=>Promise.all([import("three"),import("mindar-face-three"),import("/assets/trivia.js"),document.fonts.load('700 40px "Sora"').catch(()=>{})]).then(([t,m,g])=>{ THREE=t; MindARThree=m.MindARThree; TRIVIA=g; });
 const libs=()=>Promise.all([import("three"),import("mindar-image-three"),import("/assets/escena.js")]).then(([t,m,e])=>{ THREE=t; MindARThree=m.MindARThree; ESC=e;
   if(CFG.items.some(i=>i.type==="text")&&!document.getElementById("fonts")) document.head.appendChild(Object.assign(document.createElement("link"),{id:"fonts",rel:"stylesheet",href:ESC.FONT_CSS})); });
 let libsP=null;
@@ -204,6 +212,12 @@ const LABEL={whatsapp:"WhatsApp",facebook:"Facebook",instagram:"Instagram",youtu
 const ORDER=["whatsapp","facebook","instagram","youtube","x","tiktok","web"];
 function socialHref(k,v){ if(k==="whatsapp") return "https://wa.me/"+String(v).replace(/[^\d]/g,""); return v; }
 
+function socialButtons(){
+  const soc=$("social"); soc.replaceChildren();
+  for(const k of ORDER){ const v=CFG.buttons&&CFG.buttons[k]; if(!v) continue;
+    const a=document.createElement("a"); a.href=socialHref(k,v); a.target="_blank"; a.rel="noopener"; a.setAttribute("aria-label",LABEL[k]);
+    a.innerHTML=`<svg viewBox="0 0 24 24">${ICONS[k]}</svg>`; soc.appendChild(a); }
+}
 async function load(){
   if(!slug){ message("Experiencia no encontrada","Revisa que el link esté completo."); return; }
   const base=new URLSearchParams(location.search).get("api")||"";
@@ -211,6 +225,12 @@ async function load(){
   if(r.status===410){ const j=await r.json().catch(()=>({})); if(j.paused) message("Esta experiencia está pausada","Su creador puede reactivarla desde su cuenta."); else if(j.limit) message("Esta experiencia llegó a su límite de vistas","Su creador puede mejorar su plan para que siga funcionando."); else message("Esta experiencia ya terminó","Las experiencias de prueba duran 15 días."); return; }
   if(!r.ok){ message("Experiencia no encontrada","Revisa que el link esté completo."); return; }
   CFG=await r.json(); CFG.base=base;
+  if(CFG.kind==="trivia"){   // a trivia: front camera and face, no image
+    document.title=(CFG.title||"Trivia")+" · Vórtice VR"; $("title").textContent=CFG.title||"Trivia";
+    $("kick").textContent="Trivia con tu cara"; startBtn.textContent="Jugar";
+    $("steps").innerHTML="<li><span>Toca <b>Jugar</b> y, si te lo pregunta, <b>Permitir</b> la cámara.</span></li><li><span><b>Inclina la cabeza</b> hacia la respuesta correcta (o toca ese lado de la pantalla).</span></li><li><span>Al final ves cuántas acertaste. ¡Grábalo y compártelo!</span></li>";
+    socialButtons(); startBtn.disabled=false; libsP=triviaLibs().catch(e=>{ console.error(e); libsP=null; }); return;
+  }
   const m=`${base}/m/${CFG.slug}/`;
   CFG.media={target:m+"target",image:m+"image"};
   CFG.items=CFG.items||[];
@@ -226,10 +246,7 @@ async function load(){
     if(v!==vid){ v.playsInline=true; v.setAttribute("webkit-playsinline",""); v.loop=true; v.preload="auto"; v.crossOrigin="anonymous"; $("vids").appendChild(v); }
     v.muted=!it.sound; v.src=m+it.file; VIDS.set(it.id,v);
   }
-  const soc=$("social"); soc.replaceChildren();
-  for(const k of ORDER){ const v=CFG.buttons&&CFG.buttons[k]; if(!v) continue;
-    const a=document.createElement("a"); a.href=socialHref(k,v); a.target="_blank"; a.rel="noopener"; a.setAttribute("aria-label",LABEL[k]);
-    a.innerHTML=`<svg viewBox="0 0 24 24">${ICONS[k]}</svg>`; soc.appendChild(a); }
+  socialButtons();
   startBtn.disabled=false;
   libsP=libs().catch(e=>{ console.error(e); libsP=null; });
 }
@@ -269,7 +286,8 @@ function setupCapture(mind){
     if(out.width!==w||out.height!==h){ out.width=w; out.height=h; } return {r,sx:w/r.width,sy:h/r.height}; }
   function compose(){ const {r,sx,sy}=size(); const cam=container.querySelector("video"), gl=mind.renderer.domElement, onScreen=vbox.classList.contains("on")?vid:null;
     ctx.fillStyle="#000"; ctx.fillRect(0,0,out.width,out.height);
-    for(const el of [cam,gl,onScreen]){ if(!el) continue; const b=el.getBoundingClientRect(); ctx.drawImage(el,(b.left-r.left)*sx,(b.top-r.top)*sy,b.width*sx,b.height*sy); }
+    for(const el of [cam,gl,onScreen]){ if(!el) continue; const b=el.getBoundingClientRect(), x=(b.left-r.left)*sx, y=(b.top-r.top)*sy, w=b.width*sx, h=b.height*sy;
+      if(el===cam&&/scaleX\(-1\)/.test(el.style.transform)){ ctx.save(); ctx.translate(x+w,y); ctx.scale(-1,1); ctx.drawImage(el,0,0,w,h); ctx.restore(); } else ctx.drawImage(el,x,y,w,h); }
     // logo on the capture too
     const lg=$("brand").querySelector("img"); if(lg.complete){ const lw=out.width*.32, lh=lw*lg.naturalHeight/lg.naturalWidth; ctx.globalAlpha=.9; ctx.drawImage(lg,(out.width-lw)/2,out.height*.03,lw,lh); ctx.globalAlpha=1; } }
   function afterRender(){ if(wantPhoto){ wantPhoto=false; compose(); out.toBlob(b=>show(b,"image"),"image/jpeg",.92); } else if(recorder) compose(); }
@@ -306,7 +324,20 @@ const AUDIO={};
 function setupAudio(){ try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; const ac=new AC(); const src=ac.createMediaElementSource(vid);
   const dest=ac.createMediaStreamDestination(); src.connect(ac.destination); src.connect(dest); AUDIO.ac=ac; AUDIO.dest=dest; ac.resume&&ac.resume(); }catch(e){} }
 
+async function startTrivia(){
+  startBtn.disabled=true; startBtn.textContent="Cargando…"; $("err").hidden=true;
+  try{ await (libsP||triviaLibs()); if(!THREE||!MindARThree||!TRIVIA) throw 0; }
+  catch(e){ startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false; $("err").textContent="No se pudo cargar el juego. Revisa tu conexión; si estás en navegación privada, ábrelo en una pestaña normal."; return; }
+  try{
+    await TRIVIA.run({THREE,MindARThree,container:$("ar"),cfg:CFG,setupCapture,
+      started:()=>{ $("intro").hidden=true; $("controls").hidden=false; $("social").hidden=!$("social").children.length; }});
+  }catch(e){
+    console.error(e); startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false;
+    $("err").textContent=(e&&(e.name==="NotAllowedError"||/Permission/i.test(e.message||"")))?"No se dio permiso a la cámara. Actívalo en los ajustes del navegador y vuelve a intentar.":"No se pudo iniciar la cámara. Abre este link en Chrome o Safari (no dentro de Instagram o WhatsApp).";
+  }
+}
 async function start(){
+  if(CFG.kind==="trivia") return startTrivia();
   if(PRIMARY){ vid.muted=!PRIMARY.sound; vid.play().then(()=>vid.pause()).catch(()=>{}); if(PRIMARY.sound) setupAudio(); }   // unlock sound inside the tap (iOS)
   for(const v of VIDS.values()) if(v!==vid) v.play().then(()=>v.pause()).catch(()=>{});
   startBtn.disabled=true; startBtn.textContent="Cargando…"; $("err").hidden=true;

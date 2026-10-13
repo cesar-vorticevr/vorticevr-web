@@ -373,7 +373,7 @@ async function api(request, env, ctx, url) {
     const image = form.get("image"), target = form.get("target"), qr = form.get("qr");
     const isNew = !mine;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
-    if (isNew && (!image || !target)) return json({ error: "Falta la imagen." }, 400);
+    if (isNew && data.kind !== "trivia" && (!image || !target)) return json({ error: "Falta la imagen." }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
     if (target && target.size > LIMITS.targetBytes) return json({ error: "La imagen no se pudo preparar. Intenta con otra." }, 400);
     // each element's file: uploaded now (field f_<id>) or kept from the version being edited (same id and type)
@@ -685,7 +685,8 @@ async function api(request, env, ctx, url) {
 
 function publicExp(row) {
   const d = JSON.parse(row.data || "{}");
-  return { slug: row.slug, title: row.title, img: d.img, place: d.place || "mesa", scenes: d.scenes || 1, items: itemsOf(d), buttons: d.buttons, expires: row.expires };
+  if (d.kind === "trivia") return { slug: row.slug, kind: "trivia", title: row.title, trivia: d.trivia, buttons: d.buttons, expires: row.expires };
+  return { slug: row.slug, kind: "ra", title: row.title, img: d.img, place: d.place || "mesa", scenes: d.scenes || 1, items: itemsOf(d), buttons: d.buttons, expires: row.expires };
 }
 function ownerExp(row, request, env) {
   return { ...publicExp(row), url: expUrl(row.slug, request, env), created: row.created, updated: row.updated, views: row.views, paused: !!row.paused, forever: row.expires >= FAR };
@@ -770,9 +771,32 @@ function cleanItems(list, P) {
   }
   return { items: out };
 }
+// Trivia with face tracking (assets/trivia.js): 1 to 5 questions, each with the answer on the left (a[0]) and on the right
+// (a[1]); ok = which one is right. time = seconds to answer each one (0 = no limit). No image and no files.
+const TRIVIA = { max: 5, times: [0, 5, 10, 15, 20] };
+function cleanTrivia(t) {
+  const list = Array.isArray(t && t.questions) ? t.questions : [];
+  if (!list.length) return { error: "Agrega al menos una pregunta." };
+  if (list.length > TRIVIA.max) return { error: `Puedes poner hasta ${TRIVIA.max} preguntas.` };
+  const questions = [];
+  for (const [i, x] of list.entries()) {
+    const q = String(x && x.q || "").trim().slice(0, 140), a = (Array.isArray(x && x.a) ? x.a : []).slice(0, 2).map(v => String(v || "").trim().slice(0, 40));
+    if (!q) return { error: `Escribe la pregunta ${i + 1}.` };
+    if (a.length < 2 || !a[0] || !a[1]) return { error: `Escribe las dos respuestas de la pregunta ${i + 1}.` };
+    questions.push({ q, a, ok: x.ok === 1 ? 1 : 0 });
+  }
+  const time = TRIVIA.times.includes(Number(t.time)) ? Number(t.time) : 10;
+  return { questions, time };
+}
 function cleanMeta(m, P) {
   const title = String(m.title || "").trim().slice(0, 80);
   if (!title) return { error: "Escribe un título." };
+  const buttons = cleanButtons(m.buttons);
+  if (buttons.error) return buttons;
+  if (m.kind === "trivia") {
+    const trivia = cleanTrivia(m.trivia);
+    return trivia.error ? trivia : { kind: "trivia", title, trivia, items: [], buttons };
+  }
   const num = (v, a, b) => { v = Number(v); return Number.isFinite(v) && v >= a && v <= b ? Math.round(v) : null; };
   const img = { w: num(m.img && m.img.w, 50, 8000), h: num(m.img && m.img.h, 50, 8000) };
   if (!img.w || !img.h) return { error: "Faltan las medidas de la imagen." };
@@ -780,9 +804,12 @@ function cleanMeta(m, P) {
   if (ci.error) return ci;
   const items = ci.items, scenes = Math.min(ITEM_LIMITS.scenes, Math.max(1, num(m.scenes, 1, ITEM_LIMITS.scenes) || 1, ...items.map(i => i.scene + 1)));
   const place = m.place === "pared" ? "pared" : "mesa";   // how the editor shows the image (on a table or on a wall)
+  return { title, img, place, scenes, items, buttons };
+}
+function cleanButtons(b) {
   const buttons = {};
   for (const k of BUTTONS) {
-    let v = String((m.buttons && m.buttons[k]) || "").trim().slice(0, 300);
+    let v = String((b && b[k]) || "").trim().slice(0, 300);
     if (!v) continue;
     if (k === "whatsapp") { v = v.replace(/\D/g, ""); if (v.length === 10) v = "52" + v; /* Mexican number without country code */ if (v.length < 10) return { error: "El número de WhatsApp no es válido." }; }
     else if (SOCIAL_BASE[k] && !/^https?:/i.test(v) && !v.includes("/")) {
@@ -793,7 +820,7 @@ function cleanMeta(m, P) {
     else { if (!/^https?:\/\//i.test(v)) v = "https://" + v; try { const u = new URL(v); if (!/^https?:$/.test(u.protocol)) throw 0; v = u.href; } catch { return { error: `El enlace de ${LABELS[k]} no es válido.` }; } }
     buttons[k] = v;
   }
-  return { title, img, place, scenes, items, buttons };
+  return buttons;
 }
 
 // ---------- helpers ----------
