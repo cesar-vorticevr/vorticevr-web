@@ -17,19 +17,22 @@
     return j;
   }
 
-  // QR 1024×1180: modules in deep purple, the Vórtice VR mark in the middle, link and hint underneath
-  const icon = new Image(); icon.src = (document.currentScript && document.currentScript.src || "").replace(/plataforma\.js.*$/, "icono.png");
+  // QR 1024×1150: modules in deep purple, the Vórtice VR mark in the middle; underneath the hint and a small logo (no link text)
+  const base = (document.currentScript && document.currentScript.src || "").replace(/plataforma\.js.*$/, "");
+  const icon = new Image(); icon.src = base + "icono.png";
+  const logo = new Image(); logo.src = base + "logo-vorticevr.png";
   function drawQR(canvas, url) {
     const qr = qrcode(0, "H"); qr.addData(url); qr.make(); const n = qr.getModuleCount();
     const x = canvas.getContext("2d"), W = 1024, M = 80, cell = Math.floor((W - 2 * M) / n), off = Math.floor((W - cell * n) / 2);
-    canvas.width = 1024; canvas.height = 1180;
+    canvas.width = 1024; canvas.height = 1150;
     x.fillStyle = "#fff"; x.fillRect(0, 0, canvas.width, canvas.height); x.fillStyle = "#1b0a36";
     for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) x.fillRect(off + c * cell, off + r * cell, cell, cell);
     if (icon.complete && icon.naturalWidth) { const s = cell * n * .2, p = (W - s) / 2; x.fillStyle = "#fff"; x.beginPath(); x.roundRect ? x.roundRect(p - 14, p - 14, s + 28, s + 28, 24) : x.rect(p - 14, p - 14, s + 28, s + 28); x.fill(); x.drawImage(icon, p, p, s, s); }
-    x.fillStyle = "#1b0a36"; x.font = "600 46px 'Chakra Petch', sans-serif"; x.textAlign = "center"; x.fillText(url.replace(/^https?:\/\//, "").replace(/\/$/, ""), W / 2, W + 70);
-    x.fillStyle = "#6b279b"; x.font = "500 30px 'IBM Plex Sans', sans-serif"; x.fillText("Escanea y apunta tu cámara a la imagen", W / 2, W + 122);
+    x.fillStyle = "#6b279b"; x.font = "500 32px 'IBM Plex Sans', sans-serif"; x.textAlign = "center"; x.fillText("Escanea y apunta tu cámara a la imagen", W / 2, W + 14);
+    if (logo.complete && logo.naturalWidth) { const w = 230, h = w * logo.naturalHeight / logo.naturalWidth; x.drawImage(logo, (W - w) / 2, W + 44, w, h); }
   }
-  const iconReady = new Promise(r => { if (icon.complete) r(); else { icon.onload = r; icon.onerror = r; } });
+  const loaded = img => new Promise(r => { if (img.complete) r(); else { img.onload = r; img.onerror = r; } });
+  const iconReady = Promise.all([loaded(icon), loaded(logo)]);
   function downloadCanvas(canvas, name) {
     canvas.toBlob(b => { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }, "image/png");
   }

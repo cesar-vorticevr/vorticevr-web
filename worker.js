@@ -343,7 +343,8 @@ async function api(request, env, ctx, url) {
     }
     const b = await request.json().catch(() => ({}));
     if (!STRIPE_PRICES[b.plan]) return json({ error: "Plan inválido." }, 400);
-    const price = await stripePrice(env, b.plan);
+    const period = b.period === "anio" ? "anio" : "mes";
+    const price = await stripePrice(env, b.plan, period);
     const newCustomer = async () => {
       const c = await stripe(env, "POST", "customers", { email: me.email, name: me.name, metadata: { user_id: me.id } });
       await env.DB.prepare("UPDATE users SET stripe_customer = ?, stripe_mode = ? WHERE id = ?").bind(c.id, mode, me.id).run();
@@ -353,7 +354,7 @@ async function api(request, env, ctx, url) {
     const session = c => stripe(env, "POST", "checkout/sessions", {
       mode: "subscription", customer: c, client_reference_id: me.id, locale: "es-419", allow_promotion_codes: "true",
       line_items: [{ price: price.id, quantity: 1 }],
-      subscription_data: { metadata: { user_id: me.id, plan: b.plan } },
+      subscription_data: { metadata: { user_id: me.id, plan: b.plan, period } },
       success_url: `${origin}/cuenta/?pago=ok`, cancel_url: `${origin}/cuenta/?pago=cancelado#planes`,
     });
     let s;
@@ -543,7 +544,7 @@ async function sessionFor(env, request, user) {
 async function auth(request, env) {
   const t = bearer(request);
   if (!t) return null;
-  const row = await env.DB.prepare("SELECT u.id, u.email, u.name, u.verified, u.plan, u.plan_until, u.stripe_customer, u.stripe_sub, u.stripe_status, u.stripe_mode, s.expires FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?").bind(await sha256hex(t)).first();
+  const row = await env.DB.prepare("SELECT u.id, u.email, u.name, u.verified, u.plan, u.plan_until, u.plan_note, u.stripe_customer, u.stripe_sub, u.stripe_status, u.stripe_mode, s.expires FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?").bind(await sha256hex(t)).first();
   return row && row.expires > Date.now() && row.verified ? row : null;
 }
 async function account(env, request, user) {
@@ -576,20 +577,24 @@ async function applyPlan(env, user, plan, until, note) {
   ]);
 }
 
-// ---------- payments: Stripe subscriptions for Básico and Pro (monthly, IVA included) ----------
+// ---------- payments: Stripe subscriptions for Básico and Pro (monthly or yearly, IVA included) ----------
 // Secrets STRIPE_SECRET_KEY (sk_test_ in the preview, sk_live_ in production) and STRIPE_WEBHOOK_SECRET.
 // Products and prices are created in Stripe on first use (found again by lookup_key). Stripe Checkout takes the payment,
 // the webhook keeps users.plan in sync, and the Customer Portal lets people change card, switch plan or cancel.
 // A paid month is "paid until" the period end + STRIPE_GRACE_DAYS; if a renewal fails and Stripe gives up, the daily
 // cron moves the account back to Gratis on its own. With test keys only admins can pay (the preview shares the database).
-const STRIPE_PRICES = { basico: "vvr_basico_mes", pro: "vvr_pro_mes" };
+// lookup keys per plan and period; a year costs 10 months (2 months free)
+const STRIPE_PRICES = { basico: { mes: "vvr_basico_mes", anio: "vvr_basico_anual" }, pro: { mes: "vvr_pro_mes", anio: "vvr_pro_anual" } };
+const YEAR_MONTHS = 10;
+const STRIPE_PERIODS = { mes: "month", anio: "year" };
+const stripeKeys = () => Object.entries(STRIPE_PRICES).flatMap(([plan, k]) => Object.entries(k).map(([period, key]) => ({ plan, period, key })));
 const STRIPE_GRACE_DAYS = 7;
 const STRIPE_LIVE = ["active", "trialing", "past_due"];
 const stripeMode = env => String(env.STRIPE_SECRET_KEY || "").startsWith("sk_live_") ? "live" : "test";
 function billingInfo(env, user) {
   if (!env.STRIPE_SECRET_KEY) return { enabled: false };
   const mode = stripeMode(env), mine = user.stripe_mode === mode;
-  return { enabled: mode === "live" || isAdmin(env, user), test: mode === "test", subscribed: mine && STRIPE_LIVE.includes(user.stripe_status), pastDue: mine && user.stripe_status === "past_due" };
+  return { enabled: mode === "live" || isAdmin(env, user), test: mode === "test", subscribed: mine && STRIPE_LIVE.includes(user.stripe_status), pastDue: mine && user.stripe_status === "past_due", period: /· anual$/.test(user.plan_note || "") ? "anio" : "mes", yearMonths: YEAR_MONTHS };
 }
 async function stripe(env, method, path, params) {
   const qs = params ? new URLSearchParams(flatParams(params)).toString() : "";
@@ -612,23 +617,27 @@ function flatParams(o, pre = "", out = []) {
   return out;
 }
 const priceCache = {};
-// the plan's monthly price; created if missing, and replaced if PLANS changed its amount
-async function stripePrice(env, plan) {
-  const key = STRIPE_PRICES[plan], ck = stripeMode(env) + key, amount = PLANS[plan].price * 100;
+// the plan's price for a period (mes | anio); created if missing, and replaced if PLANS changed its amount
+async function stripePrice(env, plan, period = "mes") {
+  const key = STRIPE_PRICES[plan][period], ck = stripeMode(env) + key, amount = PLANS[plan].price * (period === "anio" ? YEAR_MONTHS : 1) * 100;
   if (priceCache[ck]) return priceCache[ck];
   const found = (await stripe(env, "GET", "prices", { lookup_keys: [key], active: "true", limit: 1 })).data[0];
+  // the product is shared by both periods of a plan: reuse the one of the other period if it exists
+  const other = found ? null : (await stripe(env, "GET", "prices", { lookup_keys: Object.values(STRIPE_PRICES[plan]), active: "true", limit: 2 })).data[0];
   let price = found && found.unit_amount === amount && found.currency === "mxn" ? found : null;
   if (!price) {
-    const product = found ? found.product : (await stripe(env, "POST", "products", { name: `Vórtice VR · Plan ${PLANS[plan].name}`, description: `${expCount(PLANS[plan].exp)} de realidad aumentada`, metadata: { plan } })).id;
-    price = await stripe(env, "POST", "prices", { product, currency: "mxn", unit_amount: amount, tax_behavior: "inclusive", recurring: { interval: "month" }, lookup_key: key, transfer_lookup_key: "true", metadata: { plan } });
+    const product = found ? found.product : other ? other.product : (await stripe(env, "POST", "products", { name: `Vórtice VR · Plan ${PLANS[plan].name}`, description: `${expCount(PLANS[plan].exp)} de realidad aumentada`, metadata: { plan } })).id;
+    price = await stripe(env, "POST", "prices", { product, currency: "mxn", unit_amount: amount, tax_behavior: "inclusive", recurring: { interval: STRIPE_PERIODS[period] }, lookup_key: key, transfer_lookup_key: "true", metadata: { plan, period } });
   }
   return (priceCache[ck] = { id: price.id, product: typeof price.product === "string" ? price.product : price.product.id });
 }
-// Customer Portal settings (made once by the API): card, invoices, cancel at period end, switch between Básico and Pro
+// Customer Portal settings (made once by the API): card, invoices, cancel at period end, switch plan or period
 async function stripePortalConfig(env) {
   const list = await stripe(env, "GET", "billing_portal/configurations", { active: "true", limit: 100 });
-  const prices = await Promise.all(Object.keys(STRIPE_PRICES).map(p => stripePrice(env, p)));
+  const prices = []; // one after the other: the second period of a plan reuses the product made for the first
+  for (const k of stripeKeys()) prices.push(await stripePrice(env, k.plan, k.period));
   const want = prices.map(p => p.id).sort().join(",");
+  const byProduct = {}; for (const p of prices) (byProduct[p.product] ||= []).push(p.id);
   const mine = list.data.find(c => c.metadata && c.metadata.app === "vvr" && c.metadata.prices === want);
   if (mine) return mine.id;
   return (await stripe(env, "POST", "billing_portal/configurations", {
@@ -637,7 +646,7 @@ async function stripePortalConfig(env) {
       payment_method_update: { enabled: "true" },
       invoice_history: { enabled: "true" },
       subscription_cancel: { enabled: "true", mode: "at_period_end" },
-      subscription_update: { enabled: "true", default_allowed_updates: ["price"], proration_behavior: "create_prorations", products: prices.map(p => ({ product: p.product, prices: [p.id] })) },
+      subscription_update: { enabled: "true", default_allowed_updates: ["price"], proration_behavior: "create_prorations", products: Object.entries(byProduct).map(([product, ids]) => ({ product, prices: ids })) },
     },
     metadata: { app: "vvr", prices: want },
   })).id;
@@ -660,14 +669,16 @@ async function stripeSync(env, ctx, subId) {
   if (!user) user = await env.DB.prepare("SELECT * FROM users WHERE stripe_customer = ?").bind(sub.customer).first();
   if (!user) { console.error("Stripe: suscripción sin cuenta", subId); return; }
   const item = sub.items && sub.items.data[0], price = item && item.price;
-  const plan = Object.keys(STRIPE_PRICES).find(p => price && STRIPE_PRICES[p] === price.lookup_key) || (price && price.metadata && price.metadata.plan) || (sub.metadata && sub.metadata.plan);
+  const known = stripeKeys().find(k => price && k.key === price.lookup_key);
+  const plan = (known && known.plan) || (price && price.metadata && price.metadata.plan) || (sub.metadata && sub.metadata.plan);
+  const yearly = (known && known.period === "anio") || (price && price.recurring && price.recurring.interval === "year");
   const live = STRIPE_LIVE.includes(sub.status);
   if (!live && user.stripe_sub && user.stripe_sub !== sub.id) return; // an old subscription ending must not undo the current one
   await env.DB.prepare("UPDATE users SET stripe_customer = ?, stripe_sub = ?, stripe_status = ?, stripe_mode = ? WHERE id = ?").bind(sub.customer, sub.id, sub.status, sub.livemode ? "live" : "test", user.id).run();
   if (live && STRIPE_PRICES[plan]) {
     const end = (sub.current_period_end || (item && item.current_period_end) || 0) * 1000;
     const before = planOf(user).id;
-    await applyPlan(env, user, plan, Math.max(end, Date.now()) + STRIPE_GRACE_DAYS * 864e5, `Stripe · ${sub.id}`);
+    await applyPlan(env, user, plan, Math.max(end, Date.now()) + STRIPE_GRACE_DAYS * 864e5, `Stripe · ${sub.id}${yearly ? " · anual" : ""}`);
     if (before !== plan) ctx.waitUntil(sendMail(env, user.email, `Tu plan ${PLANS[plan].name} de Vórtice VR está activo`, planMail(user, plan, null)));
   } else if (!live && STRIPE_PRICES[user.plan]) {
     await applyPlan(env, user, "gratis", null, null);

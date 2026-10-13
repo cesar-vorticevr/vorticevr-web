@@ -61,7 +61,13 @@ input:focus{border-color:var(--lav);outline:none}
 .strip .row{margin-left:auto}
 .btn.sm{padding:9px 16px;font-size:.75rem}
 #plansBox{margin-bottom:18px}
-#plansBox .phead{display:flex;justify-content:space-between;align-items:center;gap:12px}
+#plansBox .phead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.seg{display:inline-flex;gap:4px;padding:4px;border-radius:999px;border:1px solid var(--line2);background:rgba(5,2,11,.6)}
+.seg button{font:600 .82rem var(--fb);color:var(--mute);background:transparent;border:0;border-radius:999px;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--lav);color:#1a0d33}
+.seg button b{font-size:.7rem;color:var(--sun);margin-left:4px}
+.seg button[aria-pressed="true"] b{color:#6b279b}
+.plan .save{font-size:.82rem;color:var(--ok);margin:-2px 0 2px}
 .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin:14px 0 12px}
 .plan{border:1px solid var(--line);border-radius:14px;padding:16px;background:rgba(5,2,11,.5);display:flex;flex-direction:column;gap:6px}
 .plan.cur{border-color:var(--sun);box-shadow:0 0 0 1px var(--sun) inset}
@@ -181,7 +187,9 @@ details.settings>summary{cursor:pointer;font-family:var(--fd);letter-spacing:.12
       </div>
     </section>
     <section class="card" id="plansBox" hidden>
-      <div class="phead"><h2>Planes</h2><button class="btn sm" id="plansClose" type="button">Cerrar</button></div>
+      <div class="phead"><h2>Planes</h2>
+        <div class="seg" id="pPeriod" role="group" aria-label="Forma de pago"><button type="button" data-period="mes" aria-pressed="true">Mensual</button><button type="button" data-period="anio" aria-pressed="false">Anual <b>2 meses gratis</b></button></div>
+        <button class="btn sm" id="plansClose" type="button">Cerrar</button></div>
       <div class="plans" id="pPlans"></div>
       <p class="note" id="pNote"></p>
     </section>
@@ -276,8 +284,19 @@ let DATA=null, shownN=24;
 const PAGE=24;
 const fmtD=t=>new Date(t).toLocaleDateString("es-MX",{day:"numeric",month:"long",year:"numeric"});
 const nf=n=>Number(n||0).toLocaleString("es-MX");
+// ?demo=45 (admins only): adds sample experiences that exist only on this screen, to see how a full dashboard looks
+const DEMO_N=Math.min(1000,Math.max(0,parseInt(Q.get("demo"),10)||0));
+function demoExps(n){
+  const names=["Menú de temporada","Tarjeta de presentación","Cartel del festival","Invitación de boda","Libro de ciencias, pág.","Folleto turístico","Etiqueta de producto","Póster de la expo","Tarea de historia","Catálogo primavera","Volante de inauguración","Credencial del evento","Portada de revista","Mapa del museo","Postal de Tabasco"];
+  const imgs=["observatorio","orbita","deletreo-lsm","steal-a-pinata"], now=Date.now();
+  return Array.from({length:n},(_,i)=>{ const slug=`ejemplo-${i+1}`, paused=i>=n-3, t=now-(i+1)*5.5e6;
+    return {slug,demo:true,title:`${names[i%names.length]} ${Math.floor(i/names.length)+1}`,url:`https://${slug}.vorticevr.mx/`,thumb:`../assets/proyectos/${imgs[i%imgs.length]}.webp`,
+      created:t,updated:t,views:(i*137+41)%900,paused,forever:!paused,expires:paused?now+(9+i%20)*864e5:253402300799000}; });
+}
 function showPanel(data){
+  if(DEMO_N&&data.admin&&!data.demoAdded) data={...data,demoAdded:true,experiences:[...data.experiences,...demoExps(DEMO_N)]};
   DATA=data; const {user,experiences}=data;
+  if(data.demoAdded) banner(`Vista de ejemplo: se agregaron ${DEMO_N} experiencias de muestra que solo existen en esta pantalla. Quita ?demo de la dirección para volver a la normal.`,"warn");
   const P=data.plan||{id:"gratis",name:"Gratis",exp:data.limit||1,days:30,videoMB:25};
   const B=data.billing||{enabled:false};
   $("pHello").textContent=`Hola, ${user.name||"bienvenido"}`; $("pEmail").textContent=user.email;
@@ -287,16 +306,12 @@ function showPanel(data){
   $("pUse").innerHTML=`<b>${nf(active)}</b> de ${nf(P.exp)} ${P.exp===1?"experiencia":"experiencias"} en uso`;
   $("pMeter").classList.toggle("full",full); $("pMeter").firstElementChild.style.width=Math.min(100,Math.max(2,active/P.exp*100))+"%";
   $("pPlan").textContent=`Videos de hasta ${P.videoMB} MB · `
-    +(P.id==="gratis"?"cada experiencia dura 30 días.":B.subscribed?"pago mensual automático con tarjeta.":P.until?`pagado hasta el ${fmtD(P.until)}.`:"sin vencimiento.")
+    +(P.id==="gratis"?"cada experiencia dura 30 días.":B.subscribed?(B.period==="anio"?"pago anual automático con tarjeta.":"pago mensual automático con tarjeta."):P.until?`pagado hasta el ${fmtD(P.until)}.`:"sin vencimiento.")
     +(full?(P.exp===1?" Ya usaste tu experiencia: edítala, bórrala o mejora tu plan.":" Ya usaste todas: edita o borra una, o mejora tu plan."):"");
   $("pUpgrade").hidden=P.id==="escuela"; $("pUpgrade").textContent=P.id==="gratis"?"Mejorar plan":"Cambiar de plan";
   // plans: pay online with Stripe when it is on (billing.enabled); otherwise "Lo quiero" opens WhatsApp
-  $("pPlans").innerHTML=PLANS.map(([id,name,price,items])=>{ const cur=id===P.id;
-    const msg=encodeURIComponent(`Hola, quiero el plan ${name} de realidad aumentada para mi cuenta ${user.email}`);
-    return `<div class="plan${cur?" cur":""}"><h3>${name} ${cur?'<span class="tag">Tu plan</span>':""}</h3><div class="price">${price?"$"+price+" <small>MXN al mes · IVA incluido</small>":"$0"}</div><ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul>`
-      +(!cur&&price?(B.enabled?`<button class="btn sun" type="button" data-plan="${id}">${B.subscribed?"Cambiar a este plan":"Contratar"}</button>`:`<a class="btn sun" href="https://wa.me/${WA}?text=${msg}" target="_blank" rel="noopener">Lo quiero</a>`):"")+`</div>`; }).join("");
-  $("pPlans").querySelectorAll("[data-plan]").forEach(b=>b.addEventListener("click",()=>pay("billing/checkout",{plan:b.dataset.plan},b)));
-  $("pNote").textContent=(B.enabled?(B.test?"Modo de prueba (solo lo ves tú como administrador): se paga con la tarjeta de prueba de Stripe 4242 4242 4242 4242. ":"Pago seguro con tarjeta a través de Stripe. Se cobra cada mes automáticamente y cancelas cuando quieras. ")
+  renderPlans();
+  $("pNote").textContent=(B.enabled?(B.test?"Modo de prueba (solo lo ves tú como administrador): se paga con la tarjeta de prueba de Stripe 4242 4242 4242 4242. ":"Pago seguro con tarjeta a través de Stripe. Se cobra automáticamente cada mes o cada año, según elijas, y cancelas cuando quieras. ")
     :"El pago con tarjeta en línea llega pronto; por ahora escríbenos y activamos tu plan. ")+"¿Eres escuela? Pregúntanos por el plan Escuela.";
   if(location.hash==="#planes"&&P.id!=="escuela") openPlans(true);
   if(B.pastDue) banner("No pudimos cobrar tu última mensualidad. Actualiza tu tarjeta en “Administrar suscripción” para que tu plan siga activo.","warn");
@@ -304,6 +319,22 @@ function showPanel(data){
   const pub=Q.get("publicada"); if(pub&&experiences.some(x=>x.slug===pub)){ banner("¡Listo! Tu experiencia está publicada. También te enviamos el link y el QR por correo."); history.replaceState(null,"",location.pathname); }
   view("vPanel");
 }
+// plan cards for the chosen period (a year costs 10 months); pay online with Stripe when billing.enabled, otherwise WhatsApp
+let PERIOD="mes";
+const YEAR=10;
+function renderPlans(){
+  const {user}=DATA, P=DATA.plan||{id:"gratis"}, B=DATA.billing||{enabled:false}, yr=PERIOD==="anio";
+  document.querySelectorAll("#pPeriod button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.period===PERIOD)));
+  $("pPlans").innerHTML=PLANS.map(([id,name,price,items])=>{ const cur=id===P.id;
+    const msg=encodeURIComponent(`Hola, quiero el plan ${name} ${yr?"anual":"mensual"} de realidad aumentada para mi cuenta ${user.email}`);
+    const amount=price*(yr?YEAR:1);
+    return `<div class="plan${cur?" cur":""}"><h3>${name} ${cur?'<span class="tag">Tu plan</span>':""}</h3><div class="price">${price?"$"+nf(amount)+` <small>MXN al ${yr?"año":"mes"} · IVA incluido</small>`:"$0"}</div>`
+      +(price&&yr?`<p class="save">Equivale a $${nf(Math.round(amount/12))} al mes · ahorras $${nf(price*(12-YEAR))}</p>`:"")
+      +`<ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul>`
+      +(price&&(!cur||(B.subscribed&&PERIOD!==B.period))?(B.enabled?`<button class="btn sun" type="button" data-plan="${id}">${cur?(yr?"Pasar a pago anual":"Pasar a pago mensual"):B.subscribed?"Cambiar a este plan":"Contratar"}</button>`:`<a class="btn sun" href="https://wa.me/${WA}?text=${msg}" target="_blank" rel="noopener">Lo quiero</a>`):"")+`</div>`; }).join("");
+  $("pPlans").querySelectorAll("[data-plan]").forEach(b=>b.addEventListener("click",()=>pay("billing/checkout",{plan:b.dataset.plan,period:PERIOD},b)));
+}
+document.querySelectorAll("#pPeriod button").forEach(b=>b.addEventListener("click",()=>{ PERIOD=b.dataset.period; renderPlans(); }));
 function openPlans(on){ $("plansBox").hidden=!on; if(on) setTimeout(()=>$("plansBox").scrollIntoView({behavior:"smooth",block:"start"}),30); }
 $("pUpgrade").addEventListener("click",()=>openPlans($("plansBox").hidden));
 $("plansClose").addEventListener("click",()=>openPlans(false));
@@ -328,13 +359,19 @@ function card(exp){
   const el=document.createElement("article"); el.className="ec"+(exp.paused?" paused":"");
   const days=Math.max(0,Math.ceil((exp.expires-Date.now())/864e5)), short=exp.url.replace(/^https?:\/\//,"").replace(/\/$/,"");
   const status=exp.paused?`se borra en ${days} días`:exp.forever?"Activa":`${days} días restantes`;
-  el.innerHTML=`<div class="th"><img loading="lazy" src="${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}" alt="">${exp.paused?'<span class="tag bad">Pausada</span>':""}</div>
+  el.innerHTML=`<div class="th"><img loading="lazy" src="${exp.thumb||`${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}`}" alt="">${exp.paused?'<span class="tag bad">Pausada</span>':""}</div>
     <div class="bd"><h3>${esc(exp.title)}</h3>${exp.paused?`<span class="url">${esc(short)}</span>`:`<a class="url" href="${esc(exp.url)}" target="_blank" rel="noopener">${esc(short)}</a>`}
       <div class="meta"><span><b>${nf(exp.views)}</b> ${exp.views===1?"vista":"vistas"}</span><span>${status}</span></div>
       <div class="acts">${exp.paused?`<button class="btn sun" type="button" data-a="up">Mejorar plan</button>`
         :`<a class="btn" href="../crear/?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="copy">Copiar link</button>`}
         <button class="btn del" type="button" data-a="del" aria-label="Borrar ${esc(exp.title)}">Borrar</button></div></div>`;
   const on=(a,f)=>{ const b=el.querySelector(`[data-a=${a}]`); if(b) b.addEventListener("click",f); };
+  if(exp.demo){ // sample card: only the QR works; the rest explains itself
+    el.querySelectorAll("a.url,a.btn").forEach(a=>a.addEventListener("click",e=>{ e.preventDefault(); alert("Es una experiencia de ejemplo: no existe."); }));
+    on("up",()=>openPlans(true)); on("qr",()=>openQR(exp)); on("copy",()=>alert("Es una experiencia de ejemplo: no existe."));
+    on("del",()=>{ DATA.experiences=DATA.experiences.filter(x=>x!==exp); renderList(); });
+    return el;
+  }
   on("up",()=>openPlans(true));
   on("qr",()=>openQR(exp));
   on("copy",async ev=>{ try{ await navigator.clipboard.writeText(exp.url); ev.target.textContent="¡Copiado!"; setTimeout(()=>ev.target.textContent="Copiar link",1600); }catch(e){ prompt("Copia tu link:",exp.url); } });

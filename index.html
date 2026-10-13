@@ -119,6 +119,15 @@ header.top nav a:hover{color:var(--ink)}
 .mkplan .price small{font-size:.85rem;font-weight:500;color:var(--mute)}
 .mkplan p{margin:0;color:var(--mute);font-size:.95rem}
 .mknote{color:var(--mute);margin:0}
+.mkper{display:inline-flex;gap:4px;padding:4px;margin-bottom:16px;border-radius:999px;border:1px solid var(--line2);background:rgba(5,2,11,.6)}
+.mkper button{font:600 .9rem var(--fb);color:var(--mute);background:transparent;border:0;border-radius:999px;padding:9px 16px;cursor:pointer}
+.mkper button[aria-pressed="true"]{background:var(--lav);color:#1a0d33}
+.mkper button b{font-size:.72rem;color:var(--sun);margin-left:4px}
+.mkper button[aria-pressed="true"] b{color:#6b279b}
+.mkplan .save{color:#74e8ba;font-size:.85rem;margin:-4px 0 6px}
+.mkplans .pa{display:none}
+.mkplans.yr .pa{display:block}
+.mkplans.yr .pm{display:none}
 .mknote a{color:var(--sun)}
 @media (prefers-reduced-motion:reduce){.mkdemo .poster::after,.mkdemo .vid,.mkdemo .vid i{animation:none}.mkdemo .vid img{animation:none}.mkdemo .vid img:first-child{opacity:1}}
 .lang{font:600 .78rem var(--fm);letter-spacing:.12em;min-width:46px;height:38px;padding:0 12px;border-radius:999px;border:1px solid var(--line2);background:transparent;color:var(--ink);cursor:pointer;transition:background .3s,border-color .3s}
@@ -372,10 +381,11 @@ footer img{height:22px;width:auto}
       <div class="chips"><span class="chip" data-en="Business cards">Tarjetas de presentación</span><span class="chip" data-en="Menus and products">Menús y productos</span><span class="chip" data-en="Invitations">Invitaciones</span><span class="chip" data-en="Books and homework">Libros y tareas escolares</span><span class="chip" data-en="Posters and events">Carteles y eventos</span><span class="chip" data-en="Photos and memories">Fotos y recuerdos</span></div>
     </div>
 
-    <div class="mkplans">
+    <div class="mkper reveal" role="group" aria-label="Forma de pago" data-en-aria="Billing period"><button type="button" data-per="m" aria-pressed="true" data-en="Monthly">Mensual</button><button type="button" data-per="a" aria-pressed="false" data-en="Yearly &lt;b&gt;2 months free&lt;/b&gt;">Anual <b>2 meses gratis</b></button></div>
+    <div class="mkplans" id="mkplans">
       <div class="mkplan reveal"><h3 data-en="Free">Gratis</h3><div class="price">$0</div><p data-en="1 image with video · lasts 30 days">1 imagen con video · dura 30 días</p></div>
-      <div class="mkplan reveal"><h3 data-en="Basic">Básico</h3><div class="price">$199 <small data-en="MXN / month, VAT included">MXN al mes, IVA incluido</small></div><p data-en="5 images · change them whenever you want · no expiration while you pay">5 imágenes · cámbialas cuando quieras · sin vencimiento mientras pagues</p></div>
-      <div class="mkplan reveal hot"><h3>Pro</h3><div class="price">$499 <small data-en="MXN / month, VAT included">MXN al mes, IVA incluido</small></div><p data-en="50 images · bigger videos · opens straight to your experience, without the Vórtice VR screen">50 imágenes · videos más grandes · abre directo tu experiencia, sin la pantalla de Vórtice VR</p></div>
+      <div class="mkplan reveal"><h3 data-en="Basic">Básico</h3><div class="price pm">$199 <small data-en="MXN / month, VAT included">MXN al mes, IVA incluido</small></div><div class="price pa">$1,990 <small data-en="MXN / year, VAT included">MXN al año, IVA incluido</small></div><p class="save pa" data-en="Like $166 a month · you save $398">Equivale a $166 al mes · ahorras $398</p><p data-en="5 images · change them whenever you want · no expiration while you pay">5 imágenes · cámbialas cuando quieras · sin vencimiento mientras pagues</p></div>
+      <div class="mkplan reveal hot"><h3>Pro</h3><div class="price pm">$499 <small data-en="MXN / month, VAT included">MXN al mes, IVA incluido</small></div><div class="price pa">$4,990 <small data-en="MXN / year, VAT included">MXN al año, IVA incluido</small></div><p class="save pa" data-en="Like $416 a month · you save $998">Equivale a $416 al mes · ahorras $998</p><p data-en="50 images · bigger videos · opens straight to your experience, without the Vórtice VR screen">50 imágenes · videos más grandes · abre directo tu experiencia, sin la pantalla de Vórtice VR</p></div>
     </div>
     <p class="mknote" data-en="School or company? &lt;a href=&quot;https://wa.me/529983448207?text=Hola%2C%20quiero%20informaci%C3%B3n%20del%20plan%20para%20escuelas%20o%20empresas&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;Ask us about a plan for you&lt;/a&gt;.">¿Escuela o empresa? <a href="https://wa.me/529983448207?text=Hola%2C%20quiero%20informaci%C3%B3n%20del%20plan%20para%20escuelas%20o%20empresas" target="_blank" rel="noopener">Pregúntanos por un plan a tu medida</a>.</p>
   </div></section>
@@ -552,6 +562,10 @@ footer img{height:22px;width:auto}
 <script>
 // ---- "Pruébalo ya": live demo with the platform experience "ejemplo" (César's account, Pro plan). If it does not
 // exist, the section keeps only the animation. Computer: a QR to scan and the image to point at. Phone: open the camera.
+// plans: monthly / yearly (a year costs 10 months)
+document.querySelectorAll(".mkper button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".mkper button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+  document.getElementById("mkplans").classList.toggle("yr",b.dataset.per==="a"); }));
 // explainer video: drop it at assets/video-ra.mp4 and it appears in the section
 fetch("assets/video-ra.mp4",{method:"HEAD"}).then(r=>{ if(r.ok) document.getElementById("mkvideo").hidden=false; }).catch(()=>{});
 (async()=>{
