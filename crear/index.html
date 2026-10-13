@@ -43,6 +43,8 @@ h1{font-family:var(--fd);font-size:clamp(2rem,5vw,3.2rem);line-height:1.02;margi
 .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:10px}
 .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--vortex),var(--sun));transition:width .2s}
 .msg{font-size:.88rem;margin-top:8px}
+.tutlink{margin-top:10px;font:600 .8rem var(--fd);letter-spacing:.1em;text-transform:uppercase;color:var(--sun);background:rgba(255,190,85,.08);border:1px solid rgba(255,190,85,.4);border-radius:999px;padding:8px 14px;cursor:pointer}
+.tutlink:hover{background:rgba(255,190,85,.16)}
 .quality{display:flex;gap:12px;align-items:flex-start;margin-top:10px;padding:12px 14px;border-radius:12px;border:1px solid var(--line2);background:rgba(5,2,11,.6);font-size:.9rem;color:var(--mute)}
 .quality b{display:block;color:var(--ink);font-family:var(--fd);font-size:.85rem;letter-spacing:.06em;margin-bottom:2px}
 .quality .stars{font-size:1.35rem;letter-spacing:2px;color:#ffbe55;text-shadow:0 0 12px rgba(255,190,85,.7);white-space:nowrap;line-height:1.2}
@@ -111,6 +113,7 @@ header .acts{display:flex;align-items:center;gap:14px}
     <span class="kick" id="kick">Gratis · prueba de 30 días</span>
     <h1>Crea tu realidad aumentada</h1>
     <p>Sube una imagen y un video. Cuando alguien apunte su celular a la imagen, el video aparecerá encima. Recibes un link propio y un código QR para compartir.</p>
+    <button class="tutlink" id="tutBtn" type="button">✦ Ver tutorial</button>
   </div>
 
   <div class="grid">
@@ -337,6 +340,7 @@ $("publish").addEventListener("click",async()=>{
 // ---------- start: require an account, load the experience to edit ----------
 (async()=>{
   const ed=new URLSearchParams(location.search).get("editar");
+  let tour=false;
   const toLogin=()=>location.replace("../cuenta/?siguiente=crear"+(ed?"&editar="+encodeURIComponent(ed):""));
   const sess=VVR.session(); if(!sess){ toLogin(); return; }
   S.token=sess.token; S.email=sess.user&&sess.user.email;
@@ -356,10 +360,14 @@ $("publish").addEventListener("click",async()=>{
     else if(active.length>=P.exp) P.exp===1
       ? block("Ya tienes tu experiencia",`Tu plan ${P.name} incluye ${inc}. Puedes editarla, borrarla para crear otra, o mejorar tu plan.`,active[0].slug)
       : block("Ya usaste todas tus experiencias",`Tu plan ${P.name} incluye ${inc}. Edita o borra una desde tu cuenta, o mejora tu plan.`,null);
+    else tour=true;   // creating a new one: the first time, the guided tour
   }catch(e){ if(e.status===401){ toLogin(); return; } }
   check(); updatePreview();
+  if(tour){ const go=()=>window.vvrTutorial&&vvrTutorial.maybeStart(); window.vvrTutorial?setTimeout(go,500):addEventListener("load",()=>setTimeout(go,500)); }
 })();
+$("tutBtn").addEventListener("click",()=>window.vvrTutorial&&vvrTutorial.start());
 </script>
 <script src="../assets/magia.js" defer></script>
+<script src="../assets/tutorial.js" defer></script>
 </body>
 </html>

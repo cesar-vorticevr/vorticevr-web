@@ -330,7 +330,7 @@ const nf=n=>Number(n||0).toLocaleString("es-MX");
 // ?demo=45 (admins only): adds sample experiences that exist only on this screen, to see how a full dashboard looks
 const DEMO_N=Math.min(1000,Math.max(0,parseInt(Q.get("demo"),10)||0));
 function demoExps(n,paid){
-  const names=["Menú de temporada","Tarjeta de presentación","Cartel del festival","Invitación de boda","Libro de ciencias, pág.","Folleto turístico","Etiqueta de producto","Póster de la expo","Tarea de historia","Catálogo primavera","Volante de inauguración","Credencial del evento","Portada de revista","Mapa del museo","Postal de Tabasco"];
+  const names=["Menú de temporada","Tarjeta de presentación","Cartel del festival","Invitación de boda","Libro de ciencias, pág.","Folleto turístico","Etiqueta de producto","Póster de la expo","Tarea de historia","Catálogo primavera","Volante de inauguración","Credencial del evento","Portada de revista","Mapa del museo","Postal de viaje"];
   const imgs=["observatorio","orbita","deletreo-lsm","steal-a-pinata"], now=Date.now();
   return Array.from({length:n},(_,i)=>{ const slug=`ejemplo-${i+1}`, paused=i>=n-3, t=now-(i+1)*5.5e6;
     return {slug,demo:true,title:`${names[i%names.length]} ${Math.floor(i/names.length)+1}`,url:`https://${slug}.vorticevr.mx/`,thumb:`../assets/proyectos/${imgs[i%imgs.length]}.webp`,

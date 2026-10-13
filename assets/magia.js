@@ -59,6 +59,7 @@
     if (parts.length > 400) parts.splice(0, parts.length - 400);
     go();
   }
+  window.vvrSparkle = burst;   // other scripts (the /crear/ tutorial) can throw sparkles too
   addEventListener("pointerdown", e => { if (e.button === 0 || e.pointerType !== "mouse") burst(e.clientX, e.clientY); }, { passive: true });
   if (fine) {   // trail behind the mouse
     let last = 0;
