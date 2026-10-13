@@ -12,7 +12,7 @@
 <link rel="icon" href="assets/icono.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 /* Layout: one dark "observatory" stage. Full-screen particle vortex that becomes the Vórtice VR mark,
    then playable projects as big tilt cards, services, other projects, about, contact.
@@ -22,7 +22,7 @@
   --line:rgba(190,150,255,.18); --line2:rgba(190,150,255,.42);
   --vortex:#8b3fd6; --vortex-d:#5a1f8f; --lav:#d2b8ff; --ink:#f2ecff; --mute:#a99bcb; --sun:#ffbe55;
   --brand:#6b279b; /* exact purple of the Vórtice VR mark */
-  --fd:"Chakra Petch",ui-sans-serif,system-ui,sans-serif;
+  --fd:"Sora",ui-sans-serif,system-ui,sans-serif;
   --fb:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --fm:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
   --ease:cubic-bezier(.2,.8,.2,1);
@@ -113,7 +113,15 @@ header.top nav a:hover{color:var(--ink)}
 .mkplans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:16px}
 @media (max-width:820px){.mkplans{grid-template-columns:minmax(0,1fr)}}
 .mkplan{padding:22px;border-radius:16px;border:1px solid var(--line);background:linear-gradient(170deg,rgba(40,16,74,.5),rgba(12,5,26,.6))}
-.mkplan.hot{border-color:var(--sun);box-shadow:0 0 0 1px var(--sun) inset,0 20px 60px -30px rgba(255,190,85,.5)}
+/* Pro: a rotating gold-violet border and a breathing glow, so it is the one that catches the eye */
+@property --pa{syntax:"<angle>";initial-value:0deg;inherits:false}
+.mkplan.hot{position:relative;isolation:isolate;border-color:transparent!important;animation:proglow 3.2s ease-in-out infinite}
+.mkplan.hot::before{content:"";position:absolute;inset:-2px;border-radius:18px;padding:2px;background:conic-gradient(from var(--pa),#ffbe55,#fff3d1,#d2b8ff,#8b3fd6,#ffd27f,#ffbe55);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:proborder 4s linear infinite;z-index:-1;pointer-events:none}
+@keyframes proborder{to{--pa:360deg}}
+@keyframes proglow{0%,100%{box-shadow:0 0 26px rgba(255,190,85,.22)}50%{box-shadow:0 0 54px rgba(255,190,85,.5),0 0 90px rgba(139,63,214,.3)}}
+.pop{position:absolute;top:-12px;right:16px;font-family:var(--fd);font-size:.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 12px;border-radius:999px;color:#1a0d00;background:linear-gradient(110deg,#ffd27f,#ffbe55,#ff9f3a);box-shadow:0 0 18px rgba(255,190,85,.6)}
+@media (prefers-reduced-motion:reduce){.mkplan.hot,.mkplan.hot::before{animation:none}}
 .mkplan h3{margin:0;font-family:var(--fd);font-size:1.15rem}
 .mkplan .price{font-family:var(--fd);font-weight:700;font-size:2.2rem;line-height:1.2;margin:4px 0 6px}
 .mkplan .price small{font-size:.85rem;font-weight:500;color:var(--mute)}
@@ -265,11 +273,25 @@ section{position:relative;padding-block:110px}
 .sign span{color:var(--mute);font-size:.9rem}
 
 /* contact */
-.cta{text-align:center;display:flex;flex-direction:column;align-items:center;gap:26px;padding-block:120px;overflow:hidden}
+.cta{text-align:center;display:flex;flex-direction:column;align-items:center;gap:26px;padding-block:120px;padding-inline:16px;overflow:hidden}
 .cta::before{content:"";position:absolute;left:50%;top:50%;width:900px;height:900px;max-width:160vw;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(139,63,214,.32),transparent 62%);pointer-events:none;animation:breathe 8s ease-in-out infinite}
 @keyframes breathe{50%{transform:translate(-50%,-50%) scale(1.15)}}
 .cta h2{position:relative;font-family:var(--fd);font-weight:700;font-size:clamp(2.2rem,7vw,5.4rem);line-height:.98;margin:0;max-width:14ch;text-wrap:balance}
 .cta h2 em{font-style:normal;color:var(--sun)}
+/* contact form: goes to hola@vorticevr.mx through /api/contact */
+.cform{position:relative;width:min(640px,100%);text-align:left;display:flex;flex-direction:column;gap:14px;padding:24px;border-radius:20px;border:1px solid var(--line2);background:rgba(13,6,32,.7);backdrop-filter:blur(8px)}
+.cform .cintro{margin:0;color:var(--mute)}
+.cf2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:14px}
+.cform label{display:flex;flex-direction:column;gap:6px;font-size:.8rem;font-family:var(--fd);letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.cform input,.cform select,.cform textarea{font:400 1rem var(--fb);letter-spacing:0;text-transform:none;color:var(--ink);background:rgba(5,2,11,.75);border:1px solid var(--line2);border-radius:12px;padding:12px 14px;width:100%}
+.cform input:focus,.cform select:focus,.cform textarea:focus{outline:none;border-color:var(--sun);box-shadow:0 0 0 3px rgba(255,190,85,.18)}
+.cform textarea{resize:vertical;min-height:110px}
+.cform .hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.cform .cnote{margin:0;font-size:.85rem;color:var(--mute)}
+.cform .cnote a{color:var(--lav)}
+.cform .btn{align-self:flex-start}
+.cmsg{min-height:1.3em;font-size:.95rem}
+.cmsg.ok{color:#74e8ba}.cmsg.bad{color:#ff8a9e}
 .cta .actions{position:relative;justify-content:center}
 .cgrid{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px;width:100%;max-width:820px;margin-top:10px}
 .cgrid a{display:flex;flex-direction:column;gap:2px;padding:18px;border-radius:14px;border:1px solid var(--line);background:rgba(20,9,40,.6);text-decoration:none;text-align:left;transition:border-color .3s,transform .4s var(--ease)}
@@ -279,6 +301,8 @@ section{position:relative;padding-block:110px}
 footer{border-top:1px solid var(--line);padding-block:30px calc(30px + env(safe-area-inset-bottom,0px));color:var(--mute);font-size:.85rem}
 footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:center}
 footer img{height:22px;width:auto}
+footer .legal a{color:var(--mute);text-decoration:none}
+footer .legal a:hover{color:var(--ink)}
 
 /* custom cursor (mouse only) */
 #cur,#cur2{position:fixed;left:0;top:0;pointer-events:none;z-index:40;border-radius:50%;opacity:0;transition:opacity .3s}
@@ -385,7 +409,7 @@ footer img{height:22px;width:auto}
     <div class="mkplans" id="mkplans">
       <div class="mkplan reveal"><h3 data-en="Free">Gratis</h3><div class="price">$0</div><p data-en="1 image with video · lasts 30 days · up to 1,000 views">1 imagen con video · dura 30 días · hasta 1,000 vistas</p></div>
       <div class="mkplan reveal"><h3 data-en="Basic">Básico</h3><div class="price pm">$199 <small data-en="MXN / month, VAT included">MXN al mes, IVA incluido</small></div><div class="price pa">$1,990 <small data-en="MXN / year, VAT included">MXN al año, IVA incluido</small></div><p class="save pa" data-en="Like $166 a month · you save $398">Equivale a $166 al mes · ahorras $398</p><p data-en="5 images · change them whenever you want · no expiration while you pay">5 imágenes · cámbialas cuando quieras · sin vencimiento mientras pagues</p></div>
-      <div class="mkplan reveal hot"><h3>Pro</h3><div class="price pm">$499 <small data-en="MXN / month, VAT included">MXN al mes, IVA incluido</small></div><div class="price pa">$4,990 <small data-en="MXN / year, VAT included">MXN al año, IVA incluido</small></div><p class="save pa" data-en="Like $416 a month · you save $998">Equivale a $416 al mes · ahorras $998</p><p data-en="50 images · bigger videos · opens straight to your experience, without the Vórtice VR screen">50 imágenes · videos más grandes · abre directo tu experiencia, sin la pantalla de Vórtice VR</p></div>
+      <div class="mkplan reveal hot"><span class="pop" data-en="Most popular">Más popular</span><h3>Pro</h3><div class="price pm">$499 <small data-en="MXN / month, VAT included">MXN al mes, IVA incluido</small></div><div class="price pa">$4,990 <small data-en="MXN / year, VAT included">MXN al año, IVA incluido</small></div><p class="save pa" data-en="Like $416 a month · you save $998">Equivale a $416 al mes · ahorras $998</p><p data-en="50 images · bigger videos · opens straight to your experience, without the Vórtice VR screen">50 imágenes · videos más grandes · abre directo tu experiencia, sin la pantalla de Vórtice VR</p></div>
     </div>
     <p class="mknote" data-en="School or company? &lt;a href=&quot;https://wa.me/529983448207?text=Hola%2C%20quiero%20informaci%C3%B3n%20del%20plan%20para%20escuelas%20o%20empresas&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;Ask us about a plan for you&lt;/a&gt;.">¿Escuela o empresa? <a href="https://wa.me/529983448207?text=Hola%2C%20quiero%20informaci%C3%B3n%20del%20plan%20para%20escuelas%20o%20empresas" target="_blank" rel="noopener">Pregúntanos por un plan a tu medida</a>.</p>
   </div></section>
@@ -477,15 +501,27 @@ footer img{height:22px;width:auto}
     <div class="actions reveal">
       <a class="btn sun mag" href="https://wa.me/529983448207?text=Hola%2C%20quiero%20platicar%20de%20un%20proyecto%20con%20V%C3%B3rtice%20VR" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg><span data-en="Message us on WhatsApp">Escríbenos por WhatsApp</span></a>
     </div>
+    <form class="cform reveal" id="cform" novalidate>
+      <p class="cintro" data-en="Or leave us your details and we will get back to you:">O déjanos tus datos y te contactamos:</p>
+      <div class="cf2"><label><span data-en="Name">Nombre</span><input name="name" required maxlength="80" autocomplete="name"></label>
+        <label><span data-en="Email">Correo</span><input name="email" type="email" required maxlength="190" autocomplete="email"></label></div>
+      <div class="cf2"><label><span data-en="WhatsApp (optional)">WhatsApp (opcional)</span><input name="phone" type="tel" maxlength="20" autocomplete="tel"></label>
+        <label><span data-en="I am interested in">Me interesa</span><select name="topic"><option value="plataforma" data-en="The augmented reality platform">La plataforma de realidad aumentada</option><option value="escuela" data-en="A plan for my school">Un plan para mi escuela</option><option value="proyecto" data-en="A custom project">Un proyecto a la medida</option><option value="otro" data-en="Something else">Otra cosa</option></select></label></div>
+      <label><span data-en="Message">Mensaje</span><textarea name="message" rows="4" required maxlength="2000"></textarea></label>
+      <input class="hp" name="web" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <p class="cnote" data-en="By sending this you accept our &lt;a href=&quot;privacidad/&quot;&gt;privacy notice&lt;/a&gt;.">Al enviarlo aceptas nuestro <a href="privacidad/">aviso de privacidad</a>.</p>
+      <button class="btn sun" type="submit"><span data-en="Send message">Enviar mensaje</span></button>
+      <div class="cmsg" id="cmsg" role="status"></div>
+    </form>
     <div class="cgrid reveal">
       <a href="https://wa.me/529983448207" target="_blank" rel="noopener"><span class="lbl">WhatsApp</span><span class="val">+52 998 344 8207</span></a>
-      <a href="mailto:vorticevr@gmail.com"><span class="lbl" data-en="Email">Correo</span><span class="val">vorticevr@gmail.com</span></a>
+      <a href="mailto:hola@vorticevr.mx"><span class="lbl" data-en="Email">Correo</span><span class="val">hola@vorticevr.mx</span></a>
       <a href="https://instagram.com/vorticevr" target="_blank" rel="noopener"><span class="lbl">Instagram</span><span class="val">@vorticevr</span></a>
     </div>
   </section>
 </main>
 
-<footer><div class="wrap"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span>© Vórtice VR</span><span data-en="César Adrián García Martínez, M.A., CEO">Mtro. César Adrián García Martínez, Director General</span></div></footer>
+<footer><div class="wrap"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span>© Vórtice VR</span><span class="legal"><a href="privacidad/" data-en="Privacy">Privacidad</a> · <a href="privacidad/#cookies">Cookies</a> · <a href="terminos/" data-en="Terms">Términos</a></span><span data-en="César Adrián García Martínez, M.A., CEO">Mtro. César Adrián García Martínez, Director General</span></div></footer>
 
 <script>
 // ---- UI effects (no dependencies) ----
@@ -562,6 +598,18 @@ footer img{height:22px;width:auto}
 <script>
 // ---- "Pruébalo ya": live demo with the platform experience "ejemplo" (César's account, Pro plan). If it does not
 // exist, the section keeps only the animation. Computer: a QR to scan and the image to point at. Phone: open the camera.
+// contact form → /api/contact (sends it to hola@vorticevr.mx)
+document.getElementById("cform").addEventListener("submit",async e=>{
+  e.preventDefault(); const f=e.target, m=document.getElementById("cmsg"), en=window.vvrLang&&vvrLang()==="en", b=f.querySelector("button");
+  const d=Object.fromEntries(new FormData(f));
+  if(!d.name.trim()||!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(d.email.trim())||!d.message.trim()){ m.className="cmsg bad"; m.textContent=en?"Please write your name, a valid email and a message.":"Escribe tu nombre, un correo válido y tu mensaje."; return; }
+  b.disabled=true; m.className="cmsg"; m.textContent=en?"Sending…":"Enviando…";
+  try{ const r=await fetch("api/contact",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)}); const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.error||"");
+    f.reset(); m.className="cmsg ok"; m.textContent=en?"Thank you! We got your message and will write back soon.":"¡Gracias! Recibimos tu mensaje y te escribimos pronto."; }
+  catch(err){ m.className="cmsg bad"; m.textContent=err.message||(en?"It could not be sent. Try WhatsApp.":"No se pudo enviar. Intenta por WhatsApp."); }
+  b.disabled=false;
+});
 // plans: monthly / yearly (a year costs 10 months)
 document.querySelectorAll(".mkper button").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll(".mkper button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
@@ -707,5 +755,6 @@ async function init(){
 }
 init().catch(e=>{ console.error(e); fallback(); });
 </script>
+<script src="assets/magia.js" defer></script>
 </body>
 </html>

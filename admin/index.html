@@ -7,11 +7,11 @@
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#05020b">
 <link rel="icon" href="../assets/icono.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 /* Admin of the AR platform (only ADMIN_EMAILS): accounts, their plan and experiences; plans are activated by hand here. */
 :root{--void:#05020b;--panel:rgba(20,9,40,.72);--line:rgba(190,150,255,.2);--line2:rgba(190,150,255,.45);--vortex:#8b3fd6;--vortex-d:#5a1f8f;--lav:#d2b8ff;--ink:#f2ecff;--mute:#a99bcb;--sun:#ffbe55;--ok:#74e8ba;--bad:#ff8a9e;
-  --fd:"Chakra Petch",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;min-height:100vh;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55}
@@ -163,5 +163,6 @@ $("q").addEventListener("input",()=>{ clearTimeout(timer); timer=setTimeout(()=>
     $("status").textContent=e.status===403?"Esta cuenta no tiene acceso a la administración.":e.message; }
 })();
 </script>
+<script src="../assets/magia.js" defer></script>
 </body>
 </html>

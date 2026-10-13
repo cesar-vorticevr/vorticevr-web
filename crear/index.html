@@ -7,11 +7,11 @@
 <meta name="description" content="Crea gratis una experiencia de realidad aumentada: sube una imagen y un video, y comparte el link y el código QR.">
 <meta name="theme-color" content="#05020b">
 <link rel="icon" href="../assets/icono.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 /* Layout: one column of numbered steps; on wide screens the live preview sticks on the right. */
 :root{--void:#05020b;--panel:rgba(20,9,40,.7);--line:rgba(190,150,255,.2);--line2:rgba(190,150,255,.45);--vortex:#8b3fd6;--vortex-d:#5a1f8f;--lav:#d2b8ff;--ink:#f2ecff;--mute:#a99bcb;--sun:#ffbe55;--ok:#74e8ba;--bad:#ff8a9e;
-  --fd:"Chakra Petch",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55;min-height:100vh}
@@ -43,6 +43,12 @@ h1{font-family:var(--fd);font-size:clamp(2rem,5vw,3.2rem);line-height:1.02;margi
 .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:10px}
 .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--vortex),var(--sun));transition:width .2s}
 .msg{font-size:.88rem;margin-top:8px}
+.quality{display:flex;gap:12px;align-items:flex-start;margin-top:10px;padding:12px 14px;border-radius:12px;border:1px solid var(--line2);background:rgba(5,2,11,.6);font-size:.9rem;color:var(--mute)}
+.quality b{display:block;color:var(--ink);font-family:var(--fd);font-size:.85rem;letter-spacing:.06em;margin-bottom:2px}
+.quality .stars{font-size:1.35rem;letter-spacing:2px;color:#ffbe55;text-shadow:0 0 12px rgba(255,190,85,.7);white-space:nowrap;line-height:1.2}
+.quality .stars i{font-style:normal;color:rgba(255,255,255,.15);text-shadow:none}
+.quality.q1 .stars,.quality.q2 .stars{color:#ff9f7a;text-shadow:0 0 10px rgba(255,138,120,.5)}
+.quality.q5{border-color:rgba(255,190,85,.6);box-shadow:0 0 24px rgba(255,190,85,.18)}
 .msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
 label.f{display:block;font-size:.8rem;font-family:var(--fd);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:12px 0 6px}
 input[type=text],input[type=email],input[type=tel],input[type=url]{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:11px 12px}
@@ -119,7 +125,7 @@ header .acts{display:flex;align-items:center;gap:14px}
         <h2><span class="n" id="n1">1</span>Tu imagen</h2>
         <p class="hint">La que la gente va a enfocar: una tarjeta, un póster, una portada. Funciona mejor con muchos detalles y contraste; evita fondos lisos o repetitivos.</p>
         <label class="drop" id="dImg"><input type="file" id="fImg" accept="image/jpeg,image/png,image/webp"><img class="thumb" id="tImg" alt="" hidden><span><b id="lImg">Elegir imagen</b><small>JPG, PNG o WebP</small></span></label>
-        <div class="bar" id="bImg" hidden><i></i></div><div class="msg" id="mImg"></div>
+        <div class="bar" id="bImg" hidden><i></i></div><div class="msg" id="mImg"></div><div class="quality" id="qImg" hidden></div>
       </section>
 
       <section class="step" id="s2">
@@ -157,7 +163,7 @@ header .acts{display:flex;align-items:center;gap:14px}
         <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
         <button class="btn primary" id="publish" type="button" disabled>Publicar mi experiencia</button>
         <div class="bar" id="bPub" hidden><i></i></div><div class="msg" id="mPub"></div>
-        <p class="legal">Al publicar confirmas que tienes derecho a usar la imagen y el video. Vórtice VR puede retirar contenido inapropiado. <span id="legalDays">La experiencia se borra a los 30 días; puedes editarla o borrarla desde tu cuenta.</span></p>
+        <p class="legal">Al publicar confirmas que tienes derecho a usar la imagen y el video. Vórtice VR puede retirar contenido inapropiado (<a href="../terminos/">términos</a>). <span id="legalDays">La experiencia se borra a los 30 días; puedes editarla o borrarla desde tu cuenta.</span></p>
       </section>
     </div>
 
@@ -198,8 +204,22 @@ for(const [k] of SOC) if(BASES[k]) $("b_"+k).addEventListener("change",e=>{ e.ta
 
 // ---------- step 1: image → downscale, preview, compile the MindAR target in this browser ----------
 let compilerMod=null;
+// How well a phone will recognize the image (1–5 stars), from what MindAR found while compiling it:
+// tracking points (keep the video stuck to the image; measured on a 256 px tall copy) and the density of matching
+// points near 256 px (let it be found from afar or at an angle). Calibrated with real images: a printed business card
+// that tracks very well and a detailed poster get 5; a dark image with few details gets 1.
+function quality(d){
+  if(!d||!d.trackingData||!d.matchingData) return 0;
+  const T=d.trackingData.reduce((n,t)=>n+((t.points||[]).length),0);
+  const k=d.matchingData.reduce((b,x)=>Math.abs(Math.min(x.width,x.height)-256)<Math.abs(Math.min(b.width,b.height)-256)?x:b);
+  const dens=((k.maximaPoints||[]).length+(k.minimaPoints||[]).length)/(k.width*k.height)*65536;
+  return Math.max(1,Math.min(5,Math.round((.5*Math.min(1,T/80)+.5*Math.min(1,dens/180))*5)));
+}
+const QTXT=["","Muy baja: lo más probable es que tiemble o no se reconozca. Usa una imagen con más detalles, texto o textura, y sin fondos lisos.","Baja: puede costar trabajo reconocerla y temblar. Una imagen con más detalles y contraste funcionará mejor.","Aceptable: funciona, pero con más detalles y contraste se verá más firme.","Muy buena: se va a reconocer bien.","Excelente: se va a reconocer muy bien y el video se verá firme."];
+function showQuality(d){ const q=quality(d), el=$("qImg"); if(!q){ el.hidden=true; return; }
+  el.hidden=false; el.className="quality q"+q; el.innerHTML=`<span class="stars" aria-label="${q} de 5 estrellas">${"★".repeat(q)}<i>${"★".repeat(5-q)}</i></span><span><b>Calidad para reconocerse</b>${QTXT[q]}</span>`; }
 async function onImage(file){
-  if(!file) return; const m=$("mImg"); m.className="msg"; m.textContent="";
+  if(!file) return; const m=$("mImg"); m.className="msg"; m.textContent=""; $("qImg").hidden=true;
   if(!/^image\/(jpeg|png|webp)$/.test(file.type)){ m.className="msg bad"; m.textContent="Usa una imagen JPG, PNG o WebP."; return; }
   const bmp=await createImageBitmap(file).catch(()=>null); if(!bmp){ m.className="msg bad"; m.textContent="No pude abrir esa imagen."; return; }
   if(Math.min(bmp.width,bmp.height)<300){ m.className="msg bad"; m.textContent="La imagen es muy pequeña. Usa una de al menos 600 px."; return; }
@@ -216,7 +236,7 @@ async function onImage(file){
     const c=new compilerMod.Compiler();
     await c.compileImageTargets([img],p=>{ bar.firstElementChild.style.width=Math.max(2,p)+"%"; });
     S.target=new Blob([await c.exportData()],{type:"application/octet-stream"});
-    m.className="msg ok"; m.textContent="Imagen lista."; $("n1").classList.add("done");
+    m.className="msg ok"; m.textContent="Imagen lista."; $("n1").classList.add("done"); showQuality(c.data&&c.data[0]);
   }catch(e){ console.error(e); m.className="msg bad"; m.textContent="No pude preparar esta imagen. Prueba con otra con más detalles."; }
   S.compiling=false; bar.hidden=true; check();
 }
@@ -340,5 +360,6 @@ $("publish").addEventListener("click",async()=>{
   check(); updatePreview();
 })();
 </script>
+<script src="../assets/magia.js" defer></script>
 </body>
 </html>

@@ -7,11 +7,11 @@
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#05020b">
 <link rel="icon" href="../assets/icono.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 /* Account: centered forms for sign-in / sign-up; the dashboard is a list of experience cards plus account settings. */
 :root{--void:#05020b;--panel:rgba(20,9,40,.72);--line:rgba(190,150,255,.2);--line2:rgba(190,150,255,.45);--vortex:#8b3fd6;--vortex-d:#5a1f8f;--lav:#d2b8ff;--ink:#f2ecff;--mute:#a99bcb;--sun:#ffbe55;--ok:#74e8ba;--bad:#ff8a9e;
-  --fd:"Chakra Petch",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;min-height:100vh;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55}
@@ -90,6 +90,15 @@ input:focus{border-color:var(--lav);outline:none}
 .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin:14px 0 12px}
 .plan{border:1px solid var(--line);border-radius:14px;padding:16px;background:rgba(5,2,11,.5);display:flex;flex-direction:column;gap:6px}
 .plan.cur{border-color:var(--sun);box-shadow:0 0 0 1px var(--sun) inset}
+/* Pro: a rotating gold-violet border and a breathing glow, so it is the one that catches the eye */
+@property --pa{syntax:"<angle>";initial-value:0deg;inherits:false}
+.plan.hot{position:relative;isolation:isolate;border-color:transparent!important;animation:proglow 3.2s ease-in-out infinite}
+.plan.hot::before{content:"";position:absolute;inset:-2px;border-radius:16px;padding:2px;background:conic-gradient(from var(--pa),#ffbe55,#fff3d1,#d2b8ff,#8b3fd6,#ffd27f,#ffbe55);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:proborder 4s linear infinite;z-index:-1;pointer-events:none}
+@keyframes proborder{to{--pa:360deg}}
+@keyframes proglow{0%,100%{box-shadow:0 0 26px rgba(255,190,85,.22)}50%{box-shadow:0 0 54px rgba(255,190,85,.5),0 0 90px rgba(139,63,214,.3)}}
+.pop{position:absolute;top:-12px;right:16px;font-family:var(--fd);font-size:.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 12px;border-radius:999px;color:#1a0d00;background:linear-gradient(110deg,#ffd27f,#ffbe55,#ff9f3a);box-shadow:0 0 18px rgba(255,190,85,.6)}
+@media (prefers-reduced-motion:reduce){.plan.hot,.plan.hot::before{animation:none}}
 .plan h3{font-family:var(--fd);margin:0;font-size:1.1rem}
 .plan .price{font-family:var(--fd);font-size:1.6rem;font-weight:700}
 .plan .price small{font-size:.8rem;color:var(--mute);font-weight:500}
@@ -127,6 +136,8 @@ dialog canvas{width:100%;height:auto;border-radius:12px;background:#fff;display:
 dialog h2{margin:0;font-size:1.1rem;overflow-wrap:anywhere}
 dialog .row{justify-content:space-between}
 .note{font-size:.85rem;color:var(--mute)}
+.lfoot{text-align:center;color:var(--mute);font-size:.82rem;padding:10px 20px 34px}
+.lfoot a{color:var(--mute)}
 </style>
 </head>
 <body>
@@ -174,7 +185,7 @@ dialog .row{justify-content:space-between}
       <button class="btn primary wide" type="submit">Crear cuenta</button>
     </form>
     <div class="msg" id="mRegistro"></div>
-    <p class="note">Te enviaremos un código para confirmar tu correo. Tu correo solo se usa para tu cuenta y tus experiencias.</p>
+    <p class="note">Te enviaremos un código para confirmar tu correo. Tu correo solo se usa para tu cuenta y tus experiencias. Al crear tu cuenta aceptas los <a href="../terminos/">Términos</a> y el <a href="../privacidad/">Aviso de privacidad</a>.</p>
     <div class="links"><a href="#entrar">Ya tengo cuenta</a></div>
   </section>
 
@@ -240,6 +251,7 @@ dialog .row{justify-content:space-between}
     <div class="row"><button class="btn sun" id="qrDown" type="button">Descargar QR</button><button class="btn" id="qrClose" type="button">Cerrar</button></div>
   </dialog>
 </main>
+<footer class="lfoot"><a href="../privacidad/">Aviso de privacidad</a> · <a href="../terminos/">Términos</a> · <a href="mailto:hola@vorticevr.mx">hola@vorticevr.mx</a></footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="../assets/plataforma.js"></script>
@@ -351,7 +363,7 @@ function renderPlans(){
   $("pPlans").innerHTML=PLANS.map(([id,name,price,items])=>{ const cur=id===P.id;
     const msg=encodeURIComponent(`Hola, quiero el plan ${name} ${yr?"anual":"mensual"} de realidad aumentada para mi cuenta ${user.email}`);
     const amount=price*(yr?YEAR:1);
-    return `<div class="plan${cur?" cur":""}"><h3>${name} ${cur?'<span class="tag">Tu plan</span>':""}</h3><div class="price">${price?"$"+nf(amount)+` <small>MXN al ${yr?"año":"mes"} · IVA incluido</small>`:"$0"}</div>`
+    return `<div class="plan${cur?" cur":""}${id==="pro"?" hot":""}">${id==="pro"?'<span class="pop">Más popular</span>':""}<h3>${name} ${cur?'<span class="tag">Tu plan</span>':""}</h3><div class="price">${price?"$"+nf(amount)+` <small>MXN al ${yr?"año":"mes"} · IVA incluido</small>`:"$0"}</div>`
       +(price&&yr?`<p class="save">Equivale a $${nf(Math.round(amount/12))} al mes · ahorras $${nf(price*(12-YEAR))}</p>`:"")
       +`<ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul>`
       +(price&&(!cur||(B.subscribed&&PERIOD!==B.period))?(B.enabled?`<button class="btn sun" type="button" data-plan="${id}">${cur?(yr?"Pasar a pago anual":"Pasar a pago mensual"):B.subscribed?"Cambiar a este plan":"Contratar"}</button>`:`<a class="btn sun" href="https://wa.me/${WA}?text=${msg}" target="_blank" rel="noopener">Lo quiero</a>`):"")+`</div>`; }).join("");
@@ -450,5 +462,6 @@ function route(){ if(VVR.session()&&!$("vPanel").hidden) return; const h=locatio
 addEventListener("hashchange",()=>{ if(!VVR.session()) route(); });
 load();
 </script>
+<script src="../assets/magia.js" defer></script>
 </body>
 </html>

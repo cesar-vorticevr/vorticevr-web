@@ -7,12 +7,12 @@
 <meta name="theme-color" content="#05020b">
 <title>Realidad aumentada · Vórtice VR</title>
 <link rel="icon" href="/assets/icono.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 /* Visor de experiencias creadas en vorticevr.mx/crear/. Pantalla completa sobre la cámara:
    logo de Vórtice VR arriba, controles del video a la derecha, redes y captura abajo. */
 :root{--void:#05020b;--ink:#f2ecff;--mute:#b9addb;--vortex:#8b3fd6;--lav:#d2b8ff;--sun:#ffbe55;--glass:rgba(10,4,22,.62);
-  --fd:"Chakra Petch",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;color-scheme:dark}
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0;height:100%;background:#000;color:var(--ink);font-family:var(--fb);overflow:hidden;-webkit-tap-highlight-color:transparent}
@@ -323,7 +323,25 @@ async function start(){
     if(CFG.fit==="height"){ ph=IH; pw=IH*VA; } else if(CFG.fit==="fill"){ pw=1; ph=IH; }
     const vtex=new THREE.VideoTexture(vid); vtex.colorSpace=THREE.SRGBColorSpace;
     const vplane=new THREE.Mesh(new THREE.PlaneGeometry(pw,ph),new THREE.MeshBasicMaterial({map:vtex,toneMapped:false,transparent:true,opacity:0}));
-    vplane.position.z=0.004; anchor.group.add(vplane);
+    vplane.position.z=0.004;
+    // Steadier video: the plane does not ride the anchor directly. It lives in its own group that follows the anchor
+    // with an adaptive low-pass filter: tiny movements (tracking jitter) are damped hard, real movements are followed fast.
+    const steady=new THREE.Group(); steady.matrixAutoUpdate=false; steady.visible=false; scene.add(steady); steady.add(vplane);
+    const tP=new THREE.Vector3(), tQ=new THREE.Quaternion(), tS=new THREE.Vector3(), sP=new THREE.Vector3(), sQ=new THREE.Quaternion(), sS=new THREE.Vector3();
+    let steadyOn=false;
+    const SMOOTH=new URLSearchParams(location.search).get("suave")!=="0";   // ?suave=0 turns it off, to compare
+    const follow=dt=>{
+      if(!found){ steady.visible=false; steadyOn=false; return; }
+      anchor.group.updateMatrixWorld(true); anchor.group.matrixWorld.decompose(tP,tQ,tS);
+      if(!steadyOn||!SMOOTH){ sP.copy(tP); sQ.copy(tQ); sS.copy(tS); steadyOn=true; }   // just found (or smoothing off): snap
+      else {
+        const size=Math.max(1e-6,tS.x), move=Math.max(sP.distanceTo(tP)/size, sQ.angleTo(tQ)*0.5);   // in image widths / radians
+        const k=Math.min(1,Math.max(0,(move-0.004)/0.06)), a=0.07+0.6*k*k;                     // jitter → 0.07 · real move → up to 0.67
+        const f=1-Math.pow(1-a,Math.min(4,dt*60));                                              // same feel at any frame rate
+        sP.lerp(tP,f); sQ.slerp(tQ,f); sS.lerp(tS,f);
+      }
+      steady.matrix.compose(sP,sQ,sS); steady.matrixWorldNeedsUpdate=true; steady.visible=true;
+    };
 
     let found=false, started=false;
     setMode=()=>{ const full=vbox.classList.contains("full"), onScreen=started&&(!found||full);
@@ -336,7 +354,7 @@ async function start(){
     await mind.start();
     $("intro").hidden=true; guide.hidden=false; $("controls").hidden=false; $("social").hidden=!$("social").children.length; showCtl(); setMode();
     const clock=new THREE.Clock(); let appear=0;
-    renderer.setAnimationLoop(()=>{ const dt=clock.getDelta(); appear=found?Math.min(1,appear+dt*2.4):0;
+    renderer.setAnimationLoop(()=>{ const dt=clock.getDelta(); appear=found?Math.min(1,appear+dt*2.4):0; follow(dt);
       vplane.material.opacity=1-Math.pow(1-appear,3); vplane.scale.setScalar(.9+.1*vplane.material.opacity);
       if(found&&vid.readyState>=2) vtex.needsUpdate=true; // a hidden <video> is not painted, so its frame callback stops (iPhone): push frames ourselves
       renderer.render(scene,camera); capture.afterRender(); });

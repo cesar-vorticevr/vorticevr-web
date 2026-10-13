@@ -34,27 +34,7 @@ const SOCIAL_BASE = { facebook: "https://facebook.com/", instagram: "https://ins
 
 export default {
   async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    const root = env.ROOT_DOMAIN || ROOT_DEFAULT;
-    try {
-      if (url.pathname.startsWith("/api/")) return await api(request, env, ctx, url);
-      if (url.pathname.startsWith("/m/")) return await media(request, env, url);
-      const sub = subdomainOf(url.hostname, root);
-      if (sub) {
-        // nombre.vorticevr.mx: the page is the viewer; shared files (/assets/…) come from the site
-        if (url.pathname === "/" || url.pathname === "/index.html") return viewerPage(request, env, url);
-        return assets(request, env, url);
-      }
-      const e = url.pathname.match(/^\/e\/([a-z0-9-]+)\/?$/);
-      if (e) {
-        if (!url.pathname.endsWith("/")) return Response.redirect(url.origin + url.pathname + "/" + url.search, 301);
-        return viewerPage(request, env, url);
-      }
-      return assets(request, env, url);
-    } catch (err) {
-      console.error(err);
-      return json({ error: "Error interno. Intenta de nuevo.", detalle: /workers.dev$|localhost$|^127./.test(url.hostname) ? String(err && err.message || err).slice(0, 200) : undefined }, 500);
-    }
+    return secure(await route(request, env, ctx), new URL(request.url));
   },
 
   // daily: delete expired experiences and their files
@@ -76,6 +56,44 @@ export default {
     await env.DB.prepare("DELETE FROM ratelimit WHERE reset < ?").bind(Date.now()).run();
   },
 };
+
+async function route(request, env, ctx) {
+  const url = new URL(request.url);
+  const root = env.ROOT_DOMAIN || ROOT_DEFAULT;
+  try {
+    if (url.pathname.startsWith("/api/")) return await api(request, env, ctx, url);
+    if (url.pathname.startsWith("/m/")) return await media(request, env, url);
+    const sub = subdomainOf(url.hostname, root);
+    if (sub) {
+      // nombre.vorticevr.mx: the page is the viewer; shared files (/assets/…) come from the site
+      if (url.pathname === "/" || url.pathname === "/index.html") return viewerPage(request, env, url);
+      return assets(request, env, url);
+    }
+    const e = url.pathname.match(/^\/e\/([a-z0-9-]+)\/?$/);
+    if (e) {
+      if (!url.pathname.endsWith("/")) return Response.redirect(url.origin + url.pathname + "/" + url.search, 301);
+      return viewerPage(request, env, url);
+    }
+    return assets(request, env, url);
+  } catch (err) {
+    console.error(err);
+    return json({ error: "Error interno. Intenta de nuevo.", detalle: /workers.dev$|localhost$|^127./.test(url.hostname) ? String(err && err.message || err).slice(0, 200) : undefined }, 500);
+  }
+}
+
+// Security headers on every response: no MIME sniffing, no framing by other sites, only https, and the camera
+// and microphone only for this site (the AR viewer and the projects use them).
+function secure(res, url) {
+  if (res.status === 101) return res;
+  const h = new Headers(res.headers);
+  h.set("X-Content-Type-Options", "nosniff");
+  h.set("X-Frame-Options", "SAMEORIGIN");
+  h.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  h.set("Permissions-Policy", "camera=(self), microphone=(self), geolocation=(), payment=()");
+  if (url.protocol === "https:") h.set("Strict-Transport-Security", "max-age=31536000");
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+}
+
 
 function subdomainOf(host, root) {
   if (!host.endsWith("." + root)) return null;
@@ -172,6 +190,24 @@ async function api(request, env, ctx, url) {
     if (P.views && row.views >= P.views) return json({ error: "Límite de vistas", limit: true }, 410);
     ctx.waitUntil(env.DB.prepare("UPDATE experiences SET views = views + 1 WHERE slug = ?").bind(row.slug).run());
     return json({ ...publicExp(row), brand: planOf(row).brand }, 200, { "Cache-Control": "no-store" });
+  }
+
+  // contact form of the home page → email to CONTACT_TO (hola@vorticevr.mx); reply goes straight to the person
+  if (path === "/api/contact" && M === "POST") {
+    const b = await request.json().catch(() => ({}));
+    if (b.web) return json({ ok: true }); // honeypot: bots fill the hidden field
+    const name = String(b.name || "").trim().slice(0, 80), em = normEmail(b.email), msg = String(b.message || "").trim().slice(0, 2000);
+    const phone = String(b.phone || "").replace(/[^\d+ ()-]/g, "").slice(0, 20);
+    const topic = { plataforma: "Plataforma de realidad aumentada", escuela: "Plan para escuela", proyecto: "Proyecto a la medida", otro: "Otra cosa" }[b.topic] || "Otra cosa";
+    if (!name || !em || !msg) return json({ error: "Escribe tu nombre, un correo válido y tu mensaje." }, 400);
+    if (!(await limit(env, "contact:" + ip, 5, 3600e3)) || !(await limit(env, "contact:all", 200, 864e5))) return json({ error: "Recibimos muchos mensajes seguidos. Intenta en un rato o escríbenos por WhatsApp." }, 429);
+    const html = shell(`<h1 style="font-size:20px">Nuevo mensaje desde vorticevr.mx</h1>
+<p><b>${esc(name)}</b> · <a href="mailto:${esc(em)}" style="color:#ffbe55">${esc(em)}</a>${phone ? ` · ${esc(phone)}` : ""}</p>
+<p style="color:#d2b8ff">Le interesa: <b>${esc(topic)}</b></p>
+<div style="white-space:pre-wrap;background:#1b0a36;border-radius:10px;padding:14px">${esc(msg)}</div>
+<p style="color:#a99bcb;font-size:12px">Contesta este correo para responderle directamente.</p>`);
+    const sent = await sendMail(env, env.CONTACT_TO || "hola@vorticevr.mx", `Contacto: ${name} · ${topic}`, html, undefined, em);
+    return sent ? json({ ok: true }) : json({ error: "No se pudo enviar. Escríbenos por WhatsApp." }, 502);
   }
 
   if (path === "/api/slug" && M === "GET") { const who0 = await auth(request, env); return json(await slugStatus(env, (url.searchParams.get("s") || "").toLowerCase(), null, null, isAdmin(env, who0))); }
@@ -719,12 +755,12 @@ function b64(buf) { const u = new Uint8Array(buf); let s = ""; for (let i = 0; i
 function unb64url(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); const b = atob(s + "=".repeat((4 - s.length % 4) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); }
 function json(obj, status = 200, extra = {}) { return new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...extra } }); }
 
-async function sendMail(env, to, subject, html, attachments) {
+async function sendMail(env, to, subject, html, attachments, replyTo) {
   if (!env.RESEND_API_KEY) { console.log("[correo sin configurar]", to, subject); return false; }
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: env.MAIL_FROM || "Vórtice VR <ra@vorticevr.mx>", to: [to], subject, html, attachments }),
+    body: JSON.stringify({ from: env.MAIL_FROM || "Vórtice VR <ra@vorticevr.mx>", to: [to], subject, html, attachments, reply_to: replyTo }),
   });
   if (!r.ok) console.error("Resend", r.status, await r.text());
   return r.ok;
