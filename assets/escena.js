@@ -4,10 +4,12 @@
 //
 // Units are the image's: the image is 1 wide and centered at 0,0 (x right, y up, z toward the camera).
 // Every element (see cleanItems in worker.js) has:
-//   x, y  spot on the image · z  lift off the image · s  width (3D: its largest side) · r  turn in degrees
-//   o     "frente": parallel to the image (a video or a picture lying on it; a 3D object facing the viewer, for walls)
-//         "pie":    standing up out of the image (perpendicular; for images lying on a table)
+//   x, y  its center on the image · z  lift off the image · s  width (3D: its largest side)
+//   rx, ry, rz  rotation in degrees around the image axes (Euler XYZ). Pictures turn around their center; 3D objects
+//         around the middle of their base, and they stand on the image with rx = 90.
 //   in    entrance animation · scene  which scene it belongs to (0…4) · link  opened when tapped
+// Elements saved before rx/ry/rz have o ("frente" | "pie") and r instead: place() still reads them, and modernize()
+// turns them into rx/ry/rz with the same look.
 import * as THREE from "three";
 
 export const FONTS = ["Sora", "Bebas Neue", "Pacifico", "Playfair Display", "Permanent Marker", "IBM Plex Sans"];
@@ -157,19 +159,46 @@ function setOpacity(n, a) {
   }
 }
 
-// Which axis "r" turns: a 3D object and a standing picture spin around their vertical; a picture lying on the image
-// turns within the image.
-export const turnAxis = (n, it) => (n.plane && it.o !== "pie") ? "z" : "y";
+const RAD = Math.PI / 180;
+const round = v => Math.round(v * 1000) / 1000;
+// An element saved with o/r → rx/ry/rz (+ the lift the old placement added on its own)
+export function modernize(n, it) {
+  if (it.rx != null) return false;
+  const pie = it.o === "pie", r = it.r || 0;
+  if (n.plane) { if (pie) { it.rx = 90; it.ry = r; it.rz = 0; it.z = round((it.z || 0) + n.size.y * it.s / 2); } else { it.rx = 0; it.ry = 0; it.rz = r; } }
+  else if (pie) { it.rx = 90; it.ry = r; it.rz = 0; }
+  else { it.rx = 0; it.ry = r; it.rz = 0; it.z = round((it.z || 0) + Math.max(n.size.x, n.size.z) / 2 * it.s); }
+  delete it.o; delete it.r;
+  return true;
+}
+// standing up or lying on the image (the button "Parar / Acostar")
+export function stand(n, it) {
+  const up = Math.abs(((it.rx || 0) % 360 + 360) % 360 - 90) > 45;
+  it.rx = up ? 90 : 0; it.ry = 0; it.rz = 0;
+  it.z = n.plane && up ? round(n.size.y * it.s / 2) : 0;
+}
 
 // Puts a node where its element says. k: entrance progress (1 = done) · layer: order, so flat pictures do not flicker
 export function place(n, it, k = 1, layer = 0) {
+  if (it.rx != null) {
+    const e = entrance(it.in, k), s = it.s * e.scale;
+    n.front = n.plane ? 0.003 + layer * 0.002 : 0;
+    n.inner.position.y = 0;
+    n.root.rotation.set((it.rx || 0) * RAD, (it.ry || 0) * RAD, (it.rz || 0) * RAD, "XYZ");
+    n.turn.rotation.set(0, e.spin, 0);
+    n.root.scale.setScalar(Math.max(1e-4, s));
+    n.root.position.set(it.x, it.y, (it.z || 0) + n.front + e.lift * it.s);
+    n.root.visible = s > 1e-3;
+    setOpacity(n, e.alpha);
+    return;
+  }
   const pie = it.o === "pie", e = entrance(it.in, k), s = it.s * e.scale;
   const front = n.plane ? (pie ? 0 : 0.003 + layer * 0.002) : (pie ? 0 : Math.max(n.size.x, n.size.z) / 2 * it.s);
   n.front = front;
   n.inner.position.y = n.plane && pie ? n.size.y / 2 : 0;
   n.root.rotation.set(pie ? Math.PI / 2 : 0, 0, 0);
   const ang = THREE.MathUtils.degToRad(it.r || 0) + e.spin;
-  n.turn.rotation.set(0, 0, 0); n.turn.rotation[turnAxis(n, it)] = ang;
+  n.turn.rotation.set(0, 0, 0); n.turn.rotation[n.plane && !pie ? "z" : "y"] = ang;
   n.root.scale.setScalar(Math.max(1e-4, s));
   n.root.position.set(it.x, it.y, (it.z || 0) + front + e.lift * it.s);
   n.root.visible = s > 1e-3;

@@ -7,8 +7,8 @@
   const STEPS = [
     { title: "¡Vamos a crear tu realidad aumentada!", text: "Te guío en 4 pasos rápidos. En un par de minutos tendrás tu link y tu código QR listos para compartir." },
     { sel: "#s1", title: "1 · Tu imagen", text: "Sube la imagen que la gente va a enfocar con su celular: tu tarjeta, un cartel, una portada. Te diremos con estrellas qué tan bien se va a reconocer." },
-    { sel: "#s2", title: "2 · Tu contenido", text: "Agrega lo que aparece sobre tu imagen: videos, fotos, textos u objetos 3D. En la vista previa los arrastras, les cambias el tamaño y los giras. Un video entra a lo ancho de la imagen y luego lo acomodas." },
-    { sel: ".side", title: "Tu vista previa", text: "Así se verá en el celular. Toca un elemento para elegirlo y arrástralo; con dos dedos (o la rueda del mouse) cambias su tamaño. Usa Pantalla completa para trabajar más cómodo." },
+    { sel: "#adds", title: "2 · Tu contenido", text: "Con estos botones agregas lo que aparece sobre tu imagen: videos, fotos, textos u objetos 3D. Un video entra a lo ancho de la imagen y luego lo acomodas." },
+    { sel: "#ed", title: "Acomódalo", text: "Así se verá en el celular. Toca un elemento: arrástralo para moverlo, usa los anillos para girarlo y la rueda o dos dedos para su tamaño. A la derecha están sus opciones." },
     { sel: "#s4", title: "3 · Título, link y botones", text: "Ponle un título, elige tu link y, si quieres, agrega tu WhatsApp, tu sitio o tus redes como botones." },
     { sel: "#s6", title: "4 · ¡Publica!", text: "Al publicar recibes tu link y tu QR, también por correo. Imprime el QR junto a tu imagen y listo." },
   ];

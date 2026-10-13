@@ -739,8 +739,11 @@ function cleanItems(list, P) {
     const id = String(m && m.id || "");
     if (!/^(video|model|[a-z0-9]{6,16})$/.test(id) || ids.has(id) || !ITEM_TYPES.includes(m.type)) return { error: "Uno de tus elementos no es válido." };
     ids.add(id);
-    const it = { id, type: m.type, x: f(m.x, -2, 2, 0), y: f(m.y, -2, 2, 0), z: f(m.z, -1, 2, 0), s: f(m.s, 0.02, 4, 0.6), r: f(m.r, -360, 360, 0),
-      o: m.o === "pie" ? "pie" : "frente", in: ENTRANCES.includes(m.in) ? m.in : "aparecer", scene: int(m.scene, 0, ITEM_LIMITS.scenes - 1) || 0 };
+    const it = { id, type: m.type, x: f(m.x, -2, 2, 0), y: f(m.y, -2, 2, 0), z: f(m.z, -1, 2, 0), s: f(m.s, 0.02, 4, 0.6) };
+    // rotation on the 3 axes (degrees); elements saved before it have o ("frente" | "pie") and r
+    if (m.rx != null || m.ry != null || m.rz != null) { it.rx = f(m.rx, -360, 360, 0); it.ry = f(m.ry, -360, 360, 0); it.rz = f(m.rz, -360, 360, 0); }
+    else { it.o = m.o === "pie" ? "pie" : "frente"; it.r = f(m.r, -360, 360, 0); }
+    it.in = ENTRANCES.includes(m.in) ? m.in : "aparecer"; it.scene = int(m.scene, 0, ITEM_LIMITS.scenes - 1) || 0;
     const name = String(m.name || "").trim().slice(0, 60); if (name) it.name = name;
     const link = cleanLink(m.link);
     if (link === undefined) return { error: `El enlace de "${name || "un elemento"}" no es válido. Escribe una dirección web o un número de WhatsApp.` };
