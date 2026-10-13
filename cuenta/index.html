@@ -75,6 +75,10 @@ input:focus{border-color:var(--lav);outline:none}
 @media (prefers-reduced-motion:reduce){.create::after{animation:none;display:none}}
 .lim{font-family:var(--fm);font-size:1rem;color:var(--sun);margin-left:6px}
 #passBox{max-width:440px;margin-bottom:18px}
+#helpBox{max-width:560px;margin-bottom:18px}
+select,textarea{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:12px}
+textarea{resize:vertical}
+select:focus,textarea:focus{border-color:var(--lav);outline:none}
 .meter{height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
 .meter i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--vortex),var(--lav))}
 .meter.full i{background:linear-gradient(90deg,#ff9f3a,var(--sun))}
@@ -152,6 +156,7 @@ dialog .row{justify-content:space-between}
         <button type="button" id="pUpgrade">Cambiar de plan</button>
         <button type="button" id="pManage" hidden>Administrar suscripción</button>
         <a id="pAdmin" href="../admin/" hidden>Administración</a>
+        <button type="button" id="pHelpBtn">Ayuda y soporte</button>
         <button type="button" id="pPassBtn">Cambiar contraseña</button>
         <button type="button" id="pOut">Cerrar sesión</button>
       </div>
@@ -226,6 +231,15 @@ dialog .row{justify-content:space-between}
       <p class="note" id="pNote"></p>
     </section>
 
+    <section class="card" id="helpBox" hidden>
+      <div class="phead"><h2>Ayuda y soporte</h2><button class="btn sm" id="helpClose" type="button">Cerrar</button></div>
+      <p class="note" id="helpLead">Cuéntanos qué pasó y te respondemos por correo.</p>
+      <form id="fHelp"><label class="f" for="hExp">¿Sobre qué experiencia? (opcional)</label><select id="hExp"><option value="">Ninguna en particular</option></select>
+        <label class="f" for="hMsg">Tu mensaje</label><textarea id="hMsg" rows="5" maxlength="3000" required placeholder="Ej. Mi video no se ve sobre la imagen en iPhone…"></textarea>
+        <button class="btn sun wide" type="submit">Enviar</button></form><div class="msg" id="mHelp"></div>
+      <p class="note">También puedes escribir directo a <a href="mailto:hola@vorticevr.mx">hola@vorticevr.mx</a>.</p>
+    </section>
+
     <section class="card" id="passBox" hidden>
       <div class="phead"><h2>Cambiar contraseña</h2><button class="btn sm" id="passClose" type="button">Cerrar</button></div>
       <form id="fPass"><label class="f" for="aCur">Contraseña actual</label><input type="password" id="aCur" autocomplete="current-password" required>
@@ -261,7 +275,6 @@ const Q=new URLSearchParams(location.search);
 const NEXT=Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":null;
 // public plans (Escuela is sold in person and activated from /admin/)
 const PLANS=[["gratis","Gratis",0,["1 experiencia","Videos de hasta 25 MB","Dura 30 días","Hasta 1,000 vistas","Abre con la pantalla de Vórtice VR"]],["basico","Básico",199,["5 experiencias","Cámbialas cuando quieras","Videos de hasta 25 MB","Sin vencimiento mientras pagues","Abre con la pantalla de Vórtice VR"]],["pro","Pro",499,["50 experiencias","Cámbialas cuando quieras","Videos de hasta 50 MB","Sin vencimiento mientras pagues","Sin la pantalla de Vórtice VR: abre directo tu experiencia"]]];
-const WA="529983448207";
 const VIEWS=["vEntrar","vRegistro","vCodigo","vOlvide","vPanel"];
 function view(v){ VIEWS.forEach(x=>$(x).hidden=x!==v); scrollTo(0,0); const f=$(v).querySelector("input"); if(f&&v!=="vPanel") setTimeout(()=>f.focus(),50); }
 function msg(id,t,kind){ const m=$(id); m.className="msg"+(kind?" "+kind:""); m.textContent=t||""; }
@@ -344,29 +357,28 @@ function showPanel(data){
   $("pCreate").classList.toggle("full",full); $("pCreate").href=full?"#planes":"../crear/";
   $("pCreateT").textContent=full?`Llegaste a tu límite (${nf(active)}/${nf(P.exp)})`:"+ Crear experiencia";
   $("pCreateS").textContent=full?(P.id==="escuela"?"Borra una experiencia para crear otra.":"Borra una experiencia o mejora tu plan para crear más."):"Sube una imagen y un video, y obtén tu link y tu QR";
-  // plans: pay online with Stripe when it is on (billing.enabled); otherwise "Lo quiero" opens WhatsApp
+  // plans: pay online with Stripe when it is on (billing.enabled); otherwise "Lo quiero" opens the contact form
   renderPlans();
-  $("pNote").textContent=(B.enabled?(B.test?"Modo de prueba (solo lo ves tú como administrador): se paga con la tarjeta de prueba de Stripe 4242 4242 4242 4242. ":"Pago seguro con tarjeta a través de Stripe. Se cobra automáticamente cada mes o cada año, según elijas, y cancelas cuando quieras. ")
-    :"El pago con tarjeta en línea llega pronto; por ahora escríbenos y activamos tu plan. ")+"¿Eres escuela? Pregúntanos por el plan Escuela.";
+  $("pNote").innerHTML=(B.enabled?(B.test?"Modo de prueba (solo lo ves tú como administrador): se paga con la tarjeta de prueba de Stripe 4242 4242 4242 4242. ":"Pago seguro con tarjeta a través de Stripe. Se cobra automáticamente cada mes o cada año, según elijas, y cancelas cuando quieras. ")
+    :"El pago con tarjeta en línea llega pronto; por ahora escríbenos y activamos tu plan. ")+'¿Escuela o empresa? <a href="../?tema=escuela#contacto">Pregúntanos por un plan a tu medida</a>.';
   if(location.hash==="#planes"&&P.id!=="escuela") openPlans(true);
   if(B.pastDue) banner("No pudimos cobrar tu última mensualidad. Actualiza tu tarjeta en “Administrar suscripción” para que tu plan siga activo.","warn");
   renderList();
   const pub=Q.get("publicada"); if(pub&&experiences.some(x=>x.slug===pub)){ banner("¡Listo! Tu experiencia está publicada. También te enviamos el link y el QR por correo."); history.replaceState(null,"",location.pathname); }
   view("vPanel");
 }
-// plan cards for the chosen period (a year costs 10 months); pay online with Stripe when billing.enabled, otherwise WhatsApp
+// plan cards for the chosen period (a year costs 10 months); pay online with Stripe when billing.enabled, otherwise the contact form
 let PERIOD="mes";
 const YEAR=10;
 function renderPlans(){
   const {user}=DATA, P=DATA.plan||{id:"gratis"}, B=DATA.billing||{enabled:false}, yr=PERIOD==="anio";
   document.querySelectorAll("#pPeriod button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.period===PERIOD)));
   $("pPlans").innerHTML=PLANS.map(([id,name,price,items])=>{ const cur=id===P.id;
-    const msg=encodeURIComponent(`Hola, quiero el plan ${name} ${yr?"anual":"mensual"} de realidad aumentada para mi cuenta ${user.email}`);
     const amount=price*(yr?YEAR:1);
     return `<div class="plan${cur?" cur":""}${id==="pro"?" hot":""}">${id==="pro"?'<span class="pop">Más popular</span>':""}<h3>${name} ${cur?'<span class="tag">Tu plan</span>':""}</h3><div class="price">${price?"$"+nf(amount)+` <small>MXN al ${yr?"año":"mes"} · IVA incluido</small>`:"$0"}</div>`
       +(price&&yr?`<p class="save">Equivale a $${nf(Math.round(amount/12))} al mes · ahorras $${nf(price*(12-YEAR))}</p>`:"")
       +`<ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul>`
-      +(price&&(!cur||(B.subscribed&&PERIOD!==B.period))?(B.enabled?`<button class="btn sun" type="button" data-plan="${id}">${cur?(yr?"Pasar a pago anual":"Pasar a pago mensual"):B.subscribed?"Cambiar a este plan":"Contratar"}</button>`:`<a class="btn sun" href="https://wa.me/${WA}?text=${msg}" target="_blank" rel="noopener">Lo quiero</a>`):"")+`</div>`; }).join("");
+      +(price&&(!cur||(B.subscribed&&PERIOD!==B.period))?(B.enabled?`<button class="btn sun" type="button" data-plan="${id}">${cur?(yr?"Pasar a pago anual":"Pasar a pago mensual"):B.subscribed?"Cambiar a este plan":"Contratar"}</button>`:`<a class="btn sun" href="../?tema=plataforma#contacto">Lo quiero</a>`):"")+`</div>`; }).join("");
   $("pPlans").querySelectorAll("[data-plan]").forEach(b=>b.addEventListener("click",()=>pay("billing/checkout",{plan:b.dataset.plan,period:PERIOD},b)));
 }
 document.querySelectorAll("#pPeriod button").forEach(b=>b.addEventListener("click",()=>{ PERIOD=b.dataset.period; renderPlans(); }));
@@ -377,6 +389,15 @@ document.addEventListener("click",e=>{ if(!$("me").contains(e.target)) menu(fals
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") menu(false); });
 $("pPassBtn").addEventListener("click",()=>{ menu(false); $("passBox").hidden=false; $("passBox").scrollIntoView({behavior:"smooth",block:"start"}); setTimeout(()=>$("aCur").focus(),300); });
 $("passClose").addEventListener("click",()=>{ $("passBox").hidden=true; });
+// support: goes by email to hola@vorticevr.mx with the account details (see /api/support)
+$("pHelpBtn").addEventListener("click",()=>{ menu(false);
+  const sel=$("hExp"), cur=sel.value; sel.length=1; (DATA.experiences||[]).filter(x=>!x.demo).forEach(x=>sel.add(new Option(x.title,x.slug))); sel.value=cur;
+  $("helpLead").textContent=`Cuéntanos qué pasó y te respondemos a ${DATA.user.email}${DATA.plan&&DATA.plan.id!=="gratis"?" lo antes posible (tu plan "+DATA.plan.name+" tiene prioridad)":""}.`;
+  $("helpBox").hidden=false; $("helpBox").scrollIntoView({behavior:"smooth",block:"start"}); setTimeout(()=>$("hMsg").focus(),300); });
+$("helpClose").addEventListener("click",()=>{ $("helpBox").hidden=true; });
+$("fHelp").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,async()=>{ msg("mHelp","Enviando…");
+  try{ await VVR.call("support",{json:{message:$("hMsg").value,slug:$("hExp").value}}); msg("mHelp","¡Listo! Te respondemos por correo pronto.","ok"); $("hMsg").value=""; }
+  catch(err){ msg("mHelp",err.message,"bad"); } }); });
 $("pCreate").addEventListener("click",e=>{ if(!e.currentTarget.classList.contains("full")) return; e.preventDefault(); if(DATA.plan&&DATA.plan.id!=="escuela") openPlans(true); });
 function openPlans(on){ $("plansBox").hidden=!on; if(on) setTimeout(()=>$("plansBox").scrollIntoView({behavior:"smooth",block:"start"}),30); }
 $("pUpgrade").addEventListener("click",()=>{ menu(false); openPlans(true); });
@@ -445,7 +466,7 @@ async function afterPayment(){
   banner("¡Gracias por tu pago! Estamos activando tu plan…");
   for(let i=0;i<10;i++){ await new Promise(r=>setTimeout(r,2000));
     try{ const d=await VVR.call("me"); if(d.plan&&d.plan.id!=="gratis"&&d.billing&&d.billing.subscribed){ showPanel(d); banner(`¡Tu plan ${d.plan.name} está activo! Ya puedes crear hasta ${d.plan.exp} experiencias.`); return; } }catch(e){} }
-  banner("Recibimos tu pago. Tu plan se activará en unos minutos; si no, escríbenos por WhatsApp.","warn");
+  banner("Recibimos tu pago. Tu plan se activará en unos minutos; si no, escríbenos desde “Ayuda y soporte” en Mi cuenta.","warn");
 }
 $("pOut").addEventListener("click",async()=>{ try{ await VVR.call("logout",{method:"POST"}); }catch(e){} VVR.clearSession(); $("me").hidden=true; menu(false); location.hash="#entrar"; view("vEntrar"); });
 $("fPass").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,async()=>{ msg("mPass","Guardando…");

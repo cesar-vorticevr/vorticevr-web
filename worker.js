@@ -198,16 +198,16 @@ async function api(request, env, ctx, url) {
     if (b.web) return json({ ok: true }); // honeypot: bots fill the hidden field
     const name = String(b.name || "").trim().slice(0, 80), em = normEmail(b.email), msg = String(b.message || "").trim().slice(0, 2000);
     const phone = String(b.phone || "").replace(/[^\d+ ()-]/g, "").slice(0, 20);
-    const topic = { plataforma: "Plataforma de realidad aumentada", escuela: "Plan para escuela", proyecto: "Proyecto a la medida", otro: "Otra cosa" }[b.topic] || "Otra cosa";
+    const topic = { plataforma: "Plataforma de realidad aumentada", escuela: "Plan para escuela", empresa: "Plan para empresa", proyecto: "Proyecto a la medida", soporte: "Ayuda con su cuenta", otro: "Otra cosa" }[b.topic] || "Otra cosa";
     if (!name || !em || !msg) return json({ error: "Escribe tu nombre, un correo válido y tu mensaje." }, 400);
-    if (!(await limit(env, "contact:" + ip, 5, 3600e3)) || !(await limit(env, "contact:all", 200, 864e5))) return json({ error: "Recibimos muchos mensajes seguidos. Intenta en un rato o escríbenos por WhatsApp." }, 429);
+    if (!(await limit(env, "contact:" + ip, 5, 3600e3)) || !(await limit(env, "contact:all", 200, 864e5))) return json({ error: "Recibimos muchos mensajes seguidos. Intenta en un rato o escríbenos a hola@vorticevr.mx." }, 429);
     const html = shell(`<h1 style="font-size:20px">Nuevo mensaje desde vorticevr.mx</h1>
 <p><b>${esc(name)}</b> · <a href="mailto:${esc(em)}" style="color:#ffbe55">${esc(em)}</a>${phone ? ` · ${esc(phone)}` : ""}</p>
 <p style="color:#d2b8ff">Le interesa: <b>${esc(topic)}</b></p>
 <div style="white-space:pre-wrap;background:#1b0a36;border-radius:10px;padding:14px">${esc(msg)}</div>
 <p style="color:#a99bcb;font-size:12px">Contesta este correo para responderle directamente.</p>`);
     const sent = await sendMail(env, env.CONTACT_TO || "hola@vorticevr.mx", `Contacto: ${name} · ${topic}`, html, undefined, em);
-    return sent ? json({ ok: true }) : json({ error: "No se pudo enviar. Escríbenos por WhatsApp." }, 502);
+    return sent ? json({ ok: true }) : json({ error: "No se pudo enviar. Escríbenos a hola@vorticevr.mx." }, 502);
   }
 
   if (path === "/api/slug" && M === "GET") { const who0 = await auth(request, env); return json(await slugStatus(env, (url.searchParams.get("s") || "").toLowerCase(), null, null, isAdmin(env, who0))); }
@@ -366,6 +366,25 @@ async function api(request, env, ctx, url) {
     const out = ownerExp(row, request, env);
     if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
     return json({ ok: true, experience: out });
+  }
+
+  // ---- support from the dashboard: the message goes with the account details; paid plans are marked first ----
+  if (path === "/api/support" && M === "POST") {
+    if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
+    const b = await request.json().catch(() => ({}));
+    const msg = String(b.message || "").trim().slice(0, 3000);
+    if (msg.length < 5) return json({ error: "Cuéntanos qué pasó." }, 400);
+    if (!(await limit(env, "support:" + me.id, 6, 3600e3))) return json({ error: "Ya recibimos varios mensajes tuyos; te respondemos pronto." }, 429);
+    const P = planOf(me), n = await env.DB.prepare("SELECT COUNT(*) AS n FROM experiences WHERE email = ? AND expires > ?").bind(me.email, Date.now()).first();
+    const slug = String(b.slug || "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30);
+    const html = shell(`<h1 style="font-size:20px">Soporte · plan ${esc(P.name)}</h1>
+<p><b>${esc(me.name || "")}</b> · <a href="mailto:${esc(me.email)}" style="color:#ffbe55">${esc(me.email)}</a></p>
+<p style="color:#d2b8ff">Plan ${esc(P.name)}${me.stripe_status ? " · Stripe: " + esc(me.stripe_status) : ""} · ${n.n} experiencias${slug ? ` · sobre: <b>${esc(slug)}</b>` : ""}</p>
+<div style="white-space:pre-wrap;background:#1b0a36;border-radius:10px;padding:14px">${esc(msg)}</div>
+<p style="color:#a99bcb;font-size:12px">Contesta este correo para responderle directamente.</p>`);
+    const tag = P.id === "gratis" ? "" : `[${P.name}] `;
+    const sent = await sendMail(env, env.CONTACT_TO || "hola@vorticevr.mx", `${tag}Soporte: ${me.name || me.email}`, html, undefined, me.email);
+    return sent ? json({ ok: true }) : json({ error: "No se pudo enviar. Escríbenos a hola@vorticevr.mx." }, 502);
   }
 
   // ---- payments: start a subscription (Stripe Checkout) or manage it (Customer Portal) ----
