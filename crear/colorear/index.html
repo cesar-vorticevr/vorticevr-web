@@ -103,6 +103,10 @@ input[type=range]{width:100%;accent-color:#8b3fd6}
 .pv h3{margin:0 0 10px;font-family:var(--fd);font-size:1rem;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .pv h3 small{font:500 .78rem var(--fb);color:var(--mute)}
 .board{position:relative;height:min(64vh,520px);border-radius:14px;overflow:hidden;background:#0b0518}
+.conv{margin-top:12px;padding:14px;border-radius:12px;border:1px solid rgba(255,190,85,.5);background:rgba(255,190,85,.07)}
+.tog{display:flex;gap:12px;align-items:flex-start;cursor:pointer}
+.tog input{width:22px;height:22px;accent-color:#8b3fd6;flex:none;margin-top:2px}
+.tog b{display:block}.tog small{color:var(--mute);font-size:.86rem}
 .board .empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--mute);padding:20px;font-size:.92rem}
 </style>
 </head>
@@ -128,13 +132,17 @@ input[type=range]{width:100%;accent-color:#8b3fd6}
         <label class="drop" id="drop"><input type="file" id="file" accept="image/png,image/jpeg,image/webp"><img class="thumb" id="thumb" alt="" hidden><span><b id="dropT">Elige o suelta tu dibujo</b><small id="dropS">Funciona mejor con líneas negras y zonas cerradas.</small></span></label>
         <button class="sample" id="sample" type="button">¿Sin dibujo a la mano? Usa uno de ejemplo</button>
         <div class="msg" id="mImg"></div>
+        <div class="conv" id="conv" hidden>
+          <label class="tog"><input type="checkbox" id="convOn"><span><b>Convertir en dibujo para colorear</b><small id="convTxt">Sacamos los contornos de tu imagen y los dejamos como líneas negras sobre blanco.</small></span></label>
+          <div id="convDet"><label class="f" for="detail">Detalle</label><input type="range" id="detail" min="0" max="100" step="5" value="50"><div class="rng"><span>Solo lo principal</span><span>Más detalle</span></div></div>
+        </div>
         <ul class="tips"><li>Las zonas deben estar <b>cerradas</b>: si una línea tiene un hueco, la cubeta pinta también lo de al lado.</li><li>Sin sombras ni textura de papel; si la foto salió gris, sube la detección de líneas.</li></ul>
       </section>
       <section class="step" id="s2">
         <h2><span class="n done">2</span>Ajustes</h2>
-        <label class="f" for="th">Detección de líneas</label>
+        <div id="thBox"><label class="f" for="th">Detección de líneas</label>
         <input type="range" id="th" min="90" max="230" step="5" value="170">
-        <div class="rng"><span>Solo líneas muy oscuras</span><span>También líneas claras</span></div>
+        <div class="rng"><span>Solo líneas muy oscuras</span><span>También líneas claras</span></div></div>
         <label class="f">Colores para empezar</label>
         <div class="pals" id="pals"></div>
         <p class="note">Quien colorea también puede elegir cualquier otro color.</p>
@@ -171,12 +179,12 @@ input[type=range]{width:100%;accent-color:#8b3fd6}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="../../assets/plataforma.js" data-api="../.."></script>
 <script type="module">
-import { run, analyze, PALETTES, PALETTE_NAMES } from "../../assets/colorear.js";
+import { run, analyze, toLineArt, PALETTES, PALETTE_NAMES } from "../../assets/colorear.js";
 const $=id=>document.getElementById(id);
 const API=VVR.api;
 const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
 $("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
-const S={token:null,email:null,mine:null,img:null,file:null,w:0,h:0,th:170,palette:"vivos"};
+const S={token:null,email:null,mine:null,img:null,orig:null,file:null,w:0,h:0,th:170,palette:"vivos",convert:false,colorful:false,detail:50};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 // ---------- social buttons (same as /crear/) ----------
@@ -193,18 +201,33 @@ for(const [k] of SOC) if(BASES[k]) $("b_"+k).addEventListener("change",e=>{ e.ta
 // ---------- the drawing: up to 1600 px, flattened on white; PNG (line art compresses well) or JPG if it is heavy ----------
 const MAXPX=1600;
 const loadImg=src=>new Promise((ok,bad)=>{ const i=new Image(); i.crossOrigin="anonymous"; i.onload=()=>ok(i); i.onerror=bad; i.src=src; });
+// A color picture is turned into outlines (toLineArt) unless the person switches it off.
 async function useImage(src,name){
   const m=$("mImg"); m.className="msg"; m.textContent="Preparando tu dibujo…";
   let im; try{ im=await loadImg(src); }catch(e){ m.className="msg bad"; m.textContent="No pude abrir esa imagen. Prueba con un JPG o PNG."; return; }
-  const k=Math.min(1,MAXPX/Math.max(im.naturalWidth||1200,im.naturalHeight||900)), w=Math.round((im.naturalWidth||1200)*k), h=Math.round((im.naturalHeight||900)*k);
-  if(Math.max(w,h)<500){ m.className="msg bad"; m.textContent="Tu dibujo es muy chico. Usa uno de al menos 800 px de ancho."; return; }
-  const c=document.createElement("canvas"); c.width=w; c.height=h; const x=c.getContext("2d"); x.fillStyle="#fff"; x.fillRect(0,0,w,h); x.imageSmoothingQuality="high"; x.drawImage(im,0,0,w,h);
+  if(Math.max(im.naturalWidth||1200,im.naturalHeight||900)<500){ m.className="msg bad"; m.textContent="Tu dibujo es muy chico. Usa uno de al menos 800 px de ancho."; return; }
+  S.orig=im; const a=analyze(im,170); S.colorful=a.color>.06||a.dark>.4; S.convert=S.colorful;
+  $("conv").hidden=false; $("convOn").checked=S.convert;
+  $("convTxt").textContent=S.colorful?"Tu imagen tiene color o es una foto: sacamos sus contornos y los dejamos como líneas negras sobre blanco.":"¿Es una foto o una imagen a color? Sacamos sus contornos y los dejamos como líneas negras sobre blanco.";
+  $("dropT").textContent=name||"Tu dibujo"; $("dropS").textContent="Toca para cambiarlo.";
+  await build();
+}
+async function build(){
+  if(!S.orig) return;
+  let c;
+  if(S.convert) c=toLineArt(S.orig,S.detail,MAXPX);
+  else { const im=S.orig, k=Math.min(1,MAXPX/Math.max(im.naturalWidth||1200,im.naturalHeight||900)), w=Math.round((im.naturalWidth||1200)*k), h=Math.round((im.naturalHeight||900)*k);
+    c=document.createElement("canvas"); c.width=w; c.height=h; const x=c.getContext("2d"); x.fillStyle="#fff"; x.fillRect(0,0,w,h); x.imageSmoothingQuality="high"; x.drawImage(im,0,0,w,h); }
   let blob=await new Promise(r=>c.toBlob(r,"image/png")); if(blob.size>2.8e6) blob=await new Promise(r=>c.toBlob(r,"image/jpeg",.92));
-  S.file=blob; S.w=w; S.h=h; S.img=await loadImg(URL.createObjectURL(blob));
-  $("thumb").src=S.img.src; $("thumb").hidden=false; $("dropT").textContent=name||"Tu dibujo"; $("dropS").textContent="Toca para cambiarlo.";
+  S.file=blob; S.w=c.width; S.h=c.height; S.img=await loadImg(URL.createObjectURL(blob));
+  $("thumb").src=S.img.src; $("thumb").hidden=false; $("convDet").hidden=!S.convert; $("thBox").hidden=S.convert;
   rate(); preview(); check();
 }
+$("convOn").addEventListener("change",()=>{ S.convert=$("convOn").checked; build(); });
+let detT=0; $("detail").addEventListener("input",()=>{ S.detail=+$("detail").value; clearTimeout(detT); detT=setTimeout(build,300); });
 function rate(){ if(!S.img) return; const m=$("mImg"), a=analyze(S.img,S.th);
+  if(S.convert){ m.className="msg ok"; m.textContent="¡Listo! Convertimos tu imagen en líneas. Pruébala en la vista previa; si faltan o sobran líneas, mueve el detalle."; return; }
+  if(S.colorful){ m.className="msg bad"; m.textContent="Tu imagen tiene color: la cubeta no va a funcionar bien. Activa “Convertir en dibujo para colorear”."; return; }
   if(a.dark>.4){ m.className="msg bad"; m.textContent="Hay mucho oscuro: parece una foto o un fondo de color. Baja la detección de líneas o usa un dibujo de líneas sobre blanco."; }
   else if(a.dark<.004){ m.className="msg bad"; m.textContent="Casi no encuentro líneas. Sube la detección de líneas o usa trazos más oscuros."; }
   else { m.className="msg ok"; m.textContent="¡Listo! Pruébalo en la vista previa: toca una zona para pintarla."; } }

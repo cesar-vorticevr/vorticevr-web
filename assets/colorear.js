@@ -25,9 +25,60 @@ export function analyze(img, th) {
   const w = Math.max(1, Math.round((img.naturalWidth || img.width) * k)), h = Math.max(1, Math.round((img.naturalHeight || img.height) * k));
   const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d", { willReadFrequently: true });
   x.fillStyle = "#fff"; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h);
-  const d = x.getImageData(0, 0, w, h).data; let dark = 0;
-  for (let i = 0; i < d.length; i += 4) if (LUM(d[i], d[i + 1], d[i + 2]) < th) dark++;
-  return { dark: dark / (w * h) };
+  const d = x.getImageData(0, 0, w, h).data; let dark = 0, color = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i], g = d[i + 1], b = d[i + 2], mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    if (LUM(r, g, b) < th) dark++;
+    if (mx > 50 && (mx - mn) / mx > 0.3) color++;   // a clearly colored pixel (not white, gray or black)
+  }
+  return { dark: dark / (w * h), color: color / (w * h) };
+}
+
+// A color picture (or a photo) → black outlines on white, ready to color. Contours = where the color changes
+// (Sobel on R, G and B after a light blur; detail 0–100 sets how small a change counts) plus the dark outlines it
+// already has; specks are dropped and the lines are thickened a little so the zones stay closed.
+export function toLineArt(img, detail = 50, maxPx = 1600) {
+  const nw = img.naturalWidth || img.width, nh = img.naturalHeight || img.height, k = Math.min(1, maxPx / Math.max(nw, nh));
+  const w = Math.round(nw * k), h = Math.round(nh * k), n = w * h;
+  const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d", { willReadFrequently: true });
+  x.fillStyle = "#fff"; x.fillRect(0, 0, w, h); x.imageSmoothingQuality = "high"; x.drawImage(img, 0, 0, w, h);
+  const id = x.getImageData(0, 0, w, h), d = id.data;
+  const ch = [new Uint8ClampedArray(n), new Uint8ClampedArray(n), new Uint8ClampedArray(n)], lum = new Uint8ClampedArray(n);
+  let darkN = 0;
+  for (let p = 0, i = 0; p < n; p++, i += 4) { ch[0][p] = d[i]; ch[1][p] = d[i + 1]; ch[2][p] = d[i + 2]; lum[p] = LUM(d[i], d[i + 1], d[i + 2]); if (lum[p] < 60) darkN++; }
+  const keepDark = darkN < n * 0.2;   // its own dark outlines count as lines, unless the picture is dark overall (night, dark background)
+  // [1 2 1] blur, twice when less detail is wanted (hides texture and noise)
+  const tmp = new Uint8ClampedArray(n), passes = detail < 40 ? 3 : detail < 75 ? 2 : 1;
+  for (const a of ch) for (let s = 0; s < passes; s++) {
+    for (let y = 0; y < h; y++) { const o = y * w; for (let X = 0; X < w; X++) tmp[o + X] = (a[o + Math.max(0, X - 1)] + 2 * a[o + X] + a[o + Math.min(w - 1, X + 1)]) >> 2; }
+    for (let y = 0; y < h; y++) { const u = Math.max(0, y - 1) * w, m = y * w, v = Math.min(h - 1, y + 1) * w; for (let X = 0; X < w; X++) a[m + X] = (tmp[u + X] + 2 * tmp[m + X] + tmp[v + X]) >> 2; }
+  }
+  const T = 300 - detail * 2.3;   // edge strength needed: 300 (only strong changes) … 70 (fine detail)
+  const edge = new Uint8Array(n);
+  for (let y = 1; y < h - 1; y++) for (let X = 1; X < w - 1; X++) {
+    const p = y * w + X; let mag = 0;
+    for (const a of ch) {
+      const gx = a[p - w + 1] + 2 * a[p + 1] + a[p + w + 1] - a[p - w - 1] - 2 * a[p - 1] - a[p + w - 1];
+      const gy = a[p + w - 1] + 2 * a[p + w] + a[p + w + 1] - a[p - w - 1] - 2 * a[p - w] - a[p - w + 1];
+      const g = Math.abs(gx) + Math.abs(gy); if (g > mag) mag = g;
+    }
+    if (mag > T || (keepDark && lum[p] < 60)) edge[p] = 1;
+  }
+  // drop specks (fewer than 2 neighbors), then thicken by 1 px
+  const keep = new Uint8Array(n);
+  for (let y = 1; y < h - 1; y++) for (let X = 1; X < w - 1; X++) {
+    const p = y * w + X; if (!edge[p]) continue;
+    const nb = edge[p - w - 1] + edge[p - w] + edge[p - w + 1] + edge[p - 1] + edge[p + 1] + edge[p + w - 1] + edge[p + w] + edge[p + w + 1];
+    if (nb >= 2) keep[p] = 1;
+  }
+  const thick = Math.max(w, h) >= 900;
+  for (let y = 0; y < h; y++) for (let X = 0; X < w; X++) {
+    const p = y * w + X; let on = keep[p];
+    if (!on && thick && X > 0 && y > 0 && X < w - 1 && y < h - 1) on = keep[p - 1] | keep[p + 1] | keep[p - w] | keep[p + w] | keep[p - w - 1] | keep[p - w + 1] | keep[p + w - 1] | keep[p + w + 1];
+    const v = on ? 20 : 255, i = p * 4; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
+  }
+  x.putImageData(id, 0, 0);
+  return c;
 }
 
 const CSS = `
@@ -65,8 +116,16 @@ const CSS = `
 .clr-pop h4{margin:0 0 8px;font:700 .78rem "Sora",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#d2b8ff}
 .clr-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:6px}
 .clr-grid button{aspect-ratio:1;border-radius:50%;border:2px solid rgba(255,255,255,.2)}
-.clr-pick{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:.88rem;color:#b9addb}
-.clr-pick input{width:46px;height:34px;border:0;padding:0;background:none}
+.clr-box{display:grid;gap:12px}
+.clr-sv{position:relative;height:150px;border-radius:12px;touch-action:none;cursor:crosshair;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
+.clr-hue{position:relative;height:28px;border-radius:999px;touch-action:none;cursor:pointer;background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)}
+.clr-sv i,.clr-hue i{position:absolute;width:28px;height:28px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4),0 3px 10px rgba(0,0,0,.5);transform:translate(-50%,-50%);pointer-events:none}
+.clr-hue i{top:50%}
+.clr-okrow{display:flex;gap:10px;align-items:center;margin-top:12px}
+.clr-now{flex:1;height:44px;border-radius:12px;display:grid;place-items:center;font:600 .85rem "IBM Plex Mono",monospace;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+.clr-ok{flex:none;height:44px;border-radius:999px;border:1px solid #d2b8ff;background:linear-gradient(135deg,#8b3fd6,#5a1f8f);font:700 .85rem "Sora",system-ui,sans-serif!important;letter-spacing:.08em;text-transform:uppercase;padding:0 22px}
+.clr-pop{max-height:calc(100vh - 140px);overflow-y:auto}
+.clr.mini .clr-pop{max-height:340px}
 .clr-menu{display:grid;gap:4px}
 .clr-menu button,.clr-menu a{display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;padding:12px;border-radius:10px;border:0;background:rgba(255,255,255,.04);color:#f2ecff;text-decoration:none;font-size:.95rem}
 .clr-menu .sw{width:42px;height:24px;border-radius:999px;background:rgba(255,255,255,.2);position:relative;flex:none;transition:background .2s}
@@ -100,6 +159,15 @@ const SVG = {
 };
 
 const hex2rgb = h => { h = h.replace("#", ""); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; };
+function hex2hsv(hex) {
+  const [r, g, b] = hex2rgb(hex).map(v => v / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), dd = mx - mn;
+  let h = 0; if (dd) h = mx === r ? ((g - b) / dd) % 6 : mx === g ? (b - r) / dd + 2 : (r - g) / dd + 4;
+  return [Math.round((h * 60 + 360) % 360), mx ? dd / mx : 0, mx];
+}
+function hsv2hex(h, s, v) {
+  const f = n => { const k = (n + h / 60) % 6; return Math.round(255 * (v - v * s * Math.max(0, Math.min(k, 4 - k, 1)))); };
+  return "#" + [f(5), f(3), f(1)].map(x => x.toString(16).padStart(2, "0")).join("");
+}
 
 // opts: { root, image (url or <img>), th, palette, title, slug, key (autosave), embedded, buttons:[{href,label,svg}], logo (url) }
 export async function run(opts) {
@@ -340,11 +408,34 @@ export async function run(opts) {
   let pop = null;
   function closePop() { if (pop) { pop.remove(); pop = null; } }
   function openPop(html) { closePop(); pop = document.createElement("div"); pop.className = "clr-pop"; pop.innerHTML = html; bar.appendChild(pop); return pop; }
+  // color box: drag on the square (lightness and intensity) and on the rainbow bar (the hue); it paints live
   function openMore() {
-    const p = openPop(`<h4>Más colores</h4><div class="clr-grid">${MORE.map(c => `<button type="button" data-c="${c}" style="background:${c}" aria-label="Color ${c}"></button>`).join("")}</div>
-      <label class="clr-pick">Cualquier color <input type="color" value="${S.color}"></label>`);
+    let [hh, ss, vv] = hex2hsv(S.color);
+    const p = openPop(`<h4>Elige tu color</h4>
+      <div class="clr-box"><div class="clr-sv"><i></i></div><div class="clr-hue"><i></i></div></div>
+      <div class="clr-okrow"><span class="clr-now"></span><button type="button" class="clr-ok">Listo</button></div>
+      <h4 style="margin-top:12px">Colores rápidos</h4><div class="clr-grid">${MORE.map(c => `<button type="button" data-c="${c}" style="background:${c}" aria-label="Color ${c}"></button>`).join("")}</div>`);
+    const sv = p.querySelector(".clr-sv"), hue = p.querySelector(".clr-hue"), now = p.querySelector(".clr-now");
+    const show = () => {
+      const c = hsv2hex(hh, ss, vv); S.color = c; if (S.tool === "eraser") setTool("fill");
+      sv.style.background = `linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,hsl(${hh},100%,50%))`;
+      sv.firstElementChild.style.cssText = `left:${ss * 100}%;top:${(1 - vv) * 100}%;background:${c}`;
+      hue.firstElementChild.style.cssText = `left:${hh / 360 * 100}%;background:hsl(${hh},100%,50%)`;
+      now.style.background = c; now.textContent = c.toUpperCase(); now.style.color = vv > .6 && ss < .5 ? "#1a0d00" : "#fff";
+      root.querySelectorAll(".clr-colors .clr-sw").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.c === c)));
+    };
+    const drag = (el, fn) => {
+      const at = e => { const r = el.getBoundingClientRect(); fn(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))); show(); };
+      el.addEventListener("pointerdown", e => { try { el.setPointerCapture(e.pointerId); } catch (err) {} el.dataset.on = "1"; at(e); });
+      el.addEventListener("pointermove", e => { if (el.dataset.on) at(e); });
+      const end = () => { delete el.dataset.on; };
+      el.addEventListener("pointerup", end); el.addEventListener("pointercancel", end);
+    };
+    drag(sv, (fx, fy) => { ss = fx; vv = 1 - fy; });
+    drag(hue, fx => { hh = Math.round(fx * 360) % 360; if (ss < .15) ss = 1; if (vv < .15) vv = 1; });
+    show();
+    p.querySelector(".clr-ok").addEventListener("click", () => { pickColor(S.color); closePop(); });
     p.addEventListener("click", e => { const b = e.target.closest("[data-c]"); if (b) { pickColor(b.dataset.c); closePop(); } });
-    p.querySelector("input").addEventListener("change", e => { pickColor(e.target.value); closePop(); });
   }
   $('[data-a="menu"]').addEventListener("click", e => {
     if (pop) { closePop(); return; }
