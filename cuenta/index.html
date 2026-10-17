@@ -174,8 +174,9 @@ select:focus,textarea:focus{border-color:var(--lav);outline:none}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:14px}
 .ec{border:1px solid var(--line);background:var(--panel);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
 .ec.paused{opacity:.7}
-.ec .th{position:relative;aspect-ratio:16/10;background:#120826}
-.ec .th img{width:100%;height:100%;object-fit:cover;display:block}
+.ec .th{position:relative;aspect-ratio:16/10;background:#120826;overflow:hidden;min-height:0}   /* same size for every thumbnail, whatever the image */
+.ec .th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.ec .th.white{background:#fff}.ec .th.white img{object-fit:contain;padding:6px}   /* coloring pages: the whole drawing on white */
 .ec .th .tag{position:absolute;left:10px;top:10px;background:rgba(5,2,11,.75)}
 .ec .bd{padding:14px 14px 12px;display:flex;flex-direction:column;gap:8px;flex:1}
 .ec h3{margin:0;font-family:var(--fd);font-size:1.05rem;line-height:1.2;overflow-wrap:anywhere}
@@ -602,7 +603,7 @@ function card(exp){
   const days=Math.max(0,Math.ceil((exp.expires-Date.now())/864e5)), short=exp.url.replace(/^https?:\/\//,"").replace(/\/$/,"");
   const free=!DATA.plan||DATA.plan.id==="gratis", vlim=(DATA.plan&&DATA.plan.views)||1000;
   const status=exp.paused?(exp.forever?"Excede tu plan":`se borra en ${days} días`):exp.forever?"Activa":`${days} días restantes`;
-  el.innerHTML=`<div class="th"><img loading="lazy" src="${exp.thumb||(exp.kind==="trivia"?"../assets/trivia.svg":`${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}`)}" alt="">${exp.paused?'<span class="tag bad">Pausada</span>':""}</div>
+  el.innerHTML=`<div class="th${exp.kind==="colorear"?" white":""}"><img loading="lazy" src="${exp.thumb||(exp.kind==="trivia"?"../assets/trivia.svg":`${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}`)}" alt="">${exp.paused?'<span class="tag bad">Pausada</span>':""}</div>
     <div class="bd"><h3>${esc(exp.title)}</h3>${exp.paused?`<span class="url">${esc(short)}</span>`:`<a class="url" href="${esc(exp.url)}" target="_blank" rel="noopener">${esc(short)}</a>`}
       <div class="meta"><span><b>${nf(exp.views)}</b>${free?`/${nf(vlim)}`:""} ${exp.views===1&&!free?"vista":"vistas"}</span><span>${status}</span></div>
       <div class="acts">${exp.paused?`<button class="btn sun" type="button" data-a="up">Mejorar plan</button>`
