@@ -89,6 +89,14 @@ header .acts{display:flex;align-items:center;gap:14px}
 .switch a,.switch span{font:600 .82rem var(--fd);padding:8px 14px;border-radius:999px;text-decoration:none;color:var(--mute)}
 .switch span{background:var(--vortex);color:#fff}
 .switch{flex-wrap:wrap;border-radius:18px}
+/* color and logo */
+.colors{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.colors button{width:40px;height:40px;border-radius:50%;border:3px solid rgba(255,255,255,.25);cursor:pointer;transition:transform .15s}
+.colors button[aria-pressed="true"]{transform:scale(1.15);border-color:#fff;box-shadow:0 0 0 3px rgba(139,63,214,.8)}
+.colors label{display:flex;align-items:center;gap:8px;font-size:.88rem;color:var(--mute);cursor:pointer}
+.colors input{width:44px;height:40px;border:0;padding:0;background:none;cursor:pointer}
+.drop .thumb.lg{width:64px;height:64px;border-radius:50%;object-fit:contain;background:#fff;padding:6px}
+.sample{margin-top:8px;background:none;border:0;color:var(--lav);text-decoration:underline;cursor:pointer;font:inherit;font-size:.9rem;padding:0}
 /* questions */
 .qs{display:grid;gap:12px}
 .q{border:1px solid var(--line2);border-radius:14px;padding:14px;background:rgba(5,2,11,.45);animation:qIn .35s cubic-bezier(.3,1.4,.5,1)}
@@ -117,13 +125,16 @@ header .acts{display:flex;align-items:center;gap:14px}
 .phone{position:relative;margin:0 auto;width:min(100%,300px);aspect-ratio:9/17;border-radius:34px;border:8px solid #1e1236;background:radial-gradient(90% 60% at 50% 55%,#3b2a58,#140b26);overflow:hidden;box-shadow:0 20px 60px -20px rgba(139,63,214,.7)}
 .phone .logo{position:absolute;top:12px;left:0;right:0;text-align:center}
 .phone .logo img{height:14px}
-.pq{position:absolute;left:8%;right:8%;top:11%;padding:12px 12px 14px;border-radius:16px;background:linear-gradient(135deg,#a35cf0,#5a1f8f);border:2px solid #e8d6ff;text-align:center;font:700 .95rem/1.2 var(--fd);color:#fff;box-shadow:0 0 22px rgba(139,63,214,.8)}
+.pq{position:absolute;left:6%;right:6%;top:9%;padding:10px 12px 14px;border-radius:22px;background:linear-gradient(180deg,var(--tc1,#a86fe6),var(--tc,#8b3fd6));border:2px solid #fff;text-align:center;font:700 .95rem/1.2 var(--fd);color:#fff;box-shadow:0 0 22px rgba(139,63,214,.8)}
 .pq small{display:block;font-size:.6rem;letter-spacing:.14em;color:#ffe0a3;margin-bottom:4px}
 .face{position:absolute;left:50%;top:44%;width:44%;transform:translate(-50%,0);transform-origin:50% 100%}
 .face svg{width:100%;display:block}
-.pa{position:absolute;bottom:20%;width:40%;padding:10px 8px;border-radius:14px;background:rgba(12,5,26,.92);border:2px solid rgba(210,184,255,.8);color:#fff;font:700 .78rem/1.2 var(--fd);text-align:center;transition:transform .3s,background .3s,border-color .3s}
+.pa{position:absolute;top:34%;width:41%;padding:8px 8px;border-radius:999px;background:rgba(255,255,255,.95);border:2px solid var(--tc,#8b3fd6);color:var(--tc,#5a1f8f);font:700 .78rem/1.2 var(--fd);text-align:center;transition:transform .3s,background .3s,border-color .3s}
 .pa.l{left:5%}.pa.r{right:5%}
-.pa.hot{background:linear-gradient(135deg,#47e29a,#159a5b);border-color:#fff;transform:scale(1.12)}
+.pa.hot{background:linear-gradient(180deg,#6ff0b2,#16a663);border-color:#fff;color:#fff;transform:scale(1.12)}
+.pa.l{transform-origin:100% 50%;rotate:3deg}.pa.r{transform-origin:0 50%;rotate:-3deg}
+.pq .brand{display:flex;align-items:center;gap:6px;justify-content:center;font:700 .62rem var(--fd);color:rgba(255,255,255,.9);margin-bottom:4px}
+.pq .brand img{width:20px;height:20px;border-radius:50%;background:#fff;object-fit:contain;padding:2px}
 .pres{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:6px;text-align:center;background:rgba(10,4,22,.55)}
 .pres b{font:800 3rem var(--fd);color:#ffd27f;text-shadow:0 0 20px rgba(255,190,85,.8)}
 .pres span{font:700 .9rem var(--fd)}
@@ -172,19 +183,26 @@ header .acts{display:flex;align-items:center;gap:14px}
           <button type="button" data-t="0">Sin límite</button><button type="button" data-t="5">5 s</button><button type="button" data-t="10">10 s</button><button type="button" data-t="15">15 s</button><button type="button" data-t="20">20 s</button>
         </div>
       </section>
+      <section class="step" id="s3">
+        <h2><span class="n done">3</span>Tu marca en la trivia</h2>
+        <p class="hint">El color de las burbujas y tu logo o una imagen: salen en la pregunta, al inicio y en el resultado, para que se sepa que la trivia es tuya.</p>
+        <label class="f">Color</label>
+        <div class="colors" id="colors"></div>
+        <label class="f">Tu logo o imagen (opcional)</label>
+        <label class="drop" id="lgDrop"><input type="file" id="lgFile" accept="image/png,image/jpeg,image/webp,image/svg+xml"><img class="thumb lg" id="lgThumb" alt="" hidden><span><b id="lgT">Sube tu logo o una imagen</b><small>PNG, JPG, WebP o SVG. Se ve en un círculo blanco.</small></span></label>
+        <button class="sample" id="lgDel" type="button" hidden>Quitar imagen</button>
+      </section>
       <section class="step" id="s4">
-        <h2><span class="n" id="n4">3</span>Título, link y botones</h2>
+        <h2><span class="n" id="n4">4</span>Título y link</h2>
         <label class="f" for="title">Título</label>
         <input type="text" id="title" maxlength="80" placeholder="Ej. ¿Cuánto sabes del cacao?">
         <label class="f" for="slug">Tu link</label>
         <div class="slugrow"><input type="text" id="slug" maxlength="30" placeholder="tu-trivia" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="root">.vorticevr.mx</span></div>
         <div class="msg" id="mSlug"></div>
-        <label class="f">Botones (opcionales)</label>
-        <div class="soc" id="soc"></div>
       </section>
       <section class="step" id="sMarca" hidden></section>
       <section class="step" id="s6">
-        <h2><span class="n" id="n6">4</span>Publicar</h2>
+        <h2><span class="n" id="n6">5</span>Publicar</h2>
         <div class="mine" id="mine" hidden style="margin:0 0 12px"></div>
         <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
         <button class="btn primary" id="publish" type="button" disabled>Publicar mi trivia</button>
@@ -197,7 +215,7 @@ header .acts{display:flex;align-items:center;gap:14px}
         <h3>Vista previa <small id="pvTxt"></small></h3>
         <div class="phone" id="phone">
           <div class="logo"><img src="../../assets/logo-vorticevr-blanco.png" alt=""></div>
-          <div class="pq" id="pq"><small id="pqn"></small><span id="pqt"></span></div>
+          <div class="pq" id="pq"><div class="brand"><img id="pqLogo" alt="" hidden><span id="pqn"></span></div><span id="pqt"></span></div>
           <div class="face" id="face"><svg viewBox="0 0 100 120" aria-hidden="true"><ellipse cx="50" cy="56" rx="36" ry="44" fill="#f2c7a5"/><path d="M14 46c2-30 70-34 72 0-8-16-62-18-72 0z" fill="#3a2a1f"/><circle cx="36" cy="58" r="4.5" fill="#2b1d14"/><circle cx="64" cy="58" r="4.5" fill="#2b1d14"/><path d="M38 78q12 10 24 0" stroke="#a5523f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M14 120c4-18 20-22 36-22s32 4 36 22z" fill="#8b3fd6"/></svg></div>
           <div class="pa l" id="pa0"></div><div class="pa r" id="pa1"></div>
           <div class="pres" id="pres" hidden><b id="presN"></b><span>¡Muy bien!</span></div>
@@ -217,18 +235,7 @@ const API=VVR.api;
 const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
 $("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
 const MAX=5;
-const S={token:null,email:null,mine:null,qs:[{q:"",a:["",""],ok:0}],time:10,view:0};
-
-// ---------- social buttons (same as /crear/) ----------
-const SOC=[["whatsapp","WhatsApp","","993 123 4567","tel"],["facebook","Facebook","facebook.com/","tu-pagina","text"],["instagram","Instagram","instagram.com/","tu_usuario","text"],["youtube","YouTube","youtube.com/@","tu-canal","text"],["x","X","x.com/","tu_usuario","text"],["tiktok","TikTok","tiktok.com/@","tu_usuario","text"],["web","Sitio web","","tusitio.com","text"]];
-// accepts "usuario", "@usuario" or a pasted link, and keeps only the username for the social networks
-const BASES={facebook:"facebook.com",instagram:"instagram.com",youtube:"youtube.com",x:"x.com",tiktok:"tiktok.com"};
-function toHandle(k,v){ v=String(v||"").trim(); if(!BASES[k]||!v) return v;
-  if(/^https?:\/\//i.test(v)||v.includes("/")){ try{ const u=new URL(/^https?:/i.test(v)?v:"https://"+v); const seg=u.pathname.split("/").filter(Boolean)[0]||""; return decodeURIComponent(seg).replace(/^@/,""); }catch(e){ return v; } }
-  return v.replace(/^@/,""); }
-const ICON={whatsapp:'<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/>',facebook:'<path d="M20 2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8.6v-7.7H10v-3h2.6V9c0-2.6 1.6-4 3.9-4 1.1 0 2.1.1 2.3.1v2.7h-1.6c-1.3 0-1.5.6-1.5 1.5v1.9h3l-.4 3h-2.6V22H20a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>',instagram:'<path d="M7.8 2h8.4A5.8 5.8 0 0 1 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8A5.8 5.8 0 0 1 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2zm-.2 2A3.6 3.6 0 0 0 4 7.6v8.8A3.6 3.6 0 0 0 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6A3.6 3.6 0 0 0 16.4 4H7.6zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>',youtube:'<path d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4a2.5 2.5 0 0 0-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.8a2.5 2.5 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8c.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8zM10 15V9l5.2 3-5.2 3z"/>',x:'<path d="M17.8 3h3.1l-6.8 7.7L22 21h-6.2l-4.9-6.4L5.3 21H2.2l7.3-8.3L2 3h6.4l4.4 5.8L17.8 3zm-1.1 16.2h1.7L7.4 4.7H5.6l11.1 14.5z"/>',tiktok:'<path d="M16.6 3c.4 2.2 1.8 3.7 4 3.9v3a7.4 7.4 0 0 1-4-1.3v6.2A5.8 5.8 0 1 1 10.8 9v3.1a2.8 2.8 0 1 0 2.8 2.8V3h3z"/>',web:'<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm7.9 9h-3a15.6 15.6 0 0 0-1.3-5.5A8 8 0 0 1 19.9 11zM12 4c.9 1.1 1.8 3.6 2 7h-4c.2-3.4 1.1-5.9 2-7zM4.1 13h3c.1 2 .6 3.9 1.3 5.5A8 8 0 0 1 4.1 13zm3-2h-3a8 8 0 0 1 4.3-5.5A15.6 15.6 0 0 0 7.1 11zM12 20c-.9-1.1-1.8-3.6-2-7h4c-.2 3.4-1.1 5.9-2 7z"/>'};
-$("soc").innerHTML=SOC.map(([k,l,pre,ph,t])=>`<label title="${l}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>${pre?`<span class="pre">${pre}</span>`:""}<input type="${t}" id="b_${k}" placeholder="${ph}" aria-label="${l}${pre?" (solo tu usuario)":""}" autocapitalize="off" autocomplete="off" spellcheck="false"></label>`).join("");
-for(const [k] of SOC) if(BASES[k]) $("b_"+k).addEventListener("change",e=>{ e.target.value=toHandle(k,e.target.value); });
+const S={token:null,email:null,mine:null,qs:[{q:"",a:["",""],ok:0}],time:10,view:0,color:"#8b3fd6",logoFile:null,logoUrl:null};
 
 // ---------- questions ----------
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -261,13 +268,31 @@ function preview(){
   $("pres").hidden=!end; $("pq").hidden=end; $("pa0").hidden=$("pa1").hidden=end;
   $("pvTxt").textContent=end?"al terminar":`pregunta ${S.view+1} de ${S.qs.length}${S.time?" · "+S.time+" s":""}`;
   if(end){ $("presN").textContent=`${Math.max(1,S.qs.length-1)}/${S.qs.length}`; $("face").style.transform="translate(-50%,0)"; return; }
-  $("pqn").textContent=`PREGUNTA ${S.view+1} DE ${S.qs.length}`; $("pqt").textContent=q.q||"Tu pregunta";
-  [0,1].forEach(s=>{ $("pa"+s).textContent=(s===0?"◀ ":"")+(q.a[s]||(s===0?"Respuesta A":"Respuesta B"))+(s===1?" ▶":""); $("pa"+s).classList.remove("hot"); });
+  $("pqn").textContent=`${$("title").value.trim()||"Tu trivia"} · ${S.view+1}/${S.qs.length}`; $("pqt").textContent=q.q||"Tu pregunta";
+  [0,1].forEach(s=>{ $("pa"+s).textContent=q.a[s]||(s===0?"Respuesta A":"Respuesta B"); $("pa"+s).classList.remove("hot"); });
   const face=$("face"); face.style.transition="none"; face.style.transform="translate(-50%,0) rotate(0deg)";
   if(matchMedia("(prefers-reduced-motion: reduce)").matches){ $("pa"+q.ok).classList.add("hot"); return; }
   pvTimer=setTimeout(()=>{ face.style.transition="transform .6s cubic-bezier(.3,1.4,.5,1)"; face.style.transform=`translate(-50%,0) rotate(${q.ok===0?-18:18}deg)`;
     pvTimer=setTimeout(()=>{ $("pa"+q.ok).classList.add("hot"); pvTimer=setTimeout(preview,1600); },550); },700);
 }
+
+// ---------- the brand: bubble color and logo/picture ----------
+const COLORS=["#8b3fd6","#e53935","#fb8c00","#f4b400","#16a663","#00897b","#1e88e5","#3949ab","#d81b60","#212121"];
+const light=(h,t)=>"#"+[1,3,5].map(i=>{ const c=parseInt(h.slice(i,i+2),16); return Math.round(c+(255-c)*t).toString(16).padStart(2,"0"); }).join("");
+function paintColors(){
+  $("colors").innerHTML=COLORS.map(c=>`<button type="button" data-c="${c}" style="background:${c}" aria-label="Color ${c}" aria-pressed="${c===S.color}"></button>`).join("")+`<label>Otro <input type="color" id="cPick" value="${S.color}"></label>`;
+  $("cPick").addEventListener("input",e=>{ S.color=e.target.value; paintColors(); });
+  const ph=$("phone"); ph.style.setProperty("--tc",S.color); ph.style.setProperty("--tc1",light(S.color,.28));
+}
+$("colors").addEventListener("click",e=>{ const b=e.target.closest("[data-c]"); if(b){ S.color=b.dataset.c; paintColors(); } });
+function showLogo(){ const src=S.logoFile?URL.createObjectURL(S.logoFile):S.logoUrl; $("lgThumb").hidden=$("pqLogo").hidden=!src; $("lgDel").hidden=!src; if(src){ $("lgThumb").src=$("pqLogo").src=src; $("lgT").textContent="Cambiar imagen"; } else $("lgT").textContent="Sube tu logo o una imagen"; }
+$("lgFile").addEventListener("change",e=>{ const f=e.target.files[0]; if(!f) return; const i=new Image(), u=URL.createObjectURL(f);
+  i.onload=()=>{ const k=Math.min(1,600/Math.max(i.naturalWidth||600,i.naturalHeight||600)), c=document.createElement("canvas"); c.width=Math.max(1,Math.round((i.naturalWidth||600)*k)); c.height=Math.max(1,Math.round((i.naturalHeight||600)*k));
+    c.getContext("2d").drawImage(i,0,0,c.width,c.height); c.toBlob(b=>{ S.logoFile=b; S.logoUrl=null; showLogo(); },"image/png"); URL.revokeObjectURL(u); };
+  i.src=u; });
+$("lgDel").addEventListener("click",()=>{ S.logoFile=null; S.logoUrl=null; $("lgFile").value=""; showLogo(); });
+$("title").addEventListener("input",()=>preview());
+paintColors();
 
 // ---------- title and link ----------
 const slugIn=$("slug"); let slugOk=false, slugTimer=0;
@@ -293,11 +318,11 @@ function check(){
 { const base=check; check=function(){ base(); const mk=S.marca&&S.marca.get(); if(mk&&!mk.ok&&!$("publish").disabled){ $("publish").disabled=true; $("pubHint").textContent="Sube el logo de tu marca o elige el de Vórtice VR."; } }; }
 $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Publicando…"; bar.hidden=false; $("publish").disabled=true;
-  const meta={kind:"trivia",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),trivia:{questions:S.qs.map(q=>({q:q.q.trim(),a:q.a.map(a=>a.trim()),ok:q.ok})),time:S.time},buttons:{}};
-  for(const [k] of SOC){ const v=toHandle(k,$("b_"+k).value); if(v) meta.buttons[k]=v; }
+  const meta={kind:"trivia",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),trivia:{questions:S.qs.map(q=>({q:q.q.trim(),a:q.a.map(a=>a.trim()),ok:q.ok})),time:S.time,color:S.color,logo:!!(S.logoFile||S.logoUrl)},buttons:{}};
   const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
   if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
+  if(S.logoFile) fd.append("image",S.logoFile,"marca.png");
   const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc, linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/");
   fd.append("qr",await new Promise(r=>qrc.toBlob(r,"image/png")),"qr.png");
   const xhr=new XMLHttpRequest(); xhr.open("POST",`${API}/api/publish`); xhr.setRequestHeader("Authorization","Bearer "+S.token);
@@ -322,9 +347,9 @@ $("publish").addEventListener("click",async()=>{
     if(exp&&exp.kind!=="trivia"){ location.replace((exp.kind==="colorear"?"../colorear/":"../")+"?editar="+encodeURIComponent(ed)); return; }
     if(exp){
       S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza.`;
-      S.qs=exp.trivia.questions.map(q=>({q:q.q,a:[...q.a],ok:q.ok})); S.time=exp.trivia.time;
+      S.qs=exp.trivia.questions.map(q=>({q:q.q,a:[...q.a],ok:q.ok})); S.time=exp.trivia.time; S.color=exp.trivia.color||S.color;
+      if(exp.trivia.logo){ S.logoUrl=`${API}/m/${exp.slug}/image?v=${exp.updated||exp.created}`; showLogo(); } paintColors();
       $("title").value=exp.title; slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
-      for(const [k] of SOC){ const el=$("b_"+k); if(exp.buttons&&exp.buttons[k]) el.value=k==="whatsapp"?exp.buttons[k].replace(/^52(?=\d{10}$)/,""):toHandle(k,exp.buttons[k]); }
       $("publish").textContent="Guardar cambios";
     } else if(r.experiences.filter(x=>!x.paused).length>=LIM){
       document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); document.querySelector(".side").hidden=true; $("full").hidden=false;

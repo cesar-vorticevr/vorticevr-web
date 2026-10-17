@@ -389,6 +389,7 @@ async function api(request, env, ctx, url) {
       data.brand = "none";
     }
     const isNew = !mine;
+    if (data.kind === "trivia" && data.trivia.logo && !image && !(mine && (JSON.parse(mine.data || "{}").trivia || {}).logo)) data.trivia.logo = false;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
     if (isNew && data.kind !== "trivia" && (!image || (!target && data.kind !== "colorear"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
@@ -795,7 +796,8 @@ function cleanItems(list, P) {
   return { items: out };
 }
 // Trivia with face tracking (assets/trivia.js): 1 to 5 questions, each with the answer on the left (a[0]) and on the right
-// (a[1]); ok = which one is right. time = seconds to answer each one (0 = no limit). No image and no files.
+// (a[1]); ok = which one is right. time = seconds to answer each one (0 = no limit). color = its bubbles' color; logo = it
+// has its own picture/logo (uploaded as "image", shown on the question and in the intro).
 const TRIVIA = { max: 5, times: [0, 5, 10, 15, 20] };
 function cleanTrivia(t) {
   const list = Array.isArray(t && t.questions) ? t.questions : [];
@@ -809,7 +811,8 @@ function cleanTrivia(t) {
     questions.push({ q, a, ok: x.ok === 1 ? 1 : 0 });
   }
   const time = TRIVIA.times.includes(Number(t.time)) ? Number(t.time) : 10;
-  return { questions, time };
+  const color = /^#[0-9a-f]{6}$/i.test(String(t.color || "")) ? String(t.color).toLowerCase() : "#8b3fd6";   // the bubbles' color
+  return { questions, time, color, logo: !!t.logo };   // logo: its picture/logo is exp/<slug>/image
 }
 // Coloring page (assets/colorear.js): the image is a line drawing that anyone with the link paints with a finger.
 // th = how dark a pixel must be to count as a line (the fill stops there); palette = the colors offered first.

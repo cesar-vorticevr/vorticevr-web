@@ -115,6 +115,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 /* trivia (assets/trivia.js) */
 #tvHint{position:fixed;left:50%;top:calc(58px + env(safe-area-inset-top,0px));transform:translate(-50%,-8px);z-index:30;background:var(--glass);padding:9px 16px;border-radius:999px;font-weight:700;font-size:.9rem;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis}
 #tvHint.on{opacity:1;transform:translate(-50%,0)}
+#tvHint{top:auto;bottom:calc(120px + env(safe-area-inset-bottom,0px))}
+#controls.reconly #shutter,#controls.reconly #modes{display:none}
+#controls.reconly{background:none}
+#controls.reconly #timer::before{content:"● ";}
+.big.ghost{background:transparent;border-color:rgba(210,184,255,.6);box-shadow:none;padding:12px 26px;font-size:.85rem}
+#intro .thumb.logo{width:min(40vw,150px);border-radius:24px;background:#fff;padding:10px;object-fit:contain}
 #tvHint:empty{display:none}
 #tvAgain{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(160px + env(safe-area-inset-bottom,0px));z-index:30;font-family:var(--fd);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:.95rem;border:1px solid #fff3d6;border-radius:999px;padding:15px 28px;color:#2b1300;background:linear-gradient(135deg,#ffd27f,#ff9f3a);box-shadow:0 0 30px rgba(255,190,85,.6);animation:tvPop .5s cubic-bezier(.3,1.6,.5,1)}
 @keyframes tvPop{from{transform:translateX(-50%) scale(.4);opacity:0}}
@@ -236,9 +242,12 @@ async function load(){
   }
   if(CFG.kind==="trivia"){   // a trivia: front camera and face, no image
     document.title=(CFG.title||"Trivia")+" · Vórtice VR"; $("title").textContent=CFG.title||"Trivia";
-    $("kick").textContent="Trivia con tu cara"; startBtn.textContent="Jugar";
-    $("steps").innerHTML="<li><span>Toca <b>Jugar</b> y, si te lo pregunta, <b>Permitir</b> la cámara.</span></li><li><span><b>Inclina la cabeza</b> hacia la respuesta correcta (o toca ese lado de la pantalla).</span></li><li><span>Al final ves cuántas acertaste. ¡Grábalo y compártelo!</span></li>";
-    socialButtons(); startBtn.disabled=false; libsP=triviaLibs().catch(e=>{ console.error(e); libsP=null; }); return;
+    $("kick").textContent="Trivia con tu cara"; startBtn.textContent="Jugar y grabar";
+    if(CFG.trivia.logo){ CFG.logo=`${base}/m/${CFG.slug}/image`; $("thumb").src=CFG.logo; $("thumb").alt=""; $("thumb").classList.add("logo"); $("thumb").hidden=false; }
+    $("steps").innerHTML="<li><span>Toca <b>Jugar y grabar</b> y, si te lo pregunta, <b>Permitir</b> la cámara.</span></li><li><span><b>Inclina la cabeza</b> hacia la respuesta correcta.</span></li><li><span>Al terminar, tu video queda listo para guardar y compartir.</span></li>";
+    const solo=Object.assign(document.createElement("button"),{id:"solo",type:"button",className:"big ghost",textContent:"Solo jugar"});
+    startBtn.after(solo); solo.addEventListener("click",()=>startTrivia(false));
+    startBtn.disabled=false; libsP=triviaLibs().catch(e=>{ console.error(e); libsP=null; }); return;
   }
   if(CFG.kind==="colorear"){   // a coloring page: no camera, the drawing is painted on screen (assets/colorear.js)
     document.title=(CFG.title||"Colorea")+" · Vórtice VR"; $("title").textContent=CFG.title||"Colorea este dibujo";
@@ -289,11 +298,11 @@ $("fs").addEventListener("click",()=>{
 vid.addEventListener("webkitendfullscreen",()=>{ if(!userPaused) playVid(); });
 
 // ---- photo / video capture: camera + 3D layer (+ on-screen video), audio of the video when possible ----
-function setupCapture(mind){
+function setupCapture(mind,opts={}){
   const container=$("ar"), shutter=$("shutter"), timer=$("timer"), flash=$("flash"), sheet=$("sheet"), media=$("media");
   const out=document.createElement("canvas"), ctx=out.getContext("2d");
   let mode="photo", wantPhoto=false, recorder=null, chunks=[], recStart=0, tick=null, lastUrl=null;
-  const MAX_SEC=30;
+  const MAX_SEC=opts.maxSec||30;
   document.querySelectorAll("#modes button").forEach(b=>b.addEventListener("click",()=>{ if(recorder) return; mode=b.dataset.mode;
     document.querySelectorAll("#modes button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
     shutter.classList.toggle("video",mode==="video"); shutter.setAttribute("aria-label",mode==="video"?"Grabar video":"Tomar foto"); }));
@@ -336,20 +345,20 @@ function setupCapture(mind){
     sheet.hidden=false; }
   function alertSheet(msg){ media.replaceChildren(Object.assign(document.createElement("p"),{textContent:msg,style:"color:#fff;padding:20px;margin:0;max-width:30ch;text-align:center"})); $("share").hidden=true; $("download").hidden=true; $("saveHint").hidden=true; sheet.hidden=false; }
   $("close").addEventListener("click",()=>{ sheet.hidden=true; media.replaceChildren(); });
-  return {afterRender};
+  return {afterRender,startRec:()=>{ if(!recorder) startRec(); },stopRec};
 }
 // Audio of the video for recordings: routed through WebAudio once (created inside the user's tap).
 const AUDIO={};
 function setupAudio(){ try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; const ac=new AC(); const src=ac.createMediaElementSource(vid);
   const dest=ac.createMediaStreamDestination(); src.connect(ac.destination); src.connect(dest); AUDIO.ac=ac; AUDIO.dest=dest; ac.resume&&ac.resume(); }catch(e){} }
 
-async function startTrivia(){
-  startBtn.disabled=true; startBtn.textContent="Cargando…"; $("err").hidden=true;
+async function startTrivia(record=true){
+  startBtn.disabled=true; startBtn.textContent="Cargando…"; $("err").hidden=true; if($("solo")) $("solo").hidden=true;
   try{ await (libsP||triviaLibs()); if(!THREE||!MindARThree||!TRIVIA) throw 0; }
   catch(e){ startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false; $("err").textContent="No se pudo cargar el juego. Revisa tu conexión; si estás en navegación privada, ábrelo en una pestaña normal."; return; }
   try{
-    await TRIVIA.run({THREE,MindARThree,container:$("ar"),cfg:CFG,setupCapture,
-      started:()=>{ $("intro").hidden=true; $("controls").hidden=false; $("social").hidden=!$("social").children.length; }});
+    await TRIVIA.run({THREE,MindARThree,container:$("ar"),cfg:CFG,setupCapture,rec:{on:record},
+      started:()=>{ $("intro").hidden=true; $("controls").classList.add("reconly"); $("controls").hidden=!record; }});   // recording only: no photo, no shutter
   }catch(e){
     console.error(e); startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false;
     $("err").textContent=(e&&(e.name==="NotAllowedError"||/Permission/i.test(e.message||"")))?"No se dio permiso a la cámara. Actívalo en los ajustes del navegador y vuelve a intentar.":"No se pudo iniciar la cámara. Abre este link en Chrome o Safari (no dentro de Instagram o WhatsApp).";

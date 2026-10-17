@@ -619,7 +619,7 @@ function card(exp){
   const days=Math.max(0,Math.ceil((exp.expires-Date.now())/864e5));
   const free=!DATA.plan||DATA.plan.id==="gratis", vlim=(DATA.plan&&DATA.plan.views)||1000;
   const status=exp.paused?(exp.forever?"Excede tu plan":`se borra en ${days} días`):exp.forever?"Activa":`${days} días restantes`;
-  el.innerHTML=`<div class="th${exp.kind==="colorear"?" white":""}"><img loading="lazy" src="${exp.thumb||(exp.kind==="trivia"?"../assets/trivia.svg":`${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}`)}" alt="">${exp.paused?'<span class="tag bad">Pausada</span>':""}<span class="kind">${KINDS[kindOf(exp)][0]} ${KINDS[kindOf(exp)][1]}</span></div>
+  el.innerHTML=`<div class="th${exp.kind==="colorear"||(exp.kind==="trivia"&&exp.trivia&&exp.trivia.logo)?" white":""}"><img loading="lazy" src="${exp.thumb||(exp.kind==="trivia"&&!(exp.trivia&&exp.trivia.logo)?"../assets/trivia.svg":`${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}`)}" alt="">${exp.paused?'<span class="tag bad">Pausada</span>':""}<span class="kind">${KINDS[kindOf(exp)][0]} ${KINDS[kindOf(exp)][1]}</span></div>
     <div class="bd"><h3>${esc(exp.title)}</h3>
       <div class="meta"><span><b>${nf(exp.views)}</b>${free?`/${nf(vlim)}`:""} ${exp.views===1&&!free?"vista":"vistas"}</span><span>${status}</span></div>
       <div class="acts">${exp.paused?`<button class="btn sun" type="button" data-a="up">Mejorar plan</button>`

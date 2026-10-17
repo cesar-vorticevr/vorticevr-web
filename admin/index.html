@@ -229,7 +229,7 @@ async function toggleExps(el,u){
   const old=el.querySelector(".exps"); if(old){ old.remove(); return; }
   const box=document.createElement("div"); box.className="exps"; box.textContent="Cargando…"; el.appendChild(box);
   try{ const r=await VVR.call("admin/experiences?email="+encodeURIComponent(u.email));
-    box.innerHTML=r.experiences.length?r.experiences.map(x=>`<div class="row"><img src="${x.kind==="trivia"?"../assets/trivia.svg":`${VVR.api}/m/${x.slug}/image`}" alt=""><b>${esc(x.title)}</b>${x.paused?' <span class="tag warn">Pausada</span>':""}<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.url.replace(/^https?:\/\//,"").replace(/\/$/,""))}</a><span class="em">${(x.views||0).toLocaleString("es-MX")} vistas · ${x.forever?"sin vencimiento":"hasta "+fmt(x.expires)}</span></div>`).join(""):"Sin experiencias.";
+    box.innerHTML=r.experiences.length?r.experiences.map(x=>`<div class="row"><img src="${x.kind==="trivia"&&!(x.trivia&&x.trivia.logo)?"../assets/trivia.svg":`${VVR.api}/m/${x.slug}/image`}" alt=""><b>${esc(x.title)}</b>${x.paused?' <span class="tag warn">Pausada</span>':""}<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.url.replace(/^https?:\/\//,"").replace(/\/$/,""))}</a><span class="em">${(x.views||0).toLocaleString("es-MX")} vistas · ${x.forever?"sin vencimiento":"hasta "+fmt(x.expires)}</span></div>`).join(""):"Sin experiencias.";
   }catch(err){ box.textContent=err.message; }
 }
 
