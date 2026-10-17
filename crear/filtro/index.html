@@ -347,7 +347,8 @@ let cTimer=0;
 const cv=$("pv"), R=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true,preserveDrawingBuffer:true});
 R.outputColorSpace=THREE.SRGBColorSpace; R.setPixelRatio(Math.min(devicePixelRatio||1,2));
 const scene=new THREE.Scene(), cam=new THREE.PerspectiveCamera(30,9/16,1,500);
-scene.add(new THREE.HemisphereLight(0xffffff,0x40305a,1.6)); const sun=new THREE.DirectionalLight(0xffffff,1.6); sun.position.set(20,30,50); scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xffffff,0x4a3670,1.5)); const sun=new THREE.DirectionalLight(0xffffff,1.5); sun.position.set(20,30,50); scene.add(sun);
+const rim=new THREE.DirectionalLight(0xc9a4ff,1.2); rim.position.set(-30,10,-40); scene.add(rim);   // a purple light from behind outlines the head
 const head=new THREE.Group(); scene.add(head);
 let FACE=null, faceMesh=null, base=null; const anchors=new Map();
 const anchor=i=>{ if(!anchors.has(i)){ const g=new THREE.Group(); head.add(g); anchors.set(i,g); } return anchors.get(i); };
@@ -357,16 +358,14 @@ async function buildHead(){
   const n=FACE.positions.length, pos=new Float32Array(n*3), uv=new Float32Array(n*2);
   FACE.positions.forEach((p,i)=>pos.set(p,i*3)); FACE.uvs.forEach((u,i)=>uv.set(u,i*2)); base=pos.slice();
   const geo=new THREE.BufferGeometry(); geo.setAttribute("position",new THREE.BufferAttribute(pos,3)); geo.setAttribute("uv",new THREE.BufferAttribute(uv,2)); geo.setIndex(FACE.faces.flat()); geo.computeVertexNormals();
-  const skin=new THREE.MeshStandardMaterial({color:0xe2ad8a,roughness:.75});
+  const skin=new THREE.MeshStandardMaterial({color:0xf3f0f7,roughness:.6});   // a neutral white mannequin, like a sculpture: it is nobody in particular
   head.add(new THREE.Mesh(geo,skin));
   faceMesh=new THREE.Mesh(geo); head.add(faceMesh);
   const skull=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),skin); skull.scale.set(7.65,10,7.5); skull.position.set(0,1.5,-3.2); head.add(skull);
-  const hair=new THREE.Mesh(new THREE.SphereGeometry(1,48,24,0,Math.PI*2,0,Math.PI*.52),new THREE.MeshStandardMaterial({color:0x2a1a14,roughness:.9}));
-  hair.scale.set(8.05,10.4,8); hair.position.set(0,1.9,-3.5); hair.rotation.x=-.3; head.add(hair);
   const neck=new THREE.Mesh(new THREE.CylinderGeometry(4,4.4,10,32),skin); neck.position.set(0,-11,-3.4); head.add(neck);
   const mid=list=>list.reduce((a,i)=>a.add(new THREE.Vector3(...FACE.positions[i])),new THREE.Vector3()).multiplyScalar(1/list.length);
   for(const eye of [[33,133,159,145],[263,362,386,374]]){ const c=mid(eye); const w=new THREE.Mesh(new THREE.SphereGeometry(1.3,24,16),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.3})); w.position.set(c.x,c.y,c.z-1.05); head.add(w);
-    const iris=new THREE.Mesh(new THREE.SphereGeometry(.62,20,12),new THREE.MeshStandardMaterial({color:0x3b2416,roughness:.2})); iris.position.set(c.x,c.y,c.z-.02); head.add(iris); }
+    const iris=new THREE.Mesh(new THREE.SphereGeometry(.62,20,12),new THREE.MeshStandardMaterial({color:0x5a4a72,roughness:.2})); iris.position.set(c.x,c.y,c.z-.02); head.add(iris); }
   const mouth=new THREE.Mesh(new THREE.CircleGeometry(2.4,32),new THREE.MeshBasicMaterial({color:0x4a1420})); mouth.scale.set(1,.7,1); mouth.position.set(0,-4.6,4.1); head.add(mouth);
   const body=new THREE.Mesh(new THREE.SphereGeometry(1,40,24),new THREE.MeshStandardMaterial({color:0x2b1d46,roughness:.8})); body.scale.set(16,7,8); body.position.set(0,-20,-4); scene.add(body);
   $("pvLoad").hidden=true;
