@@ -152,7 +152,7 @@ export function paintCanvas(kind, uvAt, color, S = 1024) {
   const cheeks = [mid([205, 50, 187, 123]), mid([425, 280, 411, 352])];
   if (kind === "catrina") {
     // white face with soft edges
-    poly(OVAL); g.fillStyle = "rgba(255,251,246,.9)"; g.fill();
+    poly(OVAL); g.fillStyle = "rgba(255,251,246,.62)"; g.fill();   // like face paint: the skin shows through
     g.globalCompositeOperation = "destination-out";
     for (const [lw, a] of [[60, 0.18], [40, 0.22], [22, 0.3], [10, 0.4]]) { poly(OVAL); g.lineWidth = lw; g.strokeStyle = `rgba(0,0,0,${a})`; g.stroke(); }
     g.globalCompositeOperation = "source-over";
@@ -162,13 +162,15 @@ export function paintCanvas(kind, uvAt, color, S = 1024) {
       const m = mid(eye), r = radius(eye, m) * 1.45;
       for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; g.beginPath(); g.ellipse(m[0] + Math.cos(a) * r * 1.2, m[1] + Math.sin(a) * r * 1.2, r * 0.42, r * 0.24, a, 0, TAU); g.fillStyle = petals[i % petals.length]; g.fill(); }
       for (let i = 0; i < 12; i++) { const a = (i + 0.5) / 12 * TAU; g.beginPath(); g.arc(m[0] + Math.cos(a) * r * 1.62, m[1] + Math.sin(a) * r * 1.62, r * 0.07, 0, TAU); g.fillStyle = "#1a0f1a"; g.fill(); }
-      g.beginPath(); g.arc(m[0], m[1], r, 0, TAU); g.fillStyle = "#140a14"; g.fill();
+      g.beginPath(); g.arc(m[0], m[1], r, 0, TAU); g.fillStyle = "rgba(20,10,20,.82)"; g.fill();
+      // the eye itself stays clear (the real eye shows through the paint)
+      g.save(); g.globalCompositeOperation = "destination-out"; g.translate(m[0], m[1]); g.scale(1.2, 1.45); g.translate(-m[0], -m[1]); poly(eye); g.fill(); g.restore();
     }
     // nose: an upside-down heart
     const nose = between(P(4), P(2), 0.55), nw = Math.hypot(P(98)[0] - P(327)[0], P(98)[1] - P(327)[1]) * 0.62;
     g.save(); g.translate(nose[0], nose[1]); g.scale(1, -1); g.beginPath(); heartPath(g, 0, 0, nw); g.fillStyle = "#140a14"; g.fill(); g.restore();
     // mouth: dark lips, a long stitched line out to the cheeks
-    poly(LIPS); g.fillStyle = "rgba(20,10,20,.92)"; g.fill();
+    poly(LIPS); g.fillStyle = "rgba(20,10,20,.78)"; g.fill();
     const a = P(61), b = P(291), ext = (b[0] - a[0]) * 0.55;
     g.strokeStyle = "#140a14"; g.lineCap = "round"; g.lineWidth = S * 0.006;
     g.beginPath(); g.moveTo(a[0] - ext, a[1] - ext * 0.18); g.quadraticCurveTo(a[0] - ext * 0.4, a[1] + ext * 0.05, a[0], a[1]); g.moveTo(b[0], b[1]); g.quadraticCurveTo(b[0] + ext * 0.4, b[1] + ext * 0.05, b[0] + ext, b[1] - ext * 0.18); g.stroke();
@@ -347,9 +349,9 @@ export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvA
     for (let i = 0; i < n; i++) {
       const q = parts[cursor++ % parts.length];
       q.life = 1.5 + Math.random() * 0.9; q.p.copy(a).addScaledVector(fwd, scale * 1.2);
-      const ang = Math.random() * TAU, spread = scale * (10 + Math.random() * 16);   // a fountain toward the camera, opening in every direction
-      q.v.copy(fwd).multiplyScalar(scale * (8 + Math.random() * 8)).addScaledVector(rgt, Math.cos(ang) * spread).addScaledVector(upv, Math.sin(ang) * spread * 0.8 + scale * 6);
-      q.spin = (Math.random() - 0.5) * 5; q.size = scale * (2.2 + Math.random() * 1.8); q.ph = Math.random() * 6; q.m.visible = true;
+      const ang = Math.random() * TAU, spread = scale * (14 + Math.random() * 14);   // a fountain toward the camera, opening in every direction
+      q.v.copy(fwd).multiplyScalar(scale * (2 + Math.random() * 4)).addScaledVector(rgt, Math.cos(ang) * spread).addScaledVector(upv, Math.sin(ang) * spread * 0.8 + scale * 6);
+      q.spin = (Math.random() - 0.5) * 5; q.size = scale * (1.3 + Math.random() * 1.2); q.ph = Math.random() * 6; q.m.visible = true;
     }
   }
   function update(dt, { face = true, mouth = 0 } = {}) {
@@ -360,8 +362,8 @@ export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvA
       if (face) {
         mouthA[0].updateWorldMatrix(true, false);
         const scale = new THREE.Vector3().setFromMatrixScale(mouthA[0].matrixWorld).x || 1;
-        if (isOpen && !open) { spawn(16, scale); everOpened = true; }
-        if (isOpen) { emit += dt * 20; const n = Math.floor(emit); if (n) { emit -= n; spawn(n, scale); } }
+        if (isOpen && !open) { spawn(12, scale); everOpened = true; }
+        if (isOpen) { emit += dt * 14; const n = Math.floor(emit); if (n) { emit -= n; spawn(n, scale); } }
       }
       open = isOpen;
       // tell people the trick once they are on camera
@@ -395,11 +397,14 @@ export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvA
 
 // ---------- /x/: the camera ----------
 export async function run({ THREE, MindARThree, container, cfg, setupCapture, started, hint, mediaUrl }) {
-  const mind = new MindARThree({ container, uiLoading: "no", uiScanning: "no", uiError: "no", filterMinCF: 0.0001, filterBeta: 0.001 });
+  // MindAR's own face smoothing (the strong one of the trivia makes a mask lag behind the face)
+  const mind = new MindARThree({ container, uiLoading: "no", uiScanning: "no", uiError: "no" });
   const { renderer, scene, camera } = mind;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   const anchors = new Map(), faceMesh = mind.addFaceMesh(); scene.add(faceMesh);
-  const anchor = i => { if (!anchors.has(i)) anchors.set(i, mind.addAnchor(i)); return anchors.get(i).group; };
+  // MindAR's landmark matrix is scaled by faceScale (the face width, ~15): an inner group scaled 1/faceScale brings it
+  // back to the canonical cm the filter uses (as the face mesh and the preview do)
+  const anchor = i => { if (!anchors.has(i)) { const a = mind.addAnchor(i), inner = new THREE.Group(); inner.scale.setScalar(1 / 15); a.group.add(inner); anchors.set(i, inner); } return anchors.get(i); };
   for (const i of [10, 151, 168, 4, 0, 152, 205, 425, 13, 14]) anchor(i);   // before start: MindAR keeps them all updated
   const uv = faceMesh.geometry.getAttribute("uv"), uvAt = i => [uv.getX(i), uv.getY(i)];
   const filter = await createFilter({ THREE, scene, camera, anchor, faceMesh, uvAt, cfg, mediaUrl, onHint: hint });
@@ -418,6 +423,7 @@ export async function run({ THREE, MindARThree, container, cfg, setupCapture, st
       if (jaw) mouth = jaw.score / 0.45;
       else if (est.metricLandmarks) { const L = est.metricLandmarks; mouth = (dist(L[13], L[14]) / dist(L[10], L[152]) - 0.02) / 0.09; }
     }
+    if (est && est.faceScale > 1) for (const inner of anchors.values()) inner.scale.setScalar(1 / est.faceScale);
     filter.update(dt, { face: !!est, mouth });
     renderer.render(scene, camera); filter.overlay(renderer); capture.afterRender();
   });
