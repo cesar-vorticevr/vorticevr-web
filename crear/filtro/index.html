@@ -84,6 +84,16 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
 .ctl select{font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:8px;padding:6px 8px}
 .ctl input[type=range]{width:100%;accent-color:var(--vortex)}
 .cnt{font-size:.82rem;color:var(--mute);margin-top:8px}
+.where{margin-top:12px;border:1.5px solid var(--sun);border-radius:14px;padding:14px;background:rgba(255,190,85,.07);animation:qIn .3s cubic-bezier(.3,1.4,.5,1)}
+@keyframes qIn{from{transform:scale(.96);opacity:0}}
+.wh{display:flex;align-items:center;gap:12px}
+.wh img{width:64px;height:64px;object-fit:contain;border-radius:10px;background:repeating-conic-gradient(#2a1f3d 0 25%,#1a1229 0 50%) 0 0/16px 16px;flex:none}
+.wh div{flex:1}.wh b{display:block;font:700 1rem var(--fd)}.wh small{color:var(--mute);font-size:.84rem}
+.wh button{width:32px;height:32px;border-radius:8px;border:1px solid var(--line2);background:none;color:var(--mute);cursor:pointer}
+.wbtns{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:12px}
+.wbtns button{display:flex;align-items:center;gap:8px;text-align:left;border:1px solid var(--line2);border-radius:12px;background:rgba(5,2,11,.6);color:var(--ink);padding:9px 10px;cursor:pointer;font:600 .86rem var(--fd)}
+.wbtns button:hover{border-color:var(--sun);background:rgba(255,190,85,.12)}
+.wbtns button span{font-size:1.3rem}.wbtns button small{display:block;font:500 .72rem var(--fb);color:var(--mute)}
 .own{margin-top:14px;border:1px dashed var(--line2);border-radius:12px;padding:14px;background:rgba(5,2,11,.45)}
 .own p{margin:0;font-size:.9rem;color:var(--mute)}
 .own p b{color:var(--ink)}
@@ -148,6 +158,10 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
         <p class="hint">Toca uno para ponerlo. También puedes subir tu propia imagen (un PNG sin fondo: tu logo, unos lentes, un sombrero…). Luego acomódalo con las barras.</p>
         <div class="stk" id="stk"></div>
         <input type="file" id="upFile" accept="image/png,image/webp,image/jpeg,image/svg+xml" hidden>
+        <div class="where" id="where" hidden>
+          <div class="wh"><img id="whImg" alt=""><div><b>¿Dónde va tu imagen?</b><small>Queda del tamaño justo. Después puedes arrastrarla en la vista previa.</small></div><button type="button" id="whX" aria-label="Cancelar">✕</button></div>
+          <div class="wbtns" id="wbtns"></div>
+        </div>
         <div class="items" id="items"></div>
         <div class="cnt" id="cnt"></div>
       </section>
@@ -254,14 +268,34 @@ $("upFile").addEventListener("change",async e=>{
   const i=new Image(), u=URL.createObjectURL(f);
   i.onload=()=>{ const k=Math.min(1,1024/Math.max(i.naturalWidth||1024,i.naturalHeight||1024)), c=document.createElement("canvas"); c.width=Math.max(1,Math.round((i.naturalWidth||1024)*k)); c.height=Math.max(1,Math.round((i.naturalHeight||1024)*k));
     c.getContext("2d").drawImage(i,0,0,c.width,c.height); URL.revokeObjectURL(u);
-    c.toBlob(b=>{ if(!b) return say("No se pudo leer esa imagen."); const it={id:rid(),type:"image",name:f.name.replace(/\.[^.]+$/,"").slice(0,40),anchor:"frente",x:0,y:1.5,s:7,r:0,w:c.width,h:c.height};
-      IMG.set(it.id,{file:b,url:URL.createObjectURL(b),w:c.width,h:c.height}); S.items.push(it); S.sel=it.id; S.tpl=null; render(); },"image/png"); };
+    c.toBlob(b=>{ if(!b) return say("No se pudo leer esa imagen.");
+      // first ask where it goes: then it comes in at the right place and size
+      if(S.pending) URL.revokeObjectURL(S.pending.url);
+      S.pending={file:b,url:URL.createObjectURL(b),w:c.width,h:c.height,name:f.name.replace(/\.[^.]+$/,"").slice(0,40)};
+      $("whImg").src=S.pending.url; $("where").hidden=false; $("where").scrollIntoView({block:"nearest",behavior:"smooth"}); },"image/png"); };
   i.onerror=()=>{ URL.revokeObjectURL(u); say("No se pudo leer esa imagen."); }; i.src=u;
 });
+// where an image goes, and its size there (cm of the canonical face; the face is ~15 cm wide, 0 = the point)
+const WHERE=[["cabeza","🎩","Arriba de la cabeza","sombrero, orejas, corona"],["ojos","👓","Ojos","lentes, antifaz"],["frente","✨","Frente","logo, diadema"],["nariz","👃","Nariz","nariz de payaso"],["boca","👄","Boca","bigote, labios"],["barbilla","🧔","Barbilla","barba"],["mejillas","😊","Mejillas","en las dos"]];
+function spot(anchor,ratio){
+  const at=(s,y)=>({x:0,y:Math.round(y*10)/10,s,r:0});
+  if(anchor==="cabeza") return at(18,1.5+18*ratio/2);   // its bottom edge just over the hairline
+  if(anchor==="ojos") return at(15.5,-0.6);
+  if(anchor==="nariz") return at(4.5,0);
+  if(anchor==="boca") return at(7,0.3);
+  if(anchor==="barbilla") return at(12,3.6-12*ratio/2); // its top edge just under the lower lip: a beard hangs from there
+  if(anchor==="mejillas") return at(3,0);
+  return at(7,0.5);
+}
+$("wbtns").innerHTML=WHERE.map(([a,ic,n,ex])=>`<button type="button" data-w="${a}"><span aria-hidden="true">${ic}</span><span style="font-size:inherit">${n}<small>${ex}</small></span></button>`).join("");
+$("wbtns").addEventListener("click",e=>{ const b=e.target.closest("[data-w]"), p=S.pending; if(!b||!p) return;
+  const it={id:rid(),type:"image",name:p.name,anchor:b.dataset.w,...spot(b.dataset.w,p.h/p.w),w:p.w,h:p.h};
+  IMG.set(it.id,{file:p.file,url:p.url,w:p.w,h:p.h}); S.pending=null; $("where").hidden=true; S.items.push(it); S.sel=it.id; S.tpl=null; render(); });
+$("whX").addEventListener("click",()=>{ if(S.pending) URL.revokeObjectURL(S.pending.url); S.pending=null; $("where").hidden=true; });
 const imgLimit=()=>Math.min(MAX_ITEMS,(S.P&&S.P.items)||3);
 const say=t=>{ $("cnt").textContent=t; $("cnt").style.color="var(--bad)"; setTimeout(()=>{ $("cnt").style.color=""; renderCount(); },3000); };
 const renderCount=()=>{ $("cnt").textContent=S.items.length?`${S.items.length} de ${MAX_ITEMS} accesorios`:"Sin accesorios."; };
-const SL=[["s","Tamaño",1,30,0.1],["y","Arriba / abajo",-12,12,0.1],["x","Izquierda / derecha",-10,10,0.1],["r","Girar",-60,60,1]];
+const SL=[["s","Tamaño",1,40,0.1],["y","Arriba / abajo",-20,20,0.1],["x","Izquierda / derecha",-15,15,0.1],["r","Girar",-90,90,1]];
 function renderItems(){
   $("items").innerHTML=S.items.map((it,k)=>`<div class="it${S.sel===it.id?" sel":""}" data-id="${it.id}">
     <div class="ih" data-pick="1"><span class="tn"></span><b>${esc(it.type==="image"?(it.name||"Tu imagen"):FL.STICKERS[it.key].name)}</b>
@@ -278,8 +312,11 @@ $("items").addEventListener("click",e=>{ const el=e.target.closest(".it"); if(!e
   if(e.target.closest("[data-up]")){ if(k>0){ [S.items[k-1],S.items[k]]=[S.items[k],S.items[k-1]]; render(); } return; }
   if(e.target.closest("[data-pick]")){ S.sel=S.sel===el.dataset.id?null:el.dataset.id; renderItems(); } });
 $("items").addEventListener("input",e=>{ const f=e.target.dataset.f; if(!f) return; const it=S.items.find(i=>i.id===e.target.closest(".it").dataset.id);
-  it[f]=f==="anchor"?e.target.value:+e.target.value; S.tpl=null; schedule(); });
-$("items").addEventListener("change",e=>{ if(e.target.dataset.f==="anchor"){ const it=S.items.find(i=>i.id===e.target.closest(".it").dataset.id); if(it.anchor==="mejillas"&&it.s>6) it.s=3; if(it.anchor==="mejillas") it.x=0; renderItems(); schedule(); } });
+  if(f==="anchor") return; it[f]=+e.target.value; S.tpl=null; if(filter) filter.place(it); else schedule(); });
+// another place: the item comes in at that place's size (a sticker back at its own place gets its own values again)
+$("items").addEventListener("change",e=>{ if(e.target.dataset.f!=="anchor") return; const it=S.items.find(i=>i.id===e.target.closest(".it").dataset.id); it.anchor=e.target.value;
+  const st=it.type==="sticker"&&FL.STICKERS[it.key];
+  Object.assign(it,st&&st.anchor===it.anchor?{x:st.x,y:st.y,s:st.s,r:st.r||0}:spot(it.anchor,st?st.ratio:it.h/it.w)); S.tpl=null; renderItems(); schedule(); });
 
 function render(){
   for(const [el,key] of [["paint","paint"],["effect","effect"],["frame","frame"]]) $(el).querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.k===S.f[key])));
@@ -354,15 +391,43 @@ async function rebuild(){
   $("pvMouth").hidden=!filter.hasEffect;
 }
 $("pvMouth").addEventListener("click",()=>{ mouthTo=1; autoT=-2.2; setTimeout(()=>mouthTo=0,1600); });
-cv.addEventListener("pointerdown",e=>{ drag={x:e.clientX,y:e.clientY,yaw,pitch}; cv.setPointerCapture(e.pointerId); cv.style.cursor="grabbing"; });
-cv.addEventListener("pointermove",e=>{ if(!drag) return; yaw=drag.yaw+(e.clientX-drag.x)*.012; pitch=Math.max(-.5,Math.min(.5,drag.pitch+(e.clientY-drag.y)*.008)); });
-const up=()=>{ drag=null; cv.style.cursor=""; }; cv.addEventListener("pointerup",up); cv.addEventListener("pointercancel",up);
+// On the preview: dragging an accessory moves it over the face (on the face's own plane, so it works with the head
+// turned), the wheel or two fingers change its size; dragging anywhere else turns the head.
+const ray=new THREE.Raycaster(), ndc=new THREE.Vector2(), ptrs=new Map(), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+let itemDrag=null, pinch=null, touchedT=-99, syncT=0;
+const itemOf=id=>S.items.find(i=>i.id===id);
+function hitAt(e){ if(!filter) return null; const r=cv.getBoundingClientRect(); ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1); ray.setFromCamera(ndc,cam); const h=filter.pick(ray); return h&&itemOf(h.id)?h:null; }
+const syncLater=()=>{ clearTimeout(syncT); syncT=setTimeout(renderItems,250); };
+function choose(id){ if(S.sel!==id){ S.sel=id; renderItems(); } }
+cv.addEventListener("pointerdown",e=>{
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); try{ cv.setPointerCapture(e.pointerId); }catch(err){} touchedT=t;
+  if(ptrs.size===2){ const it=itemDrag?itemDrag.it:itemOf(S.sel); if(it){ const [a,b]=[...ptrs.values()]; pinch={it,d:Math.hypot(a.x-b.x,a.y-b.y)||1,s:it.s}; itemDrag=null; drag=null; } return; }
+  const h=hitAt(e);
+  if(h){ const it=itemOf(h.id), g=h.mesh.parent, n=new THREE.Vector3(0,0,1).transformDirection(h.mesh.matrixWorld);
+    itemDrag={it,side:h.side,g,plane:new THREE.Plane().setFromNormalAndCoplanarPoint(n,h.point),start:g.worldToLocal(h.point.clone()),x0:it.x,y0:it.y};
+    choose(it.id); cv.style.cursor="grabbing"; return; }
+  drag={x:e.clientX,y:e.clientY,yaw,pitch}; cv.style.cursor="grabbing";
+});
+cv.addEventListener("pointermove",e=>{
+  if(ptrs.has(e.pointerId)) ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch&&ptrs.size===2){ const [a,b]=[...ptrs.values()]; pinch.it.s=clamp(Math.round(pinch.s*Math.hypot(a.x-b.x,a.y-b.y)/pinch.d*10)/10,1,40); filter&&filter.place(pinch.it); touchedT=t; return; }
+  if(itemDrag){ const r=cv.getBoundingClientRect(), p=new THREE.Vector3(); ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1); ray.setFromCamera(ndc,cam);
+    if(ray.ray.intersectPlane(itemDrag.plane,p)){ const l=itemDrag.g.worldToLocal(p), d=itemDrag;
+      d.it.x=clamp(Math.round((d.x0+(l.x-d.start.x)*d.side)*10)/10,-15,15); d.it.y=clamp(Math.round((d.y0+l.y-d.start.y)*10)/10,-20,20); filter&&filter.place(d.it); S.tpl=null; }
+    touchedT=t; return; }
+  if(drag){ yaw=drag.yaw+(e.clientX-drag.x)*.012; pitch=Math.max(-.5,Math.min(.5,drag.pitch+(e.clientY-drag.y)*.008)); touchedT=t; return; }
+  if(e.pointerType==="mouse") cv.style.cursor=hitAt(e)?"move":"";
+});
+const up=e=>{ ptrs.delete(e.pointerId); if(itemDrag||pinch) syncLater(); itemDrag=null; if(ptrs.size<2) pinch=null; if(!ptrs.size) drag=null; cv.style.cursor=""; };
+cv.addEventListener("pointerup",up); cv.addEventListener("pointercancel",up);
+cv.addEventListener("wheel",e=>{ const h=hitAt(e), it=h?itemOf(h.id):null; if(!it) return; e.preventDefault(); choose(it.id);
+  it.s=clamp(Math.round(it.s*(e.deltaY<0?1.06:1/1.06)*10)/10,1,40); filter&&filter.place(it); S.tpl=null; touchedT=t; syncLater(); },{passive:false});
 const still=matchMedia("(prefers-reduced-motion: reduce)").matches;
 const clock=new THREE.Clock(); let t=0;
 function loop(){
   requestAnimationFrame(loop);
   const dt=Math.min(.05,clock.getDelta()); t+=dt; if(!faceMesh) return;
-  if(!drag&&!still){ yaw+=(Math.sin(t*.55)*.42-yaw)*Math.min(1,dt*1.5); pitch+=(Math.sin(t*.37)*.08-pitch)*Math.min(1,dt*1.5); }
+  if(!drag&&!itemDrag&&!pinch&&!still&&t-touchedT>6){ yaw+=(Math.sin(t*.55)*.42-yaw)*Math.min(1,dt*1.5); pitch+=(Math.sin(t*.37)*.08-pitch)*Math.min(1,dt*1.5); }
   // every few seconds the head opens its mouth, to show the effect
   autoT+=dt; if(filter&&filter.hasEffect&&!still&&autoT>5){ autoT=0; mouthTo=1; setTimeout(()=>mouthTo=0,1500); }
   mouthOpen+=(mouthTo-mouthOpen)*Math.min(1,dt*9);

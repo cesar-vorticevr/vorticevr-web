@@ -353,6 +353,8 @@ export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvA
   }
   // items
   let order = 5;
+  const parts3 = new Map();   // item id → its meshes ({m, side, z}), to move them without building again (the creator)
+  const placeMesh = (m, it, side, z) => { m.position.set((it.x || 0) * side, it.y || 0, z); m.scale.setScalar(it.s || 6); m.rotation.z = THREE.MathUtils.degToRad(-(it.r || 0) * side); };
   for (const it of (cfg.items || [])) {
     let src = null, ratio = 1, z = 0.8;
     if (it.type === "sticker" && STICKERS[it.key]) { src = stickerCanvas(it.key, color); ratio = STICKERS[it.key].ratio; z = STICKERS[it.key].z; }
@@ -364,8 +366,9 @@ export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvA
     const geo = new THREE.PlaneGeometry(1, ratio), at = ANCHORS[it.anchor] ?? ANCHORS.frente;
     for (const [k, idx] of (Array.isArray(at) ? at : [at]).entries()) {
       const m = new THREE.Mesh(geo, mat), side = k ? -1 : 1;
-      m.position.set((it.x || 0) * side, it.y || 0, z); m.scale.setScalar(it.s || 6); m.rotation.z = THREE.MathUtils.degToRad(-(it.r || 0) * side);
+      placeMesh(m, it, side, z); m.userData.item = it.id;
       m.renderOrder = order; anchor(idx).add(m); made.push(m);
+      if (!parts3.has(it.id)) parts3.set(it.id, []); parts3.get(it.id).push({ m, side, z });
     }
     order++;
   }
@@ -449,7 +452,15 @@ export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvA
     if (faceMesh && faceMesh.material && faceMesh.material.dispose) faceMesh.material.dispose();
     onHint("");
   }
-  return { update, overlay, setView, dispose, hasEffect: !!fx };
+  // the creator: move an item right away (sliders, dragging) and find the item under the pointer
+  function place(it) { for (const p of parts3.get(it.id) || []) placeMesh(p.m, it, p.side, p.z); }
+  function pick(raycaster) {
+    const hit = raycaster.intersectObjects([...parts3.values()].flat().map(p => p.m), false)[0];
+    if (!hit) return null;
+    const p = [...parts3.values()].flat().find(p => p.m === hit.object);
+    return { id: hit.object.userData.item, mesh: hit.object, side: p.side, point: hit.point };
+  }
+  return { update, overlay, setView, dispose, place, pick, hasEffect: !!fx };
 }
 
 // ---------- /x/: the camera ----------
