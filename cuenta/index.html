@@ -18,7 +18,8 @@ body{margin:0;min-height:100vh;background:radial-gradient(80% 50% at 70% 0%,rgba
 a{color:var(--lav)}
 :focus-visible{outline:2px solid var(--lav);outline-offset:3px}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1100px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 8px}
-header img{height:24px;display:block}
+header img{height:38px;width:auto;display:block}   /* same size as on the home page */
+@media (max-width:480px){header img{height:28px}}
 header .acts{display:flex;align-items:center;gap:14px;font-family:var(--fd);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase}
 header .acts a{text-decoration:none;color:var(--mute)}
 main{max-width:1100px;margin:0 auto;padding:10px 20px 80px}

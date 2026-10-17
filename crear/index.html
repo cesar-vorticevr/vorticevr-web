@@ -18,7 +18,8 @@ body{margin:0;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),
 a{color:var(--lav)}
 :focus-visible{outline:2px solid var(--lav);outline-offset:3px}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1180px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 8px}
-header img{height:24px;display:block}
+header img{height:38px;width:auto;display:block}   /* same size as on the home page */
+@media (max-width:480px){header img{height:28px}}
 header a.back{font-family:var(--fd);font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--mute)}
 .wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
 .hero{padding:28px 0 26px}

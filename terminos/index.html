@@ -15,7 +15,8 @@
 body{margin:0;background:radial-gradient(70% 40% at 70% 0%,rgba(139,63,214,.2),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:17px;line-height:1.7}
 a{color:var(--lav)}
 header{max-width:820px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top,0px)) 20px 0;display:flex;justify-content:space-between;align-items:center}
-header img{height:24px;display:block}
+header img{height:38px;width:auto;display:block}   /* same size as on the home page */
+@media (max-width:480px){header img{height:28px}}
 header a.back{font-family:var(--fd);font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;color:var(--mute)}
 main{max-width:820px;margin:0 auto;padding:30px 20px 80px}
 .kick{font-family:var(--fd);font-size:.78rem;letter-spacing:.26em;text-transform:uppercase;color:var(--sun);font-weight:600}
