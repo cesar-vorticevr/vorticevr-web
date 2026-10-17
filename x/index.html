@@ -122,6 +122,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .big.ghost{background:transparent;border-color:rgba(210,184,255,.6);box-shadow:none;padding:12px 26px;font-size:.85rem}
 #intro .thumb.logo{width:min(40vw,150px);border-radius:24px;background:#fff;padding:10px;object-fit:contain}
 #tvHint:empty{display:none}
+#intro .thumb.tall{width:min(42vw,170px);aspect-ratio:9/16;object-fit:cover;border-radius:18px}
 #tvAgain{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(160px + env(safe-area-inset-bottom,0px));z-index:30;font-family:var(--fd);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:.95rem;border:1px solid #fff3d6;border-radius:999px;padding:15px 28px;color:#2b1300;background:linear-gradient(135deg,#ffd27f,#ff9f3a);box-shadow:0 0 30px rgba(255,190,85,.6);animation:tvPop .5s cubic-bezier(.3,1.6,.5,1)}
 @keyframes tvPop{from{transform:translateX(-50%) scale(.4);opacity:0}}
 @media (prefers-reduced-motion:reduce){#vbox,#guide{transition:none}}
@@ -187,7 +188,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 <script type="module">
 // The 3D/AR libraries load when the camera starts (and are warmed up in the background), so the page shows
 // its title and image right away even if a browser is slow or strict with third-party scripts.
-let THREE=null, MindARThree=null, ESC=null, TRIVIA=null;
+let THREE=null, MindARThree=null, ESC=null, TRIVIA=null, FILTRO=null;
+const filtroLibs=()=>Promise.all([import("three"),import("mindar-face-three"),import("/assets/filtro.js"),document.fonts.load('700 40px "Sora"').catch(()=>{})]).then(([t,m,f])=>{ THREE=t; MindARThree=m.MindARThree; FILTRO=f; });
 const triviaLibs=()=>Promise.all([import("three"),import("mindar-face-three"),import("/assets/trivia.js"),document.fonts.load('700 40px "Sora"').catch(()=>{})]).then(([t,m,g])=>{ THREE=t; MindARThree=m.MindARThree; TRIVIA=g; });
 const libs=()=>Promise.all([import("three"),import("mindar-image-three"),import("/assets/escena.js")]).then(([t,m,e])=>{ THREE=t; MindARThree=m.MindARThree; ESC=e;
   if(CFG.items.some(i=>i.type==="text")&&!document.getElementById("fonts")) document.head.appendChild(Object.assign(document.createElement("link"),{id:"fonts",rel:"stylesheet",href:ESC.FONT_CSS})); });
@@ -248,6 +250,14 @@ async function load(){
     const solo=Object.assign(document.createElement("button"),{id:"solo",type:"button",className:"big ghost",textContent:"Solo jugar"});
     startBtn.after(solo); solo.addEventListener("click",()=>startTrivia(false));
     startBtn.disabled=false; libsP=triviaLibs().catch(e=>{ console.error(e); libsP=null; }); return;
+  }
+  if(CFG.kind==="filtro"){   // a face filter: front camera, photo and video (assets/filtro.js)
+    document.title=(CFG.title||"Filtro")+" · Vórtice VR"; $("title").textContent=CFG.title||"Pruébate este filtro";
+    $("kick").textContent="Filtro para tu cara"; startBtn.textContent="Probar el filtro";
+    $("thumb").src=`${base}/m/${CFG.slug}/image?v=${CFG.updated||""}`; $("thumb").alt="Vista previa del filtro"; $("thumb").hidden=false; $("thumb").classList.add("tall");
+    const fx=CFG.filtro&&CFG.filtro.effect&&CFG.filtro.effect!=="ninguno";
+    $("steps").innerHTML=`<li><span>Toca <b>Probar el filtro</b> y, si te lo pregunta, <b>Permitir</b> la cámara.</span></li>${fx?"<li><span><b>Abre la boca</b> y mira lo que pasa.</span></li>":""}<li><span>Toma una <b>foto</b> o graba un <b>video</b> y compártelo.</span></li>`;
+    startBtn.disabled=false; libsP=filtroLibs().catch(e=>{ console.error(e); libsP=null; }); return;
   }
   if(CFG.kind==="colorear"){   // a coloring page: no camera, the drawing is painted on screen (assets/colorear.js)
     document.title=(CFG.title||"Colorea")+" · Vórtice VR"; $("title").textContent=CFG.title||"Colorea este dibujo";
@@ -373,7 +383,22 @@ async function startColorear(){
     $("intro").hidden=true;
   }catch(e){ console.error(e); startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false; $("err").textContent="No se pudo abrir el dibujo. Revisa tu conexión e intenta de nuevo."; }
 }
+async function startFiltro(){
+  startBtn.disabled=true; startBtn.textContent="Cargando…"; $("err").hidden=true;
+  try{ await (libsP||filtroLibs()); if(!THREE||!MindARThree||!FILTRO) throw 0; }
+  catch(e){ startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false; $("err").textContent="No se pudo cargar el filtro. Revisa tu conexión; si estás en navegación privada, ábrelo en una pestaña normal."; return; }
+  const hint=Object.assign(document.createElement("div"),{id:"tvHint"}); document.body.appendChild(hint);
+  try{
+    await FILTRO.run({THREE,MindARThree,container:$("ar"),cfg:CFG,setupCapture,mediaUrl:it=>`${CFG.base}/m/${CFG.slug}/${it.file}`,
+      hint:t=>{ hint.textContent=t?"✦ "+t:""; hint.classList.toggle("on",!!t); },
+      started:()=>{ $("intro").hidden=true; $("controls").hidden=false; }});
+  }catch(e){
+    console.error(e); startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false;
+    $("err").textContent=(e&&(e.name==="NotAllowedError"||/Permission/i.test(e.message||"")))?"No se dio permiso a la cámara. Actívalo en los ajustes del navegador y vuelve a intentar.":"No se pudo iniciar la cámara. Abre este link en Chrome o Safari (no dentro de Instagram o WhatsApp).";
+  }
+}
 async function start(){
+  if(CFG.kind==="filtro") return startFiltro();
   if(CFG.kind==="trivia") return startTrivia();
   if(CFG.kind==="colorear") return startColorear();
   if(PRIMARY){ vid.muted=!PRIMARY.sound; vid.play().then(()=>vid.pause()).catch(()=>{}); if(PRIMARY.sound) setupAudio(); }   // unlock sound inside the tap (iOS)

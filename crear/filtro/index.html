@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Crea tu filtro para la cara · Vórtice VR</title>
+<meta name="description" content="Crea un filtro para la cara sin programar: catrina, lentes, coronas, efectos al abrir la boca y un marco con tu marca. Comparte el link y el código QR.">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../../assets/icono.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Face filter maker: the steps on the left, a 3D head that wears the filter on the right (on top on a phone).
+   The filter itself is assets/filtro.js, the same one that runs at the experience's link. */
+:root{--void:#05020b;--panel:rgba(20,9,40,.7);--line:rgba(190,150,255,.2);--line2:rgba(190,150,255,.45);--vortex:#8b3fd6;--vortex-d:#5a1f8f;--lav:#d2b8ff;--ink:#f2ecff;--mute:#a99bcb;--sun:#ffbe55;--ok:#74e8ba;--bad:#ff8a9e;
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55;min-height:100vh}
+a{color:var(--lav)}
+:focus-visible{outline:2px solid var(--lav);outline-offset:3px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1180px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 8px}
+header img{height:38px;width:auto;display:block}
+@media (max-width:480px){header img{height:28px}}
+header a.back{font-family:var(--fd);font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--mute)}
+header .acts{display:flex;align-items:center;gap:14px}
+.mybtn{font-family:var(--fd);font-weight:600;letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;border:1px solid var(--line2);border-radius:999px;padding:9px 14px;background:rgba(139,63,214,.2);color:var(--ink);cursor:pointer;text-decoration:none}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+.hero{padding:28px 0 26px}
+.kick{font-family:var(--fd);font-size:.78rem;letter-spacing:.26em;text-transform:uppercase;color:var(--sun);font-weight:600}
+h1{font-family:var(--fd);font-size:clamp(2rem,5vw,3.2rem);line-height:1.02;margin:8px 0 10px;text-wrap:balance}
+.hero p{margin:0;color:var(--mute);max-width:62ch}
+.allx{display:inline-flex;align-items:center;gap:6px;margin:12px 16px 0 0;font:600 .85rem var(--fd);color:var(--lav);text-decoration:none}
+.allx:hover{color:var(--ink)}
+.step{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:20px;margin-bottom:16px}
+.step h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font-family:var(--fd);font-size:1.2rem}
+.step h2 .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--fm);font-size:.85rem;background:rgba(139,63,214,.3);border:1px solid var(--line2);flex:none}
+.step h2 .n.done{background:var(--ok);color:#0b2a1e;border-color:var(--ok)}
+.step>p.hint{margin:0 0 14px;color:var(--mute);font-size:.92rem}
+label.f{display:block;font-size:.8rem;font-family:var(--fd);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:14px 0 6px}
+input[type=text]{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:11px 12px}
+input:focus,select:focus{border-color:var(--lav);outline:none}
+.slugrow{display:flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:rgba(5,2,11,.7);overflow:hidden}
+.slugrow input{border:0;background:transparent;border-radius:0;text-align:right;padding-right:2px;min-width:0}
+.slugrow span{padding:11px 12px 11px 0;color:var(--mute);white-space:nowrap;font-family:var(--fm);font-size:.9rem}
+.msg{font-size:.88rem;margin-top:8px}
+.msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+.bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--vortex),var(--sun));transition:width .2s}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--fd);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:.85rem;border:1px solid var(--line2);border-radius:999px;padding:13px 22px;color:var(--ink);background:rgba(20,9,40,.6);cursor:pointer;text-decoration:none}
+.btn.primary{background:linear-gradient(135deg,var(--vortex),var(--vortex-d));border-color:var(--lav);box-shadow:0 0 26px rgba(139,63,214,.45)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.mine{border:1px solid rgba(255,190,85,.5);background:rgba(255,190,85,.07);border-radius:12px;padding:12px 14px;margin-top:12px;font-size:.92rem}
+.legal{font-size:.8rem;color:var(--mute);margin-top:10px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,380px);gap:28px;align-items:start}
+.side{position:sticky;top:16px}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.side{position:static;order:-1}}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{font:600 .85rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
+/* templates */
+.tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.tpl{border:1.5px solid var(--line);border-radius:14px;background:rgba(5,2,11,.5);padding:10px 8px;text-align:center;cursor:pointer;color:var(--ink);font:600 .85rem var(--fd);transition:border-color .2s,transform .2s,background .2s}
+.tpl:hover{border-color:var(--lav);transform:translateY(-2px)}
+.tpl[aria-pressed="true"]{border-color:var(--sun);background:rgba(255,190,85,.1);box-shadow:0 0 18px rgba(255,190,85,.2)}
+.tpl span{display:block;font-size:1.7rem;line-height:1.3}
+.tpl small{display:block;font:500 .72rem var(--fb);color:var(--mute);margin-top:2px}
+/* accessories */
+.stk{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.stk button{border:1px solid var(--line2);border-radius:12px;background:rgba(5,2,11,.55);padding:8px 6px 6px;cursor:pointer;color:var(--ink);font:500 .74rem var(--fb);display:flex;flex-direction:column;align-items:center;gap:4px}
+.stk button:hover{border-color:var(--lav);background:rgba(139,63,214,.15)}
+.stk canvas{width:64px;height:40px;object-fit:contain}
+.stk .up{border-style:dashed;color:var(--lav)}
+.stk .up b{font-size:1.4rem;line-height:40px;height:40px}
+.items{display:grid;gap:10px;margin-top:12px}
+.it{border:1px solid var(--line2);border-radius:12px;padding:10px 12px;background:rgba(5,2,11,.45)}
+.it.sel{border-color:var(--sun);box-shadow:0 0 14px rgba(255,190,85,.18)}
+.ih{display:flex;align-items:center;gap:10px;cursor:pointer}
+.ih canvas,.ih img{width:52px;height:34px;object-fit:contain;flex:none}
+.ih b{flex:1;font:600 .9rem var(--fd)}
+.ih button{width:30px;height:30px;border-radius:8px;border:1px solid transparent;background:none;color:var(--mute);cursor:pointer}
+.ih button:hover{border-color:var(--line2);color:var(--ink)}
+.ctl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:center;margin-top:10px;font-size:.84rem;color:var(--mute)}
+.ctl select{font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:8px;padding:6px 8px}
+.ctl input[type=range]{width:100%;accent-color:var(--vortex)}
+.cnt{font-size:.82rem;color:var(--mute);margin-top:8px}
+.colors{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.colors button{width:36px;height:36px;border-radius:50%;border:3px solid rgba(255,255,255,.25);cursor:pointer;transition:transform .15s}
+.colors button[aria-pressed="true"]{transform:scale(1.15);border-color:#fff;box-shadow:0 0 0 3px rgba(139,63,214,.8)}
+.colors label{display:flex;align-items:center;gap:8px;font-size:.88rem;color:var(--mute);cursor:pointer}
+.colors input{width:44px;height:36px;border:0;padding:0;background:none;cursor:pointer}
+/* preview */
+.pv{border:1px solid var(--line2);border-radius:18px;background:#120826;padding:16px}
+.pv h3{margin:0 0 10px;font-family:var(--fd);font-size:1rem;display:flex;justify-content:space-between;align-items:center}
+.pv h3 small{font:500 .78rem var(--fb);color:var(--mute)}
+.phone{position:relative;margin:0 auto;width:min(100%,300px);aspect-ratio:9/16;border-radius:34px;border:8px solid #1e1236;background:radial-gradient(90% 60% at 50% 40%,#3b2a58,#140b26);overflow:hidden;box-shadow:0 20px 60px -20px rgba(139,63,214,.7)}
+.phone canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.phone .logo{position:absolute;top:12px;left:0;right:0;text-align:center;pointer-events:none;z-index:2}
+.phone .logo img{height:14px}
+.phone .hint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:rgba(10,4,22,.7);padding:6px 12px;border-radius:999px;font:700 .75rem var(--fd);white-space:nowrap;pointer-events:none;z-index:2;transition:opacity .25s}
+.phone .hint:empty{opacity:0}
+.phone .load{position:absolute;inset:0;display:grid;place-items:center;color:var(--mute);font-size:.85rem}
+.pnav{display:flex;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+.pnav button{font:600 .78rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:7px 12px;cursor:pointer}
+.pnote{font-size:.78rem;color:var(--mute);text-align:center;margin:10px 0 0}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+</script>
+</head>
+<body>
+<header><a href="../../" aria-label="Vórtice VR, inicio"><img src="../../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a class="mybtn" href="../../cuenta/">Mi cuenta</a><a class="back" href="../../">← Sitio</a></div></header>
+<main class="wrap">
+  <div class="hero">
+    <span class="kick" id="kick">Gratis · prueba de 15 días</span>
+    <h1>Crea tu filtro para la cara</h1>
+    <p>Quien abra tu link se ve con tu filtro en la cámara frontal: pintura de catrina, lentes, coronas, un marco con tu marca y una sorpresa al abrir la boca. Se toma fotos y videos y los comparte.</p>
+    <a class="allx" href="../">← Todas las experiencias</a>
+  </div>
+  <div class="grid">
+    <div>
+      <section class="step" id="full" hidden>
+        <h2>Ya usaste todas tus experiencias</h2>
+        <p class="hint" id="fullText"></p>
+        <div class="row"><a class="btn" href="../../cuenta/#planes">Ver planes</a><a class="btn" href="../../cuenta/">Ir a mi cuenta</a></div>
+      </section>
+      <section class="step" id="s1">
+        <h2><span class="n done">1</span>Empieza con una plantilla</h2>
+        <p class="hint">Elige una y luego cambia lo que quieras. Todo se ve al instante en la cabeza de la derecha.</p>
+        <div class="tpls" id="tpls"></div>
+      </section>
+      <section class="step" id="s2">
+        <h2><span class="n done">2</span>Pintura de cara</h2>
+        <p class="hint">Se pinta sobre la piel y sigue cada gesto.</p>
+        <div class="seg" id="paint"></div>
+      </section>
+      <section class="step" id="s3">
+        <h2><span class="n done">3</span>Accesorios</h2>
+        <p class="hint">Toca uno para ponerlo. También puedes subir tu propia imagen (un PNG sin fondo: tu logo, unos lentes, un sombrero…). Luego acomódalo con las barras.</p>
+        <div class="stk" id="stk"></div>
+        <input type="file" id="upFile" accept="image/png,image/webp,image/jpeg,image/svg+xml" hidden>
+        <div class="items" id="items"></div>
+        <div class="cnt" id="cnt"></div>
+      </section>
+      <section class="step" id="s4">
+        <h2><span class="n done">4</span>Al abrir la boca</h2>
+        <p class="hint">Lo que sale de la boca mientras la tienen abierta. A todos les encanta.</p>
+        <div class="seg" id="effect"></div>
+      </section>
+      <section class="step" id="s5">
+        <h2><span class="n done">5</span>Marco y color</h2>
+        <p class="hint">El marco sale en pantalla y en las fotos y videos. El color también se usa en las flores y el gorro.</p>
+        <div class="seg" id="frame"></div>
+        <label class="f">Color</label>
+        <div class="colors" id="colors"></div>
+        <label class="f" for="ftext">Texto del marco (opcional)</label>
+        <input type="text" id="ftext" maxlength="32" placeholder="Ej. #DíaDeMuertos">
+      </section>
+      <section class="step" id="s6">
+        <h2><span class="n" id="n6">6</span>Título y link</h2>
+        <label class="f" for="title">Título</label>
+        <input type="text" id="title" maxlength="80" placeholder="Ej. Conviértete en catrina">
+        <label class="f" for="slug">Tu link</label>
+        <div class="slugrow"><input type="text" id="slug" maxlength="30" placeholder="tu-filtro" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="root">.vorticevr.mx</span></div>
+        <div class="msg" id="mSlug"></div>
+      </section>
+      <section class="step" id="sMarca" hidden></section>
+      <section class="step" id="s8">
+        <h2><span class="n" id="n8">7</span>Publicar</h2>
+        <div class="mine" id="mine" hidden style="margin:0 0 12px"></div>
+        <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
+        <button class="btn primary" id="publish" type="button" disabled>Publicar mi filtro</button>
+        <div class="bar" id="bPub" hidden><i></i></div><div class="msg" id="mPub"></div>
+        <p class="legal">Al publicar confirmas que el contenido es tuyo o tienes derecho a usarlo. Vórtice VR puede retirar contenido inapropiado (<a href="../../terminos/">términos</a>). <span id="legalDays">La experiencia se borra a los 15 días; puedes editarla o borrarla desde tu cuenta.</span></p>
+      </section>
+    </div>
+    <aside class="side">
+      <div class="pv">
+        <h3>Vista previa <small>arrastra para girarla</small></h3>
+        <div class="phone" id="phone">
+          <div class="load" id="pvLoad">Cargando la vista previa…</div>
+          <canvas id="pv" aria-label="Vista previa del filtro sobre una cabeza 3D"></canvas>
+          <div class="logo"><img src="../../assets/logo-vorticevr-blanco.png" alt=""></div>
+          <div class="hint" id="pvHint"></div>
+        </div>
+        <div class="pnav"><button type="button" id="pvMouth">Abrir la boca</button></div>
+        <p class="pnote">En el celular se ve sobre la cara real, con la cámara frontal.</p>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="../../assets/marca.js"></script>
+<script src="../../assets/plataforma.js" data-api="../.."></script>
+<script type="module">
+import * as THREE from "three";
+import * as FL from "../../assets/filtro.js";
+const $=id=>document.getElementById(id);
+const API=VVR.api;
+const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
+$("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
+const MAX_ITEMS=6;
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const rid=()=>Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,4);
+
+// ---------- state: the filter (same shape as data.filtro + data.items) ----------
+const S={token:null,email:null,mine:null,P:null,tpl:"catrina",sel:null,
+  f:{paint:"ninguna",effect:"ninguno",frame:"ninguno",color:"#e4007c",text:""},items:[]};
+// uploaded images: id → {file (Blob, new) | url (kept from the version being edited), w, h}
+const IMG=new Map();
+const sticker=(key,o={})=>{ const st=FL.STICKERS[key]; return {id:rid(),type:"sticker",key,anchor:st.anchor,x:st.x,y:st.y,s:st.s,r:st.r||0,...o}; };
+const TEMPLATES=[
+  {id:"catrina",icon:"💀",name:"Catrina",sub:"Día de Muertos",f:{paint:"catrina",effect:"flores",frame:"muertos",color:"#e4007c",text:"Día de Muertos"},items:()=>[sticker("flores")]},
+  {id:"fiesta",icon:"🥳",name:"Fiesta",sub:"Gorro y confeti",f:{paint:"brillos",effect:"confeti",frame:"cinta",color:"#8b3fd6",text:"¡A celebrar!"},items:()=>[sticker("gorro"),sticker("lentes-sol")]},
+  {id:"realeza",icon:"👑",name:"Rey o reina",sub:"Corona y brillos",f:{paint:"brillos",effect:"estrellas",frame:"brillo",color:"#ffbe55",text:""},items:()=>[sticker("corona")]},
+  {id:"amor",icon:"💘",name:"Amor",sub:"Lentes de corazón",f:{paint:"corazones",effect:"corazones",frame:"brillo",color:"#ff2d55",text:""},items:()=>[sticker("lentes-corazon")]},
+  {id:"gatito",icon:"🐱",name:"Gatito",sub:"Orejas y bigotes",f:{paint:"gatito",effect:"corazones",frame:"ninguno",color:"#ff7aa8",text:""},items:()=>[sticker("orejas")]},
+  {id:"mexico",icon:"🌵",name:"México",sub:"Bandera y bigote",f:{paint:"mexico",effect:"confeti",frame:"cinta",color:"#006847",text:"¡Viva México!"},items:()=>[sticker("bigote")]},
+  {id:"cero",icon:"✨",name:"Desde cero",sub:"Tú lo armas",f:{paint:"ninguna",effect:"ninguno",frame:"ninguno",color:"#8b3fd6",text:""},items:()=>[]},
+];
+function applyTemplate(t){ S.tpl=t.id; S.f={...t.f}; S.items=t.items(); IMG.clear(); S.sel=S.items[0]?S.items[0].id:null; $("ftext").value=S.f.text; render(); }
+$("tpls").innerHTML=TEMPLATES.map(t=>`<button type="button" class="tpl" data-t="${t.id}"><span aria-hidden="true">${t.icon}</span>${esc(t.name)}<small>${esc(t.sub)}</small></button>`).join("");
+$("tpls").addEventListener("click",e=>{ const b=e.target.closest("[data-t]"); if(b) applyTemplate(TEMPLATES.find(t=>t.id===b.dataset.t)); });
+
+// ---------- choices ----------
+const seg=(el,map,key)=>{ $(el).innerHTML=Object.entries(map).map(([k,v])=>`<button type="button" data-k="${k}">${esc(v)}</button>`).join("");
+  $(el).addEventListener("click",e=>{ const b=e.target.closest("[data-k]"); if(!b) return; S.f[key]=b.dataset.k; S.tpl=null; render(); }); };
+seg("paint",FL.PAINTS,"paint"); seg("effect",FL.EFFECTS,"effect"); seg("frame",FL.FRAMES,"frame");
+const COLORS=["#e4007c","#ff2d55","#ff8c00","#ffbe55","#16a663","#006847","#00a6d6","#1e88e5","#8b3fd6","#212121"];
+$("colors").addEventListener("click",e=>{ const b=e.target.closest("[data-c]"); if(b){ S.f.color=b.dataset.c; render(); } });
+$("ftext").addEventListener("input",()=>{ S.f.text=$("ftext").value; schedule(); });
+
+// accessories: the presets (drawn with the filter's own code) and "upload"
+const thumb=(key,color)=>{ const c=FL.stickerCanvas(key,color,160), t=document.createElement("canvas"); t.width=128; t.height=80; const g=t.getContext("2d"), k=Math.min(128/c.width,80/c.height); g.drawImage(c,(128-c.width*k)/2,(80-c.height*k)/2,c.width*k,c.height*k); return t; };
+function paintStickers(){
+  $("stk").replaceChildren(...Object.entries(FL.STICKERS).map(([k,st])=>{ const b=document.createElement("button"); b.type="button"; b.dataset.add=k; b.append(thumb(k,S.f.color),st.name); return b; }),
+    Object.assign(document.createElement("button"),{type:"button",className:"up",innerHTML:"<b>+</b>Subir imagen",onclick:()=>$("upFile").click()}));
+}
+$("stk").addEventListener("click",e=>{ const b=e.target.closest("[data-add]"); if(!b) return; if(S.items.length>=MAX_ITEMS) return say(`Puedes poner hasta ${MAX_ITEMS} accesorios.`); const it=sticker(b.dataset.add); S.items.push(it); S.sel=it.id; S.tpl=null; render(); });
+$("upFile").addEventListener("change",async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  if(S.items.length>=MAX_ITEMS) return say(`Puedes poner hasta ${MAX_ITEMS} accesorios.`);
+  if(S.items.filter(i=>i.type==="image").length>=imgLimit()) return say(`Tu plan permite hasta ${imgLimit()} imágenes propias por filtro.`);
+  const i=new Image(), u=URL.createObjectURL(f);
+  i.onload=()=>{ const k=Math.min(1,1024/Math.max(i.naturalWidth||1024,i.naturalHeight||1024)), c=document.createElement("canvas"); c.width=Math.max(1,Math.round((i.naturalWidth||1024)*k)); c.height=Math.max(1,Math.round((i.naturalHeight||1024)*k));
+    c.getContext("2d").drawImage(i,0,0,c.width,c.height); URL.revokeObjectURL(u);
+    c.toBlob(b=>{ if(!b) return say("No se pudo leer esa imagen."); const it={id:rid(),type:"image",name:f.name.replace(/\.[^.]+$/,"").slice(0,40),anchor:"frente",x:0,y:1.5,s:7,r:0,w:c.width,h:c.height};
+      IMG.set(it.id,{file:b,url:URL.createObjectURL(b),w:c.width,h:c.height}); S.items.push(it); S.sel=it.id; S.tpl=null; render(); },"image/png"); };
+  i.onerror=()=>{ URL.revokeObjectURL(u); say("No se pudo leer esa imagen."); }; i.src=u;
+});
+const imgLimit=()=>Math.min(MAX_ITEMS,(S.P&&S.P.items)||3);
+const say=t=>{ $("cnt").textContent=t; $("cnt").style.color="var(--bad)"; setTimeout(()=>{ $("cnt").style.color=""; renderCount(); },3000); };
+const renderCount=()=>{ $("cnt").textContent=S.items.length?`${S.items.length} de ${MAX_ITEMS} accesorios`:"Sin accesorios."; };
+const SL=[["s","Tamaño",1,30,0.1],["y","Arriba / abajo",-12,12,0.1],["x","Izquierda / derecha",-10,10,0.1],["r","Girar",-60,60,1]];
+function renderItems(){
+  $("items").innerHTML=S.items.map((it,k)=>`<div class="it${S.sel===it.id?" sel":""}" data-id="${it.id}">
+    <div class="ih" data-pick="1"><span class="tn"></span><b>${esc(it.type==="image"?(it.name||"Tu imagen"):FL.STICKERS[it.key].name)}</b>
+      <button type="button" data-up="1" title="Mover arriba" aria-label="Mover arriba" ${k?"":"disabled"}>↑</button><button type="button" data-del="1" title="Quitar" aria-label="Quitar">✕</button></div>
+    ${S.sel===it.id?`<div class="ctl"><span>Dónde</span><select data-f="anchor">${Object.entries(FL.ANCHOR_NAMES).map(([a,n])=>`<option value="${a}"${a===it.anchor?" selected":""}>${n}</option>`).join("")}</select>
+      ${SL.map(([f,n,a,b,st])=>`<span>${n}</span><input type="range" data-f="${f}" min="${a}" max="${b}" step="${st}" value="${it[f]||0}" aria-label="${n}">`).join("")}</div>`:""}
+  </div>`).join("");
+  $("items").querySelectorAll(".it").forEach(el=>{ const it=S.items.find(i=>i.id===el.dataset.id), tn=el.querySelector(".tn");
+    if(it.type==="sticker") tn.replaceWith(thumb(it.key,S.f.color)); else { const im=new Image(); im.src=IMG.get(it.id)?.url||""; im.alt=""; tn.replaceWith(im); } });
+  renderCount();
+}
+$("items").addEventListener("click",e=>{ const el=e.target.closest(".it"); if(!el) return; const k=S.items.findIndex(i=>i.id===el.dataset.id);
+  if(e.target.closest("[data-del]")){ const [it]=S.items.splice(k,1); IMG.delete(it.id); if(S.sel===it.id) S.sel=null; S.tpl=null; render(); return; }
+  if(e.target.closest("[data-up]")){ if(k>0){ [S.items[k-1],S.items[k]]=[S.items[k],S.items[k-1]]; render(); } return; }
+  if(e.target.closest("[data-pick]")){ S.sel=S.sel===el.dataset.id?null:el.dataset.id; renderItems(); } });
+$("items").addEventListener("input",e=>{ const f=e.target.dataset.f; if(!f) return; const it=S.items.find(i=>i.id===e.target.closest(".it").dataset.id);
+  it[f]=f==="anchor"?e.target.value:+e.target.value; S.tpl=null; schedule(); });
+$("items").addEventListener("change",e=>{ if(e.target.dataset.f==="anchor"){ const it=S.items.find(i=>i.id===e.target.closest(".it").dataset.id); if(it.anchor==="mejillas"&&it.s>6) it.s=3; if(it.anchor==="mejillas") it.x=0; renderItems(); schedule(); } });
+
+function render(){
+  for(const [el,key] of [["paint","paint"],["effect","effect"],["frame","frame"]]) $(el).querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.k===S.f[key])));
+  $("tpls").querySelectorAll(".tpl").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.t===S.tpl)));
+  $("colors").innerHTML=COLORS.map(c=>`<button type="button" data-c="${c}" style="background:${c}" aria-label="Color ${c}" aria-pressed="${c===S.f.color}"></button>`).join("")+`<label>Otro <input type="color" id="cPick" value="${S.f.color}"></label>`;
+  $("cPick").addEventListener("input",e=>{ S.f.color=e.target.value; clearTimeout(cTimer); cTimer=setTimeout(render,120); });
+  $("ftext").closest("section").querySelector("label[for=ftext]").hidden=$("ftext").hidden=S.f.frame==="ninguno";
+  paintStickers(); renderItems(); schedule(); check();
+}
+let cTimer=0;
+
+// ---------- the 3D head: the canonical face of MindAR (the same points the camera finds) on a simple head ----------
+const cv=$("pv"), R=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true,preserveDrawingBuffer:true});
+R.outputColorSpace=THREE.SRGBColorSpace; R.setPixelRatio(Math.min(devicePixelRatio||1,2));
+const scene=new THREE.Scene(), cam=new THREE.PerspectiveCamera(30,9/16,1,500);
+scene.add(new THREE.HemisphereLight(0xffffff,0x40305a,1.6)); const sun=new THREE.DirectionalLight(0xffffff,1.6); sun.position.set(20,30,50); scene.add(sun);
+const head=new THREE.Group(); scene.add(head);
+let FACE=null, faceMesh=null, base=null; const anchors=new Map();
+const anchor=i=>{ if(!anchors.has(i)){ const g=new THREE.Group(); head.add(g); anchors.set(i,g); } return anchors.get(i); };
+let mouthOpen=0, mouthTo=0, autoT=0, drag=null, yaw=0, pitch=0, yawTo=null;
+async function buildHead(){
+  FACE=await import("https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/src/face-target/face-geometry/face-data.js");
+  const n=FACE.positions.length, pos=new Float32Array(n*3), uv=new Float32Array(n*2);
+  FACE.positions.forEach((p,i)=>pos.set(p,i*3)); FACE.uvs.forEach((u,i)=>uv.set(u,i*2)); base=pos.slice();
+  const geo=new THREE.BufferGeometry(); geo.setAttribute("position",new THREE.BufferAttribute(pos,3)); geo.setAttribute("uv",new THREE.BufferAttribute(uv,2)); geo.setIndex(FACE.faces.flat()); geo.computeVertexNormals();
+  const skin=new THREE.MeshStandardMaterial({color:0xe2ad8a,roughness:.75});
+  head.add(new THREE.Mesh(geo,skin));
+  faceMesh=new THREE.Mesh(geo); head.add(faceMesh);
+  const skull=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),skin); skull.scale.set(7.65,10,7.5); skull.position.set(0,1.5,-3.2); head.add(skull);
+  const hair=new THREE.Mesh(new THREE.SphereGeometry(1,48,24,0,Math.PI*2,0,Math.PI*.52),new THREE.MeshStandardMaterial({color:0x2a1a14,roughness:.9}));
+  hair.scale.set(8.05,10.4,8); hair.position.set(0,1.9,-3.5); hair.rotation.x=-.3; head.add(hair);
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(4,4.4,10,32),skin); neck.position.set(0,-11,-3.4); head.add(neck);
+  const mid=list=>list.reduce((a,i)=>a.add(new THREE.Vector3(...FACE.positions[i])),new THREE.Vector3()).multiplyScalar(1/list.length);
+  for(const eye of [[33,133,159,145],[263,362,386,374]]){ const c=mid(eye); const w=new THREE.Mesh(new THREE.SphereGeometry(1.3,24,16),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.3})); w.position.set(c.x,c.y,c.z-1.05); head.add(w);
+    const iris=new THREE.Mesh(new THREE.SphereGeometry(.62,20,12),new THREE.MeshStandardMaterial({color:0x3b2416,roughness:.2})); iris.position.set(c.x,c.y,c.z-.02); head.add(iris); }
+  const mouth=new THREE.Mesh(new THREE.CircleGeometry(2.4,32),new THREE.MeshBasicMaterial({color:0x4a1420})); mouth.scale.set(1,.7,1); mouth.position.set(0,-4.6,4.1); head.add(mouth);
+  const body=new THREE.Mesh(new THREE.SphereGeometry(1,40,24),new THREE.MeshStandardMaterial({color:0x2b1d46,roughness:.8})); body.scale.set(16,7,8); body.position.set(0,-20,-4); scene.add(body);
+  $("pvLoad").hidden=true;
+}
+function deform(){   // open the jaw: the points under the mouth go down, less toward the sides
+  const p=faceMesh.geometry.getAttribute("position");
+  for(let i=0;i<p.count;i++){ const x=base[i*3],y=base[i*3+1]; const w=y<=-4.25?Math.max(0,Math.min(1,1-(Math.abs(x)-3.5)/4)):0; p.setY(i,y-mouthOpen*2.4*w*Math.min(1,(-4.25-y+0.35)/0.6)); }
+  p.needsUpdate=true; faceMesh.geometry.computeVertexNormals();
+  for(const [i,g] of anchors) g.position.set(p.getX(i),p.getY(i),p.getZ(i));
+}
+function size(){ const r=cv.getBoundingClientRect(); if(!r.width) return; R.setSize(r.width,r.height,false); cam.aspect=r.width/r.height; cam.updateProjectionMatrix(); if(filter) filter.setView({fx:1,fy:1,w:r.width,h:r.height}); }
+new ResizeObserver(size).observe(cv);
+cam.position.set(0,1.5,84); cam.lookAt(0,1.5,0);
+
+let filter=null, building=0, schedT=0;
+function cfg(){ return {filtro:{...S.f,text:S.f.text.trim()},items:S.items}; }
+function schedule(){ clearTimeout(schedT); schedT=setTimeout(rebuild,80); }
+async function rebuild(){
+  if(!faceMesh) return;
+  const my=++building;
+  const next=await FL.createFilter({THREE,scene,camera:cam,anchor,faceMesh,uvAt:i=>FACE.uvs[i],cfg:cfg(),mediaUrl:it=>IMG.get(it.id)?.url||"",onHint:t=>{ $("pvHint").textContent=t?"✦ "+t:""; }});
+  if(my!==building){ next.dispose(); return; }
+  if(filter) filter.dispose(); filter=next; size();
+  $("pvMouth").hidden=!filter.hasEffect;
+}
+$("pvMouth").addEventListener("click",()=>{ mouthTo=1; autoT=-2.2; setTimeout(()=>mouthTo=0,1600); });
+cv.addEventListener("pointerdown",e=>{ drag={x:e.clientX,y:e.clientY,yaw,pitch}; cv.setPointerCapture(e.pointerId); cv.style.cursor="grabbing"; });
+cv.addEventListener("pointermove",e=>{ if(!drag) return; yaw=drag.yaw+(e.clientX-drag.x)*.012; pitch=Math.max(-.5,Math.min(.5,drag.pitch+(e.clientY-drag.y)*.008)); });
+const up=()=>{ drag=null; cv.style.cursor=""; }; cv.addEventListener("pointerup",up); cv.addEventListener("pointercancel",up);
+const still=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const clock=new THREE.Clock(); let t=0;
+function loop(){
+  requestAnimationFrame(loop);
+  const dt=Math.min(.05,clock.getDelta()); t+=dt; if(!faceMesh) return;
+  if(!drag&&!still){ yaw+=(Math.sin(t*.55)*.42-yaw)*Math.min(1,dt*1.5); pitch+=(Math.sin(t*.37)*.08-pitch)*Math.min(1,dt*1.5); }
+  // every few seconds the head opens its mouth, to show the effect
+  autoT+=dt; if(filter&&filter.hasEffect&&!still&&autoT>5){ autoT=0; mouthTo=1; setTimeout(()=>mouthTo=0,1500); }
+  mouthOpen+=(mouthTo-mouthOpen)*Math.min(1,dt*9);
+  head.rotation.set(pitch,yaw,0); deform(); head.updateMatrixWorld(true);
+  if(filter) filter.update(dt,{face:true,mouth:mouthOpen*1.2});
+  R.render(scene,cam); if(filter) filter.overlay(R);
+}
+buildHead().then(()=>{ size(); rebuild(); loop(); }).catch(e=>{ console.error(e); $("pvLoad").textContent="No se pudo cargar la vista previa. Revisa tu conexión."; });
+// a picture of the preview for "Mis experiencias" (and the intro of the link)
+async function snapshot(){
+  if(!filter) return null;
+  const y=yaw,p=pitch,m=mouthOpen; head.rotation.set(0,.25,0); mouthOpen=0; deform(); head.updateMatrixWorld(true); filter.update(0,{face:true,mouth:0}); R.render(scene,cam); filter.overlay(R);
+  const r=cv.getBoundingClientRect(), out=document.createElement("canvas"); out.width=540; out.height=960; const g=out.getContext("2d");
+  const gr=g.createRadialGradient(270,380,40,270,480,620); gr.addColorStop(0,"#3b2a58"); gr.addColorStop(1,"#140b26"); g.fillStyle=gr; g.fillRect(0,0,540,960);
+  g.drawImage(cv,0,0,540,960); head.rotation.set(p,y,0); mouthOpen=m;
+  return await new Promise(ok=>out.toBlob(ok,"image/jpeg",.86));
+}
+
+// ---------- title and link ----------
+const slugIn=$("slug"); let slugOk=false, slugTimer=0;
+const toSlug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9-]+/g,"-").replace(/-+/g,"-").replace(/^-/,"").slice(0,30);
+slugIn.addEventListener("input",()=>{ const c=slugIn.selectionStart; slugIn.value=toSlug(slugIn.value); slugIn.setSelectionRange(c,c); checkSlug(); });
+$("title").addEventListener("input",()=>{ if(!slugIn.dataset.touched&&!S.mine){ slugIn.value=toSlug($("title").value).replace(/-$/,""); checkSlug(); } check(); });
+slugIn.addEventListener("keydown",()=>slugIn.dataset.touched="1");
+function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false; check(); const s=slugIn.value.replace(/-$/,"");
+  if(s.length<3){ m.className="msg"; m.textContent=""; return; }
+  if(S.mine&&S.mine.slug===s){ slugOk=true; m.className="msg ok"; m.textContent="Es tu link actual."; check(); return; }
+  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
+const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
+
+// ---------- publishing ----------
+const something=()=>S.f.paint!=="ninguna"||S.items.length||S.f.effect!=="ninguno"||S.f.frame!=="ninguno";
+function check(){
+  $("n6").classList.toggle("done",!!($("title").value.trim()&&slugOk));
+  let ok=something()&&$("title").value.trim()&&slugOk&&S.token, why=!something()?"Elige una plantilla o agrega algo a tu filtro.":!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
+  const mk=S.marca&&S.marca.get(); if(ok&&mk&&!mk.ok){ ok=false; why="Sube el logo de tu marca o elige el de Vórtice VR."; }
+  $("publish").disabled=!ok; $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link a ${S.email}.`:why;
+}
+$("publish").addEventListener("click",async()=>{
+  const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Publicando…"; bar.hidden=false; $("publish").disabled=true;
+  const items=S.items.map(it=>{ const o={id:it.id,type:it.type,anchor:it.anchor,x:it.x,y:it.y,s:it.s,r:it.r}; if(it.type==="sticker") o.key=it.key; else { o.w=it.w; o.h=it.h; if(it.name) o.name=it.name; } return o; });
+  const meta={kind:"filtro",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),filtro:{...S.f,text:S.f.text.trim()},items,buttons:{}};
+  const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
+  const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
+  if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
+  for(const it of S.items) if(it.type==="image"){ const f=IMG.get(it.id); if(f&&f.file) fd.append("f_"+it.id,f.file,it.id+".png"); }
+  const shot=await snapshot(); if(shot) fd.append("image",shot,"filtro.jpg");
+  const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc, linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/");
+  fd.append("qr",await new Promise(r=>qrc.toBlob(r,"image/png")),"qr.png");
+  const xhr=new XMLHttpRequest(); xhr.open("POST",`${API}/api/publish`); xhr.setRequestHeader("Authorization","Bearer "+S.token);
+  xhr.upload.onprogress=e=>{ if(e.lengthComputable) bar.firstElementChild.style.width=(e.loaded/e.total*100)+"%"; };
+  xhr.onload=()=>{ bar.hidden=true; let j={}; try{ j=JSON.parse(xhr.responseText); }catch(e){}
+    if(xhr.status!==200){ m.className="msg bad"; m.textContent=j.error||"No se pudo publicar."; $("publish").disabled=false; if(xhr.status===401){ VVR.clearSession(); location.href="../../cuenta/?siguiente=crear"; } return; }
+    m.textContent="¡Publicado! Abriendo tu cuenta…"; location.href="../../cuenta/?publicada="+encodeURIComponent(j.experience.slug); };
+  xhr.onerror=()=>{ bar.hidden=true; m.className="msg bad"; m.textContent="Se cortó la conexión. Intenta de nuevo."; $("publish").disabled=false; };
+  xhr.send(fd);
+});
+(async()=>{
+  const ed=new URLSearchParams(location.search).get("editar");
+  const toLogin=()=>location.replace("../../cuenta/?siguiente=crear");
+  const sess=VVR.session(); if(!sess){ toLogin(); return; }
+  S.token=sess.token; S.email=sess.user&&sess.user.email;
+  applyTemplate(TEMPLATES[0]);
+  try{
+    const r=await VVR.call("me"); S.email=r.user.email;
+    const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1}, LIM=r.limit??P.exp, member=r.team&&r.team.role==="member"; S.P=P;
+    if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name}`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
+    const exp=ed?r.experiences.find(x=>x.slug===ed):null;
+    if(window.VVRMarca){ S.marca=VVRMarca.mount($("sMarca"),{plan:P,exp,api:API,base:"../../",onChange:()=>check()}); $("sMarca").hidden=false; }
+    if(exp&&exp.kind!=="filtro"){ location.replace((exp.kind==="ra"?"../":"../"+exp.kind+"/")+"?editar="+encodeURIComponent(ed)); return; }
+    if(exp){
+      S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza.`;
+      S.tpl=null; S.f={paint:"ninguna",effect:"ninguno",frame:"ninguno",color:"#8b3fd6",text:"",...exp.filtro}; $("ftext").value=S.f.text||"";
+      IMG.clear(); S.items=(exp.items||[]).map(it=>{ if(it.type==="image") IMG.set(it.id,{url:`${API}/m/${exp.slug}/${it.file}?v=${exp.updated||exp.created}`,w:it.w,h:it.h}); return {...it}; });
+      S.sel=null; $("title").value=exp.title; slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
+      $("publish").textContent="Guardar cambios"; render();
+    } else if(r.experiences.filter(x=>!x.paused).length>=LIM){
+      document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); document.querySelector(".side").hidden=true; $("full").hidden=false;
+      $("fullText").textContent=member?"Tu equipo te asignó todas las que puedes usar. Borra una o pide más a quien administra tu equipo.":`Tu plan ${P.name} incluye ${LIM.toLocaleString("es-MX")} ${LIM===1?"experiencia":"experiencias"}. Borra una desde tu cuenta o mejora tu plan para crear tu filtro.`;
+    }
+  }catch(e){ if(e.status===401){ toLogin(); return; } }
+  check();
+})();
+</script>
+<script src="../../assets/magia.js" defer></script>
+</body>
+</html>

@@ -393,7 +393,7 @@ async function api(request, env, ctx, url) {
     const isNew = !mine;
     if (data.kind === "trivia" && data.trivia.logo && !image && !(mine && (JSON.parse(mine.data || "{}").trivia || {}).logo)) data.trivia.logo = false;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
-    if (isNew && data.kind !== "trivia" && (!image || (!target && data.kind !== "colorear"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
+    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
     if (target && target.size > LIMITS.targetBytes) return json({ error: "La imagen no se pudo preparar. Intenta con otra." }, 400);
     // each element's file: uploaded now (field f_<id>) or kept from the version being edited (same id and type)
@@ -402,7 +402,7 @@ async function api(request, env, ctx, url) {
     const uploads = [];
     let total = 0;
     for (const it of data.items) {
-      if (it.type === "text") continue;
+      if (it.type === "text" || it.type === "sticker") continue;   // stickers of a face filter are drawn in code
       const file = form.get("f_" + it.id);
       if (file && typeof file !== "string") {
         if (it.type === "video" && (file.size > P.videoMB * 1048576 || !/^video\/(mp4|webm|quicktime)$/.test(file.type))) return json({ error: `Cada video debe ser MP4, WebM o MOV de máximo ${P.videoMB} MB.` }, 400);
@@ -452,7 +452,7 @@ async function api(request, env, ctx, url) {
       .bind(slug, who, data.title, JSON.stringify(data), created, now, expires, mine ? mine.views || 0 : 0).run();
     const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(slug).first();
     const out = ownerExp(row, request, env);
-    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
+    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
     return json({ ok: true, experience: out });
   }
 
@@ -712,6 +712,7 @@ function publicExp(row) {
 }
 function publicKind(row, d) {
   if (d.kind === "trivia") return { slug: row.slug, kind: "trivia", title: row.title, trivia: d.trivia, buttons: d.buttons, expires: row.expires };
+  if (d.kind === "filtro") return { slug: row.slug, kind: "filtro", title: row.title, filtro: d.filtro, items: d.items || [], buttons: d.buttons, expires: row.expires };
   if (d.kind === "colorear") return { slug: row.slug, kind: "colorear", title: row.title, img: d.img, color: d.color, buttons: d.buttons, expires: row.expires };
   return { slug: row.slug, kind: "ra", title: row.title, img: d.img, place: d.place || "mesa", scenes: d.scenes || 1, items: itemsOf(d), buttons: d.buttons, expires: row.expires };
 }
@@ -817,6 +818,42 @@ function cleanTrivia(t) {
   const color = /^#[0-9a-f]{6}$/i.test(String(t.color || "")) ? String(t.color).toLowerCase() : "#8b3fd6";   // the bubbles' color
   return { questions, time, color, logo: !!t.logo };   // logo: its picture/logo is exp/<slug>/image
 }
+// Face filter (assets/filtro.js): paint on the face, stickers (drawn in code, type "sticker") or the creator's own images
+// (type "image", uploaded like any element) pinned to a point of the face, an effect when the mouth opens and a frame.
+// x, y = offset in cm from the point (the canonical face is ~15 cm wide), s = width in cm, r = turn in degrees.
+// The image of the experience (exp/<slug>/image) is a picture of the creator's preview, for the dashboard and the intro.
+const FILTRO = {
+  items: 6, anchors: ["cabeza", "frente", "ojos", "nariz", "boca", "barbilla", "mejillas"],
+  stickers: ["lentes-corazon", "lentes-sol", "corona", "flores", "orejas", "bigote", "gorro", "corazon"],
+  paints: ["ninguna", "catrina", "corazones", "mexico", "brillos", "gatito"], effects: ["ninguno", "corazones", "estrellas", "flores", "confeti"],
+  frames: ["ninguno", "muertos", "brillo", "cinta", "polaroid"],
+};
+function cleanFiltro(f, list, P) {
+  f = f || {};
+  const n = (v, a, b, d) => { v = Number(v); return Number.isFinite(v) ? Math.round(Math.min(b, Math.max(a, v)) * 100) / 100 : d; };
+  const pick = (v, all) => all.includes(v) ? v : all[0];
+  const filtro = { paint: pick(f.paint, FILTRO.paints), effect: pick(f.effect, FILTRO.effects), frame: pick(f.frame, FILTRO.frames),
+    color: HEX.test(String(f.color || "")) ? String(f.color).toLowerCase() : "#8b3fd6", text: String(f.text || "").replace(/\s+/g, " ").trim().slice(0, 32) };
+  list = Array.isArray(list) ? list : [];
+  if (list.length > FILTRO.items) return { error: `Puedes poner hasta ${FILTRO.items} accesorios.` };
+  const items = [], ids = new Set(), imgMax = Math.min(FILTRO.items, P.items || 3);
+  for (const m of list) {
+    const id = String(m && m.id || "");
+    if (!/^[a-z0-9]{6,16}$/.test(id) || ids.has(id) || !["sticker", "image"].includes(m.type)) return { error: "Uno de tus accesorios no es válido." };
+    ids.add(id);
+    const it = { id, type: m.type, anchor: pick(m.anchor, FILTRO.anchors), x: n(m.x, -20, 20, 0), y: n(m.y, -20, 20, 0), s: n(m.s, 0.5, 40, 6), r: n(m.r, -180, 180, 0) };
+    if (m.type === "sticker") { if (!FILTRO.stickers.includes(m.key)) return { error: "Uno de tus accesorios no es válido." }; it.key = m.key; }
+    else {
+      it.w = Math.round(n(m.w, 1, 8000, 0)); it.h = Math.round(n(m.h, 1, 8000, 0));
+      if (!it.w || !it.h) return { error: "Faltan las medidas de una de tus imágenes." };
+      const name = String(m.name || "").trim().slice(0, 40); if (name) it.name = name;
+    }
+    items.push(it);
+  }
+  if (items.filter(i => i.type === "image").length > imgMax) return { error: `Tu plan ${P.name} permite hasta ${imgMax} imágenes propias por filtro.` };
+  if (filtro.paint === "ninguna" && filtro.effect === "ninguno" && filtro.frame === "ninguno" && !items.length) return { error: "Tu filtro está vacío: elige una plantilla o agrégale algo." };
+  return { filtro, items };
+}
 // Coloring page (assets/colorear.js): the image is a line drawing that anyone with the link paints with a finger.
 // th = how dark a pixel must be to count as a line (the fill stops there); palette = the colors offered first.
 const COLOREAR = { palettes: ["vivos", "pastel", "naturaleza", "piel"], th: [90, 230] };
@@ -829,6 +866,10 @@ function cleanMeta(m, P) {
   if (!title) return { error: "Escribe un título." };
   const buttons = cleanButtons(m.buttons);
   if (buttons.error) return buttons;
+  if (m.kind === "filtro") {
+    const f = cleanFiltro(m.filtro, m.items, P);
+    return f.error ? f : { kind: "filtro", title, filtro: f.filtro, items: f.items, buttons: {} };
+  }
   if (m.kind === "trivia") {
     const trivia = cleanTrivia(m.trivia);
     return trivia.error ? trivia : { kind: "trivia", title, trivia, items: [], buttons };
