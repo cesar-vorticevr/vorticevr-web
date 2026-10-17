@@ -325,6 +325,30 @@ footer .legal a:hover{color:var(--ink)}
   .marquee .track,.scrollhint i,.cta::before{animation:none}
   .xin{transform:none!important}
 }
+
+/* account button in the header (assets/cuenta-chip.js) */
+header.top nav a,header.top nav .pill{white-space:nowrap}
+header.top .brand{flex:none}
+@media (max-width:480px){header.top .wrap{gap:8px}header.top nav{gap:6px}header.top nav a.pill{padding:7px 10px;letter-spacing:.06em;font-size:.68rem}header.top nav .lang{padding-inline:6px;min-width:38px;height:34px}header.top .brand img{height:20px}}
+@media (max-width:400px){header.top .wrap{padding-inline:12px}header.top nav{gap:4px}header.top nav a.pill{padding:7px 9px}}
+@media (max-width:980px){header.top nav a:not(.pill){display:none}}
+.pill.acct{background:transparent}
+.pill.acct.in{padding:5px 14px 5px 5px;background:rgba(139,63,214,.18)}
+.pill.acct .av{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--vortex);font-size:.8rem;letter-spacing:0}
+@media (max-width:760px){header.top nav a.pill{padding:8px 12px;font-size:.72rem}.pill.acct.in{padding:4px}.pill.acct.in .nm{display:none}}
+
+/* home → /estudio/ card */
+.stz{padding-block:40px 90px}
+.stcard{display:grid;grid-template-columns:1fr 1.1fr;border:1px solid var(--line2);border-radius:18px;overflow:hidden;background:var(--surface-solid);text-decoration:none;transition:border-color .3s,box-shadow .3s}
+.stcard:hover{border-color:var(--lav);box-shadow:0 0 50px rgba(139,63,214,.35)}
+.stimgs{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;min-height:260px}
+.stimgs img{width:100%;height:100%;object-fit:cover}
+.stimgs img:first-child{grid-row:span 2}
+.stbody{display:flex;flex-direction:column;gap:14px;padding:32px 30px}
+.stbody h2{font-family:var(--fd);font-weight:700;font-size:clamp(1.6rem,3.4vw,2.4rem);line-height:1.05;margin:0;text-wrap:balance}
+.stbody p{margin:0;color:#ddd3f3}
+.stcard:hover .xgo .arr{transform:rotate(-45deg);background:var(--vortex)}
+@media (max-width:760px){.stcard{grid-template-columns:1fr}.stimgs{min-height:180px}.stbody{padding:24px}}
 </style>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
@@ -337,7 +361,8 @@ footer .legal a:hover{color:var(--ink)}
 <header class="top" id="top"><div class="wrap">
   <a class="brand" href="./" aria-label="Vórtice VR, inicio" data-en-aria="Vórtice VR, home"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
   <nav aria-label="Secciones" data-en-aria="Sections">
-    <a href="#crea" data-en="Augmented reality">Realidad aumentada</a><a href="#experiencias" data-en="Projects">Proyectos</a><a href="#servicios" data-en="Services">Servicios</a><a href="#nosotros" data-en="About">Nosotros</a><a class="pill sun mag" href="#crea" data-en="Make yours">Crea la tuya</a><a class="pill talk mag" href="#contacto" data-en="Let’s talk">Platiquemos</a>
+    <a href="#crea" data-en="Augmented reality">Realidad aumentada</a><a href="estudio/" data-en="Studio">Estudio</a><a href="#nosotros" data-en="About">Nosotros</a><a class="pill sun mag" href="#crea" data-en="Make yours">Crea la tuya</a><a class="pill talk mag" href="#contacto" data-en="Let’s talk">Platiquemos</a>
+    <a class="pill acct mag" id="acct" href="cuenta/#entrar" data-en="Sign in">Entrar</a>
     <button class="lang mag" id="lang" type="button" aria-label="Ver en inglés" data-en-aria="Ver en español"><span data-en="ES">EN</span></button>
   </nav>
 </div></header>
@@ -446,68 +471,19 @@ footer .legal a:hover{color:var(--ink)}
     <p class="mknote" data-en="Need something bigger? &lt;a href=&quot;#contacto&quot; data-tema=&quot;empresa&quot;&gt;Ask us about a custom plan&lt;/a&gt;.">¿Necesitas algo más grande? <a href="#contacto" data-tema="empresa">Pregúntanos por un plan a tu medida</a>.</p>
   </div></section>
 
-  <section id="experiencias"><div class="wrap">
-    <div class="shead reveal">
-      <span class="kick" data-en="What else Vórtice VR does">Qué más hace Vórtice VR</span>
-      <h2 data-en="Educational projects we have built.">Proyectos educativos que hemos desarrollado.</h2>
-      <p data-en="Besides the platform, we design custom experiences for schools, museums and institutions. These are real; open them and try them in your browser.">Además de la plataforma, diseñamos experiencias a la medida para escuelas, museos e instituciones. Estas son reales: ábrelas y pruébalas en tu navegador.</p>
-    </div>
-    <div class="xgrid">
-      <article class="xcard wide reveal">
-        <a class="xin" href="proyectos/observatorio/">
-          <div class="xmedia"><span class="xnum">01</span><img src="assets/proyectos/observatorio.webp" alt="Observatorio Orbital: sistema solar en 3D con panel de bitácora" data-en-alt="Orbital Observatory: 3D solar system with a mission log panel" loading="lazy"></div>
-          <div class="xbody">
-            <div class="chips"><span class="chip" data-en="Interactive 3D">3D interactivo</span><span class="chip" data-en="Education">Educación</span><span class="chip sun" data-en="Astronomy">Astronomía</span></div>
-            <h3 data-en="Orbital Observatory">Observatorio Orbital</h3>
-            <p data-en="A 3D space lab: the solar system, day and night, the seasons, the Moon and eclipses, the ages, planetary patterns and the astronomy of the Maya and the Mexica. With fact sheets and an astronaut who guides you.">Un laboratorio espacial en 3D: el sistema solar, el día y la noche, las estaciones, la Luna y los eclipses, las eras, los trazos de los planetas y la astronomía de mayas y mexicas. Con fichas técnicas y un astronauta que te guía.</p>
-            <div class="xgo"><span data-en="Open the lab &lt;small&gt;· in Spanish&lt;/small&gt;">Abrir laboratorio</span><span class="arr">→</span></div>
-          </div>
-        </a>
-      </article>
-      <article class="xcard reveal">
-        <a class="xin" href="proyectos/orbita/">
-          <div class="xmedia"><span class="xnum">02</span><img src="assets/proyectos/orbita.webp" alt="Órbita en tu mesa: el Sol y la Tierra sobre una plataforma holográfica" data-en-alt="Orbit on your table: the Sun and the Earth on a holographic platform" loading="lazy"></div>
-          <div class="xbody">
-            <div class="chips"><span class="chip" data-en="Augmented reality">Realidad aumentada</span><span class="chip">WebXR</span><span class="chip sun" data-en="Education">Educación</span></div>
-            <h3 data-en="Orbit on your table">Órbita en tu mesa</h3>
-            <p data-en="Place the Sun, the Earth and the Moon on any surface and explore day and night, moon phases, seasons and eclipses in augmented reality.">Coloca el Sol, la Tierra y la Luna sobre cualquier superficie y descubre en realidad aumentada el día y la noche, las fases, las estaciones y los eclipses.</p>
-            <div class="xgo"><span data-en="Open experience &lt;small&gt;· AR on Android, 3D on any device · in Spanish&lt;/small&gt;">Abrir experiencia <small>· RA en Android, 3D en cualquier equipo</small></span><span class="arr">→</span></div>
-          </div>
-        </a>
-      </article>
-      <article class="xcard reveal">
-        <a class="xin" href="proyectos/deletreo-lsm/">
-          <div class="xmedia"><span class="xnum">03</span><img src="assets/proyectos/deletreo-lsm.webp" alt="Deletreo LSM: práctica del alfabeto manual con la cámara" data-en-alt="LSM Fingerspelling: practicing the manual alphabet with the camera" loading="lazy"></div>
-          <div class="xbody">
-            <div class="chips"><span class="chip" data-en="Artificial intelligence">Inteligencia artificial</span><span class="chip" data-en="Computer vision">Visión por computadora</span><span class="chip sun" data-en="Inclusion">Inclusión</span></div>
-            <h3 data-en="LSM Fingerspelling">Deletreo LSM</h3>
-            <p data-en="Learn the manual alphabet of Mexican Sign Language (LSM) with your camera: the AI recognizes your hand and tells you what to adjust. Everything runs on your device; no video is sent.">Aprende el alfabeto manual de la Lengua de Señas Mexicana con la cámara: la IA reconoce tu mano y te dice qué ajustar. Todo se procesa en tu equipo, sin enviar video.</p>
-            <div class="xgo"><span data-en="Open experience &lt;small&gt;· camera, on a computer · in Spanish&lt;/small&gt;">Abrir experiencia <small>· con cámara, en computadora</small></span><span class="arr">→</span></div>
-          </div>
-        </a>
-      </article>
-    </div>
+  <section id="estudio" class="stz"><div class="wrap">
+    <a class="stcard reveal" href="estudio/">
+      <div class="stimgs" aria-hidden="true"><img src="assets/proyectos/observatorio.webp" alt="" loading="lazy"><img src="assets/proyectos/orbita.webp" alt="" loading="lazy"><img src="assets/proyectos/deletreo-lsm.webp" alt="" loading="lazy"></div>
+      <div class="stbody">
+        <span class="kick" data-en="Studio and education">Estudio y educación</span>
+        <h2 data-en="We also build custom experiences.">También hacemos experiencias a la medida.</h2>
+        <p data-en="Solar systems in 3D, augmented reality on your table, sign language with AI and virtual reality for schools, museums and brands.">Sistemas solares en 3D, realidad aumentada en tu mesa, lengua de señas con IA y realidad virtual para escuelas, museos y marcas.</p>
+        <span class="xgo"><span data-en="See the studio's projects">Ver los proyectos del estudio</span><span class="arr">→</span></span>
+      </div>
+    </a>
   </div></section>
 
-  <section id="servicios"><div class="wrap">
-    <div class="shead reveal"><span class="kick" data-en="What we do">Lo que hacemos</span><h2 data-en="Immersive technology with a purpose.">Tecnología inmersiva con propósito.</h2></div>
-    <div class="sgrid">
-      <article class="svc reveal"><span class="tag" data-en="AR">RA</span><h3 data-en="Augmented reality">Realidad aumentada</h3><p data-en="Murals, books, cards and spaces that come alive through a phone camera, right in the browser, no apps to download.">Murales, libros, tarjetas y espacios que cobran vida con la cámara del celular, directo en el navegador y sin descargar apps.</p></article>
-      <article class="svc reveal"><span class="tag" data-en="VR">RV</span><h3 data-en="Virtual reality">Realidad virtual</h3><p data-en="Immersive experiences for Meta Quest headsets: tours, simulations and educational challenges.">Experiencias inmersivas para visores Meta Quest: recorridos, simulaciones y retos educativos.</p></article>
-      <article class="svc reveal"><span class="tag" data-en="AI">IA</span><h3 data-en="Applied artificial intelligence">Inteligencia artificial aplicada</h3><p data-en="AI-powered web apps for education, culture and business, built to run on any device.">Aplicaciones web con IA para educación, cultura y negocio, pensadas para usarse desde cualquier dispositivo.</p></article>
-      <article class="svc reveal"><span class="tag">+</span><h3 data-en="Training">Capacitación</h3><p data-en="Training for teachers and teams to create and use immersive experiences in the classroom and in their projects.">Formación a docentes y equipos para crear y usar experiencias inmersivas en el aula y en sus proyectos.</p></article>
-    </div>
-  </div></section>
 
-  <section id="proyectos"><div class="wrap">
-    <div class="shead reveal"><span class="kick" data-en="More projects">Más proyectos</span><h2 data-en="On the street, in the classroom, in your hand.">En la calle, en el aula, en tu mano.</h2></div>
-    <div class="plist">
-      <article class="prow reveal"><span class="n">04</span><span class="kind" data-en="AR · Street art">RA · Arte urbano</span><div><h3 data-en="Augmented reality murals in Comalcalco">Murales con realidad aumentada en Comalcalco</h3><p data-en="Murals that come to life when you point your phone at them, bringing public art and technology together.">Murales que se animan al apuntarles con el celular, uniendo arte público y tecnología.</p></div></article>
-      <article class="prow reveal"><span class="n">05</span><span class="kind" data-en="VR · Education">RV · Educación</span><div><h3 data-en="Planets in Orbit">Planetas en Órbita</h3><p data-en="An experience for Meta Quest 3 and 3S: a one-minute challenge to build the solar system.">Experiencia para Meta Quest 3 y 3S: un reto de un minuto para armar el sistema solar.</p></div></article>
-      <article class="prow reveal"><span class="n">06</span><span class="kind" data-en="AR · Festival">RA · Festival</span><div><h3 data-en="MOVART Festival">Festival MOVART</h3><p data-en="Browser-based augmented reality experiences for the festival audience.">Experiencias de realidad aumentada en el navegador para el público del festival.</p></div></article>
-      <article class="prow reveal"><span class="n">07</span><span class="kind" data-en="NFC · AR">NFC · RA</span><div><h3 data-en="Smart business cards">Tarjetas de presentación inteligentes</h3><p data-en="Cards with NFC and a QR code that open a contact portal and an augmented reality experience on the card itself. &lt;a href=&quot;tarjeta/&quot;&gt;See the Vórtice VR card&lt;/a&gt;.">Tarjetas con NFC y código QR que abren un portal de contacto y una experiencia en realidad aumentada sobre la propia tarjeta. <a href="tarjeta/">Ver la tarjeta de Vórtice VR</a>.</p></div></article>
-    </div>
-  </div></section>
 
   <section id="nosotros"><div class="wrap">
     <div class="shead reveal"><span class="kick" data-en="About us">Nosotros</span><h2 data-en="A studio that builds what it imagines.">Un estudio que construye lo que imagina.</h2></div>
@@ -789,6 +765,7 @@ async function init(){
 }
 init().catch(e=>{ console.error(e); fallback(); });
 </script>
+<script src="assets/cuenta-chip.js"></script>
 <script src="assets/magia.js" defer></script>
 </body>
 </html>

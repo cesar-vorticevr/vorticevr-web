@@ -40,6 +40,10 @@ input:focus{border-color:var(--lav);outline:none}
 .btn.wide{width:100%;margin-top:18px}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.atabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin:0 0 22px;border:1px solid var(--line2);border-radius:999px;background:rgba(5,2,11,.5)}
+.atabs a{display:block;text-align:center;padding:11px 8px;border-radius:999px;text-decoration:none;font-family:var(--fd);font-weight:600;font-size:.92rem;color:var(--mute);transition:background .2s,color .2s}
+.atabs a:hover{color:var(--ink)}
+.atabs a.on{background:linear-gradient(135deg,var(--vortex),var(--vortex-d));color:#fff;box-shadow:0 0 20px rgba(139,63,214,.4)}
 .links{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:16px;font-size:.92rem}
 .msg{font-size:.9rem;margin-top:12px;min-height:1.2em}
 .msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
@@ -220,6 +224,7 @@ dialog .row{justify-content:space-between}
 
   <!-- sign in -->
   <section class="card auth" id="vEntrar" hidden>
+    <nav class="atabs" aria-label="Cuenta"><a href="#entrar" class="on" aria-current="page">Iniciar sesión</a><a href="#registro">Crear cuenta</a></nav>
     <span class="kick">Vórtice VR</span>
     <h1>Inicia sesión</h1>
     <p class="lead">Entra para crear y administrar tus experiencias de realidad aumentada.</p>
@@ -229,11 +234,12 @@ dialog .row{justify-content:space-between}
       <button class="btn primary wide" type="submit">Entrar</button>
     </form>
     <div class="msg" id="mEntrar"></div>
-    <div class="links"><a href="#registro">Crear cuenta</a><a href="#olvide">Olvidé mi contraseña</a></div>
+    <div class="links"><a href="#olvide">Olvidé mi contraseña</a><a href="#registro">¿No tienes cuenta? Crea una gratis</a></div>
   </section>
 
   <!-- sign up -->
   <section class="card auth" id="vRegistro" hidden>
+    <nav class="atabs" aria-label="Cuenta"><a href="#entrar">Iniciar sesión</a><a href="#registro" class="on" aria-current="page">Crear cuenta</a></nav>
     <span class="kick">Gratis</span>
     <h1>Crea tu cuenta</h1>
     <p class="lead">Con tu cuenta haces realidad aumentada con tus imágenes y videos, y la compartes con un link y un código QR.</p>
@@ -246,7 +252,7 @@ dialog .row{justify-content:space-between}
     </form>
     <div class="msg" id="mRegistro"></div>
     <p class="note">Te enviaremos un código para confirmar tu correo. Tu correo solo se usa para tu cuenta y tus experiencias. Al crear tu cuenta aceptas los <a href="../terminos/">Términos</a> y el <a href="../privacidad/">Aviso de privacidad</a>.</p>
-    <div class="links"><a href="#entrar">Ya tengo cuenta</a></div>
+    <div class="links"><a href="#entrar">¿Ya tienes cuenta? Inicia sesión</a></div>
   </section>
 
   <!-- code (confirm account / reset password) -->
