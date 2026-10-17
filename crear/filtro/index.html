@@ -175,13 +175,20 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
         <div class="items" id="items"></div>
         <div class="cnt" id="cnt"></div>
       </section>
+      <section class="step" id="sLook">
+        <h2><span class="n done">5</span>Efecto de color</h2>
+        <p class="hint">Cambia el ambiente de toda la imagen: la cámara, la pintura y los accesorios. Tus imágenes en pantalla y el logo quedan encima, sin cambiar.</p>
+        <div class="seg" id="look"></div>
+        <label class="f" for="vig">Viñeta <span id="vigN" style="text-transform:none;letter-spacing:0"></span></label>
+        <input type="range" id="vig" min="0" max="100" step="1" value="0" style="width:100%;accent-color:var(--vortex)" aria-label="Viñeta: oscurece las orillas">
+      </section>
       <section class="step" id="s4">
         <h2><span class="n done">4</span>Al abrir la boca</h2>
         <p class="hint">Lo que sale de la boca mientras la tienen abierta. A todos les encanta.</p>
         <div class="seg" id="effect"></div>
       </section>
       <section class="step" id="s5">
-        <h2><span class="n done">5</span>Tu pantalla</h2>
+        <h2><span class="n done">6</span>Tu pantalla</h2>
         <p class="hint">Imágenes pegadas a una orilla o esquina de la pantalla: tu logo, un hashtag, flores en las esquinas… Se acomodan solas a cualquier celular y salen en las fotos y videos.</p>
         <button class="addq" id="scrUp" type="button">+ Subir imagen para la pantalla (PNG)</button>
         <input type="file" id="scrFile" accept="image/png,image/webp,image/jpeg,image/svg+xml" hidden>
@@ -194,7 +201,7 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
         <input type="text" id="ftext" maxlength="32" placeholder="Ej. #DíaDeMuertos">
       </section>
       <section class="step" id="s6">
-        <h2><span class="n" id="n6">6</span>Título y link</h2>
+        <h2><span class="n" id="n6">7</span>Título y link</h2>
         <label class="f" for="title">Título</label>
         <input type="text" id="title" maxlength="80" placeholder="Ej. Conviértete en catrina">
         <label class="f" for="slug">Tu link</label>
@@ -203,7 +210,7 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
       </section>
       <section class="step" id="sMarca" hidden></section>
       <section class="step" id="s8">
-        <h2><span class="n" id="n8">7</span>Publicar</h2>
+        <h2><span class="n" id="n8">8</span>Publicar</h2>
         <div class="mine" id="mine" hidden style="margin:0 0 12px"></div>
         <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
         <button class="btn primary" id="publish" type="button" disabled>Publicar mi filtro</button>
@@ -248,12 +255,12 @@ const S={token:null,email:null,mine:null,P:null,tpl:"catrina",sel:null,screen:[]
 const IMG=new Map();
 const sticker=(key,o={})=>{ const st=FL.STICKERS[key]; return {id:rid(),type:"sticker",key,anchor:st.anchor,x:st.x,y:st.y,s:st.s,r:st.r||0,...o}; };
 const TEMPLATES=[
-  {id:"catrina",icon:"💀",name:"Catrina",sub:"Día de Muertos",f:{paint:"catrina",effect:"flores",frame:"muertos",color:"#e4007c",text:"Día de Muertos"},items:()=>[sticker("flores")]},
-  {id:"fiesta",icon:"🥳",name:"Fiesta",sub:"Gorro y confeti",f:{paint:"brillos",effect:"confeti",frame:"cinta",color:"#8b3fd6",text:"¡A celebrar!"},items:()=>[sticker("gorro"),sticker("lentes-sol")]},
-  {id:"realeza",icon:"👑",name:"Rey o reina",sub:"Corona y brillos",f:{paint:"brillos",effect:"estrellas",frame:"brillo",color:"#ffbe55",text:""},items:()=>[sticker("corona")]},
-  {id:"amor",icon:"💘",name:"Amor",sub:"Lentes de corazón",f:{paint:"corazones",effect:"corazones",frame:"brillo",color:"#ff2d55",text:""},items:()=>[sticker("lentes-corazon")]},
+  {id:"catrina",icon:"💀",name:"Catrina",sub:"Día de Muertos",f:{paint:"catrina",effect:"flores",frame:"muertos",color:"#e4007c",text:"Día de Muertos",look:"calido",vig:0.4},items:()=>[sticker("flores")]},
+  {id:"fiesta",icon:"🥳",name:"Fiesta",sub:"Gorro y confeti",f:{paint:"brillos",effect:"confeti",frame:"cinta",color:"#8b3fd6",text:"¡A celebrar!",look:"vivo",vig:0},items:()=>[sticker("gorro"),sticker("lentes-sol")]},
+  {id:"realeza",icon:"👑",name:"Rey o reina",sub:"Corona y brillos",f:{paint:"brillos",effect:"estrellas",frame:"brillo",color:"#ffbe55",text:"",look:"calido",vig:0.3},items:()=>[sticker("corona")]},
+  {id:"amor",icon:"💘",name:"Amor",sub:"Lentes de corazón",f:{paint:"corazones",effect:"corazones",frame:"brillo",color:"#ff2d55",text:"",look:"sueno",vig:0.2},items:()=>[sticker("lentes-corazon")]},
   {id:"gatito",icon:"🐱",name:"Gatito",sub:"Orejas y bigotes",f:{paint:"gatito",effect:"corazones",frame:"ninguno",color:"#ff7aa8",text:""},items:()=>[sticker("orejas")]},
-  {id:"mexico",icon:"🌵",name:"México",sub:"Bandera y bigote",f:{paint:"mexico",effect:"confeti",frame:"cinta",color:"#006847",text:"¡Viva México!"},items:()=>[sticker("bigote")]},
+  {id:"mexico",icon:"🌵",name:"México",sub:"Bandera y bigote",f:{paint:"mexico",effect:"confeti",frame:"cinta",color:"#006847",text:"¡Viva México!",look:"vivo",vig:0},items:()=>[sticker("bigote")]},
   {id:"cero",icon:"✨",name:"Desde cero",sub:"Tú lo armas",f:{paint:"ninguna",effect:"ninguno",frame:"ninguno",color:"#8b3fd6",text:""},items:()=>[]},
 ];
 function applyTemplate(t){ S.tpl=t.id; S.f={...t.f}; S.items=t.items(); for(const id of [...IMG.keys()]) if((!S.pintura||id!==S.pintura.id)&&!S.screen.some(x=>x.id===id)) IMG.delete(id); S.sel=S.items[0]?S.items[0].id:null; $("ftext").value=S.f.text; render(); }
@@ -263,7 +270,8 @@ $("tpls").addEventListener("click",e=>{ const b=e.target.closest("[data-t]"); if
 // ---------- choices ----------
 const seg=(el,map,key)=>{ $(el).innerHTML=Object.entries(map).map(([k,v])=>`<button type="button" data-k="${k}">${esc(v)}</button>`).join("");
   $(el).addEventListener("click",e=>{ const b=e.target.closest("[data-k]"); if(!b) return; S.f[key]=b.dataset.k; S.tpl=null; render(); }); };
-seg("paint",FL.PAINTS,"paint"); seg("effect",FL.EFFECTS,"effect"); seg("frame",FL.FRAMES,"frame");
+seg("paint",FL.PAINTS,"paint"); seg("look",FL.LOOKS,"look");
+$("vig").addEventListener("input",()=>{ S.f.vig=+$("vig").value/100; S.tpl=null; $("vigN").textContent=$("vig").value+" %"; schedule(); }); seg("effect",FL.EFFECTS,"effect"); seg("frame",FL.FRAMES,"frame");
 const COLORS=["#e4007c","#ff2d55","#ff8c00","#ffbe55","#16a663","#006847","#00a6d6","#1e88e5","#8b3fd6","#212121"];
 $("colors").addEventListener("click",e=>{ const b=e.target.closest("[data-c]"); if(b){ S.f.color=b.dataset.c; render(); } });
 $("ftext").addEventListener("input",()=>{ S.f.text=$("ftext").value; schedule(); });
@@ -333,7 +341,8 @@ $("items").addEventListener("change",e=>{ if(e.target.dataset.f!=="anchor") retu
   Object.assign(it,st&&st.anchor===it.anchor?{x:st.x,y:st.y,s:st.s,r:st.r||0}:spot(it.anchor,st?st.ratio:it.h/it.w)); S.tpl=null; renderItems(); schedule(); });
 
 function render(){
-  for(const [el,key] of [["paint","paint"],["effect","effect"],["frame","frame"]]) $(el).querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.k===S.f[key])));
+  S.f.look=S.f.look||"ninguno"; S.f.vig=S.f.vig||0; $("vig").value=Math.round(S.f.vig*100); $("vigN").textContent=$("vig").value+" %";
+  for(const [el,key] of [["paint","paint"],["effect","effect"],["frame","frame"],["look","look"]]) $(el).querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.k===S.f[key])));
   $("tpls").querySelectorAll(".tpl").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.t===S.tpl)));
   $("colors").innerHTML=COLORS.map(c=>`<button type="button" data-c="${c}" style="background:${c}" aria-label="Color ${c}" aria-pressed="${c===S.f.color}"></button>`).join("")+`<label>Otro <input type="color" id="cPick" value="${S.f.color}"></label>`;
   $("cPick").addEventListener("input",e=>{ S.f.color=e.target.value; clearTimeout(cTimer); cTimer=setTimeout(render,120); });
@@ -381,6 +390,8 @@ new ResizeObserver(size).observe(cv);
 cam.position.set(0,1.5,84); cam.lookAt(0,1.5,0);
 
 let filter=null, building=0, schedT=0;
+// in the preview the "camera image" is the phone background (a color look or vignette grades it like the camera)
+const BG=(()=>{ const c=document.createElement("canvas"); c.width=540; c.height=960; const g=c.getContext("2d"), gr=g.createRadialGradient(270,384,30,270,384,620); gr.addColorStop(0,"#4a3670"); gr.addColorStop(1,"#140b26"); g.fillStyle=gr; g.fillRect(0,0,540,960); return c; })();
 function cfg(){ return {filtro:{...S.f,text:S.f.text.trim()},items:ownItems().concat(S.items,S.screen)}; }
 // ---------- images on the screen: stuck to an edge or a corner, width = part of the screen width ----------
 const MAX_SCREEN=4, POS=["ai","ac","ad","mi","","md","bi","bc","bd"];
@@ -419,7 +430,7 @@ function schedule(){ clearTimeout(schedT); schedT=setTimeout(rebuild,80); }
 async function rebuild(){
   if(!faceMesh) return;
   const my=++building;
-  const next=await FL.createFilter({THREE,scene,camera:cam,anchor,faceMesh,uvAt:i=>FACE.uvs[i],cfg:cfg(),mediaUrl:it=>IMG.get(it.id)?.url||"",onHint:t=>{ $("pvHint").textContent=t?"✦ "+t:""; }});
+  const next=await FL.createFilter({THREE,scene,camera:cam,anchor,faceMesh,uvAt:i=>FACE.uvs[i],cfg:cfg(),mediaUrl:it=>IMG.get(it.id)?.url||"",onHint:t=>{ $("pvHint").textContent=t?"✦ "+t:""; },source:BG});
   if(my!==building){ next.dispose(); return; }
   if(filter) filter.dispose(); filter=next; size();
   $("pvMouth").hidden=!filter.hasEffect;
@@ -467,13 +478,13 @@ function loop(){
   mouthOpen+=(mouthTo-mouthOpen)*Math.min(1,dt*9);
   head.rotation.set(pitch,yaw,0); deform(); head.updateMatrixWorld(true);
   if(filter) filter.update(dt,{face:true,mouth:mouthOpen*1.2});
-  R.render(scene,cam); if(filter) filter.overlay(R);
+  if(filter) filter.draw(R,dt); else R.render(scene,cam);
 }
 buildHead().then(()=>{ size(); rebuild(); loop(); }).catch(e=>{ console.error(e); $("pvLoad").textContent="No se pudo cargar la vista previa. Revisa tu conexión."; });
 // a picture of the preview for "Mis experiencias" (and the intro of the link)
 async function snapshot(){
   if(!filter) return null;
-  const y=yaw,p=pitch,m=mouthOpen; head.rotation.set(0,.25,0); mouthOpen=0; deform(); head.updateMatrixWorld(true); filter.update(0,{face:true,mouth:0}); R.render(scene,cam); filter.overlay(R);
+  const y=yaw,p=pitch,m=mouthOpen; head.rotation.set(0,.25,0); mouthOpen=0; deform(); head.updateMatrixWorld(true); filter.update(0,{face:true,mouth:0}); filter.draw(R,0);
   const r=cv.getBoundingClientRect(), out=document.createElement("canvas"); out.width=540; out.height=960; const g=out.getContext("2d");
   const gr=g.createRadialGradient(270,380,40,270,480,620); gr.addColorStop(0,"#3b2a58"); gr.addColorStop(1,"#140b26"); g.fillStyle=gr; g.fillRect(0,0,540,960);
   g.drawImage(cv,0,0,540,960); head.rotation.set(p,y,0); mouthOpen=m;

@@ -827,14 +827,16 @@ const FILTRO = {
   stickers: ["lentes-corazon", "lentes-sol", "corona", "flores", "orejas", "bigote", "gorro", "corazon"],
   paints: ["ninguna", "catrina", "corazones", "mexico", "brillos", "gatito", "propia"], effects: ["ninguno", "corazones", "estrellas", "flores", "confeti"],
   frames: ["ninguno", "muertos", "brillo", "cinta", "polaroid"],
-  screen: 4, screenPos: ["ai", "ac", "ad", "mi", "md", "bi", "bc", "bd"],
+  looks: ["ninguno", "vivo", "calido", "frio", "bn", "sepia", "retro", "sueno"],
+  screen: 4, screenPos:["ai", "ac", "ad", "mi", "md", "bi", "bc", "bd"],
 };
 function cleanFiltro(f, list, P) {
   f = f || {};
   const n = (v, a, b, d) => { v = Number(v); return Number.isFinite(v) ? Math.round(Math.min(b, Math.max(a, v)) * 100) / 100 : d; };
   const pick = (v, all) => all.includes(v) ? v : all[0];
   const filtro = { paint: pick(f.paint, FILTRO.paints), effect: pick(f.effect, FILTRO.effects), frame: pick(f.frame, FILTRO.frames),
-    color: HEX.test(String(f.color || "")) ? String(f.color).toLowerCase() : "#8b3fd6", text: String(f.text || "").replace(/\s+/g, " ").trim().slice(0, 32) };
+    color: HEX.test(String(f.color || "")) ? String(f.color).toLowerCase() : "#8b3fd6", text: String(f.text || "").replace(/\s+/g, " ").trim().slice(0, 32),
+    look: pick(f.look, FILTRO.looks), vig: n(f.vig, 0, 1, 0) };   // color look and vignette over the whole picture
   list = Array.isArray(list) ? list : [];
   // the creator's own face paint (paint "propia") is one item of type "pintura": a 1024 px PNG painted over the template
   const own = list.filter(m => m && m.type === "pintura");
@@ -872,7 +874,7 @@ function cleanFiltro(f, list, P) {
     items.push(it);
   }
   if (items.filter(i => i.type === "image").length > imgMax) return { error: `Tu plan ${P.name} permite hasta ${imgMax} imágenes propias por filtro.` };
-  if (filtro.paint === "ninguna" && filtro.effect === "ninguno" && filtro.frame === "ninguno" && !items.length) return { error: "Tu filtro está vacío: elige una plantilla o agrégale algo." };
+  if (filtro.paint === "ninguna" && filtro.effect === "ninguno" && filtro.frame === "ninguno" && filtro.look === "ninguno" && !filtro.vig && !items.length) return { error: "Tu filtro está vacío: elige una plantilla o agrégale algo." };
   return { filtro, items };
 }
 // Coloring page (assets/colorear.js): the image is a line drawing that anyone with the link paints with a finger.

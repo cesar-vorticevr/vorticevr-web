@@ -14,6 +14,40 @@ export const ANCHOR_NAMES = { cabeza: "Arriba de la cabeza", frente: "Frente", o
 export const PAINTS = { ninguna: "Sin pintura", catrina: "Catrina", corazones: "Corazones", mexico: "México", brillos: "Brillos", gatito: "Gatito", propia: "Mi propia pintura" };
 export const EFFECTS = { ninguno: "Nada", corazones: "Corazones", estrellas: "Estrellas", flores: "Cempasúchil", confeti: "Confeti" };
 export const FRAMES = { ninguno: "Sin marco", muertos: "Papel picado", brillo: "Brillo", cinta: "Cinta", polaroid: "Foto instantánea" };
+// color looks (their order is the number the shader gets) and the shader, which grades in sRGB and adds the vignette
+// over the visible part of the camera image (vis = how much of the canvas is on screen)
+export const LOOKS = { ninguno: "Natural", vivo: "Vivo", calido: "Cálido", frio: "Frío", bn: "Blanco y negro", sepia: "Antiguo", retro: "Retro", sueno: "Sueño" };
+const LOOK_IDS = Object.keys(LOOKS);
+const LOOK_SHADER = `
+uniform sampler2D tDiffuse; uniform float look, vig, time, aspect; uniform vec2 vis; varying vec2 vUv;
+float rnd(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+vec3 samp(vec2 uv){ return pow(max(texture2D(tDiffuse, uv).rgb, 0.0), vec3(1.0 / 2.2)); }
+void main(){
+  vec2 uv = vUv; vec3 c = samp(uv); float L = dot(c, vec3(0.299, 0.587, 0.114));
+  if (look > 0.5 && look < 1.5) { c = mix(vec3(L), c, 1.45); c = (c - 0.5) * 1.08 + 0.5; }
+  else if (look < 2.5 && look > 1.5) { c *= vec3(1.08, 1.0, 0.85); c = mix(vec3(L), c, 1.1) + vec3(0.02, 0.01, 0.0); }
+  else if (look < 3.5 && look > 2.5) { c *= vec3(0.88, 1.0, 1.12); c = mix(vec3(L), c, 0.95); }
+  else if (look < 4.5 && look > 3.5) { c = vec3((L - 0.5) * 1.15 + 0.5); }
+  else if (look < 5.5 && look > 4.5) { c = vec3(L) * vec3(1.07, 0.95, 0.76) + vec3(0.05, 0.03, 0.0); }
+  else if (look < 6.5 && look > 5.5) {
+    vec2 o = vec2(0.004 / vis.x, 0.0);
+    c = vec3(samp(uv + o).r, c.g, samp(uv - o).b);
+    c = mix(vec3(dot(c, vec3(0.299, 0.587, 0.114))), c, 0.8) * vec3(1.05, 1.0, 0.9) + 0.05;
+    c *= 0.93 + 0.07 * sin(uv.y * 700.0 / vis.y);
+    c += (rnd(uv * vec2(731.0, 513.0) + time) - 0.5) * 0.12;
+  }
+  else if (look > 6.5) {
+    vec3 b = vec3(0.0);
+    for (int i = 0; i < 8; i++) { float a = float(i) * 0.785; b += samp(uv + vec2(cos(a), sin(a) * aspect) * 0.012 * vis.x); }
+    b /= 8.0; c = 1.0 - (1.0 - c) * (1.0 - b * 0.55);
+    c = mix(c, c * vec3(1.08, 0.94, 1.04) + vec3(0.04, 0.0, 0.03), 0.8);
+  }
+  if (vig > 0.0) {
+    float r = length((uv - 0.5) / (vis * 0.5));   // 0 in the middle of the screen, 1 at the middle of each edge
+    c *= 1.0 - smoothstep(0.55, 1.45, r) * vig * 0.9;
+  }
+  gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
+}`;
 const MOUTH = [13, 14];
 
 // ---------- small drawing helpers ----------
@@ -352,7 +386,7 @@ const TINTS = { corazones: ["#ff2d55", "#ff7aa8", "#e4007c", "#ff4f8b"], estrell
  * faceMesh: a mesh with the canonical face geometry (uv), whose material becomes the paint; uvAt(i) gives point i's UV.
  * Each frame: update(dt, {face, mouth}) then, after rendering the scene, overlay(renderer) for the frame.
  */
-export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvAt, cfg, mediaUrl = id => id, onHint = () => {} }) {
+export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvAt, cfg, mediaUrl = id => id, onHint = () => {}, source = null, mirror = false }) {
   const F = cfg.filtro || {}, color = okColor(F.color), made = [], textures = [];
   const keep = t => { textures.push(t); return t; };
   const loadImg = url => new Promise(ok => { if (!url) return ok(null); const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => ok(i); i.onerror = () => ok(null); i.src = url; });
@@ -466,7 +500,41 @@ export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvA
     if (!ov.on) return;
     const auto = renderer.autoClear; renderer.autoClear = false; renderer.render(ov.scene, ov.cam); renderer.autoClear = auto;
   }
+  // color look and vignette over the WHOLE picture (camera + paint + accessories; the frame and screen images stay on
+  // top, untouched): the camera image (source: the camera video, or a canvas in the preview) is drawn into a render
+  // target with the scene, then a full-screen shader grades it. Only built when the filter has a look or a vignette.
+  const look = LOOK_IDS.indexOf(F.look) > 0 ? LOOK_IDS.indexOf(F.look) : 0, vig = Math.max(0, Math.min(1, Number(F.vig) || 0));
+  let post = null;
+  if ((look || vig > 0) && source) {
+    const bgTex = keep(source.tagName === "VIDEO" ? new THREE.VideoTexture(source) : new THREE.CanvasTexture(source)); bgTex.colorSpace = THREE.SRGBColorSpace;
+    if (mirror) { bgTex.wrapS = THREE.RepeatWrapping; bgTex.repeat.x = -1; }
+    const bg = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: bgTex, depthTest: false, depthWrite: false, toneMapped: false }));
+    const bgScene = new THREE.Scene(); bgScene.add(bg);
+    const rt = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType });
+    const mat = new THREE.ShaderMaterial({ uniforms: { tDiffuse: { value: rt.texture }, look: { value: look }, vig: { value: vig }, time: { value: 0 }, vis: { value: new THREE.Vector2(1, 1) }, aspect: { value: 1 } },
+      vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }", fragmentShader: LOOK_SHADER, depthTest: false, depthWrite: false });
+    const postScene = new THREE.Scene(); postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat));
+    post = { bgTex, bgScene, rt, mat, postScene, size: new THREE.Vector2() };
+    made.push(bg, postScene.children[0]);
+  }
+  let clockP = 0;
+  // draws a whole frame: the scene (graded when there is a look or a vignette) and then the frame/screen images
+  function draw(renderer, dt = 0) {
+    if (!post) { renderer.render(scene, camera); overlay(renderer); return; }
+    clockP += dt;
+    renderer.getDrawingBufferSize(post.size);
+    if (post.rt.width !== post.size.x || post.rt.height !== post.size.y) post.rt.setSize(post.size.x, post.size.y);
+    if (source.tagName === "VIDEO") post.bgTex.needsUpdate = true;   // iPhone: keep the camera texture fresh
+    const auto = renderer.autoClear;
+    renderer.setRenderTarget(post.rt); renderer.autoClear = true; renderer.render(post.bgScene, ov.cam);
+    renderer.autoClear = false; renderer.clearDepth(); renderer.render(scene, camera);
+    renderer.setRenderTarget(null);
+    const u = post.mat.uniforms; u.time.value = clockP % 100; u.vis.value.set(view.fx || 1, view.fy || 1); u.aspect.value = (view.w || 1) / (view.h || 1);
+    renderer.autoClear = true; renderer.render(post.postScene, ov.cam); renderer.autoClear = auto;
+    overlay(renderer);
+  }
   function dispose() {
+    if (post) { post.rt.dispose(); post.mat.dispose(); }
     for (const m of made) { m.parent && m.parent.remove(m); if (m.material && m.material.dispose) m.material.dispose(); }
     for (const t of textures) t.dispose();
     if (faceMesh && faceMesh.material && faceMesh.material.dispose) faceMesh.material.dispose();
@@ -480,7 +548,7 @@ export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvA
     const p = [...parts3.values()].flat().find(p => p.m === hit.object);
     return { id: hit.object.userData.item, mesh: hit.object, side: p.side, point: hit.point };
   }
-  return { update, overlay, setView, dispose, place, pick, hasEffect: !!fx };
+  return { update, overlay, draw, setView, dispose, place, pick, hasEffect: !!fx };
 }
 
 // ---------- /x/: the camera ----------
@@ -495,9 +563,10 @@ export async function run({ THREE, MindARThree, container, cfg, setupCapture, st
   const anchor = i => { if (!anchors.has(i)) { const a = mind.addAnchor(i), inner = new THREE.Group(); inner.scale.setScalar(1 / 15); a.group.add(inner); anchors.set(i, inner); } return anchors.get(i); };
   for (const i of [10, 151, 168, 4, 0, 152, 205, 425, 13, 14]) anchor(i);   // before start: MindAR keeps them all updated
   const uv = faceMesh.geometry.getAttribute("uv"), uvAt = i => [uv.getX(i), uv.getY(i)];
-  const filter = await createFilter({ THREE, scene, camera, anchor, faceMesh, uvAt, cfg, mediaUrl, onHint: hint });
   const capture = setupCapture(mind);
   await mind.start();
+  // after start: the camera video exists (a color look or vignette draws it in WebGL; the front camera is mirrored)
+  const filter = await createFilter({ THREE, scene, camera, anchor, faceMesh, uvAt, cfg, mediaUrl, onHint: hint, source: mind.video, mirror: true });
   started();
   const measure = () => { const c = renderer.domElement.getBoundingClientRect(), b = container.getBoundingClientRect(); filter.setView({ fx: Math.min(1, b.width / c.width), fy: Math.min(1, b.height / c.height), w: b.width, h: b.height }); };
   measure(); addEventListener("resize", () => setTimeout(measure, 300));
@@ -513,6 +582,6 @@ export async function run({ THREE, MindARThree, container, cfg, setupCapture, st
     }
     if (est && est.faceScale > 1) for (const inner of anchors.values()) inner.scale.setScalar(1 / est.faceScale);
     filter.update(dt, { face: !!est, mouth });
-    renderer.render(scene, camera); filter.overlay(renderer); capture.afterRender();
+    filter.draw(renderer, dt); capture.afterRender();
   });
 }
