@@ -409,7 +409,7 @@ $("publish").addEventListener("click",async()=>{
   const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
   if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
-  for(const it of S.items) if(it.type==="image"){ const f=IMG.get(it.id); if(f&&f.file) fd.append("f_"+it.id,f.file,it.id+".png"); }
+  for(const it of ownItems().concat(S.items)) if(it.type==="image"||it.type==="pintura"){ const f=IMG.get(it.id); if(f&&f.file) fd.append("f_"+it.id,f.file,it.id+".png"); }
   const shot=await snapshot(); if(shot) fd.append("image",shot,"filtro.jpg");
   const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc, linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/");
   fd.append("qr",await new Promise(r=>qrc.toBlob(r,"image/png")),"qr.png");
