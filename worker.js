@@ -21,7 +21,7 @@ const LIMITS = { imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, code
 // Elements (video, image, text, 3D) per experience: items = how many, totalMB = weight of all its files together
 // (each video ≤ videoMB, each GLB ≤ modelMB). The Worker reads the whole upload in memory (128 MB): keep totalMB ≤ 60.
 const PLANS = {
-  gratis:  { name: "Gratis",  exp: 1,    days: 15, videoMB: 25, modelMB: 15, items: 3, totalMB: 30, price: 0, views: 1000 },
+  gratis:  { name: "Gratis",  exp: 5,    days: 15, videoMB: 25, modelMB: 15, items: 3, totalMB: 30, price: 0, views: 1000 },
   basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 25, modelMB: 15, items: 6, totalMB: 40, price: 199, year: 1990, legacy: true },
   pro:     { name: "Pro",     exp: 100,  days: 0,  videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 499, year: 4990 },
   premium: { name: "Premium", exp: 1000000, brand: true, days: 0, videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 1499, year: 14990 },
@@ -62,6 +62,8 @@ export default {
     for (const u of lapsed) await applyPlan(env, u, "gratis", null, u.plan_note);
     // commissions become available once the refund window passed
     await env.DB.prepare("UPDATE commissions SET status = 'disponible' WHERE status = 'pendiente' AND available_at < ?").bind(Date.now()).run();
+    // …and go to the referrer's Stripe balance on their own (saldo a favor): their next charges are lower
+    await creditCommissions(env).catch(e => console.error("credit", e.message));
     // expired experiences: files in bulk (one R2 call per 1000 keys), then the rows
     const now = Date.now();
     const { results } = await env.DB.prepare("SELECT slug, data FROM experiences WHERE expires < ? LIMIT 2000").bind(now).all();
@@ -544,7 +546,7 @@ async function api(request, env, ctx, url) {
       eligible, code: eligible ? code : null, link: eligible && code ? `${new URL(request.url).origin}/cuenta/?ref=${code}#registro` : null,
       rate: REF.rate * 100, discount: REF.discount, holdDays: REF.holdDays, minPayout: REF.minPayout / 100,
       registered: refs.length, paying: refs.filter(r => STRIPE_LIVE.includes(r.stripe_status)).length,
-      totals: { pendiente: sum("pendiente") / 100, disponible: sum("disponible") / 100, pagada: sum("pagada") / 100 },
+      totals: { pendiente: sum("pendiente") / 100, disponible: sum("disponible") / 100, abonada: sum("abonada") / 100, pagada: sum("pagada") / 100 },
       referred: refs.slice(0, 100).map(r => ({ name: short(r.name), plan: planOf(r).name, since: r.created, paying: STRIPE_LIVE.includes(r.stripe_status) })),
       rows: rows.map(r => ({ name: short(r.name), plan: PLANS[r.plan] ? PLANS[r.plan].name : r.plan, amount: r.amount / 100, commission: r.commission / 100, status: r.status, created: r.created, available_at: r.available_at, paid_at: r.paid_at })),
     });
@@ -667,12 +669,13 @@ async function api(request, env, ctx, url) {
         return new Response("\ufeff" + csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="comisiones-${d(now)}.csv"` } });
       }
       const by = {};
-      for (const r of rows) { const k = r.referrer_id, x = by[k] ||= { referrer_id: k, name: r.r_name, email: r.r_email, pendiente: 0, disponible: 0, pagada: 0, cancelada: 0, payments: 0 };
+      for (const r of rows) { const k = r.referrer_id, x = by[k] ||= { referrer_id: k, name: r.r_name, email: r.r_email, pendiente: 0, disponible: 0, abonada: 0, pagada: 0, cancelada: 0, payments: 0 };
         x[r.status] = (x[r.status] || 0) + r.commission / 100; if (r.status !== "cancelada") x.payments += r.amount / 100; }
       const t = st => rows.filter(r => r.status === st).reduce((n, r) => n + r.commission, 0) / 100;
-      return json({ minPayout: REF.minPayout / 100, totals: { pendiente: t("pendiente"), disponible: t("disponible"), pagada: t("pagada"), cancelada: t("cancelada"), ventas: rows.filter(r => r.status !== "cancelada").reduce((n, r) => n + r.amount, 0) / 100 },
+      return json({ minPayout: REF.minPayout / 100, totals: { pendiente: t("pendiente"), disponible: t("disponible"), abonada: t("abonada"), pagada: t("pagada"), cancelada: t("cancelada"), ventas: rows.filter(r => r.status !== "cancelada").reduce((n, r) => n + r.amount, 0) / 100 },
         referrers: Object.values(by).sort((a, b) => b.disponible - a.disponible), rows: rows.slice(0, 300).map(r => ({ ...r, amount: r.amount / 100, commission: r.commission / 100 })) });
     }
+    if (path === "/api/admin/commissions/credit" && M === "POST") return json(await creditCommissions(env));   // "Abonar ahora"
     if (path === "/api/admin/commissions/pay" && M === "POST") {   // you transferred the money: mark everything available for that person as paid
       const b = await request.json().catch(() => ({}));
       const r = await env.DB.prepare("UPDATE commissions SET status = 'pagada', paid_at = ?, note = ? WHERE referrer_id = ? AND status = 'disponible'").bind(now, String(b.note || "").trim().slice(0, 200) || null, Number(b.referrer_id)).run();
@@ -873,7 +876,7 @@ async function schema(env) {
     env.DB.prepare("CREATE TABLE IF NOT EXISTS coupons (code TEXT PRIMARY KEY, plan TEXT NOT NULL, months INTEGER NOT NULL, max_uses INTEGER NOT NULL, uses INTEGER DEFAULT 0, expires INTEGER, note TEXT, active INTEGER DEFAULT 1, created INTEGER)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS redemptions (code TEXT NOT NULL, user_id INTEGER NOT NULL, at INTEGER, PRIMARY KEY (code, user_id))"),
     // one row per day (Mexico time) for the admin charts
-    // one row per Stripe invoice paid by a referred customer: 10% for the referrer (pendiente → disponible → pagada | cancelada)
+    // one row per Stripe invoice paid by a referred customer: 10% for the referrer (pendiente → disponible → abonada (saldo a favor) | pagada (by hand) | cancelada)
     env.DB.prepare("CREATE TABLE IF NOT EXISTS commissions (id TEXT PRIMARY KEY, referrer_id INTEGER NOT NULL, user_id INTEGER NOT NULL, invoice TEXT, plan TEXT, amount INTEGER, commission INTEGER, status TEXT, created INTEGER, available_at INTEGER, paid_at INTEGER, note TEXT)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS stats (day TEXT PRIMARY KEY, views INTEGER DEFAULT 0, signups INTEGER DEFAULT 0, publishes INTEGER DEFAULT 0, contacts INTEGER DEFAULT 0)"),
   ]);
@@ -1001,6 +1004,27 @@ async function stripeRefCoupon(env) {
   try { await stripe(env, "GET", `coupons/${REF.coupon}`); }
   catch (e) { if (e.code !== "resource_missing") throw e; await stripe(env, "POST", "coupons", { id: REF.coupon, percent_off: REF.discount, duration: "repeating", duration_in_months: 12, name: "Recomendado: 10% el primer año" }); }
   refCouponReady[mode] = true; return REF.coupon;
+}
+// "Recomienda y gana" pays as credit: every available commission (30 days after the payment) goes to the referrer's Stripe
+// customer balance as a negative balance transaction, so Stripe takes it off their next invoices (status "abonada").
+// Only referrers with a Stripe customer in the current mode; the rest stay "disponible" for a manual payout in /admin/.
+// The idempotency key (the commission ids) makes a retry after a failure never credit twice.
+async function creditCommissions(env) {
+  if (!env.STRIPE_SECRET_KEY) return { credited: 0, amount: 0 };
+  const { results } = await env.DB.prepare(`SELECT c.id, c.referrer_id, c.commission, u.stripe_customer FROM commissions c JOIN users u ON u.id = c.referrer_id
+    WHERE c.status = 'disponible' AND c.commission > 0 AND u.stripe_customer IS NOT NULL AND u.stripe_mode = ? ORDER BY c.created LIMIT 1000`).bind(stripeMode(env)).all();
+  const by = {};
+  for (const r of results) { const x = by[r.referrer_id] ||= { cus: r.stripe_customer, ids: [], total: 0 }; if (x.ids.length < 80) { x.ids.push(r.id); x.total += r.commission; } }
+  let credited = 0, amount = 0;
+  for (const [rid, x] of Object.entries(by)) {
+    try {
+      const ids = x.ids.sort(), key = "vvr-ref-" + (await sha256hex(ids.join(","))).slice(0, 40);
+      const t = await stripe(env, "POST", `customers/${x.cus}/balance_transactions`, { amount: -x.total, currency: "mxn", description: `Recomienda y gana: ${ids.length === 1 ? "1 comisión" : ids.length + " comisiones"} de Vórtice VR`, metadata: { app: "vvr", referrer: rid } }, key);
+      await env.DB.prepare(`UPDATE commissions SET status = 'abonada', paid_at = ?, note = ? WHERE id IN (${ids.map(() => "?").join(",")})`).bind(Date.now(), "Saldo a favor " + t.id, ...ids).run();
+      credited += ids.length; amount += x.total;
+    } catch (e) { console.error("credit", rid, e.message); }
+  }
+  return { credited, amount: amount / 100 };
 }
 // invoice.paid: 10% of what the referred customer actually paid, if the referrer is on Pro or Premium right now
 async function commissionFor(env, invoiceId) {
@@ -1130,11 +1154,11 @@ function billingInfo(env, user) {
   const mode = stripeMode(env), mine = user.stripe_mode === mode;
   return { enabled: mode === "live" || isAdmin(env, user), test: mode === "test", subscribed: mine && STRIPE_LIVE.includes(user.stripe_status), pastDue: mine && user.stripe_status === "past_due", period: /· anual$/.test(user.plan_note || "") ? "anio" : "mes", yearMonths: YEAR_MONTHS };
 }
-async function stripe(env, method, path, params) {
+async function stripe(env, method, path, params, idem) {
   const qs = params ? new URLSearchParams(flatParams(params)).toString() : "";
   const r = await fetch(`${env.STRIPE_API || "https://api.stripe.com"}/v1/${path}${method === "GET" && qs ? "?" + qs : ""}`, {
     method,
-    headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, "Stripe-Version": "2024-06-20", ...(method === "GET" ? {} : { "Content-Type": "application/x-www-form-urlencoded" }) },
+    headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, "Stripe-Version": "2024-06-20", ...(method === "GET" ? {} : { "Content-Type": "application/x-www-form-urlencoded" }), ...(idem ? { "Idempotency-Key": idem } : {}) },
     body: method === "GET" ? undefined : qs,
   });
   const j = await r.json().catch(() => ({}));

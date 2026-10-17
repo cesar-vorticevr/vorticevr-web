@@ -101,7 +101,7 @@ input:focus{border-color:var(--lav);outline:none}
 .rtable th{color:var(--mute);font-weight:600}
 .rtable td.n{text-align:right;font-variant-numeric:tabular-nums}
 .st{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 9px;border:1px solid var(--line2);color:var(--mute);white-space:nowrap}
-.st.disponible{border-color:var(--ok);color:var(--ok)} .st.pagada{border-color:var(--lav);color:var(--lav)} .st.pendiente{border-color:var(--sun);color:var(--sun)} .st.cancelada{border-color:var(--bad);color:var(--bad)}
+.st.disponible{border-color:var(--ok);color:var(--ok)} .st.pagada,.st.abonada{border-color:var(--lav);color:var(--lav)} .st.pendiente{border-color:var(--sun);color:var(--sun)} .st.cancelada{border-color:var(--bad);color:var(--bad)}
 .tsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0 16px}
 .tsum div{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:rgba(5,2,11,.5)}
 .tsum b{display:block;font-family:var(--fd);font-size:1.35rem}
@@ -378,7 +378,7 @@ function refCode(){ try{ const r=JSON.parse(localStorage.getItem(REFKEY)||"null"
   if(r.ok){ const b=$("rInvite"); b.hidden=false; b.innerHTML=`✦ <b>${esc(r.name)}</b> te invitó: tendrás <b>${r.discount}% de descuento</b> todo tu primer año en cualquier plan.`; } }catch(e){} })();
 const NEXT=Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":null;
 // public plans: [id, name, monthly price, yearly price, what it includes] (a year is ~10 months; IVA included)
-const PLANS=[["gratis","Gratis",0,0,"Para probar la magia",["<b>1</b> experiencia de cualquier tipo","Hasta <b>3</b> elementos: video, foto, texto o 3D","Activa <b>15 días</b>","Hasta <b>1,000</b> vistas","Videos de hasta 25 MB"]],
+const PLANS=[["gratis","Gratis",0,0,"Para probar la magia",["Hasta <b>5</b> experiencias de cualquier tipo","Hasta <b>3</b> elementos: video, foto, texto o 3D","Activa <b>15 días</b>","Hasta <b>1,000</b> vistas","Videos de hasta 25 MB"]],
   ["pro","Pro",499,4990,"Para crear y vender experiencias",["<b>100</b> experiencias de cualquier tipo","Hasta <b>15</b> elementos por imagen","Cámbialas cuando quieras","Sin vencimiento mientras pagues","Vistas ilimitadas","Videos de hasta <b>50 MB</b>"]],
   ["premium","Premium",1499,14990,"Ilimitado y con tu marca",["<b>Experiencias ilimitadas</b>","<b>El logo de tu marca</b> en lugar del de Vórtice VR","Experiencias Premium: ruleta, rasca y gana, productos en 3D (conforme salgan)","Todo lo de Pro","Soporte prioritario"]]];
 const LEGACY={basico:["basico","Básico",199,1990,"Tu plan actual",["<b>5</b> experiencias","Hasta <b>6</b> elementos por imagen","Videos de hasta 25 MB"]],
@@ -520,13 +520,13 @@ async function openRef(){ $("refBox").hidden=false; $("refBody").innerHTML='<p c
       <p class="note">Recomienda y gana está disponible con los planes <b>Pro</b> y <b>Premium</b>: mientras tu plan esté activo, ganas por cada pago de tus recomendados.</p>
       <button class="btn sun" type="button" id="refUp">Ver planes</button>`;
     $("refUp").onclick=()=>{ $("refBox").hidden=true; openPlans(true); }; return; }
-  const ST={pendiente:"Pendiente",disponible:"Disponible",pagada:"Pagada",cancelada:"Cancelada"};
+  const ST={pendiente:"Pendiente",disponible:"Disponible",abonada:"Abonada a tu plan",pagada:"Pagada",cancelada:"Cancelada"};
   B.innerHTML=`<div class="rgrid"><div>
       <p class="rlead">Comparte tu link: quien se registre con él tiene <b>${r.discount}% de descuento</b> su primer año, y tú ganas <b>${r.rate}% de cada pago</b> que haga, todo el tiempo que ambos tengan su plan.</p>
       <div class="rlink"><code id="refLink">${esc(r.link)}</code><button class="btn" type="button" id="refCopy">Copiar link</button><button class="btn sun" type="button" id="refShare">Compartir</button></div>
       <p class="note">O dales tu código: <span class="rcode">${esc(r.code)}</span></p>
-      <div class="tsum">${[[r.registered,"cuentas con tu código"],[r.paying,"pagando ahora"],[money(r.totals.pendiente),"pendiente"],[money(r.totals.disponible),"disponible"],[money(r.totals.pagada),"ya pagado"]].map(([v,l])=>`<div><b>${typeof v==="number"?nf(v):v}</b><span>${l}</span></div>`).join("")}</div>
-      <p class="note">Cada comisión queda <b>pendiente ${r.holdDays} días</b> (por si hay un reembolso) y luego <b>disponible</b>. Te transferimos cuando acumulas ${money(r.minPayout)} o más; te escribiremos al correo de tu cuenta para pedirte tus datos de pago.</p>
+      <div class="tsum">${[[r.registered,"cuentas con tu código"],[r.paying,"pagando ahora"],[money(r.totals.pendiente),"pendiente"],[money((r.totals.abonada||0)+r.totals.pagada+r.totals.disponible),"ya ganado"]].map(([v,l])=>`<div><b>${typeof v==="number"?nf(v):v}</b><span>${l}</span></div>`).join("")}</div>
+      <p class="note">Cada comisión queda <b>pendiente ${r.holdDays} días</b> (por si hay un reembolso) y luego <b>se abona sola como saldo a favor de tu plan</b>: tus próximos cobros bajan o salen en $0. Si juntas más saldo del que usas y prefieres dinero, escríbenos desde “Ayuda y soporte”.</p>
     </div>
     <div class="rqr"><canvas id="refQR" aria-label="Código QR de tu invitación"></canvas><button class="btn sun" type="button" id="refQRd">Descargar QR</button></div></div>
     <h3 class="tsub">Tus comisiones</h3>
