@@ -606,7 +606,7 @@ function card(exp){
     <div class="bd"><h3>${esc(exp.title)}</h3>${exp.paused?`<span class="url">${esc(short)}</span>`:`<a class="url" href="${esc(exp.url)}" target="_blank" rel="noopener">${esc(short)}</a>`}
       <div class="meta"><span><b>${nf(exp.views)}</b>${free?`/${nf(vlim)}`:""} ${exp.views===1&&!free?"vista":"vistas"}</span><span>${status}</span></div>
       <div class="acts">${exp.paused?`<button class="btn sun" type="button" data-a="up">Mejorar plan</button>`
-        :`<a class="btn" href="../crear/${exp.kind==="trivia"?"trivia/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="copy">Copiar link</button>`}
+        :`<a class="btn" href="../crear/${exp.kind==="trivia"||exp.kind==="colorear"?exp.kind+"/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="copy">Copiar link</button>`}
         <button class="btn del" type="button" data-a="del" aria-label="Borrar ${esc(exp.title)}">Borrar</button></div></div>`;
   const on=(a,f)=>{ const b=el.querySelector(`[data-a=${a}]`); if(b) b.addEventListener("click",f); };
   if(exp.demo){ // sample card: only the QR works; the rest explains itself

@@ -373,7 +373,7 @@ async function api(request, env, ctx, url) {
     const image = form.get("image"), target = form.get("target"), qr = form.get("qr");
     const isNew = !mine;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
-    if (isNew && data.kind !== "trivia" && (!image || !target)) return json({ error: "Falta la imagen." }, 400);
+    if (isNew && data.kind !== "trivia" && (!image || (!target && data.kind !== "colorear"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
     if (target && target.size > LIMITS.targetBytes) return json({ error: "La imagen no se pudo preparar. Intenta con otra." }, 400);
     // each element's file: uploaded now (field f_<id>) or kept from the version being edited (same id and type)
@@ -431,7 +431,7 @@ async function api(request, env, ctx, url) {
       .bind(slug, who, data.title, JSON.stringify(data), created, now, expires, mine ? mine.views || 0 : 0).run();
     const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(slug).first();
     const out = ownerExp(row, request, env);
-    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
+    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
     return json({ ok: true, experience: out });
   }
 
@@ -686,6 +686,7 @@ async function api(request, env, ctx, url) {
 function publicExp(row) {
   const d = JSON.parse(row.data || "{}");
   if (d.kind === "trivia") return { slug: row.slug, kind: "trivia", title: row.title, trivia: d.trivia, buttons: d.buttons, expires: row.expires };
+  if (d.kind === "colorear") return { slug: row.slug, kind: "colorear", title: row.title, img: d.img, color: d.color, buttons: d.buttons, expires: row.expires };
   return { slug: row.slug, kind: "ra", title: row.title, img: d.img, place: d.place || "mesa", scenes: d.scenes || 1, items: itemsOf(d), buttons: d.buttons, expires: row.expires };
 }
 function ownerExp(row, request, env) {
@@ -788,6 +789,13 @@ function cleanTrivia(t) {
   const time = TRIVIA.times.includes(Number(t.time)) ? Number(t.time) : 10;
   return { questions, time };
 }
+// Coloring page (assets/colorear.js): the image is a line drawing that anyone with the link paints with a finger.
+// th = how dark a pixel must be to count as a line (the fill stops there); palette = the colors offered first.
+const COLOREAR = { palettes: ["vivos", "pastel", "naturaleza", "piel"], th: [90, 230] };
+function cleanColor(c) {
+  const th = Math.round(Number(c && c.th));
+  return { palette: COLOREAR.palettes.includes(c && c.palette) ? c.palette : "vivos", th: th >= COLOREAR.th[0] && th <= COLOREAR.th[1] ? th : 170 };
+}
 function cleanMeta(m, P) {
   const title = String(m.title || "").trim().slice(0, 80);
   if (!title) return { error: "Escribe un título." };
@@ -800,6 +808,7 @@ function cleanMeta(m, P) {
   const num = (v, a, b) => { v = Number(v); return Number.isFinite(v) && v >= a && v <= b ? Math.round(v) : null; };
   const img = { w: num(m.img && m.img.w, 50, 8000), h: num(m.img && m.img.h, 50, 8000) };
   if (!img.w || !img.h) return { error: "Faltan las medidas de la imagen." };
+  if (m.kind === "colorear") return { kind: "colorear", title, img, color: cleanColor(m.color), items: [], buttons };
   const ci = cleanItems(m.items, P);
   if (ci.error) return ci;
   const items = ci.items, scenes = Math.min(ITEM_LIMITS.scenes, Math.max(1, num(m.scenes, 1, ITEM_LIMITS.scenes) || 1, ...items.map(i => i.scene + 1)));

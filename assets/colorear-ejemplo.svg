@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900">
+  <!-- Example line drawing for "Colorea mi dibujo": black closed shapes on white -->
+  <rect width="1200" height="900" fill="#fff"/>
+  <g fill="none" stroke="#111" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="20" y="20" width="1160" height="860" rx="30"/>
+    <!-- sun -->
+    <circle cx="1010" cy="170" r="80"/>
+    <path d="M1010 50v-22M1010 312v-22M890 170h-22M1152 170h-22M925 85l-16-16M1111 271l-16-16M925 255l-16 16M1111 69l-16 16"/>
+    <!-- hills -->
+    <path d="M20 640c180-120 360-120 520-30s330 110 640-40"/>
+    <path d="M20 760c260-90 520-80 760-10s300 30 400-10"/>
+    <!-- house -->
+    <path d="M180 600V420l170-130 170 130v180"/>
+    <path d="M150 440l200-170 200 170"/>
+    <rect x="300" y="480" width="100" height="120"/>
+    <circle cx="380" cy="545" r="7"/>
+    <rect x="215" y="455" width="60" height="60"/><path d="M245 455v60M215 485h60"/>
+    <rect x="425" y="455" width="60" height="60"/><path d="M455 455v60M425 485h60"/>
+    <rect x="420" y="300" width="50" height="70"/>
+    <!-- tree -->
+    <path d="M760 640V500h50v130"/>
+    <path d="M785 510c-90 10-140-60-100-120-40-60 20-140 100-120 60-60 160-10 150 70 60 40 30 140-50 160-30 20-70 20-100 10z"/>
+    <circle cx="730" cy="420" r="16"/><circle cx="840" cy="380" r="16"/><circle cx="800" cy="460" r="16"/>
+    <!-- flowers -->
+    <path d="M600 760v-80M1000 700v-70"/>
+    <circle cx="600" cy="660" r="20"/><path d="M600 640c-10-40 30-50 20-10M620 660c40-10 50 30 10 20M600 680c10 40-30 50-20 10M580 660c-40 10-50-30-10-20"/>
+    <circle cx="1000" cy="610" r="20"/><path d="M1000 590c-10-40 30-50 20-10M1020 610c40-10 50 30 10 20M1000 630c10 40-30 50-20 10M980 610c-40 10-50-30-10-20"/>
+    <!-- cloud and butterfly -->
+    <path d="M520 190c-20-50 50-80 80-45 25-45 105-30 100 25 45 0 55 65 5 70H535c-50-5-55-55-15-50z"/>
+    <path d="M980 470c-60-60-90 20-40 40-50 30-10 90 40 30z M990 470c60-60 90 20 40 40 50 30 10 90-40 30z M985 455v90"/>
+  </g>
+</svg>

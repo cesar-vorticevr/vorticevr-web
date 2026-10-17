@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Crea tu dibujo para colorear · Vórtice VR</title>
+<meta name="description" content="Sube un dibujo de líneas y comparte el link: cualquiera lo colorea con el dedo y guarda o comparte su versión.">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../../assets/icono.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Coloring page maker: the drawing and its settings on the left, a live coloring preview on the right (above on a phone).
+   The coloring itself is assets/colorear.js (opened at the experience link). */
+:root{--void:#05020b;--panel:rgba(20,9,40,.7);--line:rgba(190,150,255,.2);--line2:rgba(190,150,255,.45);--vortex:#8b3fd6;--vortex-d:#5a1f8f;--lav:#d2b8ff;--ink:#f2ecff;--mute:#a99bcb;--sun:#ffbe55;--ok:#74e8ba;--bad:#ff8a9e;
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55;min-height:100vh}
+a{color:var(--lav)}
+:focus-visible{outline:2px solid var(--lav);outline-offset:3px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1180px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 8px}
+header img{height:24px;display:block}
+header a.back{font-family:var(--fd);font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--mute)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+.hero{padding:28px 0 26px}
+.kick{font-family:var(--fd);font-size:.78rem;letter-spacing:.26em;text-transform:uppercase;color:var(--sun);font-weight:600}
+h1{font-family:var(--fd);font-size:clamp(2rem,5vw,3.2rem);line-height:1.02;margin:8px 0 10px;text-wrap:balance}
+.hero p{margin:0;color:var(--mute);max-width:62ch}
+.narrow{max-width:820px}
+.step{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:20px;margin-bottom:16px}
+.step h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font-family:var(--fd);font-size:1.2rem}
+.step h2 .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--fm);font-size:.85rem;background:rgba(139,63,214,.3);border:1px solid var(--line2);flex:none}
+.step h2 .n.done{background:var(--ok);color:#0b2a1e;border-color:var(--ok)}
+.step>p.hint{margin:0 0 14px;color:var(--mute);font-size:.92rem}
+.drop{display:flex;align-items:center;gap:14px;border:1.5px dashed var(--line2);border-radius:12px;padding:16px;cursor:pointer;transition:border-color .2s,background .2s}
+.drop:hover,.drop.over{border-color:var(--lav);background:rgba(139,63,214,.12)}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.drop .thumb{width:84px;height:64px;border-radius:8px;object-fit:cover;background:#120826;flex:none}
+.drop b{display:block}
+.drop small{color:var(--mute)}
+.bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--vortex),var(--sun));transition:width .2s}
+.msg{font-size:.88rem;margin-top:8px}
+.tutlink{margin-top:10px;font:600 .8rem var(--fd);letter-spacing:.1em;text-transform:uppercase;color:var(--sun);background:rgba(255,190,85,.08);border:1px solid rgba(255,190,85,.4);border-radius:999px;padding:8px 14px;cursor:pointer}
+.tutlink:hover{background:rgba(255,190,85,.16)}
+.quality{display:flex;gap:12px;align-items:flex-start;margin-top:10px;padding:12px 14px;border-radius:12px;border:1px solid var(--line2);background:rgba(5,2,11,.6);font-size:.9rem;color:var(--mute)}
+.quality b{display:block;color:var(--ink);font-family:var(--fd);font-size:.85rem;letter-spacing:.06em;margin-bottom:2px}
+.quality .stars{font-size:1.35rem;letter-spacing:2px;color:#ffbe55;text-shadow:0 0 12px rgba(255,190,85,.7);white-space:nowrap;line-height:1.2}
+.quality .stars i{font-style:normal;color:rgba(255,255,255,.15);text-shadow:none}
+.quality.q1 .stars,.quality.q2 .stars{color:#ff9f7a;text-shadow:0 0 10px rgba(255,138,120,.5)}
+.quality.q5{border-color:rgba(255,190,85,.6);box-shadow:0 0 24px rgba(255,190,85,.18)}
+.msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+label.f{display:block;font-size:.8rem;font-family:var(--fd);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:12px 0 6px}
+input[type=text],input[type=email],input[type=tel],input[type=url]{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:11px 12px}
+input:focus{border-color:var(--lav);outline:none}
+.slugrow{display:flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:rgba(5,2,11,.7);overflow:hidden}
+.slugrow input{border:0;background:transparent;border-radius:0;text-align:right;padding-right:2px;min-width:0}
+.slugrow span{padding:11px 12px 11px 0;color:var(--mute);white-space:nowrap;font-family:var(--fm);font-size:.9rem}
+.soc{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px}
+.soc label{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:4px 4px 4px 10px;background:rgba(5,2,11,.5)}
+.soc svg{width:20px;height:20px;fill:var(--lav);flex:none}
+.soc input{border:0!important;background:transparent!important;padding:8px 6px 8px 0!important;min-width:0}
+.soc .pre{font-family:var(--fm);font-size:.82rem;color:var(--mute);white-space:nowrap}
+header .acts{display:flex;align-items:center;gap:14px}
+.mybtn{font-family:var(--fd);font-weight:600;letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;border:1px solid var(--line2);border-radius:999px;padding:9px 14px;background:rgba(139,63,214,.2);color:var(--ink);cursor:pointer}
+.phead{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.phead img{width:150px;max-width:40%;border-radius:10px;border:1px solid var(--line2)}
+.phead h2{margin:4px 0 2px}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.stats div{flex:1 1 120px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:rgba(5,2,11,.5)}
+.stats b{display:block;font-family:var(--fd);font-size:1.25rem}
+.stats span{font-size:.78rem;color:var(--mute)}
+.btn.danger{border-color:rgba(255,138,158,.6);color:var(--bad)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{font:600 .85rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--fd);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:.85rem;border:1px solid var(--line2);border-radius:999px;padding:13px 22px;color:var(--ink);background:rgba(20,9,40,.6);cursor:pointer;text-decoration:none}
+.btn.primary{background:linear-gradient(135deg,var(--vortex),var(--vortex-d));border-color:var(--lav);box-shadow:0 0 26px rgba(139,63,214,.45)}
+.btn.sun{background:linear-gradient(135deg,#ffd27f,#ff9f3a);color:#1a0d00;border-color:var(--sun)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.note{font-size:.85rem;color:var(--mute)}
+
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,380px);gap:28px;align-items:start}
+.side{position:sticky;top:16px}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.side{position:static;order:-1}}
+.switch{display:inline-flex;gap:4px;padding:4px;border:1px solid var(--line2);border-radius:999px;background:rgba(5,2,11,.6);margin-top:14px}
+.switch a,.switch span{font:600 .82rem var(--fd);padding:8px 14px;border-radius:999px;text-decoration:none;color:var(--mute)}
+.switch span{background:var(--vortex);color:#fff}
+.switch{flex-wrap:wrap;border-radius:18px}
+input[type=range]{width:100%;accent-color:#8b3fd6}
+.rng{display:flex;justify-content:space-between;font-size:.8rem;color:var(--mute);margin-top:2px}
+.pals{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.pals button{border:1px solid var(--line2);border-radius:12px;background:rgba(5,2,11,.6);padding:10px;color:var(--ink);cursor:pointer;text-align:left;font:600 .85rem var(--fb)}
+.pals button[aria-pressed="true"]{border-color:var(--lav);background:rgba(139,63,214,.25);box-shadow:0 0 18px rgba(139,63,214,.35)}
+.pals i{display:flex;gap:3px;margin-top:6px}
+.pals i b{width:14px;height:14px;border-radius:50%;border:1px solid rgba(255,255,255,.25)}
+.drop .thumb{background:#fff;object-fit:contain}
+.sample{margin-top:10px;background:none;border:0;color:var(--lav);text-decoration:underline;cursor:pointer;font:inherit;font-size:.9rem;padding:0}
+.tips{margin:10px 0 0;padding-left:18px;color:var(--mute);font-size:.88rem}
+.pv{border:1px solid var(--line2);border-radius:18px;background:#120826;padding:14px}
+.pv h3{margin:0 0 10px;font-family:var(--fd);font-size:1rem;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pv h3 small{font:500 .78rem var(--fb);color:var(--mute)}
+.board{position:relative;height:min(64vh,520px);border-radius:14px;overflow:hidden;background:#0b0518}
+.board .empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--mute);padding:20px;font-size:.92rem}
+</style>
+</head>
+<body>
+<header><a href="../../" aria-label="Vórtice VR, inicio"><img src="../../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a class="mybtn" href="../../cuenta/" style="text-decoration:none">Mi cuenta</a><a class="back" href="../../">← Sitio</a></div></header>
+<main class="wrap">
+  <div class="hero">
+    <span class="kick" id="kick">Gratis · prueba de 15 días</span>
+    <h1>Crea tu dibujo para colorear</h1>
+    <p>Sube un dibujo de líneas y comparte el link o el QR: cualquiera lo colorea con el dedo, sin instalar nada, y guarda o comparte su versión. Ideal para artistas, eventos, escuelas y marcas.</p>
+    <div class="switch"><a href="../">Imagen con realidad aumentada</a><a href="../trivia/">Trivia con tu cara</a><span>Colorea mi dibujo</span></div>
+  </div>
+  <div class="grid">
+    <div>
+      <section class="step" id="full" hidden>
+        <h2 id="fullTitle">Ya usaste todas tus experiencias</h2>
+        <p class="hint" id="fullText"></p>
+        <div class="row"><a class="btn" href="../../cuenta/#planes">Ver planes</a><a class="btn" href="../../cuenta/">Ir a mi cuenta</a></div>
+      </section>
+      <section class="step" id="s1">
+        <h2><span class="n" id="n1">1</span>Tu dibujo</h2>
+        <p class="hint">Un dibujo de líneas oscuras sobre fondo blanco (JPG, PNG o WebP). Puede ser una foto o un escaneo de un dibujo en papel.</p>
+        <label class="drop" id="drop"><input type="file" id="file" accept="image/png,image/jpeg,image/webp"><img class="thumb" id="thumb" alt="" hidden><span><b id="dropT">Elige o suelta tu dibujo</b><small id="dropS">Funciona mejor con líneas negras y zonas cerradas.</small></span></label>
+        <button class="sample" id="sample" type="button">¿Sin dibujo a la mano? Usa uno de ejemplo</button>
+        <div class="msg" id="mImg"></div>
+        <ul class="tips"><li>Las zonas deben estar <b>cerradas</b>: si una línea tiene un hueco, la cubeta pinta también lo de al lado.</li><li>Sin sombras ni textura de papel; si la foto salió gris, sube la detección de líneas.</li></ul>
+      </section>
+      <section class="step" id="s2">
+        <h2><span class="n done">2</span>Ajustes</h2>
+        <label class="f" for="th">Detección de líneas</label>
+        <input type="range" id="th" min="90" max="230" step="5" value="170">
+        <div class="rng"><span>Solo líneas muy oscuras</span><span>También líneas claras</span></div>
+        <label class="f">Colores para empezar</label>
+        <div class="pals" id="pals"></div>
+        <p class="note">Quien colorea también puede elegir cualquier otro color.</p>
+      </section>
+      <section class="step" id="s4">
+        <h2><span class="n" id="n4">3</span>Título, link y botones</h2>
+        <label class="f" for="title">Título</label>
+        <input type="text" id="title" maxlength="80" placeholder="Ej. Colorea a mi personaje">
+        <label class="f" for="slug">Tu link</label>
+        <div class="slugrow"><input type="text" id="slug" maxlength="30" placeholder="tu-dibujo" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="root">.vorticevr.mx</span></div>
+        <div class="msg" id="mSlug"></div>
+        <label class="f">Botones (opcionales)</label>
+        <p class="hint" style="margin:0 0 8px;color:var(--mute);font-size:.88rem">Aparecen al guardar el dibujo: buen momento para que te sigan.</p>
+        <div class="soc" id="soc"></div>
+      </section>
+      <section class="step" id="s6">
+        <h2><span class="n" id="n6">4</span>Publicar</h2>
+        <div class="mine" id="mine" hidden style="margin:0 0 12px"></div>
+        <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
+        <button class="btn primary" id="publish" type="button" disabled>Publicar mi dibujo</button>
+        <div class="bar" id="bPub" hidden><i></i></div><div class="msg" id="mPub"></div>
+        <p class="legal">Al publicar confirmas que el dibujo es tuyo o tienes derecho a usarlo. Vórtice VR puede retirar contenido inapropiado (<a href="../../terminos/">términos</a>). <span id="legalDays">La experiencia se borra a los 15 días; puedes editarla o borrarla desde tu cuenta.</span></p>
+      </section>
+    </div>
+    <aside class="side">
+      <div class="pv">
+        <h3>Vista previa <small>pruébalo: toca una zona</small></h3>
+        <div class="board" id="board"><div class="empty" id="empty">Sube tu dibujo para probarlo aquí.</div></div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="../../assets/plataforma.js" data-api="../.."></script>
+<script type="module">
+import { run, analyze, PALETTES, PALETTE_NAMES } from "../../assets/colorear.js";
+const $=id=>document.getElementById(id);
+const API=VVR.api;
+const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
+$("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
+const S={token:null,email:null,mine:null,img:null,file:null,w:0,h:0,th:170,palette:"vivos"};
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// ---------- social buttons (same as /crear/) ----------
+const SOC=[["whatsapp","WhatsApp","","993 123 4567","tel"],["facebook","Facebook","facebook.com/","tu-pagina","text"],["instagram","Instagram","instagram.com/","tu_usuario","text"],["youtube","YouTube","youtube.com/@","tu-canal","text"],["x","X","x.com/","tu_usuario","text"],["tiktok","TikTok","tiktok.com/@","tu_usuario","text"],["web","Sitio web","","tusitio.com","text"]];
+// accepts "usuario", "@usuario" or a pasted link, and keeps only the username for the social networks
+const BASES={facebook:"facebook.com",instagram:"instagram.com",youtube:"youtube.com",x:"x.com",tiktok:"tiktok.com"};
+function toHandle(k,v){ v=String(v||"").trim(); if(!BASES[k]||!v) return v;
+  if(/^https?:\/\//i.test(v)||v.includes("/")){ try{ const u=new URL(/^https?:/i.test(v)?v:"https://"+v); const seg=u.pathname.split("/").filter(Boolean)[0]||""; return decodeURIComponent(seg).replace(/^@/,""); }catch(e){ return v; } }
+  return v.replace(/^@/,""); }
+const ICON={whatsapp:'<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/>',facebook:'<path d="M20 2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8.6v-7.7H10v-3h2.6V9c0-2.6 1.6-4 3.9-4 1.1 0 2.1.1 2.3.1v2.7h-1.6c-1.3 0-1.5.6-1.5 1.5v1.9h3l-.4 3h-2.6V22H20a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>',instagram:'<path d="M7.8 2h8.4A5.8 5.8 0 0 1 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8A5.8 5.8 0 0 1 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2zm-.2 2A3.6 3.6 0 0 0 4 7.6v8.8A3.6 3.6 0 0 0 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6A3.6 3.6 0 0 0 16.4 4H7.6zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>',youtube:'<path d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4a2.5 2.5 0 0 0-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.8a2.5 2.5 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8c.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8zM10 15V9l5.2 3-5.2 3z"/>',x:'<path d="M17.8 3h3.1l-6.8 7.7L22 21h-6.2l-4.9-6.4L5.3 21H2.2l7.3-8.3L2 3h6.4l4.4 5.8L17.8 3zm-1.1 16.2h1.7L7.4 4.7H5.6l11.1 14.5z"/>',tiktok:'<path d="M16.6 3c.4 2.2 1.8 3.7 4 3.9v3a7.4 7.4 0 0 1-4-1.3v6.2A5.8 5.8 0 1 1 10.8 9v3.1a2.8 2.8 0 1 0 2.8 2.8V3h3z"/>',web:'<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm7.9 9h-3a15.6 15.6 0 0 0-1.3-5.5A8 8 0 0 1 19.9 11zM12 4c.9 1.1 1.8 3.6 2 7h-4c.2-3.4 1.1-5.9 2-7zM4.1 13h3c.1 2 .6 3.9 1.3 5.5A8 8 0 0 1 4.1 13zm3-2h-3a8 8 0 0 1 4.3-5.5A15.6 15.6 0 0 0 7.1 11zM12 20c-.9-1.1-1.8-3.6-2-7h4c-.2 3.4-1.1 5.9-2 7z"/>'};
+$("soc").innerHTML=SOC.map(([k,l,pre,ph,t])=>`<label title="${l}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>${pre?`<span class="pre">${pre}</span>`:""}<input type="${t}" id="b_${k}" placeholder="${ph}" aria-label="${l}${pre?" (solo tu usuario)":""}" autocapitalize="off" autocomplete="off" spellcheck="false"></label>`).join("");
+for(const [k] of SOC) if(BASES[k]) $("b_"+k).addEventListener("change",e=>{ e.target.value=toHandle(k,e.target.value); });
+
+// ---------- the drawing: up to 1600 px, flattened on white; PNG (line art compresses well) or JPG if it is heavy ----------
+const MAXPX=1600;
+const loadImg=src=>new Promise((ok,bad)=>{ const i=new Image(); i.crossOrigin="anonymous"; i.onload=()=>ok(i); i.onerror=bad; i.src=src; });
+async function useImage(src,name){
+  const m=$("mImg"); m.className="msg"; m.textContent="Preparando tu dibujo…";
+  let im; try{ im=await loadImg(src); }catch(e){ m.className="msg bad"; m.textContent="No pude abrir esa imagen. Prueba con un JPG o PNG."; return; }
+  const k=Math.min(1,MAXPX/Math.max(im.naturalWidth||1200,im.naturalHeight||900)), w=Math.round((im.naturalWidth||1200)*k), h=Math.round((im.naturalHeight||900)*k);
+  if(Math.max(w,h)<500){ m.className="msg bad"; m.textContent="Tu dibujo es muy chico. Usa uno de al menos 800 px de ancho."; return; }
+  const c=document.createElement("canvas"); c.width=w; c.height=h; const x=c.getContext("2d"); x.fillStyle="#fff"; x.fillRect(0,0,w,h); x.imageSmoothingQuality="high"; x.drawImage(im,0,0,w,h);
+  let blob=await new Promise(r=>c.toBlob(r,"image/png")); if(blob.size>2.8e6) blob=await new Promise(r=>c.toBlob(r,"image/jpeg",.92));
+  S.file=blob; S.w=w; S.h=h; S.img=await loadImg(URL.createObjectURL(blob));
+  $("thumb").src=S.img.src; $("thumb").hidden=false; $("dropT").textContent=name||"Tu dibujo"; $("dropS").textContent="Toca para cambiarlo.";
+  rate(); preview(); check();
+}
+function rate(){ if(!S.img) return; const m=$("mImg"), a=analyze(S.img,S.th);
+  if(a.dark>.4){ m.className="msg bad"; m.textContent="Hay mucho oscuro: parece una foto o un fondo de color. Baja la detección de líneas o usa un dibujo de líneas sobre blanco."; }
+  else if(a.dark<.004){ m.className="msg bad"; m.textContent="Casi no encuentro líneas. Sube la detección de líneas o usa trazos más oscuros."; }
+  else { m.className="msg ok"; m.textContent="¡Listo! Pruébalo en la vista previa: toca una zona para pintarla."; } }
+$("file").addEventListener("change",e=>{ const f=e.target.files[0]; if(!f) return; if(!/^image\/(png|jpeg|webp)$/.test(f.type)){ $("mImg").className="msg bad"; $("mImg").textContent="Usa un JPG, PNG o WebP."; return; } useImage(URL.createObjectURL(f),f.name); });
+const drop=$("drop");
+["dragenter","dragover"].forEach(t=>drop.addEventListener(t,e=>{ e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{ e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop",e=>{ const f=e.dataTransfer.files[0]; if(f&&/^image\/(png|jpeg|webp)$/.test(f.type)) useImage(URL.createObjectURL(f),f.name); });
+$("sample").addEventListener("click",()=>{ useImage("../../assets/colorear-ejemplo.svg","Dibujo de ejemplo"); if(!$("title").value){ $("title").value="Colorea mi paisaje"; $("title").dispatchEvent(new Event("input")); } });
+
+// ---------- settings ----------
+let thT=0;
+$("th").addEventListener("input",()=>{ S.th=+$("th").value; clearTimeout(thT); thT=setTimeout(()=>{ rate(); preview(); },250); });
+$("pals").innerHTML=Object.keys(PALETTES).map(k=>`<button type="button" data-p="${k}">${PALETTE_NAMES[k]}<i>${PALETTES[k].slice(0,8).map(c=>`<b style="background:${c}"></b>`).join("")}</i></button>`).join("");
+const pressPal=()=>document.querySelectorAll("#pals button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.p===S.palette)));
+$("pals").addEventListener("click",e=>{ const b=e.target.closest("[data-p]"); if(!b) return; S.palette=b.dataset.p; pressPal(); preview(); });
+
+// ---------- live preview (the same coloring as the link) ----------
+let app=null, pvN=0;
+async function preview(){
+  if(!S.img) return; const n=++pvN; $("empty").hidden=true;
+  try{ const a=await run({root:$("board"),image:S.img,th:S.th,palette:S.palette,embedded:true}); if(n!==pvN){ a.destroy(); return; } if(app) app.destroy(); app=a; }
+  catch(e){ console.error(e); }
+}
+
+// ---------- title and link ----------
+const slugIn=$("slug"); let slugOk=false, slugTimer=0;
+const toSlug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9-]+/g,"-").replace(/-+/g,"-").replace(/^-/,"").slice(0,30);
+slugIn.addEventListener("input",()=>{ const c=slugIn.selectionStart; slugIn.value=toSlug(slugIn.value); slugIn.setSelectionRange(c,c); checkSlug(); });
+$("title").addEventListener("input",()=>{ if(!slugIn.dataset.touched && !S.mine){ slugIn.value=toSlug($("title").value).replace(/-$/,""); checkSlug(); } check(); });
+slugIn.addEventListener("keydown",()=>slugIn.dataset.touched="1");
+function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false; check(); const s=slugIn.value.replace(/-$/,"");
+  if(s.length<3){ m.className="msg"; m.textContent=""; return; }
+  if(S.mine&&S.mine.slug===s){ slugOk=true; m.className="msg ok"; m.textContent="Es tu link actual."; check(); return; }
+  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
+const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
+
+// ---------- account and publishing ----------
+function check(){
+  const imgOk=!!S.img;
+  $("n1").classList.toggle("done",imgOk); $("n4").classList.toggle("done",!!($("title").value.trim()&&slugOk));
+  const ok=imgOk&&$("title").value.trim()&&slugOk&&S.token;
+  $("publish").disabled=!ok;
+  $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link a ${S.email}.`:!imgOk?"Sube tu dibujo.":!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
+}
+$("publish").addEventListener("click",async()=>{
+  const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Publicando…"; bar.hidden=false; $("publish").disabled=true;
+  const meta={kind:"colorear",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),img:{w:S.w,h:S.h},color:{th:S.th,palette:S.palette},buttons:{}};
+  for(const [k] of SOC){ const v=toHandle(k,$("b_"+k).value); if(v) meta.buttons[k]=v; }
+  const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
+  if(S.file) fd.append("image",S.file,S.file.type==="image/png"?"dibujo.png":"dibujo.jpg");
+  const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc, linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/","Escanea y colorea este dibujo");
+  fd.append("qr",await new Promise(r=>qrc.toBlob(r,"image/png")),"qr.png");
+  const xhr=new XMLHttpRequest(); xhr.open("POST",`${API}/api/publish`); xhr.setRequestHeader("Authorization","Bearer "+S.token);
+  xhr.upload.onprogress=e=>{ if(e.lengthComputable) bar.firstElementChild.style.width=(e.loaded/e.total*100)+"%"; };
+  xhr.onload=()=>{ bar.hidden=true; let j={}; try{ j=JSON.parse(xhr.responseText); }catch(e){}
+    if(xhr.status!==200){ m.className="msg bad"; m.textContent=j.error||"No se pudo publicar."; $("publish").disabled=false; if(xhr.status===401){ VVR.clearSession(); location.href="../../cuenta/?siguiente=crear"; } return; }
+    m.textContent="¡Publicado! Abriendo tu cuenta…"; location.href="../../cuenta/?publicada="+encodeURIComponent(j.experience.slug); };
+  xhr.onerror=()=>{ bar.hidden=true; m.className="msg bad"; m.textContent="Se cortó la conexión. Intenta de nuevo."; $("publish").disabled=false; };
+  xhr.send(fd);
+});
+(async()=>{
+  const ed=new URLSearchParams(location.search).get("editar");
+  const toLogin=()=>location.replace("../../cuenta/?siguiente=crear");
+  const sess=VVR.session(); if(!sess){ toLogin(); return; }
+  S.token=sess.token; S.email=sess.user&&sess.user.email;
+  pressPal(); check();
+  try{
+    const r=await VVR.call("me"); S.email=r.user.email;
+    const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1}, LIM=r.limit??P.exp, member=r.team&&r.team.role==="member";
+    if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name}`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
+    const exp=ed?r.experiences.find(x=>x.slug===ed):null;
+    if(exp&&exp.kind!=="colorear"){ location.replace((exp.kind==="trivia"?"../trivia/":"../")+"?editar="+encodeURIComponent(ed)); return; }
+    if(exp){
+      S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza.`;
+      S.th=(exp.color&&exp.color.th)||170; S.palette=(exp.color&&exp.color.palette)||"vivos"; $("th").value=S.th; pressPal();
+      S.w=exp.img.w; S.h=exp.img.h;
+      try{ S.img=await loadImg(`${API}/m/${exp.slug}/image?v=${exp.updated||exp.created}`); $("thumb").src=S.img.src; $("thumb").hidden=false; $("dropT").textContent="Tu dibujo actual"; $("dropS").textContent="Toca para cambiarlo."; rate(); preview(); }catch(e){}
+      $("title").value=exp.title; slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
+      for(const [k] of SOC){ const el=$("b_"+k); if(exp.buttons&&exp.buttons[k]) el.value=k==="whatsapp"?exp.buttons[k].replace(/^52(?=\d{10}$)/,""):toHandle(k,exp.buttons[k]); }
+      $("publish").textContent="Guardar cambios";
+    } else if(r.experiences.filter(x=>!x.paused).length>=LIM){
+      document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); document.querySelector(".side").hidden=true; $("full").hidden=false;
+      $("fullText").textContent=member?"Tu equipo te asignó todas las que puedes usar. Borra una o pide más a quien administra tu equipo.":`Tu plan ${P.name} incluye ${LIM.toLocaleString("es-MX")} ${LIM===1?"experiencia":"experiencias"}. Borra una desde tu cuenta o mejora tu plan para crear tu dibujo.`;
+    }
+  }catch(e){ if(e.status===401){ toLogin(); return; } }
+  check();
+})();
+</script>
+<script src="../../assets/magia.js" defer></script>
+</body>
+</html>

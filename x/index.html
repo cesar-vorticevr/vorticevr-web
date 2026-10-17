@@ -231,6 +231,13 @@ async function load(){
     $("steps").innerHTML="<li><span>Toca <b>Jugar</b> y, si te lo pregunta, <b>Permitir</b> la cámara.</span></li><li><span><b>Inclina la cabeza</b> hacia la respuesta correcta (o toca ese lado de la pantalla).</span></li><li><span>Al final ves cuántas acertaste. ¡Grábalo y compártelo!</span></li>";
     socialButtons(); startBtn.disabled=false; libsP=triviaLibs().catch(e=>{ console.error(e); libsP=null; }); return;
   }
+  if(CFG.kind==="colorear"){   // a coloring page: no camera, the drawing is painted on screen (assets/colorear.js)
+    document.title=(CFG.title||"Colorea")+" · Vórtice VR"; $("title").textContent=CFG.title||"Colorea este dibujo";
+    $("kick").textContent="Colorea este dibujo"; startBtn.textContent="Empezar a colorear";
+    $("thumb").src=`${base}/m/${CFG.slug}/image`; $("thumb").alt="El dibujo para colorear"; $("thumb").hidden=false; $("thumb").style.background="#fff";
+    $("steps").innerHTML="<li><span>Elige un <b>color</b> y toca una zona del dibujo para pintarla.</span></li><li><span>Usa el <b>pincel</b> para los detalles; pellizca para hacer zoom.</span></li><li><span>Toca <b>Guardar</b> y compártelo.</span></li>";
+    startBtn.disabled=false; libsP=import("/assets/colorear.js").catch(e=>{ console.error(e); libsP=null; }); return;
+  }
   const m=`${base}/m/${CFG.slug}/`;
   CFG.media={target:m+"target",image:m+"image"};
   CFG.items=CFG.items||[];
@@ -336,8 +343,18 @@ async function startTrivia(){
     $("err").textContent=(e&&(e.name==="NotAllowedError"||/Permission/i.test(e.message||"")))?"No se dio permiso a la cámara. Actívalo en los ajustes del navegador y vuelve a intentar.":"No se pudo iniciar la cámara. Abre este link en Chrome o Safari (no dentro de Instagram o WhatsApp).";
   }
 }
+async function startColorear(){
+  startBtn.disabled=true; startBtn.textContent="Cargando…"; $("err").hidden=true;
+  try{
+    const C=await (libsP||import("/assets/colorear.js"));
+    const buttons=ORDER.filter(k=>CFG.buttons&&CFG.buttons[k]).map(k=>({href:socialHref(k,CFG.buttons[k]),label:LABEL[k],svg:`<svg viewBox="0 0 24 24">${ICONS[k]}</svg>`}));
+    await C.run({root:$("ar"),image:`${CFG.base}/m/${CFG.slug}/image`,th:CFG.color&&CFG.color.th,palette:CFG.color&&CFG.color.palette,title:CFG.title,slug:CFG.slug,key:CFG.slug,buttons,logo:"/assets/logo-vorticevr.png"});
+    $("intro").hidden=true;
+  }catch(e){ console.error(e); startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false; $("err").textContent="No se pudo abrir el dibujo. Revisa tu conexión e intenta de nuevo."; }
+}
 async function start(){
   if(CFG.kind==="trivia") return startTrivia();
+  if(CFG.kind==="colorear") return startColorear();
   if(PRIMARY){ vid.muted=!PRIMARY.sound; vid.play().then(()=>vid.pause()).catch(()=>{}); if(PRIMARY.sound) setupAudio(); }   // unlock sound inside the tap (iOS)
   for(const v of VIDS.values()) if(v!==vid) v.play().then(()=>v.pause()).catch(()=>{});
   startBtn.disabled=true; startBtn.textContent="Cargando…"; $("err").hidden=true;

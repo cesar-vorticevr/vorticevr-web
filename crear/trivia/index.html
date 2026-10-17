@@ -88,6 +88,7 @@ header .acts{display:flex;align-items:center;gap:14px}
 .switch{display:inline-flex;gap:4px;padding:4px;border:1px solid var(--line2);border-radius:999px;background:rgba(5,2,11,.6);margin-top:14px}
 .switch a,.switch span{font:600 .82rem var(--fd);padding:8px 14px;border-radius:999px;text-decoration:none;color:var(--mute)}
 .switch span{background:var(--vortex);color:#fff}
+.switch{flex-wrap:wrap;border-radius:18px}
 /* questions */
 .qs{display:grid;gap:12px}
 .q{border:1px solid var(--line2);border-radius:14px;padding:14px;background:rgba(5,2,11,.45);animation:qIn .35s cubic-bezier(.3,1.4,.5,1)}
@@ -148,7 +149,7 @@ header .acts{display:flex;align-items:center;gap:14px}
     <span class="kick" id="kick">Gratis · prueba de 15 días</span>
     <h1>Crea tu trivia con filtro</h1>
     <p>Un juego con la cámara frontal: cada pregunta aparece sobre la cabeza y se contesta inclinándola hacia la respuesta. Al final sale cuántas acertaste, con confeti y estrellas. Comparte el link o el QR.</p>
-    <div class="switch"><a href="../">Imagen con realidad aumentada</a><span>Trivia con tu cara</span></div>
+    <div class="switch"><a href="../">Imagen con realidad aumentada</a><span>Trivia con tu cara</span><a href="../colorear/">Colorea mi dibujo 🎨</a></div>
   </div>
   <div class="grid">
     <div>
@@ -310,7 +311,7 @@ $("publish").addEventListener("click",async()=>{
     const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1}, LIM=r.limit??P.exp, member=r.team&&r.team.role==="member";
     if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name}`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
     const exp=ed?r.experiences.find(x=>x.slug===ed):null;
-    if(exp&&exp.kind!=="trivia"){ location.replace("../?editar="+encodeURIComponent(ed)); return; }
+    if(exp&&exp.kind!=="trivia"){ location.replace((exp.kind==="colorear"?"../colorear/":"../")+"?editar="+encodeURIComponent(ed)); return; }
     if(exp){
       S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza.`;
       S.qs=exp.trivia.questions.map(q=>({q:q.q,a:[...q.a],ok:q.ok})); S.time=exp.trivia.time;

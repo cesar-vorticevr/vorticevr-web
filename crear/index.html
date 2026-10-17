@@ -29,6 +29,7 @@ h1{font-family:var(--fd);font-size:clamp(2rem,5vw,3.2rem);line-height:1.02;margi
 .switch{display:flex;width:max-content;max-width:100%;gap:4px;padding:4px;border:1px solid var(--line2);border-radius:999px;background:rgba(5,2,11,.6);margin:14px 0 4px}
 .switch a,.switch span{font:600 .82rem var(--fd);padding:8px 14px;border-radius:999px;text-decoration:none;color:var(--mute)}
 .switch span{background:var(--vortex);color:#fff}
+.switch{flex-wrap:wrap;border-radius:18px}
 .switch a:hover{color:var(--ink)}
 .step{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:20px;margin-bottom:16px}
 .step h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font-family:var(--fd);font-size:1.2rem}
@@ -193,7 +194,7 @@ body.edfull{overflow:hidden}
     <span class="kick" id="kick">Gratis · prueba de 15 días</span>
     <h1>Crea tu realidad aumentada</h1>
     <p>Sube una imagen y ponle encima videos, fotos, textos u objetos 3D. Cuando alguien apunte su celular a la imagen, todo cobra vida. Recibes un link propio y un código QR para compartir.</p>
-    <div class="switch"><span>Imagen con realidad aumentada</span><a href="trivia/">Trivia con tu cara ✨</a></div>
+    <div class="switch"><span>Imagen con realidad aumentada</span><a href="trivia/">Trivia con tu cara ✨</a><a href="colorear/">Colorea mi dibujo 🎨</a></div>
     <button class="tutlink" id="tutBtn" type="button">✦ Ver tutorial</button>
   </div>
 
@@ -674,7 +675,7 @@ $("publish").addEventListener("click",async()=>{
     if(P.id!=="gratis"){ $("kick").textContent=member?`Equipo ${P.name} · ${LIM.toLocaleString("es-MX")} experiencias para ti`:`Plan ${P.name} · hasta ${LIM.toLocaleString("es-MX")} experiencias`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
     const active=r.experiences.filter(x=>!x.paused);
     const exp=ed?r.experiences.find(x=>x.slug===ed):null;
-    if(exp&&exp.kind==="trivia"){ location.replace("trivia/?editar="+encodeURIComponent(ed)); return; }
+    if(exp&&(exp.kind==="trivia"||exp.kind==="colorear")){ location.replace(exp.kind+"/?editar="+encodeURIComponent(ed)); return; }
     const block=(title,text,editSlug)=>{ document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); $("full").hidden=false;
       $("fullTitle").textContent=title; $("fullText").textContent=text; $("fullEdit").hidden=!editSlug; if(editSlug) $("fullEdit").href="?editar="+encodeURIComponent(editSlug); };
     const inc=LIM===1?"una experiencia a la vez":`${LIM.toLocaleString("es-MX")} experiencias activas`, tiene=member?`Tu equipo te asignó ${inc}`:`Tu plan ${P.name} incluye ${inc}`;
