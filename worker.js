@@ -214,7 +214,7 @@ async function api(request, env, ctx, url) {
     if (P.views && row.views >= P.views) return json({ error: "Límite de vistas", limit: true }, 410);
     ctx.waitUntil(env.DB.batch([env.DB.prepare("UPDATE experiences SET views = views + 1 WHERE slug = ?").bind(row.slug), bump(env, "views")]));
     const out = publicExp(row);
-    if (out.brand && !P.brand) delete out.brand;   // its own logo only while the plan includes it (brand: Premium)
+    if (out.brand && !P.brand) delete out.brand;   // its own logo (or none) only while the plan includes it (brand: Premium)
     return json(out, 200, { "Cache-Control": "no-store" });
   }
 
@@ -384,6 +384,9 @@ async function api(request, env, ctx, url) {
       if (!newLogo && !had) return json({ error: "Sube el logo de tu marca." }, 400);
       if (newLogo && (newLogo.size > 1048576 || !/^image\/(png|jpeg|webp)$/.test(newLogo.type))) return json({ error: "El logo debe ser PNG, JPG o WebP de máximo 1 MB." }, 400);
       data.brand = "own";
+    } else if (meta.brand === "none") {   // no logo on top at all
+      if (!P.brand) return json({ error: "Quitar el logo es del plan Premium." }, 403);
+      data.brand = "none";
     }
     const isNew = !mine;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
@@ -423,7 +426,7 @@ async function api(request, env, ctx, url) {
     // changing the name moves the files that stay
     if (mine && mine.slug !== slug) {
       const moving = new Set(data.items.map(i => i.file).filter(Boolean));
-      if (!image) moving.add("image"); if (!target) moving.add("target"); if (data.brand && !newLogo) moving.add("logo");
+      if (!image) moving.add("image"); if (!target) moving.add("target"); if (data.brand === "own" && !newLogo) moving.add("logo");
       for (const u of uploads) moving.delete(u[0]);
       for (const k of moving) { const o = await env.MEDIA.get(`exp/${mine.slug}/${k}`); if (o) await env.MEDIA.put(`exp/${slug}/${k}`, o.body, { httpMetadata: o.httpMetadata }); }
       await deleteMedia(env, mine.slug, mine.data);
@@ -431,11 +434,11 @@ async function api(request, env, ctx, url) {
     }
     if (image) await env.MEDIA.put(`exp/${slug}/image`, await image.arrayBuffer(), { httpMetadata: { contentType: image.type } });
     if (target) await env.MEDIA.put(`exp/${slug}/target`, await target.arrayBuffer(), { httpMetadata: { contentType: "application/octet-stream" } });
-    if (data.brand && newLogo) await env.MEDIA.put(`exp/${slug}/logo`, await newLogo.arrayBuffer(), { httpMetadata: { contentType: newLogo.type } });
+    if (data.brand === "own" && newLogo) await env.MEDIA.put(`exp/${slug}/logo`, await newLogo.arrayBuffer(), { httpMetadata: { contentType: newLogo.type } });
     for (const [k, file, type] of uploads) await env.MEDIA.put(`exp/${slug}/${k}`, file, { httpMetadata: { contentType: type } });
     // files of elements that were removed (and the old single video / 3D object once they are no longer used)
     if (mine && mine.slug === slug) {
-      const keep = new Set(["target", "image", "qr", ...(data.brand ? ["logo"] : []), ...data.items.map(i => i.file).filter(Boolean)]);
+      const keep = new Set(["target", "image", "qr", ...(data.brand === "own" ? ["logo"] : []), ...data.items.map(i => i.file).filter(Boolean)]);
       const gone = mediaKeys(slug, mine.data).filter(k => !keep.has(k.slice(`exp/${slug}/`.length)));
       if (gone.length) await env.MEDIA.delete(gone);
     }
@@ -700,7 +703,7 @@ async function api(request, env, ctx, url) {
 
 function publicExp(row) {
   const d = JSON.parse(row.data || "{}"), out = publicKind(row, d);
-  if (d.brand === "own") out.brand = "own";
+  if (d.brand === "own" || d.brand === "none") out.brand = d.brand;
   return out;
 }
 function publicKind(row, d) {

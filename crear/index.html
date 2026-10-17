@@ -693,7 +693,7 @@ $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Subiendo…"; bar.hidden=false; $("publish").disabled=true;
   const meta={original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),img:{w:S.imgW,h:S.imgH},place:S.place,scenes:S.scenes,items:S.items,buttons:{}};
   for(const [k] of SOC){ const v=toHandle(k,$("b_"+k).value); if(v) meta.buttons[k]=v; }
-  const mk=S.marca&&S.marca.get(); if(mk&&mk.brand==="own") meta.brand="own";
+  const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta,(k,v)=>k.startsWith("_")?undefined:v));   // _x = only for this page
   if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
   if(S.imgBlob&&S.target){ fd.append("image",S.imgBlob,"image.jpg"); fd.append("target",S.target,"target.mind"); }

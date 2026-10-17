@@ -295,7 +295,7 @@ $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Publicando…"; bar.hidden=false; $("publish").disabled=true;
   const meta={kind:"trivia",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),trivia:{questions:S.qs.map(q=>({q:q.q.trim(),a:q.a.map(a=>a.trim()),ok:q.ok})),time:S.time},buttons:{}};
   for(const [k] of SOC){ const v=toHandle(k,$("b_"+k).value); if(v) meta.buttons[k]=v; }
-  const mk=S.marca&&S.marca.get(); if(mk&&mk.brand==="own") meta.brand="own";
+  const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
   if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
   const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc, linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/");

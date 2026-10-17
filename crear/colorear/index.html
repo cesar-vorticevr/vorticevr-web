@@ -248,7 +248,7 @@ function check(){
 $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Publicando…"; bar.hidden=false; $("publish").disabled=true;
   const meta={kind:"colorear",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),img:{w:S.w,h:S.h},color:{th:S.th},buttons:{}};
-  const mk=S.marca&&S.marca.get(); if(mk&&mk.brand==="own") meta.brand="own";
+  const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
   if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
   if(S.file) fd.append("image",S.file,S.file.type==="image/png"?"dibujo.png":"dibujo.jpg");

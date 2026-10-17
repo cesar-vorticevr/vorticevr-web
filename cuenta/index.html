@@ -171,6 +171,12 @@ select:focus,textarea:focus{border-color:var(--lav);outline:none}
 .tools input{min-width:0;flex:0 1 240px}
 .chip{font:600 .78rem var(--fb);border:1px solid var(--line2);border-radius:999px;padding:8px 12px;background:transparent;color:var(--mute);cursor:pointer}
 .chip[aria-pressed="true"]{background:rgba(255,138,158,.12);border-color:var(--bad);color:var(--bad)}
+/* filter by kind of experience */
+.kinds{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 16px}
+.kinds button{font:600 .85rem var(--fb);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;background:rgba(5,2,11,.5);color:var(--mute);cursor:pointer;display:flex;gap:6px;align-items:center}
+.kinds button span{font:600 .75rem var(--fm);opacity:.8}
+.kinds button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav);color:#fff}
+.ec .th .kind{position:absolute;right:10px;bottom:10px;font:600 .72rem var(--fb);padding:4px 10px;border-radius:999px;background:rgba(5,2,11,.8);color:#fff;border:1px solid rgba(255,255,255,.2)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:14px}
 .ec{border:1px solid var(--line);background:var(--panel);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
 .ec.paused{opacity:.7}
@@ -340,10 +346,11 @@ dialog .row{justify-content:space-between}
     <!-- experiences -->
     <div class="tools" id="pTools">
       <h2>Mis experiencias <span class="lim" id="pCount"></span></h2>
-      <input type="search" id="pSearch" placeholder="Buscar por título o link" aria-label="Buscar experiencias">
+      <input type="search" id="pSearch" placeholder="Buscar por título" aria-label="Buscar experiencias">
       <select id="pSort" aria-label="Ordenar"><option value="new">Más recientes</option><option value="views">Más vistas</option><option value="name">Nombre (A–Z)</option></select>
       <button class="chip" id="pPausedOnly" type="button" aria-pressed="false" hidden></button>
     </div>
+    <div class="kinds" id="pKinds" role="group" aria-label="Tipo de experiencia" hidden></div>
     <div id="pList"></div>
     <div class="more"><button class="btn sm" id="pMore" type="button" hidden>Mostrar más</button></div>
 
@@ -582,7 +589,11 @@ function openPlans(on){ $("plansBox").hidden=!on; if(on) setTimeout(()=>$("plans
 $("pUpgrade").addEventListener("click",()=>{ menu(false); openPlans(true); });
 $("plansClose").addEventListener("click",()=>openPlans(false));
 
-// experiences: search, sort and a "paused" filter; 24 at a time
+// kinds of experience (data.kind; "ra" when there is none)
+const KINDS={ra:["🪄","Realidad aumentada"],colorear:["🎨","Colorea mi dibujo"],trivia:["🤔","Trivia"]};
+const kindOf=x=>KINDS[x.kind]?x.kind:"ra";
+let kindSel="all";
+// experiences: kind chips, search, sort and a "paused" filter; 24 at a time
 function renderList(){
   const exps=DATA.experiences, list=$("pList"); list.replaceChildren();
   const paused=exps.filter(x=>x.paused).length, pausedOnly=$("pPausedOnly").getAttribute("aria-pressed")==="true";
@@ -592,7 +603,11 @@ function renderList(){
   if(!exps.length){ $("pMore").hidden=true;
     list.innerHTML=`<div class="card empty"><h2>Todavía no tienes experiencias</h2><p>Realidad aumentada, dibujos para colorear, trivias y más: elige qué crear, llena unos campos y comparte tu link o tu QR.</p><a class="btn primary" href="../crear/">Crear mi primera experiencia</a></div>`; return; }
   const q=$("pSearch").value.trim().toLowerCase(), sort=$("pSort").value;
-  const items=exps.filter(x=>(!pausedOnly||x.paused)&&(!q||x.title.toLowerCase().includes(q)||x.slug.includes(q)))
+  const counts={}; for(const x of exps) counts[kindOf(x)]=(counts[kindOf(x)]||0)+1;
+  const kinds=Object.keys(KINDS).filter(k=>counts[k]); if(kindSel!=="all"&&!counts[kindSel]) kindSel="all";
+  $("pKinds").hidden=kinds.length<2;
+  $("pKinds").innerHTML=`<button type="button" data-k="all" aria-pressed="${kindSel==="all"}">Todas <span>${nf(exps.length)}</span></button>`+kinds.map(k=>`<button type="button" data-k="${k}" aria-pressed="${kindSel===k}">${KINDS[k][0]} ${KINDS[k][1]} <span>${nf(counts[k])}</span></button>`).join("");
+  const items=exps.filter(x=>(kindSel==="all"||kindOf(x)===kindSel)&&(!pausedOnly||x.paused)&&(!q||x.title.toLowerCase().includes(q)||x.slug.includes(q)))
     .sort((a,b)=>(a.paused-b.paused)||(sort==="views"?(b.views||0)-(a.views||0):sort==="name"?a.title.localeCompare(b.title,"es"):(b.updated||b.created)-(a.updated||a.created)));
   if(!items.length){ list.innerHTML=`<p class="none">No hay experiencias con esa búsqueda.</p>`; $("pMore").hidden=true; return; }
   const grid=document.createElement("div"); grid.className="grid";
@@ -601,11 +616,11 @@ function renderList(){
 }
 function card(exp){
   const el=document.createElement("article"); el.className="ec"+(exp.paused?" paused":"");
-  const days=Math.max(0,Math.ceil((exp.expires-Date.now())/864e5)), short=exp.url.replace(/^https?:\/\//,"").replace(/\/$/,"");
+  const days=Math.max(0,Math.ceil((exp.expires-Date.now())/864e5));
   const free=!DATA.plan||DATA.plan.id==="gratis", vlim=(DATA.plan&&DATA.plan.views)||1000;
   const status=exp.paused?(exp.forever?"Excede tu plan":`se borra en ${days} días`):exp.forever?"Activa":`${days} días restantes`;
-  el.innerHTML=`<div class="th${exp.kind==="colorear"?" white":""}"><img loading="lazy" src="${exp.thumb||(exp.kind==="trivia"?"../assets/trivia.svg":`${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}`)}" alt="">${exp.paused?'<span class="tag bad">Pausada</span>':""}</div>
-    <div class="bd"><h3>${esc(exp.title)}</h3>${exp.paused?`<span class="url">${esc(short)}</span>`:`<a class="url" href="${esc(exp.url)}" target="_blank" rel="noopener">${esc(short)}</a>`}
+  el.innerHTML=`<div class="th${exp.kind==="colorear"?" white":""}"><img loading="lazy" src="${exp.thumb||(exp.kind==="trivia"?"../assets/trivia.svg":`${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}`)}" alt="">${exp.paused?'<span class="tag bad">Pausada</span>':""}<span class="kind">${KINDS[kindOf(exp)][0]} ${KINDS[kindOf(exp)][1]}</span></div>
+    <div class="bd"><h3>${esc(exp.title)}</h3>
       <div class="meta"><span><b>${nf(exp.views)}</b>${free?`/${nf(vlim)}`:""} ${exp.views===1&&!free?"vista":"vistas"}</span><span>${status}</span></div>
       <div class="acts">${exp.paused?`<button class="btn sun" type="button" data-a="up">Mejorar plan</button>`
         :`<a class="btn" href="../crear/${exp.kind==="trivia"||exp.kind==="colorear"?exp.kind+"/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="copy">Copiar link</button>`}
@@ -630,6 +645,7 @@ $("qrDown").addEventListener("click",()=>VVR.downloadCanvas($("qrCanvas"),`QR-${
 $("qrClose").addEventListener("click",()=>$("qrDlg").close());
 $("pSearch").addEventListener("input",()=>{ shownN=PAGE; renderList(); });
 $("pSort").addEventListener("change",()=>{ shownN=PAGE; renderList(); });
+$("pKinds").addEventListener("click",e=>{ const b=e.target.closest("[data-k]"); if(!b) return; kindSel=b.dataset.k; shownN=PAGE; renderList(); });
 $("pPausedOnly").addEventListener("click",e=>{ e.target.setAttribute("aria-pressed",String(e.target.getAttribute("aria-pressed")!=="true")); shownN=PAGE; renderList(); });
 $("pMore").addEventListener("click",()=>{ shownN+=PAGE; renderList(); });
 function banner(t,kind){ const b=$("pBanner"); b.hidden=false; b.className="banner"+(kind?" "+kind:""); b.textContent=t; }

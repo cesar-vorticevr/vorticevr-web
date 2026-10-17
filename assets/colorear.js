@@ -487,7 +487,7 @@ export async function run(opts) {
   // ---- save / share: the drawing with the logo on top (Vórtice VR, or the brand's own on Empresarial) ----
   const logo = opts.logo ? await loadImg(opts.logo).catch(() => null) : null;
   function exportBlob() {
-    const band = Math.round(W * 0.11), pad = Math.round(W * 0.03), out = document.createElement("canvas");
+    const pad = Math.round(W * 0.03), band = logo ? Math.round(W * 0.11) : pad, out = document.createElement("canvas");
     out.width = W + 2 * pad; out.height = H + band + pad; const x = out.getContext("2d");
     x.fillStyle = "#fff"; x.fillRect(0, 0, out.width, out.height);
     if (logo) { let lw = out.width * 0.34, lh = lw * logo.naturalHeight / logo.naturalWidth; if (lh > band * 0.72) { lh = band * 0.72; lw = lh * logo.naturalWidth / logo.naturalHeight; } x.drawImage(logo, (out.width - lw) / 2, (band - lh) / 2, lw, lh); }

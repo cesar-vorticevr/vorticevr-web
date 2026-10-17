@@ -1,7 +1,7 @@
-// "Logo de la experiencia" for the makers (/crear/, /crear/trivia/, /crear/colorear/): Vórtice VR (every plan) or the
-// customer's own brand (plans with `brand`: Premium). The logo goes on top of the experience and on its photos and
+// "Logo de la experiencia" for the makers (/crear/, /crear/trivia/, /crear/colorear/): Vórtice VR (every plan), the
+// customer's own brand or no logo at all (both on plans with `brand`: Premium). The logo goes on top of the experience and on its photos and
 // videos. Any image (PNG, JPG, WebP or SVG) is turned into a PNG of at most 800 px here; the server keeps it as exp/<slug>/logo.
-// Usage: const m = VVRMarca.mount(element, { plan, exp, api, base }); m.get() → { brand: "own"|"vortice", file, ok }.
+// Usage: const m = VVRMarca.mount(element, { plan, exp, api, base }); m.get() → { brand: "own"|"none"|"vortice", file, ok }.
 (function () {
   const CSS = `
 .vm-seg{display:flex;gap:6px;flex-wrap:wrap}
@@ -28,11 +28,12 @@
     if (!document.getElementById("vm-css")) document.head.appendChild(Object.assign(document.createElement("style"), { id: "vm-css", textContent: CSS }));
     const plan = o.plan || {}, can = !!plan.brand, exp = o.exp || null, base = o.base || "../";
     const had = !!(exp && exp.brand === "own");
-    const st = { brand: had && can ? "own" : "vortice", file: null, url: had ? `${o.api}/m/${exp.slug}/logo?v=${exp.updated || exp.created}` : null };
+    const st = { brand: can && exp && (exp.brand === "own" || exp.brand === "none") ? exp.brand : "vortice", file: null, url: had ? `${o.api}/m/${exp.slug}/logo?v=${exp.updated || exp.created}` : null };
     el.innerHTML = `<h2><span class="n done">✦</span>Logo de la experiencia</h2>
       <p class="hint">Sale arriba en la experiencia y en las fotos y videos que se tomen dentro.</p>
-      <div class="vm-seg"><button type="button" data-b="vortice"><img src="${base}assets/logo-vorticevr-blanco.png" alt="">Vórtice VR</button><button type="button" data-b="own" ${can ? "" : "disabled"}>${can ? "" : "🔒 "}El de mi marca</button></div>
-      ${can ? "" : `<p class="vm-lock">✦ Poner el logo de tu marca en lugar del de Vórtice VR es del plan <b>Premium</b>. <a href="${base}cuenta/#planes">Ver planes</a></p>`}
+      <div class="vm-seg"><button type="button" data-b="vortice"><img src="${base}assets/logo-vorticevr-blanco.png" alt="">Vórtice VR</button><button type="button" data-b="own" ${can ? "" : "disabled"}>${can ? "" : "🔒 "}El de mi marca</button><button type="button" data-b="none" ${can ? "" : "disabled"}>${can ? "" : "🔒 "}Sin logo</button></div>
+      ${can ? "" : `<p class="vm-lock">✦ Poner el logo de tu marca en lugar del de Vórtice VR o quitarlo es del plan <b>Premium</b>. <a href="${base}cuenta/#planes">Ver planes</a></p>`}
+      <p class="vm-none vm-msg" hidden>La experiencia no llevará ningún logo arriba, ni en las fotos y videos que se tomen.</p>
       <div class="vm-own" hidden>
         <label class="vm-drop"><input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"><span><b class="vm-t">Sube el logo de tu marca</b><br><small class="vm-msg">PNG con fondo transparente o SVG. Mejor a color u oscuro (no blanco).</small></span></label>
         <div class="vm-prev" hidden><div><span class="pill"><img alt="Tu logo sobre la experiencia"></span></div><div><img alt="Tu logo en las fotos"></div></div>
@@ -40,7 +41,7 @@
     const own = el.querySelector(".vm-own"), prev = el.querySelector(".vm-prev"), msg = el.querySelector(".vm-msg");
     const paint = () => {
       el.querySelectorAll(".vm-seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.b === st.brand)));
-      own.hidden = st.brand !== "own";
+      own.hidden = st.brand !== "own"; el.querySelector(".vm-none").hidden = st.brand !== "none";
       const src = st.file ? URL.createObjectURL(st.file) : st.url;
       prev.hidden = !src; if (src) prev.querySelectorAll("img").forEach(i => i.src = src);
       if (src) el.querySelector(".vm-t").textContent = "Cambiar el logo";

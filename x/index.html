@@ -228,6 +228,7 @@ async function load(){
   if(r.status===410){ const j=await r.json().catch(()=>({})); if(j.paused) message("Esta experiencia está pausada","Su creador puede reactivarla desde su cuenta."); else if(j.limit) message("Esta experiencia llegó a su límite de vistas","Su creador puede mejorar su plan para que siga funcionando."); else message("Esta experiencia ya terminó","Las experiencias de prueba duran 15 días."); return; }
   if(!r.ok){ message("Experiencia no encontrada","Revisa que el link esté completo."); return; }
   CFG=await r.json(); CFG.base=base;
+  if(CFG.brand==="none") $("brand").hidden=true;   // Premium: no logo at all
   if(CFG.brand==="own"){   // the brand's logo instead of Vórtice VR's (also on photos, videos and the coloring)
     const a=$("brand").querySelector("a"), im=a.querySelector("img");
     im.src=`${base}/m/${CFG.slug}/logo`; im.alt=CFG.title||""; a.removeAttribute("href"); a.removeAttribute("aria-label"); $("brand").classList.add("own");
@@ -304,7 +305,7 @@ function setupCapture(mind){
     for(const el of [cam,gl,onScreen]){ if(!el) continue; const b=el.getBoundingClientRect(), x=(b.left-r.left)*sx, y=(b.top-r.top)*sy, w=b.width*sx, h=b.height*sy;
       if(el===cam&&/scaleX\(-1\)/.test(el.style.transform)){ ctx.save(); ctx.translate(x+w,y); ctx.scale(-1,1); ctx.drawImage(el,0,0,w,h); ctx.restore(); } else ctx.drawImage(el,x,y,w,h); }
     // logo on the capture too
-    const lg=$("brand").querySelector("img"); if(lg.complete&&lg.naturalWidth){ let lw=out.width*.32, lh=lw*lg.naturalHeight/lg.naturalWidth; const mh=out.height*.07; if(lh>mh){ lh=mh; lw=lh*lg.naturalWidth/lg.naturalHeight; }
+    const lg=$("brand").querySelector("img"); if(!$("brand").hidden&&lg.complete&&lg.naturalWidth){ let lw=out.width*.32, lh=lw*lg.naturalHeight/lg.naturalWidth; const mh=out.height*.07; if(lh>mh){ lh=mh; lw=lh*lg.naturalWidth/lg.naturalHeight; }
       const lx=(out.width-lw)/2, ly=out.height*.03;
       if($("brand").classList.contains("own")){ const q=lh*.3; ctx.fillStyle="#fff"; ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(lx-q*2,ly-q,lw+q*4,lh+q*2,lh/2+q); else ctx.rect(lx-q*2,ly-q,lw+q*4,lh+q*2); ctx.fill(); }
       ctx.globalAlpha=.95; ctx.drawImage(lg,lx,ly,lw,lh); ctx.globalAlpha=1; } }
@@ -359,7 +360,7 @@ async function startColorear(){
   try{
     const C=await (libsP||import("/assets/colorear.js"));
     const buttons=ORDER.filter(k=>CFG.buttons&&CFG.buttons[k]).map(k=>({href:socialHref(k,CFG.buttons[k]),label:LABEL[k],svg:`<svg viewBox="0 0 24 24">${ICONS[k]}</svg>`}));
-    await C.run({root:$("ar"),image:`${CFG.base}/m/${CFG.slug}/image`,th:CFG.color&&CFG.color.th,palette:CFG.color&&CFG.color.palette,title:CFG.title,slug:CFG.slug,key:CFG.slug,buttons,logo:CFG.brand==="own"?`${CFG.base}/m/${CFG.slug}/logo`:"/assets/logo-vorticevr.png"});
+    await C.run({root:$("ar"),image:`${CFG.base}/m/${CFG.slug}/image`,th:CFG.color&&CFG.color.th,palette:CFG.color&&CFG.color.palette,title:CFG.title,slug:CFG.slug,key:CFG.slug,buttons,logo:CFG.brand==="none"?null:CFG.brand==="own"?`${CFG.base}/m/${CFG.slug}/logo`:"/assets/logo-vorticevr.png"});
     $("intro").hidden=true;
   }catch(e){ console.error(e); startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false; $("err").textContent="No se pudo abrir el dibujo. Revisa tu conexión e intenta de nuevo."; }
 }
