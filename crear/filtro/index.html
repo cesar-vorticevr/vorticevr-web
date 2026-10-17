@@ -84,6 +84,9 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
 .ctl select{font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:8px;padding:6px 8px}
 .ctl input[type=range]{width:100%;accent-color:var(--vortex)}
 .cnt{font-size:.82rem;color:var(--mute);margin-top:8px}
+.own{margin-top:14px;border:1px dashed var(--line2);border-radius:12px;padding:14px;background:rgba(5,2,11,.45)}
+.own p{margin:0;font-size:.9rem;color:var(--mute)}
+.own p b{color:var(--ink)}
 .colors{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .colors button{width:36px;height:36px;border-radius:50%;border:3px solid rgba(255,255,255,.25);cursor:pointer;transition:transform .15s}
 .colors button[aria-pressed="true"]{transform:scale(1.15);border-color:#fff;box-shadow:0 0 0 3px rgba(139,63,214,.8)}
@@ -133,6 +136,12 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
         <h2><span class="n done">2</span>Pintura de cara</h2>
         <p class="hint">Se pinta sobre la piel y sigue cada gesto.</p>
         <div class="seg" id="paint"></div>
+        <div class="own" id="own" hidden>
+          <p><b>Tu propia pintura.</b> Descarga el machote (la cara "desdoblada" con guías), píntalo en Procreate, Photoshop, Canva o donde quieras, en una capa encima de la guía, y súbelo en PNG. Los ojos y la boca quedan libres solos.</p>
+          <div class="row"><button class="btn" type="button" id="tplDown">⬇ Descargar machote</button><button class="btn primary" type="button" id="ownUp">⬆ Subir mi pintura</button></div>
+          <input type="file" id="ownFile" accept="image/png,image/webp,image/jpeg" hidden>
+          <div class="msg" id="ownMsg"></div>
+        </div>
       </section>
       <section class="step" id="s3">
         <h2><span class="n done">3</span>Accesorios</h2>
@@ -219,7 +228,7 @@ const TEMPLATES=[
   {id:"mexico",icon:"🌵",name:"México",sub:"Bandera y bigote",f:{paint:"mexico",effect:"confeti",frame:"cinta",color:"#006847",text:"¡Viva México!"},items:()=>[sticker("bigote")]},
   {id:"cero",icon:"✨",name:"Desde cero",sub:"Tú lo armas",f:{paint:"ninguna",effect:"ninguno",frame:"ninguno",color:"#8b3fd6",text:""},items:()=>[]},
 ];
-function applyTemplate(t){ S.tpl=t.id; S.f={...t.f}; S.items=t.items(); IMG.clear(); S.sel=S.items[0]?S.items[0].id:null; $("ftext").value=S.f.text; render(); }
+function applyTemplate(t){ S.tpl=t.id; S.f={...t.f}; S.items=t.items(); for(const id of [...IMG.keys()]) if(!S.pintura||id!==S.pintura.id) IMG.delete(id); S.sel=S.items[0]?S.items[0].id:null; $("ftext").value=S.f.text; render(); }
 $("tpls").innerHTML=TEMPLATES.map(t=>`<button type="button" class="tpl" data-t="${t.id}"><span aria-hidden="true">${t.icon}</span>${esc(t.name)}<small>${esc(t.sub)}</small></button>`).join("");
 $("tpls").addEventListener("click",e=>{ const b=e.target.closest("[data-t]"); if(b) applyTemplate(TEMPLATES.find(t=>t.id===b.dataset.t)); });
 
@@ -277,6 +286,7 @@ function render(){
   $("tpls").querySelectorAll(".tpl").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.t===S.tpl)));
   $("colors").innerHTML=COLORS.map(c=>`<button type="button" data-c="${c}" style="background:${c}" aria-label="Color ${c}" aria-pressed="${c===S.f.color}"></button>`).join("")+`<label>Otro <input type="color" id="cPick" value="${S.f.color}"></label>`;
   $("cPick").addEventListener("input",e=>{ S.f.color=e.target.value; clearTimeout(cTimer); cTimer=setTimeout(render,120); });
+  $("own").hidden=S.f.paint!=="propia"; $("ownUp").textContent=S.pintura?"⬆ Cambiar mi pintura":"⬆ Subir mi pintura";
   $("ftext").closest("section").querySelector("label[for=ftext]").hidden=$("ftext").hidden=S.f.frame==="ninguno";
   paintStickers(); renderItems(); schedule(); check();
 }
@@ -321,7 +331,19 @@ new ResizeObserver(size).observe(cv);
 cam.position.set(0,1.5,84); cam.lookAt(0,1.5,0);
 
 let filter=null, building=0, schedT=0;
-function cfg(){ return {filtro:{...S.f,text:S.f.text.trim()},items:S.items}; }
+function cfg(){ return {filtro:{...S.f,text:S.f.text.trim()},items:ownItems().concat(S.items)}; }
+const ownItems=()=>S.f.paint==="propia"&&S.pintura?[S.pintura]:[];
+// the template to paint your own face paint, and uploading it (1024×1024 PNG; another size is stretched to it)
+$("tplDown").addEventListener("click",()=>{ if(!FACE) return; FL.templateCanvas(i=>FACE.uvs[i]).toBlob(b=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="machote-pintura-facial-vorticevr.png"; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); },"image/png"); });
+$("ownUp").addEventListener("click",()=>$("ownFile").click());
+$("ownFile").addEventListener("change",e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return; const m=$("ownMsg"), i=new Image(), u=URL.createObjectURL(f);
+  i.onload=()=>{ URL.revokeObjectURL(u); const w=i.naturalWidth, h=i.naturalHeight, c=document.createElement("canvas"); c.width=c.height=1024; c.getContext("2d").drawImage(i,0,0,1024,1024);
+    c.toBlob(b=>{ if(!b){ m.className="msg bad"; m.textContent="No se pudo leer esa imagen."; return; }
+      if(S.pintura) IMG.delete(S.pintura.id); S.pintura={id:rid(),type:"pintura",w:1024,h:1024}; IMG.set(S.pintura.id,{file:b,url:URL.createObjectURL(b),w:1024,h:1024});
+      m.className="msg ok"; m.textContent=Math.abs(w/h-1)>0.02?`Lista. Ojo: tu imagen mide ${w}×${h}; la estiramos a 1024×1024. Usa el machote tal cual para que quede en su lugar.`:"¡Lista! Revísala en la cabeza de la derecha (gírala para ver los lados).";
+      S.tpl=null; render(); },"image/png"); };
+  i.onerror=()=>{ URL.revokeObjectURL(u); m.className="msg bad"; m.textContent="No se pudo leer esa imagen. Súbela en PNG."; }; i.src=u; });
 function schedule(){ clearTimeout(schedT); schedT=setTimeout(rebuild,80); }
 async function rebuild(){
   if(!faceMesh) return;
@@ -373,15 +395,16 @@ const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
 
 // ---------- publishing ----------
 const something=()=>S.f.paint!=="ninguna"||S.items.length||S.f.effect!=="ninguno"||S.f.frame!=="ninguno";
+const ownMissing=()=>S.f.paint==="propia"&&!S.pintura;
 function check(){
   $("n6").classList.toggle("done",!!($("title").value.trim()&&slugOk));
-  let ok=something()&&$("title").value.trim()&&slugOk&&S.token, why=!something()?"Elige una plantilla o agrega algo a tu filtro.":!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
+  let ok=something()&&!ownMissing()&&$("title").value.trim()&&slugOk&&S.token, why=!something()?"Elige una plantilla o agrega algo a tu filtro.":ownMissing()?"Sube tu pintura (el machote pintado) o elige otra pintura.":!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
   const mk=S.marca&&S.marca.get(); if(ok&&mk&&!mk.ok){ ok=false; why="Sube el logo de tu marca o elige el de Vórtice VR."; }
   $("publish").disabled=!ok; $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link a ${S.email}.`:why;
 }
 $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Publicando…"; bar.hidden=false; $("publish").disabled=true;
-  const items=S.items.map(it=>{ const o={id:it.id,type:it.type,anchor:it.anchor,x:it.x,y:it.y,s:it.s,r:it.r}; if(it.type==="sticker") o.key=it.key; else { o.w=it.w; o.h=it.h; if(it.name) o.name=it.name; } return o; });
+  const items=ownItems().map(it=>({id:it.id,type:"pintura",w:1024,h:1024})).concat(S.items.map(it=>{ const o={id:it.id,type:it.type,anchor:it.anchor,x:it.x,y:it.y,s:it.s,r:it.r}; if(it.type==="sticker") o.key=it.key; else { o.w=it.w; o.h=it.h; if(it.name) o.name=it.name; } return o; }));
   const meta={kind:"filtro",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),filtro:{...S.f,text:S.f.text.trim()},items,buttons:{}};
   const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
@@ -414,7 +437,8 @@ $("publish").addEventListener("click",async()=>{
     if(exp){
       S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza.`;
       S.tpl=null; S.f={paint:"ninguna",effect:"ninguno",frame:"ninguno",color:"#8b3fd6",text:"",...exp.filtro}; $("ftext").value=S.f.text||"";
-      IMG.clear(); S.items=(exp.items||[]).map(it=>{ if(it.type==="image") IMG.set(it.id,{url:`${API}/m/${exp.slug}/${it.file}?v=${exp.updated||exp.created}`,w:it.w,h:it.h}); return {...it}; });
+      IMG.clear(); const all=(exp.items||[]).map(it=>{ if(it.type==="image"||it.type==="pintura") IMG.set(it.id,{url:`${API}/m/${exp.slug}/${it.file}?v=${exp.updated||exp.created}`,w:it.w,h:it.h}); return {...it}; });
+      S.pintura=all.find(it=>it.type==="pintura")||null; S.items=all.filter(it=>it.type!=="pintura");
       S.sel=null; $("title").value=exp.title; slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
       $("publish").textContent="Guardar cambios"; render();
     } else if(r.experiences.filter(x=>!x.paused).length>=LIM){

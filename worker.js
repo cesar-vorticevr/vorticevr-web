@@ -406,7 +406,7 @@ async function api(request, env, ctx, url) {
       const file = form.get("f_" + it.id);
       if (file && typeof file !== "string") {
         if (it.type === "video" && (file.size > P.videoMB * 1048576 || !/^video\/(mp4|webm|quicktime)$/.test(file.type))) return json({ error: `Cada video debe ser MP4, WebM o MOV de máximo ${P.videoMB} MB.` }, 400);
-        if (it.type === "image" && (file.size > ITEM_LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(file.type))) return json({ error: "Cada imagen debe ser JPG, PNG o WebP de máximo 5 MB." }, 400);
+        if ((it.type === "image" || it.type === "pintura") && (file.size > ITEM_LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(file.type))) return json({ error: "Cada imagen debe ser JPG, PNG o WebP de máximo 5 MB." }, 400);
         if (it.type === "model") {
           if (file.size > P.modelMB * 1048576) return json({ error: `Cada objeto 3D debe pesar máximo ${P.modelMB} MB.` }, 400);
           if (new TextDecoder().decode(new Uint8Array(await file.slice(0, 4).arrayBuffer())) !== "glTF") return json({ error: "Los objetos 3D deben ser archivos GLB." }, 400);
@@ -825,7 +825,7 @@ function cleanTrivia(t) {
 const FILTRO = {
   items: 6, anchors: ["cabeza", "frente", "ojos", "nariz", "boca", "barbilla", "mejillas"],
   stickers: ["lentes-corazon", "lentes-sol", "corona", "flores", "orejas", "bigote", "gorro", "corazon"],
-  paints: ["ninguna", "catrina", "corazones", "mexico", "brillos", "gatito"], effects: ["ninguno", "corazones", "estrellas", "flores", "confeti"],
+  paints: ["ninguna", "catrina", "corazones", "mexico", "brillos", "gatito", "propia"], effects: ["ninguno", "corazones", "estrellas", "flores", "confeti"],
   frames: ["ninguno", "muertos", "brillo", "cinta", "polaroid"],
 };
 function cleanFiltro(f, list, P) {
@@ -835,8 +835,17 @@ function cleanFiltro(f, list, P) {
   const filtro = { paint: pick(f.paint, FILTRO.paints), effect: pick(f.effect, FILTRO.effects), frame: pick(f.frame, FILTRO.frames),
     color: HEX.test(String(f.color || "")) ? String(f.color).toLowerCase() : "#8b3fd6", text: String(f.text || "").replace(/\s+/g, " ").trim().slice(0, 32) };
   list = Array.isArray(list) ? list : [];
+  // the creator's own face paint (paint "propia") is one item of type "pintura": a 1024 px PNG painted over the template
+  const own = list.filter(m => m && m.type === "pintura");
+  list = list.filter(m => m && m.type !== "pintura");
+  if (filtro.paint === "propia" && own.length !== 1) return { error: "Sube tu pintura (el machote pintado)." };
   if (list.length > FILTRO.items) return { error: `Puedes poner hasta ${FILTRO.items} accesorios.` };
   const items = [], ids = new Set(), imgMax = Math.min(FILTRO.items, P.items || 3);
+  if (filtro.paint === "propia") {
+    const id = String(own[0].id || "");
+    if (!/^[a-z0-9]{6,16}$/.test(id)) return { error: "Tu pintura no es válida." };
+    ids.add(id); items.push({ id, type: "pintura", w: 1024, h: 1024 });
+  }
   for (const m of list) {
     const id = String(m && m.id || "");
     if (!/^[a-z0-9]{6,16}$/.test(id) || ids.has(id) || !["sticker", "image"].includes(m.type)) return { error: "Uno de tus accesorios no es válido." };

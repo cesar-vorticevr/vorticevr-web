@@ -11,7 +11,7 @@
 
 export const ANCHORS = { cabeza: 10, frente: 151, ojos: 168, nariz: 4, boca: 0, barbilla: 152, mejillas: [205, 425] };
 export const ANCHOR_NAMES = { cabeza: "Arriba de la cabeza", frente: "Frente", ojos: "Ojos", nariz: "Nariz", boca: "Boca", barbilla: "Barbilla", mejillas: "Mejillas (las dos)" };
-export const PAINTS = { ninguna: "Sin pintura", catrina: "Catrina", corazones: "Corazones", mexico: "México", brillos: "Brillos", gatito: "Gatito" };
+export const PAINTS = { ninguna: "Sin pintura", catrina: "Catrina", corazones: "Corazones", mexico: "México", brillos: "Brillos", gatito: "Gatito", propia: "Mi propia pintura" };
 export const EFFECTS = { ninguno: "Nada", corazones: "Corazones", estrellas: "Estrellas", flores: "Cempasúchil", confeti: "Confeti" };
 export const FRAMES = { ninguno: "Sin marco", muertos: "Papel picado", brillo: "Brillo", cinta: "Cinta", polaroid: "Foto instantánea" };
 const MOUTH = [13, 14];
@@ -140,9 +140,65 @@ const EYE_L = [263, 466, 388, 387, 386, 385, 384, 398, 362, 382, 381, 380, 374, 
 const LIPS = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291, 375, 321, 405, 314, 17, 84, 181, 91, 146];
 const LIP_UP = [185, 40, 39, 37, 0, 267, 269, 270, 409], LIP_DN = [146, 91, 181, 84, 17, 314, 405, 321, 375];
 const BROW_R = [70, 63, 105, 66, 107], BROW_L = [300, 293, 334, 296, 336];
-
-export function paintCanvas(kind, uvAt, color, S = 1024) {
+const LIPS_IN = [78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95];
+const NOSE = [168, 6, 197, 195, 5, 4], NOSTRILS = [98, 97, 2, 326, 327];
+// helpers in the face's UV space (S px square, v up)
+function uvTools(g, uvAt, S) {
+  const P = i => { const [u, v] = uvAt(i); return [u * S, (1 - v) * S]; };
+  const poly = (list, close = true) => { g.beginPath(); list.forEach((i, k) => { const [x, y] = P(i); k ? g.lineTo(x, y) : g.moveTo(x, y); }); if (close) g.closePath(); };
+  const mid = list => { let x = 0, y = 0; for (const i of list) { const p = P(i); x += p[0]; y += p[1]; } return [x / list.length, y / list.length]; };
+  return { P, poly, mid };
+}
+// the eyes and the inside of the mouth stay clear in every paint: the mesh has triangles across them, so painting
+// there would cover the real eyes, and the teeth when the mouth opens
+function clearHoles(g, uvAt, S) {
+  const { poly, mid } = uvTools(g, uvAt, S);
+  g.save(); g.globalCompositeOperation = "destination-out"; g.fillStyle = g.strokeStyle = "#000"; g.lineJoin = "round";
+  for (const eye of [EYE_R, EYE_L]) { const m = mid(eye); g.save(); g.translate(m[0], m[1]); g.scale(1.2, 1.45); g.translate(-m[0], -m[1]); poly(eye); g.fill(); g.restore(); }
+  poly(LIPS_IN); g.fill(); g.lineWidth = S * 0.007; g.stroke();
+  g.restore();
+}
+function softEdge(g, uvAt, S) {   // fades the outline of the face, so a paint does not look like a cut-out mask
+  const { poly } = uvTools(g, uvAt, S);
+  g.save(); g.globalCompositeOperation = "destination-out";
+  for (const [lw, a] of [[60, 0.18], [40, 0.22], [22, 0.3], [10, 0.4]]) { poly(OVAL); g.lineWidth = lw * S / 1024; g.strokeStyle = `rgba(0,0,0,${a})`; g.stroke(); }
+  g.restore();
+}
+// The template ("machote") to paint your own face paint: the face unfolded in UV space with guides, and the steps.
+// What is painted outside the outline is not seen; eyes and inside of the mouth are cleared on their own.
+export function templateCanvas(uvAt, S = 1024) {
   const c = document.createElement("canvas"); c.width = c.height = S;
+  const g = c.getContext("2d"), { P, poly, mid } = uvTools(g, uvAt, S), k = S / 1024;
+  poly(OVAL); g.fillStyle = "#f3ecfa"; g.fill(); g.lineWidth = 4 * k; g.strokeStyle = "#8b3fd6"; g.stroke();
+  g.setLineDash([10 * k, 10 * k]); g.lineWidth = 2 * k; g.strokeStyle = "rgba(139,63,214,.45)"; g.beginPath(); g.moveTo(...P(10)); g.lineTo(...P(152)); g.stroke(); g.setLineDash([]);
+  const hatch = (list, label, sy = 1) => {
+    g.save(); poly(list); g.clip(); g.strokeStyle = "rgba(229,36,59,.55)"; g.lineWidth = 2 * k; const m = mid(list);
+    for (let x = -80; x <= 80; x += 7) { g.beginPath(); g.moveTo(m[0] + x * k - 40 * k, m[1] + 40 * k); g.lineTo(m[0] + x * k + 40 * k, m[1] - 40 * k); g.stroke(); }
+    g.restore(); poly(list); g.lineWidth = 3 * k; g.strokeStyle = "#e5243b"; g.stroke();
+    g.font = `700 ${13 * k}px Sora, system-ui, sans-serif`; g.textAlign = "center"; g.fillStyle = "#e5243b"; g.fillText(label, m[0], m[1] + sy * 34 * k);
+  };
+  hatch(EYE_R, "OJO (queda libre)"); hatch(EYE_L, "OJO (queda libre)");
+  poly(LIPS); g.lineWidth = 3 * k; g.strokeStyle = "#8b3fd6"; g.stroke();
+  hatch(LIPS_IN, "BOCA (queda libre)", 1.4);
+  for (const b of [BROW_R, BROW_L]) { poly(b, false); g.lineWidth = 5 * k; g.lineCap = "round"; g.strokeStyle = "rgba(139,63,214,.7)"; g.stroke(); }
+  poly(NOSE, false); g.lineWidth = 3 * k; g.strokeStyle = "rgba(139,63,214,.7)"; g.stroke(); poly(NOSTRILS, false); g.stroke();
+  g.font = `700 ${15 * k}px Sora, system-ui, sans-serif`; g.textAlign = "center"; g.fillStyle = "rgba(90,31,143,.75)";
+  const lab = (t, p, dy = 0) => g.fillText(t, p[0], p[1] + dy * k);
+  lab("FRENTE", P(151), -10); lab("NARIZ", P(4), 38); lab("BARBILLA", P(152), -30); lab("MEJILLA", mid([205, 50, 187, 123])); lab("MEJILLA", mid([425, 280, 411, 352]));
+  g.textAlign = "left"; g.fillStyle = "#5a1f8f"; g.font = `800 ${20 * k}px Sora, system-ui, sans-serif`; g.fillText("Machote de pintura facial · Vórtice VR", 18 * k, 34 * k);
+  g.font = `500 ${14 * k}px Sora, system-ui, sans-serif`; g.fillStyle = "#3b2160";
+  ["1. Pinta en una capa nueva, encima de esta guía.", "2. Oculta o borra esta guía (deja solo tu pintura).", "3. Exporta en PNG de 1024 × 1024, con fondo transparente."].forEach((t, i) => g.fillText(t, 18 * k, (58 + i * 19) * k));
+  g.textAlign = "right"; ["Lo que quede fuera del contorno no se ve.", "Ojos y boca se borran solos.", "Lo semitransparente se ve como maquillaje."].forEach((t, i) => g.fillText(t, S - 18 * k, (40 + i * 19) * k));
+  return c;
+}
+
+export function paintCanvas(kind, uvAt, color, S = 1024, img = null) {
+  const c = document.createElement("canvas"); c.width = c.height = S;
+  if (kind === "propia") {   // the creator's own paint, painted over the template
+    const g = c.getContext("2d"); if (img) g.drawImage(img, 0, 0, S, S);
+    softEdge(g, uvAt, S); clearHoles(g, uvAt, S);
+    return c;
+  }
   const g = c.getContext("2d"), P = i => { const [u, v] = uvAt(i); return [u * S, (1 - v) * S]; };
   const poly = (list) => { g.beginPath(); list.forEach((i, k) => { const [x, y] = P(i); k ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath(); };
   const mid = list => { let x = 0, y = 0; for (const i of list) { const p = P(i); x += p[0]; y += p[1]; } return [x / list.length, y / list.length]; };
@@ -163,8 +219,6 @@ export function paintCanvas(kind, uvAt, color, S = 1024) {
       for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; g.beginPath(); g.ellipse(m[0] + Math.cos(a) * r * 1.2, m[1] + Math.sin(a) * r * 1.2, r * 0.42, r * 0.24, a, 0, TAU); g.fillStyle = petals[i % petals.length]; g.fill(); }
       for (let i = 0; i < 12; i++) { const a = (i + 0.5) / 12 * TAU; g.beginPath(); g.arc(m[0] + Math.cos(a) * r * 1.62, m[1] + Math.sin(a) * r * 1.62, r * 0.07, 0, TAU); g.fillStyle = "#1a0f1a"; g.fill(); }
       g.beginPath(); g.arc(m[0], m[1], r, 0, TAU); g.fillStyle = "rgba(20,10,20,.82)"; g.fill();
-      // the eye itself stays clear (the real eye shows through the paint)
-      g.save(); g.globalCompositeOperation = "destination-out"; g.translate(m[0], m[1]); g.scale(1.2, 1.45); g.translate(-m[0], -m[1]); poly(eye); g.fill(); g.restore();
     }
     // nose: an upside-down heart
     const nose = between(P(4), P(2), 0.55), nw = Math.hypot(P(98)[0] - P(327)[0], P(98)[1] - P(327)[1]) * 0.62;
@@ -209,6 +263,7 @@ export function paintCanvas(kind, uvAt, color, S = 1024) {
     for (const [i, d] of [[205, -1], [425, 1]]) { const [x, y] = P(i); for (let k = -1; k <= 1; k++) { g.beginPath(); g.moveTo(x - d * S * 0.03, y + k * S * 0.012); g.lineTo(x + d * S * 0.07, y + k * S * 0.03 - S * 0.005); g.stroke(); } }
     for (const ch of cheeks) for (let k = 0; k < 3; k++) { g.beginPath(); g.arc(ch[0] + (k - 1) * S * 0.014, ch[1] - S * 0.03 + (k === 1 ? -S * 0.008 : 0), S * 0.0045, 0, TAU); g.fillStyle = "#1a1220"; g.fill(); }
   }
+  clearHoles(g, uvAt, S);
   return c;
 }
 
@@ -285,16 +340,18 @@ const TINTS = { corazones: ["#ff2d55", "#ff7aa8", "#e4007c", "#ff4f8b"], estrell
 export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvAt, cfg, mediaUrl = id => id, onHint = () => {} }) {
   const F = cfg.filtro || {}, color = okColor(F.color), made = [], textures = [];
   const keep = t => { textures.push(t); return t; };
-  // paint
+  const loadImg = url => new Promise(ok => { if (!url) return ok(null); const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => ok(i); i.onerror = () => ok(null); i.src = url; });
+  // paint (the creator's own one is the item of type "pintura")
   if (faceMesh) {
-    if (F.paint && F.paint !== "ninguna" && PAINTS[F.paint]) {
-      const tex = keep(new THREE.CanvasTexture(paintCanvas(F.paint, uvAt, color))); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    const own = F.paint === "propia" ? (cfg.items || []).find(i => i.type === "pintura") : null;
+    const ownImg = own ? await loadImg(mediaUrl(own)) : null;
+    if (F.paint && F.paint !== "ninguna" && PAINTS[F.paint] && (F.paint !== "propia" || ownImg)) {
+      const tex = keep(new THREE.CanvasTexture(paintCanvas(F.paint, uvAt, color, 1024, ownImg))); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
       faceMesh.material = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2 });
       faceMesh.renderOrder = 2; faceMesh.userData.painted = true;
     } else { faceMesh.material = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }); faceMesh.userData.painted = false; }
   }
   // items
-  const loadImg = url => new Promise(ok => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => ok(i); i.onerror = () => ok(null); i.src = url; });
   let order = 5;
   for (const it of (cfg.items || [])) {
     let src = null, ratio = 1, z = 0.8;
