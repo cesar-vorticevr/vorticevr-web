@@ -48,7 +48,7 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
 .meta{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:.85rem;color:var(--mute);margin-top:8px}
 .meta b{color:var(--ink)}
 .tag{display:inline-block;font-family:var(--fd);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;border-radius:999px;padding:3px 10px;border:1px solid var(--line2);color:var(--mute);vertical-align:middle}
-.tag.basico{border-color:var(--lav);color:var(--lav)} .tag.pro{border-color:var(--sun);color:var(--sun)} .tag.empresarial{border-color:var(--ok);color:var(--ok)} .tag.escuela{border-color:var(--ok);color:var(--ok)}
+.tag.basico{border-color:var(--lav);color:var(--lav)} .tag.pro{border-color:var(--sun);color:var(--sun)} .tag.empresarial,.tag.premium{border-color:var(--ok);color:var(--ok)} .tag.escuela{border-color:var(--ok);color:var(--ok)}
 .tag.warn{border-color:var(--bad);color:var(--bad)}
 .acts2{display:flex;gap:8px;flex-wrap:wrap}
 .form{border-top:1px solid var(--line);margin-top:14px;padding-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px;align-items:end}
@@ -128,7 +128,7 @@ table.top td.n{text-align:right;font-variant-numeric:tabular-nums}
         <h2>Crear cupón de cortesía</h2>
         <p class="note">Da el plan que elijas por los meses que elijas. Cada cuenta lo puede usar una vez; tú decides cuántas cuentas en total. Se canjea en Mi cuenta → "Tengo un código". Al terminar la cortesía, la cuenta regresa sola a Gratis.</p>
         <form class="form cform" id="fCoupon">
-          <label>Plan<select name="plan"><option value="basico">Básico</option><option value="pro" selected>Pro</option><option value="empresarial">Empresarial</option></select></label>
+          <label>Plan<select name="plan"><option value="pro" selected>Pro</option><option value="premium">Premium</option></select></label>
           <label>Meses gratis<input name="months" type="number" min="1" max="24" value="1" required></label>
           <label>Veces que se puede usar<input name="max_uses" type="number" min="1" max="10000" value="10" required></label>
           <label>Código (opcional)<input name="code" maxlength="30" placeholder="Se genera solo" autocapitalize="characters"></label>
@@ -144,7 +144,7 @@ table.top td.n{text-align:right;font-variant-numeric:tabular-nums}
     <section id="t-comisiones" hidden>
       <div class="kpis" id="cmKpis"></div>
       <div class="card"><div class="uhead"><h2>A quién le debes</h2><button class="btn sm" id="cmCsv" type="button">Descargar reporte (Excel)</button></div>
-        <p class="note">Cada comisión es el 10% de un pago real cobrado por Stripe a un cliente recomendado, solo si quien lo recomendó tenía Pro o Empresarial ese día. Queda <b>pendiente 30 días</b> (si hay un reembolso se cancela sola) y luego <b>disponible</b>. Cuando le transfieras a alguien, pulsa <b>Marcar como pagado</b>.</p>
+        <p class="note">Cada comisión es el 10% de un pago real cobrado por Stripe a un cliente recomendado, solo si quien lo recomendó tenía Pro o Premium ese día. Queda <b>pendiente 30 días</b> (si hay un reembolso se cancela sola) y luego <b>disponible</b>. Cuando le transfieras a alguien, pulsa <b>Marcar como pagado</b>.</p>
         <div class="tablewrap"><table class="top" id="cmRef"></table></div></div>
       <div class="card" style="margin-top:12px"><h2>Movimientos recientes</h2><div class="tablewrap"><table class="top" id="cmRows"></table></div></div>
     </section>
@@ -204,7 +204,7 @@ function toggleForm(el,u){
   const old=el.querySelector(".form"); if(old){ old.remove(); return; }
   const f=document.createElement("div"); f.className="form";
   const until=u.plan_until&&u.plan_until>Date.now()?ymd(new Date(u.plan_until)):"";
-  f.innerHTML=`<label>Plan<select data-k="plan">${Object.entries(PLANS).filter(([id,p])=>!p.legacy||id===u.effective).map(([id,p])=>`<option value="${id}" ${id===u.effective?"selected":""}>${esc(p.name)} · ${p.exp.toLocaleString("es-MX")} exp.${p.seats?" · "+p.seats+" cuentas":""}${p.price?" · $"+p.price.toLocaleString("es-MX"):""}</option>`).join("")}</select></label>
+  f.innerHTML=`<label>Plan<select data-k="plan">${Object.entries(PLANS).filter(([id,p])=>!p.legacy||id===u.effective).map(([id,p])=>`<option value="${id}" ${id===u.effective?"selected":""}>${esc(p.name)} · ${p.exp>=1e6?"ilimitadas":p.exp.toLocaleString("es-MX")+" exp."}${p.seats?" · "+p.seats+" cuentas":""}${p.price?" · $"+p.price.toLocaleString("es-MX"):""}</option>`).join("")}</select></label>
     <label>Experiencias extra<input type="number" min="0" data-k="extra" value="${u.extra_exp||0}"></label>
     <label>Pagado hasta<input type="date" data-k="until" value="${until}"></label>
     <div class="quick"><button class="btn sm" type="button" data-m="1">+1 mes</button><button class="btn sm" type="button" data-m="12">+1 año</button><button class="btn sm" type="button" data-m="0">Sin fecha</button></div>
@@ -251,7 +251,7 @@ function drawCharts(s){
 async function loadStats(){
   const s=lastStats=await VVR.call("admin/stats");
   const k=[[nf(s.users),"cuentas confirmadas",`+${nf(s.new7)} en 7 días · +${nf(s.new30)} en 30`],
-    [nf(s.paid),"con plan pagado",`Básico ${s.byPlan.basico} · Pro ${s.byPlan.pro} · Empresarial ${s.byPlan.empresarial||0}${s.byPlan.escuela?" · Escuela "+s.byPlan.escuela:""}`],
+    [nf(s.paid),"con plan pagado",`Pro ${s.byPlan.pro} · Premium ${s.byPlan.premium||0}${s.byPlan.basico?" · Básico "+s.byPlan.basico:""}${s.byPlan.empresarial?" · Empresarial "+s.byPlan.empresarial:""}${s.byPlan.escuela?" · Escuela "+s.byPlan.escuela:""}`],
     ["$"+nf(s.mrr),"ingreso mensual estimado",`Stripe ${s.kind.stripe} · a mano ${s.kind.manual} · cortesías ${s.kind.cortesia}`],
     [s.conversion+"%","de cuentas que pagan","sin contar cortesías"],
     [nf(s.experiences.active),"experiencias activas",`${nf(s.experiences.new30)} nuevas en 30 días · ${nf(s.experiences.paused)} pausadas`],

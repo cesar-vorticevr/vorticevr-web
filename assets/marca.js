@@ -1,5 +1,5 @@
 // "Logo de la experiencia" for the makers (/crear/, /crear/trivia/, /crear/colorear/): Vórtice VR (every plan) or the
-// customer's own brand (plans with `brand`: Empresarial). The logo goes on top of the experience and on its photos and
+// customer's own brand (plans with `brand`: Premium). The logo goes on top of the experience and on its photos and
 // videos. Any image (PNG, JPG, WebP or SVG) is turned into a PNG of at most 800 px here; the server keeps it as exp/<slug>/logo.
 // Usage: const m = VVRMarca.mount(element, { plan, exp, api, base }); m.get() → { brand: "own"|"vortice", file, ok }.
 (function () {
@@ -32,7 +32,7 @@
     el.innerHTML = `<h2><span class="n done">✦</span>Logo de la experiencia</h2>
       <p class="hint">Sale arriba en la experiencia y en las fotos y videos que se tomen dentro.</p>
       <div class="vm-seg"><button type="button" data-b="vortice"><img src="${base}assets/logo-vorticevr-blanco.png" alt="">Vórtice VR</button><button type="button" data-b="own" ${can ? "" : "disabled"}>${can ? "" : "🔒 "}El de mi marca</button></div>
-      ${can ? "" : `<p class="vm-lock">✦ Poner el logo de tu marca en lugar del de Vórtice VR es del plan <b>Empresarial</b>. <a href="${base}cuenta/#planes">Ver planes</a></p>`}
+      ${can ? "" : `<p class="vm-lock">✦ Poner el logo de tu marca en lugar del de Vórtice VR es del plan <b>Premium</b>. <a href="${base}cuenta/#planes">Ver planes</a></p>`}
       <div class="vm-own" hidden>
         <label class="vm-drop"><input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"><span><b class="vm-t">Sube el logo de tu marca</b><br><small class="vm-msg">PNG con fondo transparente o SVG. Mejor a color u oscuro (no blanco).</small></span></label>
         <div class="vm-prev" hidden><div><span class="pill"><img alt="Tu logo sobre la experiencia"></span></div><div><img alt="Tu logo en las fotos"></div></div>

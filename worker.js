@@ -13,24 +13,27 @@ const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear",
 const LIMITS = { imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, codeMinutes: 10, codeTries: 5, sessionDays: 30, pausedDays: 30 };
 // Plans. exp = active experiences; days = how long each one lasts (0 = while the plan is active);
 // views = most times each experience can be opened (Gratis only, so a viral free QR cannot run up costs);
-// Every experience shows the Vórtice VR logo on top (no other branding). Video: limited by size only, not duration.
-// year = price of a year (default 10 months). seats = team accounts the owner can create (Empresarial): the owner hands
-// each one part of the plan's experiences (users.quota); what is not handed out stays for the owner.
+// Experiences show the Vórtice VR logo on top; brand = may put its own logo instead (Premium). Video: size only, not duration.
+// Since October 2026 only Gratis, Pro and Premium are offered (they count experiences of any kind). exp: UNLIMITED = no
+// limit (fair use in the terms). year = price of a year (default 10 months). seats = team accounts (only the legacy
+// Empresarial plan still has them): the owner hands each one part of the plan's experiences (users.quota).
 // legacy = no longer offered (only kept for accounts that have it). Paid plans can also be set by an admin in /admin/.
 // Elements (video, image, text, 3D) per experience: items = how many, totalMB = weight of all its files together
 // (each video ≤ videoMB, each GLB ≤ modelMB). The Worker reads the whole upload in memory (128 MB): keep totalMB ≤ 60.
 const PLANS = {
   gratis:  { name: "Gratis",  exp: 1,    days: 15, videoMB: 25, modelMB: 15, items: 3, totalMB: 30, price: 0, views: 1000 },
-  basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 25, modelMB: 15, items: 6, totalMB: 40, price: 199, year: 1990 },
-  pro:     { name: "Pro",     exp: 50,   days: 0,  videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 499, year: 4990 },
-  empresarial: { name: "Empresarial", exp: 150, seats: 15, brand: true, days: 0, videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 999, year: 9999 },
+  basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 25, modelMB: 15, items: 6, totalMB: 40, price: 199, year: 1990, legacy: true },
+  pro:     { name: "Pro",     exp: 100,  days: 0,  videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 499, year: 4990 },
+  premium: { name: "Premium", exp: 1000000, brand: true, days: 0, videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 1499, year: 14990 },
+  empresarial: { name: "Empresarial", exp: 150, seats: 15, brand: true, days: 0, videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 999, year: 9999, legacy: true },
   escuela: { name: "Escuela", exp: 1000, brand: true, days: 0,  videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 1500, year: 15000, legacy: true },
 };
+const UNLIMITED = 1000000;   // PLANS.premium.exp: shown as "ilimitadas"
 const yearPrice = plan => PLANS[plan].year || PLANS[plan].price * YEAR_MONTHS;
 const FAR = 253402300799000; // expires of an experience on a paid plan: "while the plan is active" (year 9999)
 const ADMINS_DEFAULT = "lad.cesargarcia@gmail.com";
 // "Recomienda y gana": who can earn, how much, and when a commission can be paid out
-const REF = { plans: ["pro", "empresarial"], rate: 0.10, discount: 10, holdDays: 30, minPayout: 50000 /* centavos: $500 */, coupon: "VVR_REF10" };
+const REF = { plans: ["pro", "premium", "empresarial"], rate: 0.10, discount: 10, holdDays: 30, minPayout: 50000 /* centavos: $500 */, coupon: "VVR_REF10" };
 const ADMIN_SLUGS = new Set(["ejemplo"]); // only an admin can take these (the home page demo uses "ejemplo")
 const VIDEO = /\.(mp4|m4v|webm|mov)$/i;
 const MEDIA_KEYS = ["video", "target", "image", "model", "qr", "logo"]; // R2 files of an experience: exp/<slug>/<key> (+ i/<id> of its elements)
@@ -211,7 +214,7 @@ async function api(request, env, ctx, url) {
     if (P.views && row.views >= P.views) return json({ error: "Límite de vistas", limit: true }, 410);
     ctx.waitUntil(env.DB.batch([env.DB.prepare("UPDATE experiences SET views = views + 1 WHERE slug = ?").bind(row.slug), bump(env, "views")]));
     const out = publicExp(row);
-    if (out.brand && !P.brand) delete out.brand;   // its own logo only while the plan includes it (brand: Empresarial)
+    if (out.brand && !P.brand) delete out.brand;   // its own logo only while the plan includes it (brand: Premium)
     return json(out, 200, { "Cache-Control": "no-store" });
   }
 
@@ -376,7 +379,7 @@ async function api(request, env, ctx, url) {
     // its own brand logo instead of Vórtice VR (plans with brand): uploaded now or kept from the version being edited
     const logo = form.get("logo"), newLogo = logo && typeof logo !== "string" ? logo : null;
     if (meta.brand === "own") {
-      if (!P.brand) return json({ error: "Poner el logo de tu marca es del plan Empresarial." }, 403);
+      if (!P.brand) return json({ error: "Poner el logo de tu marca es del plan Premium." }, 403);
       const had = mine && JSON.parse(mine.data || "{}").brand === "own";
       if (!newLogo && !had) return json({ error: "Sube el logo de tu marca." }, 400);
       if (newLogo && (newLogo.size > 1048576 || !/^image\/(png|jpeg|webp)$/.test(newLogo.type))) return json({ error: "El logo debe ser PNG, JPG o WebP de máximo 1 MB." }, 400);
@@ -575,7 +578,7 @@ async function api(request, env, ctx, url) {
       return json({ url: s.url, portal: true });
     }
     const b = await request.json().catch(() => ({}));
-    if (!STRIPE_PRICES[b.plan]) return json({ error: "Plan inválido." }, 400);
+    if (!STRIPE_PRICES[b.plan] || PLANS[b.plan].legacy) return json({ error: "Plan inválido." }, 400);
     const period = b.period === "anio" ? "anio" : "mes";
     const price = await stripePrice(env, b.plan, period);
     const newCustomer = async () => {
@@ -629,7 +632,7 @@ async function api(request, env, ctx, url) {
     }
     if (path === "/api/admin/coupons" && M === "POST") {
       const b = await request.json().catch(() => ({}));
-      if (!["basico", "pro", "empresarial"].includes(b.plan)) return json({ error: "Elige el plan del cupón." }, 400);
+      if (!["pro", "premium"].includes(b.plan)) return json({ error: "Elige el plan del cupón." }, 400);
       const months = Math.round(Number(b.months)), uses = Math.round(Number(b.max_uses));
       if (!(months >= 1 && months <= 24)) return json({ error: "Los meses deben ser de 1 a 24." }, 400);
       if (!(uses >= 1 && uses <= 10000)) return json({ error: "Las veces de uso deben ser de 1 a 10,000." }, 400);
@@ -993,7 +996,7 @@ async function stripeRefCoupon(env) {
   catch (e) { if (e.code !== "resource_missing") throw e; await stripe(env, "POST", "coupons", { id: REF.coupon, percent_off: REF.discount, duration: "repeating", duration_in_months: 12, name: "Recomendado: 10% el primer año" }); }
   refCouponReady[mode] = true; return REF.coupon;
 }
-// invoice.paid: 10% of what the referred customer actually paid, if the referrer is on Pro or Empresarial right now
+// invoice.paid: 10% of what the referred customer actually paid, if the referrer is on Pro or Premium right now
 async function commissionFor(env, invoiceId) {
   const inv = await stripe(env, "GET", `invoices/${invoiceId}`);   // never trust the event's copy
   if (inv.status !== "paid" || !(inv.amount_paid > 0) || inv.currency !== "mxn") return;
@@ -1003,18 +1006,18 @@ async function commissionFor(env, invoiceId) {
   const P = ref && planOf(ref);
   const line = inv.lines && inv.lines.data && inv.lines.data[0], lk = line && line.price && line.price.lookup_key;
   const plan = (stripeKeys().find(k => k.key === lk) || {}).plan || user.plan;
-  const ok = P && REF.plans.includes(P.id) && !ref.owner_id;   // only while the referrer also pays Pro or Empresarial
+  const ok = P && REF.plans.includes(P.id) && !ref.owner_id;   // only while the referrer also pays Pro or Premium
   const now = Date.now(), paidAt = ((inv.status_transitions && inv.status_transitions.paid_at) || now / 1000) * 1000;
   await env.DB.prepare("INSERT OR IGNORE INTO commissions (id, referrer_id, user_id, invoice, plan, amount, commission, status, created, available_at, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
     .bind(inv.id, ref ? ref.id : user.ref_by, user.id, inv.id, plan, inv.amount_paid, ok ? Math.round(inv.amount_paid * REF.rate) : 0, ok ? "pendiente" : "cancelada", now, paidAt + REF.holdDays * 864e5,
-      ok ? null : "Quien recomendó no tenía plan Pro o Empresarial ese día").run();
+      ok ? null : "Quien recomendó no tenía plan Pro o Premium ese día").run();
 }
 
 // ---------- daily stats and admin analytics ----------
 const today = () => new Date(Date.now() - 6 * 3600e3).toISOString().slice(0, 10);   // Mexico (UTC−6)
 const bump = (env, field) => env.DB.prepare(`INSERT INTO stats (day, ${field}) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET ${field} = ${field} + 1`).bind(today());
 function addMonths(t, n) { const d = new Date(t); d.setUTCMonth(d.getUTCMonth() + n); return d.getTime(); }
-const PLAN_RANK = { gratis: 0, basico: 1, pro: 2, empresarial: 3, escuela: 3 };
+const PLAN_RANK = { gratis: 0, basico: 1, pro: 2, empresarial: 3, escuela: 3, premium: 4 };
 // What matters to run the platform: accounts and growth, paying plans and monthly income, experiences and views,
 // a 30-day daily series, and the most viewed experiences. About 10 queries.
 async function adminStats(env, request) {
@@ -1029,7 +1032,7 @@ async function adminStats(env, request) {
   ]);
   const a = acc.results[0], e = exps.results[0];
   // paying accounts by plan; monthly income: Stripe (yearly ÷ 12) + plans activated by hand; courtesy codes are $0
-  const byPlan = { basico: 0, pro: 0, empresarial: 0, escuela: 0 }, kind = { stripe: 0, manual: 0, cortesia: 0 }; let mrr = 0;
+  const byPlan = { basico: 0, pro: 0, premium: 0, empresarial: 0, escuela: 0 }, kind = { stripe: 0, manual: 0, cortesia: 0 }; let mrr = 0;
   for (const u of plans.results) {
     if (!PLANS[u.plan]) continue; byPlan[u.plan] = (byPlan[u.plan] || 0) + 1;
     const note = u.plan_note || "";
@@ -1039,7 +1042,7 @@ async function adminStats(env, request) {
   }
   const series = []; const map = Object.fromEntries(days.results.map(r => [r.day, r]));
   for (let i = 29; i >= 0; i--) { const day = new Date(now - 6 * 3600e3 - i * 864e5).toISOString().slice(0, 10), r = map[day] || {}; series.push({ day, views: r.views || 0, signups: r.signups || 0, publishes: r.publishes || 0, contacts: r.contacts || 0 }); }
-  const paid = byPlan.basico + byPlan.pro + byPlan.empresarial + byPlan.escuela;
+  const paid = byPlan.basico + byPlan.pro + byPlan.premium + byPlan.empresarial + byPlan.escuela;
   return {
     users: a.users || 0, new7: a.new7 || 0, new30: a.new30 || 0, paid, byPlan, kind, mrr: Math.round(mrr),
     conversion: a.users ? Math.round(1000 * (paid - kind.cortesia) / a.users) / 10 : 0,
@@ -1069,7 +1072,7 @@ async function limitOf(env, user, P) {
   const r = await env.DB.prepare("SELECT COALESCE(SUM(quota), 0) AS q FROM users WHERE owner_id = ?").bind(user.id).first();
   return Math.max(0, P.exp - r.q);
 }
-const expCount = n => n === 1 ? "1 experiencia" : `${n.toLocaleString("es-MX")} experiencias`;
+const expCount = n => n >= UNLIMITED ? "experiencias ilimitadas" : n === 1 ? "1 experiencia" : `${n.toLocaleString("es-MX")} experiencias`;
 const isAdmin = (env, user) => !!user && (env.ADMIN_EMAILS || ADMINS_DEFAULT).split(",").map(s => s.trim().toLowerCase()).includes(user.email);
 // Sets the plan and fits the user's experiences to it in one statement (the free Workers plan allows 50 queries per request).
 // The first `exp` (active first, most recently edited) stay active: on a paid plan with no end date, on the free plan for
@@ -1100,14 +1103,15 @@ function fitExperiences(env, email, limit, days) {
       WHERE experiences.slug = r.slug`).bind(limit, days, FAR, now + days * 864e5, now + LIMITS.pausedDays * 864e5, email, now);
 }
 
-// ---------- payments: Stripe subscriptions for Básico and Pro (monthly or yearly, IVA included) ----------
+// ---------- payments: Stripe subscriptions for Pro and Premium (monthly or yearly, IVA included; Básico and Empresarial
+// keep working for the subscriptions that already exist, but are no longer sold) ----------
 // Secrets STRIPE_SECRET_KEY (sk_test_ in the preview, sk_live_ in production) and STRIPE_WEBHOOK_SECRET.
 // Products and prices are created in Stripe on first use (found again by lookup_key). Stripe Checkout takes the payment,
 // the webhook keeps users.plan in sync, and the Customer Portal lets people change card, switch plan or cancel.
 // A paid month is "paid until" the period end + STRIPE_GRACE_DAYS; if a renewal fails and Stripe gives up, the daily
 // cron moves the account back to Gratis on its own. With test keys only admins can pay (the preview shares the database).
 // lookup keys per plan and period; a year costs 10 months (2 months free)
-const STRIPE_PRICES = { basico: { mes: "vvr_basico_mes", anio: "vvr_basico_anual" }, pro: { mes: "vvr_pro_mes", anio: "vvr_pro_anual" }, empresarial: { mes: "vvr_empresarial_mes", anio: "vvr_empresarial_anual" } };
+const STRIPE_PRICES = { basico: { mes: "vvr_basico_mes", anio: "vvr_basico_anual" }, pro: { mes: "vvr_pro_mes", anio: "vvr_pro_anual" }, premium: { mes: "vvr_premium_mes", anio: "vvr_premium_anual" }, empresarial: { mes: "vvr_empresarial_mes", anio: "vvr_empresarial_anual" } };
 const YEAR_MONTHS = 10;
 const STRIPE_PERIODS = { mes: "month", anio: "year" };
 const stripeKeys = () => Object.entries(STRIPE_PRICES).flatMap(([plan, k]) => Object.entries(k).map(([period, key]) => ({ plan, period, key })));
@@ -1158,13 +1162,13 @@ async function stripePrice(env, plan, period = "mes") {
 async function stripePortalConfig(env) {
   const list = await stripe(env, "GET", "billing_portal/configurations", { active: "true", limit: 100 });
   const prices = []; // one after the other: the second period of a plan reuses the product made for the first
-  for (const k of stripeKeys()) prices.push(await stripePrice(env, k.plan, k.period));
+  for (const k of stripeKeys()) if (!PLANS[k.plan].legacy) prices.push(await stripePrice(env, k.plan, k.period));   // switch only to the plans on sale
   const want = prices.map(p => p.id).sort().join(",");
   const byProduct = {}; for (const p of prices) (byProduct[p.product] ||= []).push(p.id);
   const mine = list.data.find(c => c.metadata && c.metadata.app === "vvr" && c.metadata.prices === want);
   if (mine) return mine.id;
   return (await stripe(env, "POST", "billing_portal/configurations", {
-    business_profile: { headline: "Vórtice VR · Realidad aumentada" },
+    business_profile: { headline: "Vórtice VR · Experiencias inmersivas" },
     features: {
       payment_method_update: { enabled: "true" },
       invoice_history: { enabled: "true" },

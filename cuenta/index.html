@@ -370,11 +370,12 @@ function refCode(){ try{ const r=JSON.parse(localStorage.getItem(REFKEY)||"null"
   if(r.ok){ const b=$("rInvite"); b.hidden=false; b.innerHTML=`✦ <b>${esc(r.name)}</b> te invitó: tendrás <b>${r.discount}% de descuento</b> todo tu primer año en cualquier plan.`; } }catch(e){} })();
 const NEXT=Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":null;
 // public plans: [id, name, monthly price, yearly price, what it includes] (a year is ~10 months; IVA included)
-const PLANS=[["gratis","Gratis",0,0,"Para probar la magia",["<b>1</b> imagen con video","Hasta <b>3</b> elementos: video, foto, texto o 3D","Activa <b>15 días</b>","Hasta <b>1,000</b> vistas","Videos de hasta 25 MB"]],
-  ["basico","Básico",199,1990,"Para tu negocio",["<b>5</b> imágenes con video","Hasta <b>6</b> elementos por imagen","Cámbialas cuando quieras","Sin vencimiento mientras pagues","Vistas ilimitadas","Videos de hasta 25 MB"]],
-  ["pro","Pro",499,4990,"Para crecer en grande",["<b>50</b> imágenes con video","Hasta <b>15</b> elementos por imagen","Cámbialas cuando quieras","Sin vencimiento mientras pagues","Vistas ilimitadas","Videos de hasta <b>50 MB</b>"]],
-  ["empresarial","Empresarial",999,9999,"Para escuelas y empresas",["<b>150</b> imágenes con video","Hasta <b>15</b> elementos por imagen","Hasta <b>15 cuentas</b> para tu equipo","Tú repartes las imágenes de cada cuenta","Vistas ilimitadas","Soporte prioritario"]]];
-const LEGACY={escuela:["escuela","Escuela",1500,15000,"Tu plan actual",["<b>1,000</b> imágenes con video","Cámbialas cuando quieras","Videos de hasta 50 MB"]]};
+const PLANS=[["gratis","Gratis",0,0,"Para probar la magia",["<b>1</b> experiencia de cualquier tipo","Hasta <b>3</b> elementos: video, foto, texto o 3D","Activa <b>15 días</b>","Hasta <b>1,000</b> vistas","Videos de hasta 25 MB"]],
+  ["pro","Pro",499,4990,"Para crear y vender experiencias",["<b>100</b> experiencias de cualquier tipo","Hasta <b>15</b> elementos por imagen","Cámbialas cuando quieras","Sin vencimiento mientras pagues","Vistas ilimitadas","Videos de hasta <b>50 MB</b>"]],
+  ["premium","Premium",1499,14990,"Ilimitado y con tu marca",["<b>Experiencias ilimitadas</b>","<b>El logo de tu marca</b> en lugar del de Vórtice VR","Experiencias Premium: ruleta, rasca y gana, productos en 3D (conforme salgan)","Todo lo de Pro","Soporte prioritario"]]];
+const LEGACY={basico:["basico","Básico",199,1990,"Tu plan actual",["<b>5</b> experiencias","Hasta <b>6</b> elementos por imagen","Videos de hasta 25 MB"]],
+  empresarial:["empresarial","Empresarial",999,9999,"Tu plan actual",["<b>150</b> experiencias","Hasta <b>15 cuentas</b> para tu equipo","El logo de tu marca"]],
+  escuela:["escuela","Escuela",1500,15000,"Tu plan actual",["<b>1,000</b> experiencias","Cámbialas cuando quieras","Videos de hasta 50 MB"]]};
 const VIEWS=["vEntrar","vRegistro","vCodigo","vOlvide","vPanel"];
 function view(v){ VIEWS.forEach(x=>$(x).hidden=x!==v); scrollTo(0,0); const f=$(v).querySelector("input"); if(f&&v!=="vPanel") setTimeout(()=>f.focus(),50); }
 function msg(id,t,kind){ const m=$(id); m.className="msg"+(kind?" "+kind:""); m.textContent=t||""; }
@@ -449,7 +450,7 @@ function showPanel(data){
   const T=data.team||{}, member=T.role==="member", owner=T.role==="owner", lim=data.limit??P.exp;
   const active=experiences.filter(x=>!x.paused).length, full=active>=lim;
   $("pPlanName").textContent=member?`${P.name} · equipo`:P.name; $("pAdmin").hidden=!data.admin; $("pManage").hidden=!B.subscribed;
-  $("pUse").textContent=`${nf(active)}/${nf(lim)} experiencias en uso`+(owner?` (de ${nf(T.total)} del plan)`:"");
+  $("pUse").textContent=lim>=1e6?`${nf(active)} experiencias en uso · ilimitadas`:`${nf(active)}/${nf(lim)} experiencias en uso`+(owner?` (de ${nf(T.total)} del plan)`:"");
   $("pMeter").classList.toggle("full",full); $("pMeter").firstElementChild.style.width=Math.min(100,Math.max(2,lim?active/lim*100:100))+"%";
   $("pPlan").textContent=member?`Tu cuenta es parte del equipo de ${T.owner}; ellos manejan el plan.`:`Videos de hasta ${P.videoMB} MB · `
     +(P.id==="gratis"?`cada experiencia dura 15 días y hasta ${nf(P.views||1000)} vistas.`:B.subscribed?(B.period==="anio"?"pago anual automático.":"pago mensual automático."):P.until?`pagado hasta el ${fmtD(P.until)}.`:"sin vencimiento.");
@@ -459,7 +460,7 @@ function showPanel(data){
   // the main action; at the limit it explains instead
   $("pCreate").classList.toggle("full",full); $("pCreate").href=full?"#planes":"../crear/";
   $("pCreateT").textContent=full?`Llegaste a tu límite (${nf(active)}/${nf(lim)})`:"+ Crear experiencia";
-  $("pCreateS").textContent=full?(member?"Borra una experiencia o pide más a quien administra tu equipo.":owner?"Borra una, quita experiencias a tu equipo o mejora tu plan.":P.id==="escuela"?"Borra una experiencia para crear otra.":"Borra una experiencia o mejora tu plan para crear más."):"Sube una imagen y un video, y obtén tu link y tu QR";
+  $("pCreateS").textContent=full?(member?"Borra una experiencia o pide más a quien administra tu equipo.":owner?"Borra una, quita experiencias a tu equipo o mejora tu plan.":P.id==="escuela"?"Borra una experiencia para crear otra.":"Borra una experiencia o mejora tu plan para crear más."):"Elige qué crear, llena unos campos y obtén tu link y tu QR";
   // plans: pay online with Stripe when it is on (billing.enabled); otherwise "Lo quiero" opens the contact form
   renderPlans();
   $("pNote").innerHTML=(data.referral&&data.referral.discount?`<b style="color:var(--sun)">✦ Tienes ${data.referral.discount}% de descuento todo tu primer año por invitación; se aplica al pagar.</b> `:"")+(B.enabled?(B.test?"Modo de prueba (solo lo ves tú como administrador): se paga con la tarjeta de prueba de Stripe 4242 4242 4242 4242. ":"Pago seguro con tarjeta a través de Stripe. Se cobra automáticamente cada mes o cada año, según elijas, y cancelas cuando quieras. ")
@@ -508,7 +509,7 @@ async function openRef(){ $("refBox").hidden=false; $("refBody").innerHTML='<p c
   let r; try{ r=await VVR.call("referral"); }catch(e){ $("refBody").textContent=e.message; return; }
   const B=$("refBody");
   if(!r.eligible){ B.innerHTML=`<p class="rlead">Gana <b>${r.rate}% de cada pago</b> de las personas y empresas que invites, todo el tiempo que ellas paguen su plan. Ellas reciben <b>${r.discount}% de descuento</b> todo su primer año.</p>
-      <p class="note">Recomienda y gana está disponible con los planes <b>Pro</b> y <b>Empresarial</b>: mientras tu plan esté activo, ganas por cada pago de tus recomendados.</p>
+      <p class="note">Recomienda y gana está disponible con los planes <b>Pro</b> y <b>Premium</b>: mientras tu plan esté activo, ganas por cada pago de tus recomendados.</p>
       <button class="btn sun" type="button" id="refUp">Ver planes</button>`;
     $("refUp").onclick=()=>{ $("refBox").hidden=true; openPlans(true); }; return; }
   const ST={pendiente:"Pendiente",disponible:"Disponible",pagada:"Pagada",cancelada:"Cancelada"};
@@ -586,10 +587,10 @@ function renderList(){
   const exps=DATA.experiences, list=$("pList"); list.replaceChildren();
   const paused=exps.filter(x=>x.paused).length, pausedOnly=$("pPausedOnly").getAttribute("aria-pressed")==="true";
   const lim=DATA.limit??((DATA.plan&&DATA.plan.exp)||1), act=exps.length-paused;
-  $("pCount").textContent=`${nf(act)}/${nf(lim)}`; $("pSearch").hidden=$("pSort").hidden=exps.length<2;
+  $("pCount").textContent=lim>=1e6?`${nf(act)} · ilimitadas`:`${nf(act)}/${nf(lim)}`; $("pSearch").hidden=$("pSort").hidden=exps.length<2;
   $("pPausedOnly").hidden=!paused; $("pPausedOnly").textContent=`Pausadas (${paused})`;
   if(!exps.length){ $("pMore").hidden=true;
-    list.innerHTML=`<div class="card empty"><h2>Todavía no tienes experiencias</h2><p>Sube una imagen y un video: cuando alguien apunte su celular a la imagen, el video aparecerá encima.</p><a class="btn primary" href="../crear/">Crear mi primera experiencia</a></div>`; return; }
+    list.innerHTML=`<div class="card empty"><h2>Todavía no tienes experiencias</h2><p>Realidad aumentada, dibujos para colorear, trivias y más: elige qué crear, llena unos campos y comparte tu link o tu QR.</p><a class="btn primary" href="../crear/">Crear mi primera experiencia</a></div>`; return; }
   const q=$("pSearch").value.trim().toLowerCase(), sort=$("pSort").value;
   const items=exps.filter(x=>(!pausedOnly||x.paused)&&(!q||x.title.toLowerCase().includes(q)||x.slug.includes(q)))
     .sort((a,b)=>(a.paused-b.paused)||(sort==="views"?(b.views||0)-(a.views||0):sort==="name"?a.title.localeCompare(b.title,"es"):(b.updated||b.created)-(a.updated||a.created)));
