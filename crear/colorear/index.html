@@ -56,11 +56,6 @@ input:focus{border-color:var(--lav);outline:none}
 .slugrow{display:flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:rgba(5,2,11,.7);overflow:hidden}
 .slugrow input{border:0;background:transparent;border-radius:0;text-align:right;padding-right:2px;min-width:0}
 .slugrow span{padding:11px 12px 11px 0;color:var(--mute);white-space:nowrap;font-family:var(--fm);font-size:.9rem}
-.soc{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px}
-.soc label{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:4px 4px 4px 10px;background:rgba(5,2,11,.5)}
-.soc svg{width:20px;height:20px;fill:var(--lav);flex:none}
-.soc input{border:0!important;background:transparent!important;padding:8px 6px 8px 0!important;min-width:0}
-.soc .pre{font-family:var(--fm);font-size:.82rem;color:var(--mute);white-space:nowrap}
 header .acts{display:flex;align-items:center;gap:14px}
 .mybtn{font-family:var(--fd);font-weight:600;letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;border:1px solid var(--line2);border-radius:999px;padding:9px 14px;background:rgba(139,63,214,.2);color:var(--ink);cursor:pointer}
 .phead{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
@@ -91,11 +86,6 @@ header .acts{display:flex;align-items:center;gap:14px}
 .switch{flex-wrap:wrap;border-radius:18px}
 input[type=range]{width:100%;accent-color:#8b3fd6}
 .rng{display:flex;justify-content:space-between;font-size:.8rem;color:var(--mute);margin-top:2px}
-.pals{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
-.pals button{border:1px solid var(--line2);border-radius:12px;background:rgba(5,2,11,.6);padding:10px;color:var(--ink);cursor:pointer;text-align:left;font:600 .85rem var(--fb)}
-.pals button[aria-pressed="true"]{border-color:var(--lav);background:rgba(139,63,214,.25);box-shadow:0 0 18px rgba(139,63,214,.35)}
-.pals i{display:flex;gap:3px;margin-top:6px}
-.pals i b{width:14px;height:14px;border-radius:50%;border:1px solid rgba(255,255,255,.25)}
 .drop .thumb{background:#fff;object-fit:contain}
 .sample{margin-top:10px;background:none;border:0;color:var(--lav);text-decoration:underline;cursor:pointer;font:inherit;font-size:.9rem;padding:0}
 .tips{margin:10px 0 0;padding-left:18px;color:var(--mute);font-size:.88rem}
@@ -136,30 +126,21 @@ input[type=range]{width:100%;accent-color:#8b3fd6}
           <label class="tog"><input type="checkbox" id="convOn"><span><b>Convertir en dibujo para colorear</b><small id="convTxt">Sacamos los contornos de tu imagen y los dejamos como líneas negras sobre blanco.</small></span></label>
           <div id="convDet"><label class="f" for="detail">Detalle</label><input type="range" id="detail" min="0" max="100" step="5" value="50"><div class="rng"><span>Solo lo principal</span><span>Más detalle</span></div></div>
         </div>
-        <ul class="tips"><li>Las zonas deben estar <b>cerradas</b>: si una línea tiene un hueco, la cubeta pinta también lo de al lado.</li><li>Sin sombras ni textura de papel; si la foto salió gris, sube la detección de líneas.</li></ul>
-      </section>
-      <section class="step" id="s2">
-        <h2><span class="n done">2</span>Ajustes</h2>
-        <div id="thBox"><label class="f" for="th">Detección de líneas</label>
+        <div id="thBox" hidden><label class="f" for="th">Detección de líneas</label>
         <input type="range" id="th" min="90" max="230" step="5" value="170">
         <div class="rng"><span>Solo líneas muy oscuras</span><span>También líneas claras</span></div></div>
-        <label class="f">Colores para empezar</label>
-        <div class="pals" id="pals"></div>
-        <p class="note">Quien colorea también puede elegir cualquier otro color.</p>
+        <ul class="tips"><li>Las zonas deben estar <b>cerradas</b>: si una línea tiene un hueco, la cubeta pinta también lo de al lado.</li><li>Sin sombras ni textura de papel; si la foto salió gris, sube la detección de líneas.</li></ul>
       </section>
       <section class="step" id="s4">
-        <h2><span class="n" id="n4">3</span>Título, link y botones</h2>
+        <h2><span class="n" id="n4">2</span>Título y link</h2>
         <label class="f" for="title">Título</label>
         <input type="text" id="title" maxlength="80" placeholder="Ej. Colorea a mi personaje">
         <label class="f" for="slug">Tu link</label>
         <div class="slugrow"><input type="text" id="slug" maxlength="30" placeholder="tu-dibujo" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="root">.vorticevr.mx</span></div>
         <div class="msg" id="mSlug"></div>
-        <label class="f">Botones (opcionales)</label>
-        <p class="hint" style="margin:0 0 8px;color:var(--mute);font-size:.88rem">Aparecen al guardar el dibujo: buen momento para que te sigan.</p>
-        <div class="soc" id="soc"></div>
       </section>
       <section class="step" id="s6">
-        <h2><span class="n" id="n6">4</span>Publicar</h2>
+        <h2><span class="n" id="n6">3</span>Publicar</h2>
         <div class="mine" id="mine" hidden style="margin:0 0 12px"></div>
         <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
         <button class="btn primary" id="publish" type="button" disabled>Publicar mi dibujo</button>
@@ -179,24 +160,13 @@ input[type=range]{width:100%;accent-color:#8b3fd6}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="../../assets/plataforma.js" data-api="../.."></script>
 <script type="module">
-import { run, analyze, toLineArt, PALETTES, PALETTE_NAMES } from "../../assets/colorear.js";
+import { run, analyze, toLineArt } from "../../assets/colorear.js";
 const $=id=>document.getElementById(id);
 const API=VVR.api;
 const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
 $("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
-const S={token:null,email:null,mine:null,img:null,orig:null,file:null,w:0,h:0,th:170,palette:"vivos",convert:false,colorful:false,detail:50};
+const S={token:null,email:null,mine:null,img:null,orig:null,file:null,w:0,h:0,th:170,convert:false,colorful:false,detail:50};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-
-// ---------- social buttons (same as /crear/) ----------
-const SOC=[["whatsapp","WhatsApp","","993 123 4567","tel"],["facebook","Facebook","facebook.com/","tu-pagina","text"],["instagram","Instagram","instagram.com/","tu_usuario","text"],["youtube","YouTube","youtube.com/@","tu-canal","text"],["x","X","x.com/","tu_usuario","text"],["tiktok","TikTok","tiktok.com/@","tu_usuario","text"],["web","Sitio web","","tusitio.com","text"]];
-// accepts "usuario", "@usuario" or a pasted link, and keeps only the username for the social networks
-const BASES={facebook:"facebook.com",instagram:"instagram.com",youtube:"youtube.com",x:"x.com",tiktok:"tiktok.com"};
-function toHandle(k,v){ v=String(v||"").trim(); if(!BASES[k]||!v) return v;
-  if(/^https?:\/\//i.test(v)||v.includes("/")){ try{ const u=new URL(/^https?:/i.test(v)?v:"https://"+v); const seg=u.pathname.split("/").filter(Boolean)[0]||""; return decodeURIComponent(seg).replace(/^@/,""); }catch(e){ return v; } }
-  return v.replace(/^@/,""); }
-const ICON={whatsapp:'<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/>',facebook:'<path d="M20 2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8.6v-7.7H10v-3h2.6V9c0-2.6 1.6-4 3.9-4 1.1 0 2.1.1 2.3.1v2.7h-1.6c-1.3 0-1.5.6-1.5 1.5v1.9h3l-.4 3h-2.6V22H20a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>',instagram:'<path d="M7.8 2h8.4A5.8 5.8 0 0 1 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8A5.8 5.8 0 0 1 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2zm-.2 2A3.6 3.6 0 0 0 4 7.6v8.8A3.6 3.6 0 0 0 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6A3.6 3.6 0 0 0 16.4 4H7.6zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>',youtube:'<path d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4a2.5 2.5 0 0 0-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.8a2.5 2.5 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8c.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8zM10 15V9l5.2 3-5.2 3z"/>',x:'<path d="M17.8 3h3.1l-6.8 7.7L22 21h-6.2l-4.9-6.4L5.3 21H2.2l7.3-8.3L2 3h6.4l4.4 5.8L17.8 3zm-1.1 16.2h1.7L7.4 4.7H5.6l11.1 14.5z"/>',tiktok:'<path d="M16.6 3c.4 2.2 1.8 3.7 4 3.9v3a7.4 7.4 0 0 1-4-1.3v6.2A5.8 5.8 0 1 1 10.8 9v3.1a2.8 2.8 0 1 0 2.8 2.8V3h3z"/>',web:'<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm7.9 9h-3a15.6 15.6 0 0 0-1.3-5.5A8 8 0 0 1 19.9 11zM12 4c.9 1.1 1.8 3.6 2 7h-4c.2-3.4 1.1-5.9 2-7zM4.1 13h3c.1 2 .6 3.9 1.3 5.5A8 8 0 0 1 4.1 13zm3-2h-3a8 8 0 0 1 4.3-5.5A15.6 15.6 0 0 0 7.1 11zM12 20c-.9-1.1-1.8-3.6-2-7h4c-.2 3.4-1.1 5.9-2 7z"/>'};
-$("soc").innerHTML=SOC.map(([k,l,pre,ph,t])=>`<label title="${l}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>${pre?`<span class="pre">${pre}</span>`:""}<input type="${t}" id="b_${k}" placeholder="${ph}" aria-label="${l}${pre?" (solo tu usuario)":""}" autocapitalize="off" autocomplete="off" spellcheck="false"></label>`).join("");
-for(const [k] of SOC) if(BASES[k]) $("b_"+k).addEventListener("change",e=>{ e.target.value=toHandle(k,e.target.value); });
 
 // ---------- the drawing: up to 1600 px, flattened on white; PNG (line art compresses well) or JPG if it is heavy ----------
 const MAXPX=1600;
@@ -241,15 +211,12 @@ $("sample").addEventListener("click",()=>{ useImage("../../assets/colorear-ejemp
 // ---------- settings ----------
 let thT=0;
 $("th").addEventListener("input",()=>{ S.th=+$("th").value; clearTimeout(thT); thT=setTimeout(()=>{ rate(); preview(); },250); });
-$("pals").innerHTML=Object.keys(PALETTES).map(k=>`<button type="button" data-p="${k}">${PALETTE_NAMES[k]}<i>${PALETTES[k].slice(0,8).map(c=>`<b style="background:${c}"></b>`).join("")}</i></button>`).join("");
-const pressPal=()=>document.querySelectorAll("#pals button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.p===S.palette)));
-$("pals").addEventListener("click",e=>{ const b=e.target.closest("[data-p]"); if(!b) return; S.palette=b.dataset.p; pressPal(); preview(); });
 
 // ---------- live preview (the same coloring as the link) ----------
 let app=null, pvN=0;
 async function preview(){
   if(!S.img) return; const n=++pvN; $("empty").hidden=true;
-  try{ const a=await run({root:$("board"),image:S.img,th:S.th,palette:S.palette,embedded:true}); if(n!==pvN){ a.destroy(); return; } if(app) app.destroy(); app=a; }
+  try{ const a=await run({root:$("board"),image:S.img,th:S.th,embedded:true}); if(n!==pvN){ a.destroy(); return; } if(app) app.destroy(); app=a; }
   catch(e){ console.error(e); }
 }
 
@@ -275,8 +242,7 @@ function check(){
 }
 $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Publicando…"; bar.hidden=false; $("publish").disabled=true;
-  const meta={kind:"colorear",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),img:{w:S.w,h:S.h},color:{th:S.th,palette:S.palette},buttons:{}};
-  for(const [k] of SOC){ const v=toHandle(k,$("b_"+k).value); if(v) meta.buttons[k]=v; }
+  const meta={kind:"colorear",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),img:{w:S.w,h:S.h},color:{th:S.th},buttons:{}};
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
   if(S.file) fd.append("image",S.file,S.file.type==="image/png"?"dibujo.png":"dibujo.jpg");
   const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc, linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/","Escanea y colorea este dibujo");
@@ -294,7 +260,7 @@ $("publish").addEventListener("click",async()=>{
   const toLogin=()=>location.replace("../../cuenta/?siguiente=crear");
   const sess=VVR.session(); if(!sess){ toLogin(); return; }
   S.token=sess.token; S.email=sess.user&&sess.user.email;
-  pressPal(); check();
+  check();
   try{
     const r=await VVR.call("me"); S.email=r.user.email;
     const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1}, LIM=r.limit??P.exp, member=r.team&&r.team.role==="member";
@@ -303,11 +269,10 @@ $("publish").addEventListener("click",async()=>{
     if(exp&&exp.kind!=="colorear"){ location.replace((exp.kind==="trivia"?"../trivia/":"../")+"?editar="+encodeURIComponent(ed)); return; }
     if(exp){
       S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza.`;
-      S.th=(exp.color&&exp.color.th)||170; S.palette=(exp.color&&exp.color.palette)||"vivos"; $("th").value=S.th; pressPal();
+      S.th=(exp.color&&exp.color.th)||170; $("th").value=S.th; $("thBox").hidden=false;
       S.w=exp.img.w; S.h=exp.img.h;
       try{ S.img=await loadImg(`${API}/m/${exp.slug}/image?v=${exp.updated||exp.created}`); $("thumb").src=S.img.src; $("thumb").hidden=false; $("dropT").textContent="Tu dibujo actual"; $("dropS").textContent="Toca para cambiarlo."; rate(); preview(); }catch(e){}
       $("title").value=exp.title; slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
-      for(const [k] of SOC){ const el=$("b_"+k); if(exp.buttons&&exp.buttons[k]) el.value=k==="whatsapp"?exp.buttons[k].replace(/^52(?=\d{10}$)/,""):toHandle(k,exp.buttons[k]); }
       $("publish").textContent="Guardar cambios";
     } else if(r.experiences.filter(x=>!x.paused).length>=LIM){
       document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); document.querySelector(".side").hidden=true; $("full").hidden=false;

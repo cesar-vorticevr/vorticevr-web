@@ -103,11 +103,15 @@ const CSS = `
 .clr-sp{flex:1}
 .clr-save{flex:none;height:46px;border-radius:999px;border:1px solid #ffbe55;background:linear-gradient(135deg,#ffd27f,#ff9f3a);color:#1a0d00!important;font:700 .82rem "Sora",system-ui,sans-serif!important;letter-spacing:.08em;text-transform:uppercase;padding:0 16px;box-shadow:0 0 22px rgba(255,170,60,.35);display:flex;align-items:center;gap:8px}
 .clr-save svg{width:18px;height:18px;fill:currentColor}
-.clr-colors{display:flex;gap:7px;overflow-x:auto;padding:3px 2px 4px;scrollbar-width:none;align-items:center}
+.clr-colors{display:flex;gap:8px;padding:3px 2px 4px;align-items:center}
 .clr-colors::-webkit-scrollbar{display:none}
 .clr-sw{flex:none;width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,.25);transition:transform .15s}
 .clr-sw[aria-pressed="true"]{transform:scale(1.18);border-color:#fff;box-shadow:0 0 0 3px rgba(139,63,214,.9)}
-.clr-sw.more{background:conic-gradient(#e53935,#fdd835,#43a047,#00acc1,#1e88e5,#8e24aa,#e53935);display:grid;place-items:center;font-weight:700;font-size:1.2rem;color:#fff;text-shadow:0 1px 3px #000}
+.clr-sw.cur{width:52px;height:52px;border:3px solid #fff;box-shadow:0 0 0 2px rgba(139,63,214,.9),0 4px 14px rgba(0,0,0,.5)}
+.clr-spec{position:relative;flex:1;min-width:150px;height:52px;display:flex;gap:6px;touch-action:none;cursor:crosshair}
+.clr-spec .hue{flex:1;border-radius:12px;background:linear-gradient(to bottom,#fff 0%,rgba(255,255,255,0) 50%,rgba(0,0,0,0) 50%,#000 100%),linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
+.clr-spec .gray{flex:none;width:26px;border-radius:10px;background:linear-gradient(#fff,#000);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
+.clr-spec i{position:absolute;width:26px;height:26px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.5);transform:translate(-50%,-50%);pointer-events:none}
 .clr-sizes{display:flex;gap:4px;align-items:center;flex:none;padding-right:6px;margin-right:2px;border-right:1px solid rgba(210,184,255,.2)}
 .clr-sizes button{width:34px;height:36px;border-radius:10px;border:1px solid transparent;background:none;display:grid;place-items:center}
 .clr-sizes button i{display:block;border-radius:50%;background:#fff}
@@ -143,7 +147,7 @@ const CSS = `
 .clr-soc svg{width:20px;height:20px;fill:#fff}
 .clr-conf{position:absolute;top:-10px;width:10px;height:14px;border-radius:2px;pointer-events:none;z-index:6;animation:clrFall var(--d) cubic-bezier(.3,.6,.5,1) forwards}
 @keyframes clrFall{to{transform:translate(var(--x),110vh) rotate(var(--r))}}
-.clr.mini .clr-tool{width:40px;height:40px;border-radius:12px}.clr.mini .clr-sw{width:30px;height:30px}.clr.mini .clr-save{display:none}
+.clr.mini .clr-tool{width:40px;height:40px;border-radius:12px}.clr.mini .clr-sw.cur{width:44px;height:44px}.clr.mini .clr-spec{height:44px}.clr.mini .clr-save{display:none}
 @media (prefers-reduced-motion:reduce){.clr-conf{display:none}}
 @media (max-width:420px){.clr-row{gap:5px}.clr-tool{width:40px;height:44px;border-radius:12px}.clr-save{padding:0 12px;letter-spacing:.04em;gap:6px}}
 @media (max-width:345px){.clr-tool{width:36px}.clr-save{padding:0 10px}}`;
@@ -391,19 +395,46 @@ export async function run(opts) {
   const setTool = t => { S.tool = t; tools.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.t === t))); colors(); };
   tools.forEach(b => b.addEventListener("click", () => { setTool(b.dataset.t); if (b.dataset.t !== "fill" && !emb) toast(S.clip ? "Pinta con el dedo; no se sale de la línea" : "Pinta libre con el dedo"); }));
   $('[data-a="undo"]').addEventListener("click", () => { const u = undo.pop(); if (u) { px.putImageData(u, 0, 0); autosave(); } $('[data-a="undo"]').disabled = !undo.length; });
-  const pal = PALETTES[opts.palette] || PALETTES.vivos, recent = [];
+  // colors: the current one (tap = the big color box) and a strip with every color always in view — the hue from left to
+  // right, lighter toward the top and darker toward the bottom — plus a gray column; dragging a finger over it paints live
+  const specColor = (fx, fy) => fy < .5 ? hsv2hex(fx * 360, fy * 2, 1) : hsv2hex(fx * 360, 1, Math.max(0, 1 - (fy - .5) * 2));
+  const grayColor = fy => { const v = Math.round(255 * (1 - fy)).toString(16).padStart(2, "0"); return "#" + v + v + v; };
+  let chosen = null;
   function colors() {
-    const box = $(".clr-colors"), list = [...recent.filter(c => !pal.includes(c)), ...pal];
+    const box = $(".clr-colors");
     const sizes = S.tool === "fill" ? "" : `<div class="clr-sizes">${SIZES.map((s, i) => `<button type="button" data-s="${i}" aria-pressed="${S.size === i}" aria-label="Grosor ${["chico", "mediano", "grande"][i]}"><i style="width:${[6, 11, 18][i]}px;height:${[6, 11, 18][i]}px"></i></button>`).join("")}</div>`;
-    box.innerHTML = sizes + (S.tool === "eraser" ? "" : list.map(c => `<button type="button" class="clr-sw" data-c="${c}" style="background:${c}" aria-label="Color ${c}" aria-pressed="${c === S.color}"></button>`).join("") + `<button type="button" class="clr-sw more" data-a="more" aria-label="Más colores">+</button>`);
+    box.innerHTML = sizes + (S.tool === "eraser" ? "" : `<button type="button" class="clr-sw cur" data-a="more" style="background:${S.color}" aria-label="Tu color (toca para ajustarlo)"></button>
+      <div class="clr-spec" role="slider" aria-label="Todos los colores: arrastra el dedo"><div class="hue" data-k="spec"></div><div class="gray" data-k="gray"></div><i hidden></i></div>`);
+    placeMark();
   }
+  function placeMark() {
+    const i = root.querySelector(".clr-spec i"); if (!i) return;
+    if (!chosen || chosen.c !== S.color) { i.hidden = true; return; }
+    const el = root.querySelector(chosen.k === "gray" ? ".clr-spec .gray" : ".clr-spec .hue");
+    i.hidden = false; i.style.left = (el.offsetLeft + chosen.fx * el.offsetWidth) + "px"; i.style.top = (chosen.fy * el.offsetHeight) + "px"; i.style.background = S.color;
+  }
+  const specAt = e => {
+    const spec = root.querySelector(".clr-spec"); if (!spec) return;
+    const hue = spec.querySelector(".hue"), r = hue.getBoundingClientRect(), g = spec.querySelector(".gray").getBoundingClientRect();
+    const fy = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+    if (e.clientX >= g.left) { S.color = grayColor(fy); chosen = { k: "gray", fx: .5, fy, c: S.color }; }
+    else { const fx = Math.min(.999, Math.max(0, (e.clientX - r.left) / r.width)); S.color = specColor(fx, fy); chosen = { k: "spec", fx, fy, c: S.color }; }
+    const cur = root.querySelector(".clr-sw.cur"); if (cur) cur.style.background = S.color;
+    placeMark();
+  };
+  $(".clr-colors").addEventListener("pointerdown", e => {
+    const spec = e.target.closest(".clr-spec"); if (!spec) return;
+    try { spec.setPointerCapture(e.pointerId); } catch (err) {} spec.dataset.on = "1"; closePop(); specAt(e);
+  });
+  $(".clr-colors").addEventListener("pointermove", e => { const spec = e.target.closest(".clr-spec"); if (spec && spec.dataset.on) specAt(e); });
+  const specEnd = e => { const spec = e.target.closest && e.target.closest(".clr-spec"); if (spec) delete spec.dataset.on; };
+  $(".clr-colors").addEventListener("pointerup", specEnd); $(".clr-colors").addEventListener("pointercancel", specEnd);
   $(".clr-colors").addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
     if (b.dataset.s) { S.size = +b.dataset.s; colors(); return; }
-    if (b.dataset.a === "more") { openMore(); return; }
-    if (b.dataset.c) { S.color = b.dataset.c; if (S.tool === "eraser") S.tool = "fill"; setTool(S.tool); }
+    if (b.dataset.a === "more") { if (pop) closePop(); else openMore(); return; }
   });
-  const pickColor = c => { S.color = c; if (!pal.includes(c) && !recent.includes(c)) { recent.unshift(c); recent.length = Math.min(recent.length, 4); } if (S.tool === "eraser") S.tool = "fill"; setTool(S.tool); };
+  const pickColor = c => { S.color = c; if (S.tool === "eraser") S.tool = "fill"; setTool(S.tool); };
 
   let pop = null;
   function closePop() { if (pop) { pop.remove(); pop = null; } }
@@ -411,7 +442,7 @@ export async function run(opts) {
   // color box: drag on the square (lightness and intensity) and on the rainbow bar (the hue); it paints live
   function openMore() {
     let [hh, ss, vv] = hex2hsv(S.color);
-    const p = openPop(`<h4>Elige tu color</h4>
+    const p = openPop(`<h4>Ajusta tu color</h4>
       <div class="clr-box"><div class="clr-sv"><i></i></div><div class="clr-hue"><i></i></div></div>
       <div class="clr-okrow"><span class="clr-now"></span><button type="button" class="clr-ok">Listo</button></div>
       <h4 style="margin-top:12px">Colores rápidos</h4><div class="clr-grid">${MORE.map(c => `<button type="button" data-c="${c}" style="background:${c}" aria-label="Color ${c}"></button>`).join("")}</div>`);
@@ -422,7 +453,7 @@ export async function run(opts) {
       sv.firstElementChild.style.cssText = `left:${ss * 100}%;top:${(1 - vv) * 100}%;background:${c}`;
       hue.firstElementChild.style.cssText = `left:${hh / 360 * 100}%;background:hsl(${hh},100%,50%)`;
       now.style.background = c; now.textContent = c.toUpperCase(); now.style.color = vv > .6 && ss < .5 ? "#1a0d00" : "#fff";
-      root.querySelectorAll(".clr-colors .clr-sw").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.c === c)));
+      const cur = root.querySelector(".clr-sw.cur"); if (cur) cur.style.background = c; placeMark();
     };
     const drag = (el, fn) => {
       const at = e => { const r = el.getBoundingClientRect(); fn(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))); show(); };
