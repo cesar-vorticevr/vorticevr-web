@@ -406,7 +406,7 @@ async function api(request, env, ctx, url) {
       const file = form.get("f_" + it.id);
       if (file && typeof file !== "string") {
         if (it.type === "video" && (file.size > P.videoMB * 1048576 || !/^video\/(mp4|webm|quicktime)$/.test(file.type))) return json({ error: `Cada video debe ser MP4, WebM o MOV de máximo ${P.videoMB} MB.` }, 400);
-        if ((it.type === "image" || it.type === "pintura") && (file.size > ITEM_LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(file.type))) return json({ error: "Cada imagen debe ser JPG, PNG o WebP de máximo 5 MB." }, 400);
+        if (["image", "pintura", "pantalla"].includes(it.type) && (file.size > ITEM_LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(file.type))) return json({ error: "Cada imagen debe ser JPG, PNG o WebP de máximo 5 MB." }, 400);
         if (it.type === "model") {
           if (file.size > P.modelMB * 1048576) return json({ error: `Cada objeto 3D debe pesar máximo ${P.modelMB} MB.` }, 400);
           if (new TextDecoder().decode(new Uint8Array(await file.slice(0, 4).arrayBuffer())) !== "glTF") return json({ error: "Los objetos 3D deben ser archivos GLB." }, 400);
@@ -827,6 +827,7 @@ const FILTRO = {
   stickers: ["lentes-corazon", "lentes-sol", "corona", "flores", "orejas", "bigote", "gorro", "corazon"],
   paints: ["ninguna", "catrina", "corazones", "mexico", "brillos", "gatito", "propia"], effects: ["ninguno", "corazones", "estrellas", "flores", "confeti"],
   frames: ["ninguno", "muertos", "brillo", "cinta", "polaroid"],
+  screen: 4, screenPos: ["ai", "ac", "ad", "mi", "md", "bi", "bc", "bd"],
 };
 function cleanFiltro(f, list, P) {
   f = f || {};
@@ -837,7 +838,10 @@ function cleanFiltro(f, list, P) {
   list = Array.isArray(list) ? list : [];
   // the creator's own face paint (paint "propia") is one item of type "pintura": a 1024 px PNG painted over the template
   const own = list.filter(m => m && m.type === "pintura");
-  list = list.filter(m => m && m.type !== "pintura");
+  // images on the screen (type "pantalla"): pos = edge or corner (see SCREEN_POS in assets/filtro.js), s = part of the width
+  const screen = list.filter(m => m && m.type === "pantalla");
+  list = list.filter(m => m && m.type !== "pintura" && m.type !== "pantalla");
+  if (screen.length > FILTRO.screen) return { error: `Puedes poner hasta ${FILTRO.screen} imágenes en la pantalla.` };
   if (filtro.paint === "propia" && own.length !== 1) return { error: "Sube tu pintura (el machote pintado)." };
   if (list.length > FILTRO.items) return { error: `Puedes poner hasta ${FILTRO.items} accesorios.` };
   const items = [], ids = new Set(), imgMax = Math.min(FILTRO.items, P.items || 3);
@@ -845,6 +849,14 @@ function cleanFiltro(f, list, P) {
     const id = String(own[0].id || "");
     if (!/^[a-z0-9]{6,16}$/.test(id)) return { error: "Tu pintura no es válida." };
     ids.add(id); items.push({ id, type: "pintura", w: 1024, h: 1024 });
+  }
+  for (const m of screen) {
+    const id = String(m.id || ""), w = Math.round(n(m.w, 1, 8000, 0)), h = Math.round(n(m.h, 1, 8000, 0));
+    if (!/^[a-z0-9]{6,16}$/.test(id) || ids.has(id) || !w || !h) return { error: "Una de tus imágenes de la pantalla no es válida." };
+    ids.add(id);
+    const it = { id, type: "pantalla", pos: FILTRO.screenPos.includes(m.pos) ? m.pos : "bd", s: n(m.s, 0.05, 1, 0.3), w, h };
+    const name = String(m.name || "").trim().slice(0, 40); if (name) it.name = name;
+    items.push(it);
   }
   for (const m of list) {
     const id = String(m && m.id || "");

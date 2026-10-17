@@ -322,6 +322,21 @@ export function drawFrame(g, w, h, style, color, text) {
   }
 }
 
+// ---------- an image stuck to the screen ----------
+// pos = vertical (a arriba, m en medio, b abajo) + horizontal (i izquierda, c centro, d derecha); s = width as a part of
+// the screen width (it never gets taller than 45 % of the screen). At the top, whatever reaches the center goes under the logo.
+export const SCREEN_POS = { ai: "Arriba izquierda", ac: "Arriba al centro", ad: "Arriba derecha", mi: "En medio izquierda", md: "En medio derecha", bi: "Abajo izquierda", bc: "Abajo al centro", bd: "Abajo derecha" };
+export function drawScreen(g, W, H, it, img) {
+  const ratio = (it.h || img.naturalHeight) / (it.w || img.naturalWidth);
+  let w = Math.max(0.05, Math.min(1, it.s || 0.3)) * W, h = w * ratio;
+  if (h > H * 0.45) { h = H * 0.45; w = h / ratio; }
+  const m = Math.min(W, H) * 0.03, pos = SCREEN_POS[it.pos] ? it.pos : "bd", v = pos[0], u = pos[1];
+  const x = u === "i" ? m : u === "d" ? W - m - w : (W - w) / 2;
+  const underLogo = x < W * 0.7 && x + w > W * 0.3;   // it would reach the logo at the top center: it goes under it
+  const y = v === "a" ? (underLogo ? Math.max(m, H * 0.11) : m) : v === "b" ? H - m - h : (H - h) / 2;
+  g.drawImage(img, x, y, w, h);
+}
+
 // ---------- particles that come out of the mouth ----------
 function particleTextures(THREE, effect) {
   const make = draw => { const c = Object.assign(document.createElement("canvas"), { width: 96, height: 96 }), g = c.getContext("2d"); draw(g); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
@@ -387,7 +402,10 @@ export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvA
   const ov = { scene: new THREE.Scene(), cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), canvas: document.createElement("canvas") };
   ov.ctx = ov.canvas.getContext("2d"); ov.tex = keep(new THREE.CanvasTexture(ov.canvas)); ov.tex.colorSpace = THREE.SRGBColorSpace;
   ov.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: ov.tex, transparent: true, depthTest: false, depthWrite: false, toneMapped: false }));
-  ov.scene.add(ov.quad); ov.on = !!(F.frame && F.frame !== "ninguno" && FRAMES[F.frame]);
+  // images on the screen (type "pantalla"): each one stuck to an edge or corner, its width a part of the screen width
+  const screens = [];
+  for (const it of (cfg.items || [])) if (it.type === "pantalla") { const img = await loadImg(mediaUrl(it)); if (img) screens.push({ it, img }); }
+  ov.scene.add(ov.quad); ov.on = !!(F.frame && F.frame !== "ninguno" && FRAMES[F.frame]) || screens.length > 0;
   let view = { fx: 1, fy: 1, w: 0, h: 0 };
   function setView(v) {
     view = v; ov.quad.scale.set(v.fx, v.fy, 1);
@@ -395,7 +413,9 @@ export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvA
     const k = Math.min(Math.min(devicePixelRatio || 1, 2), 1280 / Math.max(v.w, v.h, 1));
     const w = Math.max(2, Math.round(v.w * k)), h = Math.max(2, Math.round(v.h * k));
     if (ov.canvas.width !== w || ov.canvas.height !== h) { ov.canvas.width = w; ov.canvas.height = h; ov.tex.dispose(); }
-    drawFrame(ov.ctx, w, h, F.frame, color, String(F.text || "").trim()); ov.tex.needsUpdate = true;
+    drawFrame(ov.ctx, w, h, F.frame, color, String(F.text || "").trim());
+    for (const { it, img } of screens) drawScreen(ov.ctx, w, h, it, img);
+    ov.tex.needsUpdate = true;
   }
   if (ov.on && document.fonts) document.fonts.load('700 40px "Sora"').then(() => setView(view)).catch(() => {});
 

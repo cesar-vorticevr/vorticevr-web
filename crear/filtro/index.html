@@ -94,6 +94,16 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
 .wbtns button{display:flex;align-items:center;gap:8px;text-align:left;border:1px solid var(--line2);border-radius:12px;background:rgba(5,2,11,.6);color:var(--ink);padding:9px 10px;cursor:pointer;font:600 .86rem var(--fd)}
 .wbtns button:hover{border-color:var(--sun);background:rgba(255,190,85,.12)}
 .wbtns button span{font-size:1.3rem}.wbtns button small{display:block;font:500 .72rem var(--fb);color:var(--mute)}
+.addq{width:100%;border:1.5px dashed var(--line2);border-radius:12px;padding:12px;background:none;color:var(--lav);font:600 .9rem var(--fd);cursor:pointer}
+.addq:hover{border-color:var(--lav);background:rgba(139,63,214,.12)}
+/* where an image goes on the screen: a little phone with 8 spots */
+.sitem{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start}
+.mini{display:grid;grid-template-columns:repeat(3,22px);grid-template-rows:repeat(3,30px);gap:3px;padding:6px;border:2px solid var(--line2);border-radius:12px;background:#120826}
+.mini button{border:1px solid var(--line2);border-radius:5px;background:rgba(255,255,255,.04);cursor:pointer;padding:0}
+.mini button[aria-pressed="true"]{background:var(--sun);border-color:#fff}
+.mini span{border-radius:5px}
+.sctl{display:grid;gap:6px;font-size:.84rem;color:var(--mute)}
+.sctl input{width:100%;accent-color:var(--vortex)}
 .own{margin-top:14px;border:1px dashed var(--line2);border-radius:12px;padding:14px;background:rgba(5,2,11,.45)}
 .own p{margin:0;font-size:.9rem;color:var(--mute)}
 .own p b{color:var(--ink)}
@@ -171,8 +181,12 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
         <div class="seg" id="effect"></div>
       </section>
       <section class="step" id="s5">
-        <h2><span class="n done">5</span>Marco y color</h2>
-        <p class="hint">El marco sale en pantalla y en las fotos y videos. El color también se usa en las flores y el gorro.</p>
+        <h2><span class="n done">5</span>Tu pantalla</h2>
+        <p class="hint">Imágenes pegadas a una orilla o esquina de la pantalla: tu logo, un hashtag, flores en las esquinas… Se acomodan solas a cualquier celular y salen en las fotos y videos.</p>
+        <button class="addq" id="scrUp" type="button">+ Subir imagen para la pantalla (PNG)</button>
+        <input type="file" id="scrFile" accept="image/png,image/webp,image/jpeg,image/svg+xml" hidden>
+        <div class="items" id="scrItems"></div>
+        <label class="f">Marco dibujado (opcional)</label>
         <div class="seg" id="frame"></div>
         <label class="f">Color</label>
         <div class="colors" id="colors"></div>
@@ -228,7 +242,7 @@ const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 const rid=()=>Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,4);
 
 // ---------- state: the filter (same shape as data.filtro + data.items) ----------
-const S={token:null,email:null,mine:null,P:null,tpl:"catrina",sel:null,
+const S={token:null,email:null,mine:null,P:null,tpl:"catrina",sel:null,screen:[],
   f:{paint:"ninguna",effect:"ninguno",frame:"ninguno",color:"#e4007c",text:""},items:[]};
 // uploaded images: id → {file (Blob, new) | url (kept from the version being edited), w, h}
 const IMG=new Map();
@@ -242,7 +256,7 @@ const TEMPLATES=[
   {id:"mexico",icon:"🌵",name:"México",sub:"Bandera y bigote",f:{paint:"mexico",effect:"confeti",frame:"cinta",color:"#006847",text:"¡Viva México!"},items:()=>[sticker("bigote")]},
   {id:"cero",icon:"✨",name:"Desde cero",sub:"Tú lo armas",f:{paint:"ninguna",effect:"ninguno",frame:"ninguno",color:"#8b3fd6",text:""},items:()=>[]},
 ];
-function applyTemplate(t){ S.tpl=t.id; S.f={...t.f}; S.items=t.items(); for(const id of [...IMG.keys()]) if(!S.pintura||id!==S.pintura.id) IMG.delete(id); S.sel=S.items[0]?S.items[0].id:null; $("ftext").value=S.f.text; render(); }
+function applyTemplate(t){ S.tpl=t.id; S.f={...t.f}; S.items=t.items(); for(const id of [...IMG.keys()]) if((!S.pintura||id!==S.pintura.id)&&!S.screen.some(x=>x.id===id)) IMG.delete(id); S.sel=S.items[0]?S.items[0].id:null; $("ftext").value=S.f.text; render(); }
 $("tpls").innerHTML=TEMPLATES.map(t=>`<button type="button" class="tpl" data-t="${t.id}"><span aria-hidden="true">${t.icon}</span>${esc(t.name)}<small>${esc(t.sub)}</small></button>`).join("");
 $("tpls").addEventListener("click",e=>{ const b=e.target.closest("[data-t]"); if(b) applyTemplate(TEMPLATES.find(t=>t.id===b.dataset.t)); });
 
@@ -368,7 +382,28 @@ new ResizeObserver(size).observe(cv);
 cam.position.set(0,1.5,84); cam.lookAt(0,1.5,0);
 
 let filter=null, building=0, schedT=0;
-function cfg(){ return {filtro:{...S.f,text:S.f.text.trim()},items:ownItems().concat(S.items)}; }
+function cfg(){ return {filtro:{...S.f,text:S.f.text.trim()},items:ownItems().concat(S.items,S.screen)}; }
+// ---------- images on the screen: stuck to an edge or a corner, width = part of the screen width ----------
+const MAX_SCREEN=4, POS=["ai","ac","ad","mi","","md","bi","bc","bd"];
+function renderScreen(){
+  $("scrItems").innerHTML=S.screen.map(it=>`<div class="it" data-id="${it.id}"><div class="ih"><span class="tn"></span><b>${esc(it.name||"Imagen en pantalla")}</b><button type="button" data-del="1" title="Quitar" aria-label="Quitar">✕</button></div>
+    <div class="sitem" style="margin-top:10px"><div class="mini" role="group" aria-label="Lugar en la pantalla">${POS.map(p=>p?`<button type="button" data-pos="${p}" aria-pressed="${it.pos===p}" title="${FL.SCREEN_POS[p]}" aria-label="${FL.SCREEN_POS[p]}"></button>`:"<span></span>").join("")}</div>
+    <div class="sctl"><span>Lugar: <b style="color:var(--ink)">${FL.SCREEN_POS[it.pos]}</b></span><span>Tamaño</span><input type="range" data-f="s" min="0.08" max="1" step="0.01" value="${it.s}" aria-label="Tamaño en la pantalla"></div></div></div>`).join("");
+  $("scrItems").querySelectorAll(".it").forEach(el=>{ const im=new Image(); im.src=IMG.get(el.dataset.id)?.url||""; im.alt=""; el.querySelector(".tn").replaceWith(im); });
+  $("scrUp").hidden=S.screen.length>=MAX_SCREEN;
+}
+$("scrUp").addEventListener("click",()=>$("scrFile").click());
+$("scrFile").addEventListener("change",e=>{ const f=e.target.files[0]; e.target.value=""; if(!f||S.screen.length>=MAX_SCREEN) return;
+  const i=new Image(), u=URL.createObjectURL(f);
+  i.onload=()=>{ URL.revokeObjectURL(u); const k=Math.min(1,1024/Math.max(i.naturalWidth||1024,i.naturalHeight||1024)), c=document.createElement("canvas"); c.width=Math.max(1,Math.round((i.naturalWidth||1024)*k)); c.height=Math.max(1,Math.round((i.naturalHeight||1024)*k)); c.getContext("2d").drawImage(i,0,0,c.width,c.height);
+    c.toBlob(b=>{ if(!b) return; const used=new Set(S.screen.map(x=>x.pos)), pos=["bd","bi","ad","ai","bc","ac","md","mi"].find(p=>!used.has(p))||"bd";
+      const it={id:rid(),type:"pantalla",name:f.name.replace(/\.[^.]+$/,"").slice(0,40),pos,s:c.width>=c.height*2?0.6:0.3,w:c.width,h:c.height};
+      IMG.set(it.id,{file:b,url:URL.createObjectURL(b),w:c.width,h:c.height}); S.screen.push(it); renderScreen(); schedule(); check(); },"image/png"); };
+  i.onerror=()=>URL.revokeObjectURL(u); i.src=u; });
+$("scrItems").addEventListener("click",e=>{ const el=e.target.closest(".it"); if(!el) return; const it=S.screen.find(x=>x.id===el.dataset.id);
+  if(e.target.closest("[data-del]")){ S.screen=S.screen.filter(x=>x!==it); IMG.delete(it.id); renderScreen(); schedule(); check(); return; }
+  const b=e.target.closest("[data-pos]"); if(b){ it.pos=b.dataset.pos; renderScreen(); schedule(); } });
+$("scrItems").addEventListener("input",e=>{ if(e.target.dataset.f!=="s") return; const it=S.screen.find(x=>x.id===e.target.closest(".it").dataset.id); it.s=+e.target.value; schedule(); });
 const ownItems=()=>S.f.paint==="propia"&&S.pintura?[S.pintura]:[];
 // the template to paint your own face paint, and uploading it (1024×1024 PNG; another size is stretched to it)
 $("tplDown").addEventListener("click",()=>{ if(!FACE) return; FL.templateCanvas(i=>FACE.uvs[i]).toBlob(b=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="machote-pintura-facial-vorticevr.png"; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); },"image/png"); });
@@ -459,7 +494,7 @@ function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false;
 const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
 
 // ---------- publishing ----------
-const something=()=>S.f.paint!=="ninguna"||S.items.length||S.f.effect!=="ninguno"||S.f.frame!=="ninguno";
+const something=()=>S.f.paint!=="ninguna"||S.items.length||S.screen.length||S.f.effect!=="ninguno"||S.f.frame!=="ninguno";
 const ownMissing=()=>S.f.paint==="propia"&&!S.pintura;
 function check(){
   $("n6").classList.toggle("done",!!($("title").value.trim()&&slugOk));
@@ -469,12 +504,12 @@ function check(){
 }
 $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Publicando…"; bar.hidden=false; $("publish").disabled=true;
-  const items=ownItems().map(it=>({id:it.id,type:"pintura",w:1024,h:1024})).concat(S.items.map(it=>{ const o={id:it.id,type:it.type,anchor:it.anchor,x:it.x,y:it.y,s:it.s,r:it.r}; if(it.type==="sticker") o.key=it.key; else { o.w=it.w; o.h=it.h; if(it.name) o.name=it.name; } return o; }));
+  const items=ownItems().map(it=>({id:it.id,type:"pintura",w:1024,h:1024})).concat(S.items.map(it=>{ const o={id:it.id,type:it.type,anchor:it.anchor,x:it.x,y:it.y,s:it.s,r:it.r}; if(it.type==="sticker") o.key=it.key; else { o.w=it.w; o.h=it.h; if(it.name) o.name=it.name; } return o; }),S.screen.map(it=>({id:it.id,type:"pantalla",pos:it.pos,s:it.s,w:it.w,h:it.h,name:it.name})));
   const meta={kind:"filtro",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),filtro:{...S.f,text:S.f.text.trim()},items,buttons:{}};
   const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
   if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
-  for(const it of ownItems().concat(S.items)) if(it.type==="image"||it.type==="pintura"){ const f=IMG.get(it.id); if(f&&f.file) fd.append("f_"+it.id,f.file,it.id+".png"); }
+  for(const it of ownItems().concat(S.items,S.screen)) if(it.type==="image"||it.type==="pintura"||it.type==="pantalla"){ const f=IMG.get(it.id); if(f&&f.file) fd.append("f_"+it.id,f.file,it.id+".png"); }
   const shot=await snapshot(); if(shot) fd.append("image",shot,"filtro.jpg");
   const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc, linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/");
   fd.append("qr",await new Promise(r=>qrc.toBlob(r,"image/png")),"qr.png");
@@ -502,8 +537,8 @@ $("publish").addEventListener("click",async()=>{
     if(exp){
       S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza.`;
       S.tpl=null; S.f={paint:"ninguna",effect:"ninguno",frame:"ninguno",color:"#8b3fd6",text:"",...exp.filtro}; $("ftext").value=S.f.text||"";
-      IMG.clear(); const all=(exp.items||[]).map(it=>{ if(it.type==="image"||it.type==="pintura") IMG.set(it.id,{url:`${API}/m/${exp.slug}/${it.file}?v=${exp.updated||exp.created}`,w:it.w,h:it.h}); return {...it}; });
-      S.pintura=all.find(it=>it.type==="pintura")||null; S.items=all.filter(it=>it.type!=="pintura");
+      IMG.clear(); const all=(exp.items||[]).map(it=>{ if(it.type==="image"||it.type==="pintura"||it.type==="pantalla") IMG.set(it.id,{url:`${API}/m/${exp.slug}/${it.file}?v=${exp.updated||exp.created}`,w:it.w,h:it.h}); return {...it}; });
+      S.pintura=all.find(it=>it.type==="pintura")||null; S.screen=all.filter(it=>it.type==="pantalla"); S.items=all.filter(it=>it.type!=="pintura"&&it.type!=="pantalla"); renderScreen();
       S.sel=null; $("title").value=exp.title; slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
       $("publish").textContent="Guardar cambios"; render();
     } else if(r.experiences.filter(x=>!x.paused).length>=LIM){
