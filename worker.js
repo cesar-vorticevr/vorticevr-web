@@ -1111,7 +1111,8 @@ function fitExperiences(env, email, limit, days) {
 
 // ---------- payments: Stripe subscriptions for Pro and Premium (monthly or yearly, IVA included; Básico and Empresarial
 // keep working for the subscriptions that already exist, but are no longer sold) ----------
-// Secrets STRIPE_SECRET_KEY (sk_test_ in the preview, sk_live_ in production) and STRIPE_WEBHOOK_SECRET.
+// Secrets STRIPE_SECRET_KEY (sk_test_ in the preview; in production sk_live_ or a restricted rk_live_ key with Products,
+// Prices, Customers, Checkout Sessions, Customer portal and Coupons write + Subscriptions and Invoices read) and STRIPE_WEBHOOK_SECRET.
 // Products and prices are created in Stripe on first use (found again by lookup_key). Stripe Checkout takes the payment,
 // the webhook keeps users.plan in sync, and the Customer Portal lets people change card, switch plan or cancel.
 // A paid month is "paid until" the period end + STRIPE_GRACE_DAYS; if a renewal fails and Stripe gives up, the daily
@@ -1123,7 +1124,7 @@ const STRIPE_PERIODS = { mes: "month", anio: "year" };
 const stripeKeys = () => Object.entries(STRIPE_PRICES).flatMap(([plan, k]) => Object.entries(k).map(([period, key]) => ({ plan, period, key })));
 const STRIPE_GRACE_DAYS = 7;
 const STRIPE_LIVE = ["active", "trialing", "past_due"];
-const stripeMode = env => String(env.STRIPE_SECRET_KEY || "").startsWith("sk_live_") ? "live" : "test";
+const stripeMode = env => /^(sk|rk)_live_/.test(String(env.STRIPE_SECRET_KEY || "")) ? "live" : "test";   // rk_ = restricted key (recommended)
 function billingInfo(env, user) {
   if (!env.STRIPE_SECRET_KEY || user.owner_id) return { enabled: false };   // team members do not pay: their owner does
   const mode = stripeMode(env), mine = user.stripe_mode === mode;
