@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Vórtice VR · Crea tu realidad aumentada</title>
-<meta name="description" content="Crea tu propia realidad aumentada: sube una imagen y un video y, al apuntar el celular a la imagen, el video aparece encima. Sin apps, con un QR. Gratis para empezar.">
+<title>Vórtice VR · Crea experiencias inmersivas</title>
+<meta name="description" content="Plataforma para crear experiencias inmersivas sin programar: realidad aumentada, trivias con tu cara, dibujos para colorear y juegos. Llenas unos campos y compartes un link o un QR. Gratis para empezar.">
 <meta property="og:title" content="Vórtice VR">
-<meta property="og:description" content="Crea tu realidad aumentada: tu imagen cobra vida con un video al apuntarle con el celular.">
+<meta property="og:description" content="Crea experiencias inmersivas sin programar y compártelas con un link o un QR.">
 <meta property="og:image" content="assets/proyectos/observatorio.webp">
 <meta name="theme-color" content="#05020b">
 <link rel="icon" href="assets/icono.png">
@@ -46,7 +46,7 @@ a{color:inherit}
 header.top{position:fixed;left:0;right:0;top:0;z-index:20;transition:background .4s,border-color .4s,backdrop-filter .4s;border-bottom:1px solid transparent}
 header.top.solid{background:rgba(5,2,11,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom-color:var(--line)}
 header.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:calc(12px + env(safe-area-inset-top,0px)) 12px}
-header.top .brand img{height:26px;width:auto}
+header.top .brand img{height:38px;width:auto}
 header.top nav{display:flex;align-items:center;gap:22px;font-family:var(--fd);font-size:.82rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
 header.top nav a{text-decoration:none;color:var(--mute);transition:color .2s}
 header.top nav a:hover{color:var(--ink)}
@@ -326,10 +326,26 @@ footer .legal a:hover{color:var(--ink)}
   .xin{transform:none!important}
 }
 
+
+/* experience catalog on the home page (same list as /crear/) */
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:14px}
+.xt{position:relative;display:flex;flex-direction:column;gap:8px;padding:20px;border-radius:18px;border:1px solid var(--line2);background:linear-gradient(160deg,rgba(139,63,214,.24),rgba(18,8,38,.85) 55%);text-decoration:none;color:var(--ink);min-height:190px;transition:transform .3s var(--ease),border-color .3s,box-shadow .3s}
+a.xt:hover{transform:translateY(-5px);border-color:var(--lav);box-shadow:0 20px 44px -16px rgba(139,63,214,.75)}
+.xt .ic{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;font-size:1.9rem;background:rgba(5,2,11,.55);border:1px solid var(--line2)}
+.xt h3{margin:4px 0 0;font:700 1.15rem var(--fd)}
+.xt p{margin:0;color:var(--mute);font-size:.94rem;line-height:1.45}
+.xt .go{margin-top:auto;font:600 .78rem var(--fd);letter-spacing:.14em;text-transform:uppercase;color:var(--sun)}
+.xt .tags{position:absolute;top:14px;right:14px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:62%}
+.xt .tag{font:600 .64rem var(--fd);letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px;border:1px solid var(--line2);background:rgba(5,2,11,.7);color:var(--lav)}
+.xt .tag.new{border-color:rgba(116,232,186,.6);color:#74e8ba}
+.xt .tag.pro{border-color:rgba(255,190,85,.6);color:#ffd27f;background:rgba(255,190,85,.1)}
+.xt.soon{background:rgba(18,8,38,.5);border-style:dashed}
+.xt.soon .ic{filter:grayscale(.6);opacity:.7}.xt.soon h3,.xt.soon p{opacity:.62}
 /* account button in the header (assets/cuenta-chip.js) */
+@media (max-width:480px){header.top nav .l2{display:none}}
 header.top nav a,header.top nav .pill{white-space:nowrap}
 header.top .brand{flex:none}
-@media (max-width:480px){header.top .wrap{gap:8px}header.top nav{gap:6px}header.top nav a.pill{padding:7px 10px;letter-spacing:.06em;font-size:.68rem}header.top nav .lang{padding-inline:6px;min-width:38px;height:34px}header.top .brand img{height:20px}}
+@media (max-width:480px){header.top .wrap{gap:8px}header.top nav{gap:6px}header.top nav a.pill{padding:7px 10px;letter-spacing:.06em;font-size:.68rem}header.top nav .lang{padding-inline:6px;min-width:38px;height:34px}header.top .brand img{height:26px}}
 @media (max-width:400px){header.top .wrap{padding-inline:12px}header.top nav{gap:4px}header.top nav a.pill{padding:7px 9px}}
 @media (max-width:980px){header.top nav a:not(.pill){display:none}}
 .pill.acct{background:transparent}
@@ -361,7 +377,7 @@ header.top .brand{flex:none}
 <header class="top" id="top"><div class="wrap">
   <a class="brand" href="./" aria-label="Vórtice VR, inicio" data-en-aria="Vórtice VR, home"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
   <nav aria-label="Secciones" data-en-aria="Sections">
-    <a href="#crea" data-en="Augmented reality">Realidad aumentada</a><a href="estudio/" data-en="Studio">Estudio</a><a href="#nosotros" data-en="About">Nosotros</a><a class="pill sun mag" href="#crea" data-en="Make yours">Crea la tuya</a><a class="pill talk mag" href="#contacto" data-en="Let’s talk">Platiquemos</a>
+    <a href="#tipos" data-en="Experiences">Experiencias</a><a href="estudio/" data-en="Studio">Estudio</a><a href="#nosotros" data-en="About">Nosotros</a><a class="pill sun mag" href="crear/" data-en="Create&lt;span class=&quot;l2&quot;&gt; experience&lt;/span&gt;">Crear<span class="l2"> experiencia</span></a>
     <a class="pill acct mag" id="acct" href="cuenta/#entrar" data-en="Sign in">Entrar</a>
     <button class="lang mag" id="lang" type="button" aria-label="Ver en inglés" data-en-aria="Ver en español"><span data-en="ES">EN</span></button>
   </nav>
@@ -376,12 +392,12 @@ header.top .brand{flex:none}
       <div class="tel mono"><span data-en="Immersive studio">Estudio inmersivo</span><br><span data-en="AR · VR · MR · AI">RA · RV · RM · IA</span><br><b id="ptxt" data-en="Move the cursor over the vortex">Mueve el cursor sobre el vórtice</b></div>
     </div>
     <div class="content"><div class="wrap">
-      <span class="kick fade" style="transition-delay:.1s" data-en="Augmented reality platform">Plataforma de realidad aumentada</span>
-      <h1 id="h1" data-en="Create your own &lt;em&gt;augmented reality&lt;/em&gt;.">Crea tu propia <em>realidad aumentada</em>.</h1>
-      <p class="fade" style="transition-delay:.7s" data-en="Upload an image and a video. When someone points their phone at the image, the video appears on top of it. No app to install: it opens with a QR code. Free to start.">Sube una imagen y un video. Cuando alguien apunte su celular a la imagen, el video aparece encima. Sin instalar ninguna app: se abre con un código QR. Empieza gratis.</p>
+      <span class="kick fade" style="transition-delay:.1s" data-en="Immersive experiences platform">Plataforma de experiencias inmersivas</span>
+      <h1 id="h1" data-en="Create &lt;em&gt;experiences&lt;/em&gt; without coding.">Crea <em>experiencias</em> sin programar.</h1>
+      <p class="fade" style="transition-delay:.7s" data-en="Augmented reality, face trivia, coloring pages and, very soon, games with prizes. Fill in a few fields and share a link or a QR code: nobody has to install an app. Free to start.">Realidad aumentada, trivias con tu cara, dibujos para colorear y muy pronto juegos con premios. Llenas unos campos y compartes un link o un código QR: nadie tiene que instalar apps. Empieza gratis.</p>
       <div class="actions fade" style="transition-delay:.9s">
-        <a class="btn sun mag" href="cuenta/?siguiente=crear#registro" data-en="Create mine free">Crear la mía gratis</a>
-        <a class="btn primary mag" href="#crea" data-en="How does it work? ↓">¿Cómo funciona? ↓</a>
+        <a class="btn sun mag" href="cuenta/?siguiente=crear#registro" data-en="Create an experience free">Crear experiencia gratis</a>
+        <a class="btn primary mag" href="#tipos" data-en="See experiences ↓">Ver experiencias ↓</a>
         <a class="btn mag" href="#contacto"><svg viewBox="0 0 24 24"><path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1.6 2 7.4 5.6L19.4 7H4.6zM20 8.5l-7.4 5.6a1 1 0 0 1-1.2 0L4 8.5V17h16V8.5z"/></svg><span data-en="Let’s talk">Platiquemos</span></a>
       </div>
     </div></div>
@@ -393,6 +409,27 @@ header.top .brand{flex:none}
     <span data-en="Augmented reality">Realidad aumentada</span><span data-en="Virtual reality">Realidad virtual</span><span data-en="&lt;b&gt;✦&lt;/b&gt; Mixed reality"><b>✦</b> Realidad mixta</span><span data-en="Artificial intelligence">Inteligencia artificial</span><span data-en="Education">Educación</span><span data-en="Culture">Cultura</span><span data-en="&lt;b&gt;✦&lt;/b&gt; Tourism"><b>✦</b> Turismo</span><span data-en="Video games">Videojuegos</span>
   </div></div>
 
+  <section id="tipos"><div class="wrap">
+    <div class="shead reveal">
+      <span class="kick" data-en="What you can create">Lo que puedes crear</span>
+      <h2 data-en="Pick your experience.">Elige tu experiencia.</h2>
+      <p data-en="Fill in a few fields and publish: you get your own link and a QR code. Nobody has to install an app.">Llenas unos campos y publicas: recibes un link propio y un código QR. Nadie tiene que instalar apps.</p>
+    </div>
+    <div class="tgrid">
+      <a class="xt reveal" href="crear/?tipo=ra"><span class="tags"></span><span class="ic" aria-hidden="true">🪄</span><h3 data-en="Augmented reality">Realidad aumentada</h3><p data-en="Your printed image comes alive with videos, photos, text and 3D.">Tu imagen impresa cobra vida con videos, fotos, textos y 3D.</p><span class="go" data-en="Create →">Crear →</span></a>
+      <a class="xt reveal" href="crear/colorear/"><span class="tags"><span class="tag new" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🎨</span><h3 data-en="Color my drawing">Colorea mi dibujo</h3><p data-en="Share a drawing and let everyone paint it with a finger.">Comparte un dibujo y que todos lo pinten con el dedo.</p><span class="go" data-en="Create →">Crear →</span></a>
+      <a class="xt reveal" href="crear/trivia/"><span class="tags"></span><span class="ic" aria-hidden="true">🤔</span><h3 data-en="Face trivia">Trivia con tu cara</h3><p data-en="Questions answered by tilting your head.">Preguntas que se contestan inclinando la cabeza.</p><span class="go" data-en="Create →">Crear →</span></a>
+      <div class="xt soon reveal"><span class="tags"><span class="tag" data-en="Coming soon">Próximamente</span></span><span class="ic" aria-hidden="true">🕶️</span><h3 data-en="Face filter">Filtro para tu cara</h3><p data-en="Glasses, masks and frames with your brand.">Lentes, máscaras y marcos con tu marca.</p></div>
+      <div class="xt soon reveal"><span class="tags"><span class="tag" data-en="Coming soon">Próximamente</span><span class="tag pro" data-en="✦ Business">✦ Empresarial</span></span><span class="ic" aria-hidden="true">🎡</span><h3 data-en="Prize wheel">Ruleta de premios</h3><p data-en="Spin and win: you set the prizes and odds.">Gira y gana: tú decides premios y probabilidades.</p></div>
+      <div class="xt soon reveal"><span class="tags"><span class="tag" data-en="Coming soon">Próximamente</span><span class="tag pro" data-en="✦ Business">✦ Empresarial</span></span><span class="ic" aria-hidden="true">🎟️</span><h3 data-en="Scratch and win">Rasca y gana</h3><p data-en="Scratch with a finger to reveal the prize.">Raspa con el dedo y descubre tu premio.</p></div>
+      <div class="xt soon reveal"><span class="tags"><span class="tag" data-en="Coming soon">Próximamente</span></span><span class="ic" aria-hidden="true">🧺</span><h3 data-en="Catch and win">Atrapa y gana</h3><p data-en="Catch what falls and score points.">Atrapa lo que cae y suma puntos.</p></div>
+      <div class="xt soon reveal"><span class="tags"><span class="tag" data-en="Coming soon">Próximamente</span></span><span class="ic" aria-hidden="true">🏆</span><h3 data-en="Scored quiz">Quiz con puntaje</h3><p data-en="Multiple choice with a timer and a leaderboard.">Opción múltiple con tiempo y tabla de ganadores.</p></div>
+      <div class="xt soon reveal"><span class="tags"><span class="tag" data-en="Coming soon">Próximamente</span></span><span class="ic" aria-hidden="true">🃏</span><h3 data-en="Memory game">Memorama</h3><p data-en="Find the pairs with your own images.">Encuentra los pares con tus imágenes.</p></div>
+      <div class="xt soon reveal"><span class="tags"><span class="tag" data-en="Coming soon">Próximamente</span><span class="tag pro" data-en="✦ Business">✦ Empresarial</span></span><span class="ic" aria-hidden="true">🍔</span><h3 data-en="Your product in 3D">Tu producto en 3D</h3><p data-en="Scan a dish and place it on any table.">Escanea un platillo y ponlo en cualquier mesa.</p></div>
+      <div class="xt soon reveal"><span class="tags"><span class="tag" data-en="Coming soon">Próximamente</span></span><span class="ic" aria-hidden="true">📸</span><h3 data-en="Photo booth">Cabina de fotos</h3><p data-en="Photos with your event or brand frame.">Fotos con el marco de tu evento o marca.</p></div>
+      <div class="xt soon reveal"><span class="tags"><span class="tag" data-en="Coming soon">Próximamente</span></span><span class="ic" aria-hidden="true">🗺️</span><h3 data-en="Treasure hunt">Búsqueda del tesoro</h3><p data-en="QR clues all around your space.">Pistas con QR por todo tu espacio.</p></div>
+    </div>
+  </div></section>
   <section id="crea" class="mk"><div class="wrap">
     <div class="mkhero">
       <div class="mktext reveal">
@@ -539,7 +576,7 @@ header.top .brand{flex:none}
   const A=[...document.querySelectorAll("[data-en-aria]")]; A.forEach(e=>e.dataset.esAria=e.getAttribute("aria-label")||"");
   const I=[...document.querySelectorAll("[data-en-alt]")]; I.forEach(e=>e.dataset.esAlt=e.alt);
   const META={es:{t:document.title,d:document.querySelector("meta[name=description]").content},
-    en:{t:"Vórtice VR · Create your augmented reality",d:"Create your own augmented reality: upload an image and a video, and when a phone points at the image the video appears on top. No apps, just a QR code. Free to start."}};
+    en:{t:"Vórtice VR · Create immersive experiences",d:"A platform to create immersive experiences without coding: augmented reality, face trivia, coloring pages and games. Fill in a few fields and share a link or a QR code. Free to start."}};
   let lang="es";
   function setLang(l,first){ lang=l; const en=l==="en"; document.documentElement.lang=l;
     T.forEach(e=>e.innerHTML=en?e.dataset.en:e.dataset.es);

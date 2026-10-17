@@ -44,7 +44,7 @@ a{color:inherit}
 header.top{position:fixed;left:0;right:0;top:0;z-index:20;transition:background .4s,border-color .4s,backdrop-filter .4s;border-bottom:1px solid transparent}
 header.top.solid{background:rgba(5,2,11,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom-color:var(--line)}
 header.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:calc(12px + env(safe-area-inset-top,0px)) 12px}
-header.top .brand img{height:26px;width:auto}
+header.top .brand img{height:38px;width:auto}
 header.top nav{display:flex;align-items:center;gap:22px;font-family:var(--fd);font-size:.82rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
 header.top nav a{text-decoration:none;color:var(--mute);transition:color .2s}
 header.top nav a:hover{color:var(--ink)}
@@ -333,9 +333,10 @@ footer .legal a:hover{color:var(--ink)}
 .phero p{margin:0;max-width:58ch;color:#ddd3f3;font-size:1.06rem}
 #experiencias{padding-top:50px}
 /* account button in the header (assets/cuenta-chip.js) */
+@media (max-width:480px){header.top nav .l2{display:none}}
 header.top nav a,header.top nav .pill{white-space:nowrap}
 header.top .brand{flex:none}
-@media (max-width:480px){header.top .wrap{gap:8px}header.top nav{gap:6px}header.top nav a.pill{padding:7px 10px;letter-spacing:.06em;font-size:.68rem}header.top nav .lang{padding-inline:6px;min-width:38px;height:34px}header.top .brand img{height:20px}}
+@media (max-width:480px){header.top .wrap{gap:8px}header.top nav{gap:6px}header.top nav a.pill{padding:7px 10px;letter-spacing:.06em;font-size:.68rem}header.top nav .lang{padding-inline:6px;min-width:38px;height:34px}header.top .brand img{height:26px}}
 @media (max-width:400px){header.top .wrap{padding-inline:12px}header.top nav{gap:4px}header.top nav a.pill{padding:7px 9px}}
 @media (max-width:980px){header.top nav a:not(.pill){display:none}}
 .pill.acct{background:transparent}
@@ -351,7 +352,7 @@ header.top .brand{flex:none}
 <header class="top" id="top"><div class="wrap">
   <a class="brand" href="../" aria-label="Vórtice VR, inicio" data-en-aria="Vórtice VR, home"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
   <nav aria-label="Secciones" data-en-aria="Sections">
-    <a href="../" data-en="Platform">Plataforma</a><a href="#experiencias" data-en="Projects">Proyectos</a><a href="#servicios" data-en="Services">Servicios</a><a class="pill sun mag" href="../#crea" data-en="Make yours">Crea la tuya</a><a class="pill talk mag" href="../?tema=proyecto#contacto" data-en="Let’s talk">Platiquemos</a>
+    <a href="../" data-en="Platform">Plataforma</a><a href="#experiencias" data-en="Projects">Proyectos</a><a href="#servicios" data-en="Services">Servicios</a><a class="pill sun mag" href="../crear/" data-en="Create&lt;span class=&quot;l2&quot;&gt; experience&lt;/span&gt;">Crear<span class="l2"> experiencia</span></a>
     <a class="pill acct mag" id="acct" href="../cuenta/#entrar" data-en="Sign in">Entrar</a>
     <button class="lang mag" id="lang" type="button" aria-label="Ver en inglés" data-en-aria="Ver en español"><span data-en="ES">EN</span></button>
   </nav>
