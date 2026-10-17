@@ -328,19 +328,24 @@ function setupCapture(mind,opts={}){
       const lx=(out.width-lw)/2, ly=out.height*.03;
       if($("brand").classList.contains("own")){ const q=lh*.3; ctx.fillStyle="#fff"; ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(lx-q*2,ly-q,lw+q*4,lh+q*2,lh/2+q); else ctx.rect(lx-q*2,ly-q,lw+q*4,lh+q*2); ctx.fill(); }
       ctx.globalAlpha=.95; ctx.drawImage(lg,lx,ly,lw,lh); ctx.globalAlpha=1; } }
-  function afterRender(){ if(wantPhoto){ wantPhoto=false; compose(); out.toBlob(b=>show(b,"image"),"image/jpeg",.92); } else if(recorder) compose(); }
+  // Photos and the first frame of a video are composed right after a render: outside of it the 3D canvas is already
+  // cleared (it is shown and wiped every frame), so a video started from the tap began with the camera alone.
+  let wantRec=false;
+  function afterRender(){ if(wantRec){ wantRec=false; compose(); beginRec(); } else if(wantPhoto){ wantPhoto=false; compose(); out.toBlob(b=>show(b,"image"),"image/jpeg",.92); } else if(recorder) compose(); }
   function pickType(){ for(const t of ["video/mp4;codecs=avc1,mp4a","video/mp4;codecs=avc1","video/mp4","video/webm;codecs=vp9,opus","video/webm"]) if(window.MediaRecorder&&MediaRecorder.isTypeSupported(t)) return t; return ""; }
-  function startRec(){
+  function startRec(){   // it really starts on the next frame drawn (afterRender)
     if(!window.MediaRecorder||!out.captureStream){ alertSheet("Tu navegador no permite grabar video aquí. Usa la opción de foto."); return; }
-    compose(); const stream=out.captureStream(30);
+    wantRec=true; }
+  function beginRec(){
+    const stream=out.captureStream(30);
     if(AUDIO.dest && !vid.muted) AUDIO.dest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
     const type=pickType(); recorder=new MediaRecorder(stream,type?{mimeType:type,videoBitsPerSecond:6e6}:undefined); chunks=[];
     recorder.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
     recorder.onstop=()=>{ const t=recorder.mimeType||type||"video/webm"; recorder=null; show(new Blob(chunks,{type:t}),"video"); };
     recorder.start(250); recStart=performance.now(); shutter.classList.add("rec"); shutter.setAttribute("aria-label","Detener grabación"); timer.hidden=false;
     tick=setInterval(()=>{ const s=Math.floor((performance.now()-recStart)/1000); timer.textContent=`0:${String(s).padStart(2,"0")}`; if(s>=MAX_SEC) stopRec(); },250); }
-  function stopRec(){ clearInterval(tick); timer.hidden=true; timer.textContent="0:00"; shutter.classList.remove("rec"); shutter.setAttribute("aria-label","Grabar video"); if(recorder&&recorder.state!=="inactive") recorder.stop(); }
-  shutter.addEventListener("click",()=>{ if(mode==="photo"){ flash.classList.add("on"); requestAnimationFrame(()=>requestAnimationFrame(()=>flash.classList.remove("on"))); wantPhoto=true; } else if(recorder) stopRec(); else startRec(); });
+  function stopRec(){ wantRec=false; clearInterval(tick); timer.hidden=true; timer.textContent="0:00"; shutter.classList.remove("rec"); shutter.setAttribute("aria-label","Grabar video"); if(recorder&&recorder.state!=="inactive") recorder.stop(); }
+  shutter.addEventListener("click",()=>{ if(mode==="photo"){ flash.classList.add("on"); requestAnimationFrame(()=>requestAnimationFrame(()=>flash.classList.remove("on"))); wantPhoto=true; } else if(recorder) stopRec(); else if(!wantRec) startRec(); });
   const stamp=()=>{ const d=new Date(),p=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };
   function show(blob,kind){
     if(!blob||!blob.size){ alertSheet("No se pudo guardar la captura. Intenta de nuevo."); return; }
@@ -355,7 +360,7 @@ function setupCapture(mind,opts={}){
     sheet.hidden=false; }
   function alertSheet(msg){ media.replaceChildren(Object.assign(document.createElement("p"),{textContent:msg,style:"color:#fff;padding:20px;margin:0;max-width:30ch;text-align:center"})); $("share").hidden=true; $("download").hidden=true; $("saveHint").hidden=true; sheet.hidden=false; }
   $("close").addEventListener("click",()=>{ sheet.hidden=true; media.replaceChildren(); });
-  return {afterRender,startRec:()=>{ if(!recorder) startRec(); },stopRec};
+  return {afterRender,startRec:()=>{ if(!recorder&&!wantRec) startRec(); },stopRec};
 }
 // Audio of the video for recordings: routed through WebAudio once (created inside the user's tap).
 const AUDIO={};
