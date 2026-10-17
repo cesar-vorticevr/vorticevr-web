@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Crea tu realidad aumentada · Vórtice VR</title>
+<title>Crea tu experiencia · Vórtice VR</title>
 <meta name="description" content="Crea gratis una experiencia de realidad aumentada: sube una imagen y un video, y comparte el link y el código QR.">
 <meta name="theme-color" content="#05020b">
 <link rel="icon" href="../assets/icono.png">
@@ -179,6 +179,30 @@ body.edfull{overflow:hidden}
 #qr{width:220px;max-width:100%;height:auto;border-radius:12px;background:#fff;display:block;margin:12px 0}
 .mine{border:1px solid rgba(255,190,85,.5);background:rgba(255,190,85,.07);border-radius:12px;padding:12px 14px;margin-top:12px;font-size:.92rem}
 .legal{font-size:.8rem;color:var(--mute);margin-top:10px}
+
+/* catalog of experiences (mode "catalogo": /crear/ without ?tipo=ra or ?editar=) */
+body.cat main>:not(.hero):not(#catalog){display:none!important}
+body.cat .hero .ra{display:none}
+body:not(.cat) #catalog,body:not(.cat) .hero .cat{display:none}
+.allx{display:inline-flex;align-items:center;gap:6px;margin:12px 16px 0 0;font:600 .85rem var(--fd);color:var(--lav);text-decoration:none}
+.allx:hover{color:var(--ink)}
+#catalog{margin-top:6px}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:14px}
+.xc{position:relative;display:flex;flex-direction:column;gap:8px;padding:18px;border-radius:18px;border:1px solid var(--line2);background:linear-gradient(160deg,rgba(139,63,214,.22),rgba(20,9,40,.75) 55%);text-decoration:none;color:var(--ink);transition:transform .25s,border-color .25s,box-shadow .25s;min-height:180px}
+a.xc:hover{transform:translateY(-4px);border-color:var(--lav);box-shadow:0 18px 40px -16px rgba(139,63,214,.7)}
+.xc .ic{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;font-size:1.8rem;background:rgba(5,2,11,.55);border:1px solid var(--line2)}
+.xc h3{margin:4px 0 0;font:700 1.1rem var(--fd)}
+.xc p{margin:0;color:var(--mute);font-size:.9rem;line-height:1.45}
+.xc .go{margin-top:auto;font:600 .78rem var(--fd);letter-spacing:.12em;text-transform:uppercase;color:var(--sun)}
+.xc .tags{position:absolute;top:14px;right:14px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:60%}
+.xc .tag{font:600 .66rem var(--fd);letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px;border:1px solid var(--line2);background:rgba(5,2,11,.7);color:var(--lav)}
+.xc .tag.new{border-color:rgba(116,232,186,.6);color:#74e8ba}
+.xc .tag.pro{border-color:rgba(255,190,85,.6);color:#ffd27f;background:rgba(255,190,85,.1)}
+.xc.soon{background:rgba(20,9,40,.45);border-style:dashed;cursor:default}
+.xc.soon .ic{filter:grayscale(.6);opacity:.7}
+.xc.soon h3,.xc.soon p{opacity:.65}
+.xc.soon .go{color:var(--mute)}
+.cnote{margin:18px 0 0;color:var(--mute);font-size:.9rem}
 </style>
 <script type="importmap">
 {"imports":{
@@ -188,15 +212,35 @@ body.edfull{overflow:hidden}
 </script>
 </head>
 <body>
+<script>{ const q=new URLSearchParams(location.search); if(!q.get("editar")&&q.get("tipo")!=="ra") document.body.classList.add("cat"); }</script>
 <header><a href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a class="mybtn" href="../cuenta/" style="text-decoration:none">Mi cuenta</a><a class="back" href="../">← Sitio</a></div></header>
 <main class="wrap">
   <div class="hero">
     <span class="kick" id="kick">Gratis · prueba de 15 días</span>
-    <h1>Crea tu realidad aumentada</h1>
-    <p>Sube una imagen y ponle encima videos, fotos, textos u objetos 3D. Cuando alguien apunte su celular a la imagen, todo cobra vida. Recibes un link propio y un código QR para compartir.</p>
-    <div class="switch"><span>Imagen con realidad aumentada</span><a href="trivia/">Trivia con tu cara ✨</a><a href="colorear/">Colorea mi dibujo 🎨</a></div>
-    <button class="tutlink" id="tutBtn" type="button">✦ Ver tutorial</button>
+    <h1 class="cat">Crea tu experiencia</h1>
+    <p class="cat">Elige qué quieres crear. Llenas unos campos, publicas y recibes un link propio y un código QR para compartir. Sin programar y sin que nadie instale apps.</p>
+    <h1 class="ra">Realidad aumentada</h1>
+    <p class="ra">Sube una imagen y ponle encima videos, fotos, textos u objetos 3D. Cuando alguien apunte su celular a la imagen, todo cobra vida. Recibes un link propio y un código QR para compartir.</p>
+    <a class="allx ra" href="./">← Todas las experiencias</a>
+    <button class="tutlink ra" id="tutBtn" type="button">✦ Ver tutorial</button>
   </div>
+  <section id="catalog" aria-label="Experiencias que puedes crear">
+    <div class="cgrid">
+      <a class="xc" data-x="ra" href="?tipo=ra"><span class="tags"></span><span class="ic" aria-hidden="true">🪄</span><h3>Realidad aumentada</h3><p>Tu imagen impresa cobra vida con videos, fotos, textos y objetos 3D al apuntarle con el celular.</p><span class="go">Crear →</span></a>
+      <a class="xc" data-x="colorear" href="colorear/"><span class="tags"><span class="tag new">Nuevo</span></span><span class="ic" aria-hidden="true">🎨</span><h3>Colorea mi dibujo</h3><p>Comparte un dibujo y que todos lo pinten con el dedo, lo guarden y lo compartan.</p><span class="go">Crear →</span></a>
+      <a class="xc" data-x="trivia" href="trivia/"><span class="tags"></span><span class="ic" aria-hidden="true">🤔</span><h3>Trivia con tu cara</h3><p>Preguntas que flotan sobre tu cabeza y se contestan inclinándola. Con confeti al final.</p><span class="go">Crear →</span></a>
+      <div class="xc soon" data-x="filtro" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span></span><span class="ic" aria-hidden="true">🕶️</span><h3>Filtro para tu cara</h3><p>Lentes, máscaras, coronas y marcos con tu marca para que se tomen selfies.</p><span class="go">Muy pronto</span></div>
+      <div class="xc soon" data-x="ruleta" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span><span class="tag pro">✦ Empresarial</span></span><span class="ic" aria-hidden="true">🎡</span><h3>Ruleta de premios</h3><p>Gira y gana: tú pones los premios, cuántos hay y qué tan fácil sale cada uno.</p><span class="go">Muy pronto</span></div>
+      <div class="xc soon" data-x="rasca" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span><span class="tag pro">✦ Empresarial</span></span><span class="ic" aria-hidden="true">🎟️</span><h3>Rasca y gana</h3><p>Raspa con el dedo y descubre si ganaste. Ideal para promociones y eventos.</p><span class="go">Muy pronto</span></div>
+      <div class="xc soon" data-x="atrapa" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span></span><span class="ic" aria-hidden="true">🧺</span><h3>Atrapa y gana</h3><p>Minijuego: atrapa lo que cae (tus productos o tu logo) y suma puntos.</p><span class="go">Muy pronto</span></div>
+      <div class="xc soon" data-x="quiz" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span></span><span class="ic" aria-hidden="true">🏆</span><h3>Quiz con puntaje</h3><p>Preguntas de opción múltiple con tiempo, puntos y tabla de ganadores.</p><span class="go">Muy pronto</span></div>
+      <div class="xc soon" data-x="memorama" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span></span><span class="ic" aria-hidden="true">🃏</span><h3>Memorama</h3><p>Encuentra los pares con tus propias imágenes. Para aprender jugando.</p><span class="go">Muy pronto</span></div>
+      <div class="xc soon" data-x="mesa3d" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span><span class="tag pro">✦ Empresarial</span></span><span class="ic" aria-hidden="true">🍔</span><h3>Tu producto en 3D</h3><p>Escanea un platillo u objeto y que aparezca en la mesa de quien lo vea.</p><span class="go">Muy pronto</span></div>
+      <div class="xc soon" data-x="fotos" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span></span><span class="ic" aria-hidden="true">📸</span><h3>Cabina de fotos</h3><p>Fotos con el marco de tu evento o marca, listas para compartir.</p><span class="go">Muy pronto</span></div>
+      <div class="xc soon" data-x="tesoro" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span></span><span class="ic" aria-hidden="true">🗺️</span><h3>Búsqueda del tesoro</h3><p>Pistas con QR por todo tu espacio; quien las junte todas, gana.</p><span class="go">Muy pronto</span></div>
+    </div>
+    <p class="cnote">✦ Las marcadas como Empresarial vienen incluidas en ese plan. ¿Quieres que hagamos una antes? <a href="../?tema=plataforma#contacto">Cuéntanos cuál</a>.</p>
+  </section>
 
       <section class="step narrow" id="full" hidden>
         <h2 id="fullTitle">Ya tienes tu experiencia</h2>
@@ -276,6 +320,7 @@ body.edfull{overflow:hidden}
         <div class="soc" id="soc"></div>
       </section>
 
+      <section class="step narrow" id="sMarca" hidden></section>
       <section class="step narrow" id="s6">
         <h2><span class="n" id="n6">4</span>Publicar</h2>
         <div class="mine" id="mine" hidden style="margin:0 0 12px"></div>
@@ -287,6 +332,7 @@ body.edfull{overflow:hidden}
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="../assets/marca.js"></script>
 <script src="../assets/plataforma.js"></script>
 <script type="module">
 const $=id=>document.getElementById(id);
@@ -642,11 +688,14 @@ function check(){
   $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link a ${S.email}.`:
     S.compiling?"Estamos preparando tu imagen…":!imgOk?"Falta tu imagen.":!S.items.length?"Agrega al menos un elemento: un video, una imagen, un texto o un objeto 3D.":loading?"Estamos abriendo tus elementos…":!wOk?`Tus elementos pasan lo que permite tu plan ${S.plan.name} (${S.plan.totalMB} MB y ${S.plan.items} elementos).`:!textOk?"Uno de tus textos está vacío.":!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
 }
+{ const base=check; check=function(){ base(); const mk=S.marca&&S.marca.get(); if(mk&&!mk.ok&&!$("publish").disabled){ $("publish").disabled=true; $("pubHint").textContent="Sube el logo de tu marca o elige el de Vórtice VR."; } }; }
 $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Subiendo…"; bar.hidden=false; $("publish").disabled=true;
   const meta={original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),img:{w:S.imgW,h:S.imgH},place:S.place,scenes:S.scenes,items:S.items,buttons:{}};
   for(const [k] of SOC){ const v=toHandle(k,$("b_"+k).value); if(v) meta.buttons[k]=v; }
+  const mk=S.marca&&S.marca.get(); if(mk&&mk.brand==="own") meta.brand="own";
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta,(k,v)=>k.startsWith("_")?undefined:v));   // _x = only for this page
+  if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
   if(S.imgBlob&&S.target){ fd.append("image",S.imgBlob,"image.jpg"); fd.append("target",S.target,"target.mind"); }
   for(const it of S.items) if(it._file) fd.append("f_"+it.id,it._file,it._fname||"archivo");
   const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc, linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/");
@@ -675,6 +724,7 @@ $("publish").addEventListener("click",async()=>{
     if(P.id!=="gratis"){ $("kick").textContent=member?`Equipo ${P.name} · ${LIM.toLocaleString("es-MX")} experiencias para ti`:`Plan ${P.name} · hasta ${LIM.toLocaleString("es-MX")} experiencias`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
     const active=r.experiences.filter(x=>!x.paused);
     const exp=ed?r.experiences.find(x=>x.slug===ed):null;
+    if(window.VVRMarca){ S.marca=VVRMarca.mount($("sMarca"),{plan:P,exp,api:API,base:"../",onChange:()=>check()}); $("sMarca").hidden=false; }
     if(exp&&(exp.kind==="trivia"||exp.kind==="colorear")){ location.replace(exp.kind+"/?editar="+encodeURIComponent(ed)); return; }
     const block=(title,text,editSlug)=>{ document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); $("full").hidden=false;
       $("fullTitle").textContent=title; $("fullText").textContent=text; $("fullEdit").hidden=!editSlug; if(editSlug) $("fullEdit").href="?editar="+encodeURIComponent(editSlug); };
@@ -684,7 +734,7 @@ $("publish").addEventListener("click",async()=>{
     else if(active.length>=LIM) LIM===1
       ? block("Ya tienes tu experiencia",`${tiene}. Puedes editarla, borrarla para crear otra, o ${more}.`,active[0]&&active[0].slug)
       : block("Ya usaste todas tus experiencias",`${tiene}. Edita o borra una desde tu cuenta, o ${more}.`,null);
-    else tour=true;   // creating a new one: the first time, the guided tour
+    else tour=!document.body.classList.contains("cat");   // creating a new one: the first time, the guided tour
   }catch(e){ if(e.status===401){ toLogin(); return; } }
   check(); renderAll(); commit();
   if(tour){ const go=()=>window.vvrTutorial&&vvrTutorial.maybeStart(); window.vvrTutorial?setTimeout(go,500):addEventListener("load",()=>setTimeout(go,500)); }

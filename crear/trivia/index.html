@@ -140,6 +140,8 @@ header .acts{display:flex;align-items:center;gap:14px}
 .mine{border:1px solid rgba(255,190,85,.5);background:rgba(255,190,85,.07);border-radius:12px;padding:12px 14px;margin-top:12px;font-size:.92rem}
 .legal{font-size:.8rem;color:var(--mute);margin-top:10px}
 
+.allx{display:inline-flex;align-items:center;gap:6px;margin:12px 16px 0 0;font:600 .85rem var(--fd);color:var(--lav);text-decoration:none}
+.allx:hover{color:var(--ink)}
 </style>
 </head>
 <body>
@@ -149,7 +151,7 @@ header .acts{display:flex;align-items:center;gap:14px}
     <span class="kick" id="kick">Gratis · prueba de 15 días</span>
     <h1>Crea tu trivia con filtro</h1>
     <p>Un juego con la cámara frontal: cada pregunta aparece sobre la cabeza y se contesta inclinándola hacia la respuesta. Al final sale cuántas acertaste, con confeti y estrellas. Comparte el link o el QR.</p>
-    <div class="switch"><a href="../">Imagen con realidad aumentada</a><span>Trivia con tu cara</span><a href="../colorear/">Colorea mi dibujo 🎨</a></div>
+    <a class="allx" href="../">← Todas las experiencias</a>
   </div>
   <div class="grid">
     <div>
@@ -180,6 +182,7 @@ header .acts{display:flex;align-items:center;gap:14px}
         <label class="f">Botones (opcionales)</label>
         <div class="soc" id="soc"></div>
       </section>
+      <section class="step" id="sMarca" hidden></section>
       <section class="step" id="s6">
         <h2><span class="n" id="n6">4</span>Publicar</h2>
         <div class="mine" id="mine" hidden style="margin:0 0 12px"></div>
@@ -206,6 +209,7 @@ header .acts{display:flex;align-items:center;gap:14px}
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="../../assets/marca.js"></script>
 <script src="../../assets/plataforma.js" data-api="../.."></script>
 <script type="module">
 const $=id=>document.getElementById(id);
@@ -286,11 +290,14 @@ function check(){
   const miss=S.qs.findIndex(q=>!q.q.trim()||!q.a[0].trim()||!q.a[1].trim());
   $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link a ${S.email}.`:miss>=0?`Completa la pregunta ${miss+1} y sus dos respuestas.`:!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
 }
+{ const base=check; check=function(){ base(); const mk=S.marca&&S.marca.get(); if(mk&&!mk.ok&&!$("publish").disabled){ $("publish").disabled=true; $("pubHint").textContent="Sube el logo de tu marca o elige el de Vórtice VR."; } }; }
 $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Publicando…"; bar.hidden=false; $("publish").disabled=true;
   const meta={kind:"trivia",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),trivia:{questions:S.qs.map(q=>({q:q.q.trim(),a:q.a.map(a=>a.trim()),ok:q.ok})),time:S.time},buttons:{}};
   for(const [k] of SOC){ const v=toHandle(k,$("b_"+k).value); if(v) meta.buttons[k]=v; }
+  const mk=S.marca&&S.marca.get(); if(mk&&mk.brand==="own") meta.brand="own";
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
+  if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
   const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc, linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/");
   fd.append("qr",await new Promise(r=>qrc.toBlob(r,"image/png")),"qr.png");
   const xhr=new XMLHttpRequest(); xhr.open("POST",`${API}/api/publish`); xhr.setRequestHeader("Authorization","Bearer "+S.token);
@@ -311,6 +318,7 @@ $("publish").addEventListener("click",async()=>{
     const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1}, LIM=r.limit??P.exp, member=r.team&&r.team.role==="member";
     if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name}`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
     const exp=ed?r.experiences.find(x=>x.slug===ed):null;
+    if(window.VVRMarca){ S.marca=VVRMarca.mount($("sMarca"),{plan:P,exp,api:API,base:"../../",onChange:()=>check()}); $("sMarca").hidden=false; }
     if(exp&&exp.kind!=="trivia"){ location.replace((exp.kind==="colorear"?"../colorear/":"../")+"?editar="+encodeURIComponent(ed)); return; }
     if(exp){
       S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza.`;

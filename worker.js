@@ -23,8 +23,8 @@ const PLANS = {
   gratis:  { name: "Gratis",  exp: 1,    days: 15, videoMB: 25, modelMB: 15, items: 3, totalMB: 30, price: 0, views: 1000 },
   basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 25, modelMB: 15, items: 6, totalMB: 40, price: 199, year: 1990 },
   pro:     { name: "Pro",     exp: 50,   days: 0,  videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 499, year: 4990 },
-  empresarial: { name: "Empresarial", exp: 150, seats: 15, days: 0, videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 999, year: 9999 },
-  escuela: { name: "Escuela", exp: 1000, days: 0,  videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 1500, year: 15000, legacy: true },
+  empresarial: { name: "Empresarial", exp: 150, seats: 15, brand: true, days: 0, videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 999, year: 9999 },
+  escuela: { name: "Escuela", exp: 1000, brand: true, days: 0,  videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 1500, year: 15000, legacy: true },
 };
 const yearPrice = plan => PLANS[plan].year || PLANS[plan].price * YEAR_MONTHS;
 const FAR = 253402300799000; // expires of an experience on a paid plan: "while the plan is active" (year 9999)
@@ -33,7 +33,7 @@ const ADMINS_DEFAULT = "lad.cesargarcia@gmail.com";
 const REF = { plans: ["pro", "empresarial"], rate: 0.10, discount: 10, holdDays: 30, minPayout: 50000 /* centavos: $500 */, coupon: "VVR_REF10" };
 const ADMIN_SLUGS = new Set(["ejemplo"]); // only an admin can take these (the home page demo uses "ejemplo")
 const VIDEO = /\.(mp4|m4v|webm|mov)$/i;
-const MEDIA_KEYS = ["video", "target", "image", "model", "qr"]; // R2 files of an experience: exp/<slug>/<key> (+ i/<id> of its elements)
+const MEDIA_KEYS = ["video", "target", "image", "model", "qr", "logo"]; // R2 files of an experience: exp/<slug>/<key> (+ i/<id> of its elements)
 const ITEM_TYPES = ["video", "image", "text", "model"];
 const ENTRANCES = ["aparecer", "crecer", "rebote", "girar", "subir", "ninguna"];
 const FONTS = ["Sora", "Bebas Neue", "Pacifico", "Playfair Display", "Permanent Marker", "IBM Plex Sans"];
@@ -147,7 +147,7 @@ function rangeFromBuffer(request, baseHeaders, buf) {
 
 // ---------- experience files from R2 ----------
 async function media(request, env, url) {
-  const m = url.pathname.match(/^\/m\/([a-z0-9-]+)\/(video|target|image|model|i\/[a-z0-9]{6,16})$/);
+  const m = url.pathname.match(/^\/m\/([a-z0-9-]+)\/(video|target|image|model|logo|i\/[a-z0-9]{6,16})$/);
   if (!m || !env.MEDIA || !env.DB) return new Response("No encontrado", { status: 404 });
   const [, slug, kind] = m;
   await schema(env);
@@ -210,7 +210,9 @@ async function api(request, env, ctx, url) {
     const P = planOf(row);
     if (P.views && row.views >= P.views) return json({ error: "Límite de vistas", limit: true }, 410);
     ctx.waitUntil(env.DB.batch([env.DB.prepare("UPDATE experiences SET views = views + 1 WHERE slug = ?").bind(row.slug), bump(env, "views")]));
-    return json(publicExp(row), 200, { "Cache-Control": "no-store" });
+    const out = publicExp(row);
+    if (out.brand && !P.brand) delete out.brand;   // its own logo only while the plan includes it (brand: Empresarial)
+    return json(out, 200, { "Cache-Control": "no-store" });
   }
 
   // contact form of the home page → email to CONTACT_TO (hola@vorticevr.mx); reply goes straight to the person
@@ -371,6 +373,15 @@ async function api(request, env, ctx, url) {
     const data = cleanMeta(meta, P);
     if (data.error) return json({ error: data.error }, 400);
     const image = form.get("image"), target = form.get("target"), qr = form.get("qr");
+    // its own brand logo instead of Vórtice VR (plans with brand): uploaded now or kept from the version being edited
+    const logo = form.get("logo"), newLogo = logo && typeof logo !== "string" ? logo : null;
+    if (meta.brand === "own") {
+      if (!P.brand) return json({ error: "Poner el logo de tu marca es del plan Empresarial." }, 403);
+      const had = mine && JSON.parse(mine.data || "{}").brand === "own";
+      if (!newLogo && !had) return json({ error: "Sube el logo de tu marca." }, 400);
+      if (newLogo && (newLogo.size > 1048576 || !/^image\/(png|jpeg|webp)$/.test(newLogo.type))) return json({ error: "El logo debe ser PNG, JPG o WebP de máximo 1 MB." }, 400);
+      data.brand = "own";
+    }
     const isNew = !mine;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
     if (isNew && data.kind !== "trivia" && (!image || (!target && data.kind !== "colorear"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
@@ -409,7 +420,7 @@ async function api(request, env, ctx, url) {
     // changing the name moves the files that stay
     if (mine && mine.slug !== slug) {
       const moving = new Set(data.items.map(i => i.file).filter(Boolean));
-      if (!image) moving.add("image"); if (!target) moving.add("target");
+      if (!image) moving.add("image"); if (!target) moving.add("target"); if (data.brand && !newLogo) moving.add("logo");
       for (const u of uploads) moving.delete(u[0]);
       for (const k of moving) { const o = await env.MEDIA.get(`exp/${mine.slug}/${k}`); if (o) await env.MEDIA.put(`exp/${slug}/${k}`, o.body, { httpMetadata: o.httpMetadata }); }
       await deleteMedia(env, mine.slug, mine.data);
@@ -417,10 +428,11 @@ async function api(request, env, ctx, url) {
     }
     if (image) await env.MEDIA.put(`exp/${slug}/image`, await image.arrayBuffer(), { httpMetadata: { contentType: image.type } });
     if (target) await env.MEDIA.put(`exp/${slug}/target`, await target.arrayBuffer(), { httpMetadata: { contentType: "application/octet-stream" } });
+    if (data.brand && newLogo) await env.MEDIA.put(`exp/${slug}/logo`, await newLogo.arrayBuffer(), { httpMetadata: { contentType: newLogo.type } });
     for (const [k, file, type] of uploads) await env.MEDIA.put(`exp/${slug}/${k}`, file, { httpMetadata: { contentType: type } });
     // files of elements that were removed (and the old single video / 3D object once they are no longer used)
     if (mine && mine.slug === slug) {
-      const keep = new Set(["target", "image", "qr", ...data.items.map(i => i.file).filter(Boolean)]);
+      const keep = new Set(["target", "image", "qr", ...(data.brand ? ["logo"] : []), ...data.items.map(i => i.file).filter(Boolean)]);
       const gone = mediaKeys(slug, mine.data).filter(k => !keep.has(k.slice(`exp/${slug}/`.length)));
       if (gone.length) await env.MEDIA.delete(gone);
     }
@@ -684,7 +696,11 @@ async function api(request, env, ctx, url) {
 }
 
 function publicExp(row) {
-  const d = JSON.parse(row.data || "{}");
+  const d = JSON.parse(row.data || "{}"), out = publicKind(row, d);
+  if (d.brand === "own") out.brand = "own";
+  return out;
+}
+function publicKind(row, d) {
   if (d.kind === "trivia") return { slug: row.slug, kind: "trivia", title: row.title, trivia: d.trivia, buttons: d.buttons, expires: row.expires };
   if (d.kind === "colorear") return { slug: row.slug, kind: "colorear", title: row.title, img: d.img, color: d.color, buttons: d.buttons, expires: row.expires };
   return { slug: row.slug, kind: "ra", title: row.title, img: d.img, place: d.place || "mesa", scenes: d.scenes || 1, items: itemsOf(d), buttons: d.buttons, expires: row.expires };

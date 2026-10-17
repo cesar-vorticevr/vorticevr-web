@@ -221,7 +221,7 @@ export async function run(opts) {
   px.fillStyle = "#fff"; px.fillRect(0, 0, W, H);
 
   // ---- state ----
-  const S = { tool: "fill", color: (PALETTES[opts.palette] || PALETTES.vivos)[0], size: 1, clip: true };
+  const S = { tool: "fill", color: (PALETTES[opts.palette] || PALETTES.vivos)[0], size: 1, clip: false };   // the brush paints freely (under the lines); "No salirse" is in the menu
   const SIZES = [W * 0.006, W * 0.016, W * 0.04];
   const undo = [];
   const pushUndo = () => { undo.push(px.getImageData(0, 0, W, H)); if (undo.length > 8) undo.shift(); $('[data-a="undo"]').disabled = false; };
@@ -484,13 +484,13 @@ export async function run(opts) {
   });
   document.addEventListener("pointerdown", e => { if (pop && !bar.contains(e.target)) closePop(); });
 
-  // ---- save / share: the drawing with the Vórtice VR logo on top ----
+  // ---- save / share: the drawing with the logo on top (Vórtice VR, or the brand's own on Empresarial) ----
   const logo = opts.logo ? await loadImg(opts.logo).catch(() => null) : null;
   function exportBlob() {
     const band = Math.round(W * 0.11), pad = Math.round(W * 0.03), out = document.createElement("canvas");
     out.width = W + 2 * pad; out.height = H + band + pad; const x = out.getContext("2d");
     x.fillStyle = "#fff"; x.fillRect(0, 0, out.width, out.height);
-    if (logo) { const lw = out.width * 0.34, lh = lw * logo.naturalHeight / logo.naturalWidth; x.drawImage(logo, (out.width - lw) / 2, (band - lh) / 2, lw, lh); }
+    if (logo) { let lw = out.width * 0.34, lh = lw * logo.naturalHeight / logo.naturalWidth; if (lh > band * 0.72) { lh = band * 0.72; lw = lh * logo.naturalWidth / logo.naturalHeight; } x.drawImage(logo, (out.width - lw) / 2, (band - lh) / 2, lw, lh); }
     x.drawImage(pc, pad, band); x.drawImage(lc, pad, band);
     return new Promise(r => out.toBlob(r, "image/jpeg", 0.92));
   }

@@ -26,6 +26,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 #brand{position:fixed;left:0;right:0;top:0;z-index:60;display:flex;justify-content:center;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 22px;background:linear-gradient(180deg,rgba(5,2,11,.7),rgba(5,2,11,0));pointer-events:none}
 #brand a{pointer-events:auto;display:block}
 #brand img{height:24px;width:auto;display:block;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6))}
+/* the customer's own logo (Empresarial): on a white pill so any color reads on the camera */
+#brand.own a{background:#fff;border-radius:999px;padding:6px 14px;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+#brand.own img{height:auto;max-height:30px;max-width:46vw;filter:none}
 
 /* intro */
 #intro{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:80px 22px calc(28px + env(safe-area-inset-bottom,0px));text-align:center;
@@ -225,6 +228,11 @@ async function load(){
   if(r.status===410){ const j=await r.json().catch(()=>({})); if(j.paused) message("Esta experiencia está pausada","Su creador puede reactivarla desde su cuenta."); else if(j.limit) message("Esta experiencia llegó a su límite de vistas","Su creador puede mejorar su plan para que siga funcionando."); else message("Esta experiencia ya terminó","Las experiencias de prueba duran 15 días."); return; }
   if(!r.ok){ message("Experiencia no encontrada","Revisa que el link esté completo."); return; }
   CFG=await r.json(); CFG.base=base;
+  if(CFG.brand==="own"){   // the brand's logo instead of Vórtice VR's (also on photos, videos and the coloring)
+    const a=$("brand").querySelector("a"), im=a.querySelector("img");
+    im.src=`${base}/m/${CFG.slug}/logo`; im.alt=CFG.title||""; a.removeAttribute("href"); a.removeAttribute("aria-label"); $("brand").classList.add("own");
+    if(CFG.buttons&&CFG.buttons.web){ a.href=CFG.buttons.web; a.target="_blank"; a.rel="noopener"; }
+  }
   if(CFG.kind==="trivia"){   // a trivia: front camera and face, no image
     document.title=(CFG.title||"Trivia")+" · Vórtice VR"; $("title").textContent=CFG.title||"Trivia";
     $("kick").textContent="Trivia con tu cara"; startBtn.textContent="Jugar";
@@ -296,7 +304,10 @@ function setupCapture(mind){
     for(const el of [cam,gl,onScreen]){ if(!el) continue; const b=el.getBoundingClientRect(), x=(b.left-r.left)*sx, y=(b.top-r.top)*sy, w=b.width*sx, h=b.height*sy;
       if(el===cam&&/scaleX\(-1\)/.test(el.style.transform)){ ctx.save(); ctx.translate(x+w,y); ctx.scale(-1,1); ctx.drawImage(el,0,0,w,h); ctx.restore(); } else ctx.drawImage(el,x,y,w,h); }
     // logo on the capture too
-    const lg=$("brand").querySelector("img"); if(lg.complete){ const lw=out.width*.32, lh=lw*lg.naturalHeight/lg.naturalWidth; ctx.globalAlpha=.9; ctx.drawImage(lg,(out.width-lw)/2,out.height*.03,lw,lh); ctx.globalAlpha=1; } }
+    const lg=$("brand").querySelector("img"); if(lg.complete&&lg.naturalWidth){ let lw=out.width*.32, lh=lw*lg.naturalHeight/lg.naturalWidth; const mh=out.height*.07; if(lh>mh){ lh=mh; lw=lh*lg.naturalWidth/lg.naturalHeight; }
+      const lx=(out.width-lw)/2, ly=out.height*.03;
+      if($("brand").classList.contains("own")){ const q=lh*.3; ctx.fillStyle="#fff"; ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(lx-q*2,ly-q,lw+q*4,lh+q*2,lh/2+q); else ctx.rect(lx-q*2,ly-q,lw+q*4,lh+q*2); ctx.fill(); }
+      ctx.globalAlpha=.95; ctx.drawImage(lg,lx,ly,lw,lh); ctx.globalAlpha=1; } }
   function afterRender(){ if(wantPhoto){ wantPhoto=false; compose(); out.toBlob(b=>show(b,"image"),"image/jpeg",.92); } else if(recorder) compose(); }
   function pickType(){ for(const t of ["video/mp4;codecs=avc1,mp4a","video/mp4;codecs=avc1","video/mp4","video/webm;codecs=vp9,opus","video/webm"]) if(window.MediaRecorder&&MediaRecorder.isTypeSupported(t)) return t; return ""; }
   function startRec(){
@@ -348,7 +359,7 @@ async function startColorear(){
   try{
     const C=await (libsP||import("/assets/colorear.js"));
     const buttons=ORDER.filter(k=>CFG.buttons&&CFG.buttons[k]).map(k=>({href:socialHref(k,CFG.buttons[k]),label:LABEL[k],svg:`<svg viewBox="0 0 24 24">${ICONS[k]}</svg>`}));
-    await C.run({root:$("ar"),image:`${CFG.base}/m/${CFG.slug}/image`,th:CFG.color&&CFG.color.th,palette:CFG.color&&CFG.color.palette,title:CFG.title,slug:CFG.slug,key:CFG.slug,buttons,logo:"/assets/logo-vorticevr.png"});
+    await C.run({root:$("ar"),image:`${CFG.base}/m/${CFG.slug}/image`,th:CFG.color&&CFG.color.th,palette:CFG.color&&CFG.color.palette,title:CFG.title,slug:CFG.slug,key:CFG.slug,buttons,logo:CFG.brand==="own"?`${CFG.base}/m/${CFG.slug}/logo`:"/assets/logo-vorticevr.png"});
     $("intro").hidden=true;
   }catch(e){ console.error(e); startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false; $("err").textContent="No se pudo abrir el dibujo. Revisa tu conexión e intenta de nuevo."; }
 }
