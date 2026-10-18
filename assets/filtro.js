@@ -12,7 +12,7 @@
 export const ANCHORS = { cabeza: 10, frente: 151, ojos: 168, nariz: 4, boca: 0, barbilla: 152, mejillas: [205, 425] };
 export const ANCHOR_NAMES = { cabeza: "Arriba de la cabeza", frente: "Frente", ojos: "Ojos", nariz: "Nariz", boca: "Boca", barbilla: "Barbilla", mejillas: "Mejillas (las dos)" };
 export const PAINTS = { ninguna: "Sin pintura", catrina: "Catrina", corazones: "Corazones", mexico: "México", brillos: "Brillos", gatito: "Gatito", propia: "Mi propia pintura" };
-export const EFFECTS = { ninguno: "Nada", corazones: "Corazones", estrellas: "Estrellas", flores: "Cempasúchil", confeti: "Confeti" };
+export const EFFECTS = { ninguno: "Nada", flores: "Cempasúchil", calaveritas: "Calaveritas", nieve: "Nieve", confeti: "Confeti", estrellas: "Estrellas", corazones: "Corazones", huellas: "Huellitas" };
 export const FRAMES = { ninguno: "Sin marco", muertos: "Papel picado", brillo: "Brillo", cinta: "Cinta", polaroid: "Foto instantánea" };
 // color looks (their order is the number the shader gets) and the shader, which grades in sRGB and adds the vignette
 // over the visible part of the camera image (vis = how much of the canvas is on screen)
@@ -160,6 +160,59 @@ export const STICKERS = {
     g.beginPath(); g.ellipse(w * 0.36, h * 0.36, w * 0.08, w * 0.04, -0.7, 0, TAU); g.fillStyle = "rgba(255,255,255,.8)"; g.fill();
   } },
 };
+// The stickers above (drawn in code) stay for the filters made with them, but the creator no longer offers them.
+for (const st of Object.values(STICKERS)) st.legacy = true;
+
+// ---------- accessories, particles and screen decorations from images (assets/filtros/*.webp) ----------
+// Made in ChatGPT from _plantillas/filtros/guia-chatgpt.html and prepared with tools/procesar-accesorios.mjs, which
+// prints these sizes (cropped to the visible pixels).
+export const ASSET_DIR = "/assets/filtros/";
+export const ASSET_SIZES = {"corona-flores":[768,504],"lentes-catrina":[768,378],"particula-cempasuchil":[256,250],"particula-petalo":[255,256],"papel-picado":[1024,340],"esquina-cempasuchil":[1017,1024],"sombrero-copa":[768,509],"lentes-catrin":[768,303],"bigote-catrin":[768,218],"mono-catrin":[768,462],"particula-calaverita":[204,256],"gorro-santa":[768,507],"diadema-reno":[768,505],"nariz-reno":[384,371],"lentes-navidad":[768,339],"particula-copo":[237,256],"particula-esfera":[210,256],"luces-navidad":[1024,330],"esquina-pino":[1024,1024],"gorro-fiesta":[515,768],"lentes-fiesta":[768,348],"particula-serpentina":[97,256],"particula-estrella":[256,255],"guirnalda-banderines":[1024,311],"esquina-globos":[1009,1024],"orejas-gato":[768,335],"nariz-gato":[768,225],"lentes-gato":[768,273],"particula-huella":[256,214],"lentes-corazon":[768,308],"diadema-corazones":[768,412],"corazon-mejilla":[384,317],"particula-corazon":[256,210],"esquina-corazones":[762,1024],"lentes-vortice":[768,362]};
+export const assetUrl = key => ASSET_DIR + key + ".webp";
+const ratioOf = key => ASSET_SIZES[key][1] / ASSET_SIZES[key][0];
+// Accessories from images: where they go and their width s (cm). On the head "dy" is the gap from the point to the
+// bottom edge (it sits on the head), on the chin the gap to the top edge (it hangs); elsewhere y is the center.
+const ACC = [
+  ["corona-flores", "Corona de flores", "Día de Muertos", "cabeza", 19, { dy: -0.6 }],
+  ["lentes-catrina", "Lentes de catrina", "Día de Muertos", "ojos", 16.5, { y: -0.6 }],
+  ["sombrero-copa", "Sombrero de copa", "Día de Muertos", "cabeza", 19.5, { dy: -0.2 }],
+  ["lentes-catrin", "Lentes de catrín", "Día de Muertos", "ojos", 16, { y: -0.6 }],
+  ["bigote-catrin", "Bigote de catrín", "Día de Muertos", "boca", 9.5, { y: 0.5 }],
+  ["mono-catrin", "Moño", "Día de Muertos", "barbilla", 8.5, { dy: 0.8 }],
+  ["gorro-santa", "Gorro de Santa", "Navidad", "cabeza", 19, { dy: -0.2 }],
+  ["diadema-reno", "Cuernos de reno", "Navidad", "cabeza", 21, { dy: -0.5 }],
+  ["nariz-reno", "Nariz de reno", "Navidad", "nariz", 3.4, { y: 0.1 }],
+  ["lentes-navidad", "Lentes navideños", "Navidad", "ojos", 16.5, { y: -0.6 }],
+  ["gorro-fiesta", "Gorro de fiesta", "Fiesta", "cabeza", 8, { dy: 1, x: -1.5, r: 12 }],
+  ["lentes-fiesta", "Lentes de estrella", "Fiesta", "ojos", 17, { y: -0.6 }],
+  ["orejas-gato", "Orejas de gato", "Gatito", "cabeza", 19, { dy: -0.4 }],
+  ["nariz-gato", "Nariz y bigotes", "Gatito", "nariz", 13, { y: -0.7 }],
+  ["lentes-gato", "Lentes ojo de gato", "Gatito", "ojos", 16.5, { y: -0.6 }],
+  ["lentes-corazon", "Lentes de corazón", "Amor", "ojos", 16.5, { y: -0.6 }],
+  ["diadema-corazones", "Antenitas de corazón", "Amor", "cabeza", 19, { dy: -0.4 }],
+  ["corazon-mejilla", "Corazón", "Amor", "mejillas", 2.8, { y: 0 }],
+  ["lentes-vortice", "Visor Vórtice VR", "Vórtice VR", "ojos", 17, { y: -0.4 }],
+];
+for (const [key, name, group, anchor, s, o] of ACC) {
+  const ratio = ratioOf(key), h = s * ratio;
+  const y = o.y != null ? o.y : anchor === "barbilla" ? -((o.dy || 0) + h / 2) : (o.dy || 0) + h / 2;
+  STICKERS[key] = { name, group, anchor, x: o.x || 0, y: Math.round(y * 10) / 10, z: 0.8, s, r: o.r || 0, ratio, src: assetUrl(key) };
+}
+// Ready-made screen decorations (items "pantalla" with a key instead of an upload). side = the corner the picture was
+// drawn for: on the other side it is mirrored, so a corner bouquet always opens toward the middle.
+export const SCREEN_PRESETS = {
+  "papel-picado": { name: "Papel picado", group: "Día de Muertos", pos: "ac", s: 1 },
+  "esquina-cempasuchil": { name: "Ramo de cempasúchil", group: "Día de Muertos", pos: "bi", s: 0.42, side: "i" },
+  "luces-navidad": { name: "Luces navideñas", group: "Navidad", pos: "ac", s: 1 },
+  "esquina-pino": { name: "Rama de pino", group: "Navidad", pos: "bi", s: 0.42, side: "i" },
+  "guirnalda-banderines": { name: "Banderines", group: "Fiesta", pos: "ac", s: 1 },
+  "esquina-globos": { name: "Globos", group: "Fiesta", pos: "bi", s: 0.42, side: "i" },
+  "esquina-corazones": { name: "Corazones", group: "Amor", pos: "bd", s: 0.36, side: "d" },
+};
+// what comes out of the mouth: images (white tint = their own colors)
+const PARTICLES = { flores: ["particula-cempasuchil", "particula-petalo"], calaveritas: ["particula-calaverita", "particula-cempasuchil"], nieve: ["particula-copo", "particula-esfera"],
+  confeti: ["particula-serpentina", "particula-estrella"], estrellas: ["particula-estrella"], corazones: ["particula-corazon"], huellas: ["particula-huella", "particula-corazon"] };
+
 export function stickerCanvas(key, color, width = 512) {
   const st = STICKERS[key], c = document.createElement("canvas");
   c.width = width; c.height = Math.round(width * st.ratio);
@@ -361,14 +414,17 @@ export function drawFrame(g, w, h, style, color, text) {
 // the screen width (it never gets taller than 45 % of the screen). At the top, whatever reaches the center goes under the logo.
 export const SCREEN_POS = { ai: "Arriba izquierda", ac: "Arriba al centro", ad: "Arriba derecha", mi: "En medio izquierda", md: "En medio derecha", bi: "Abajo izquierda", bc: "Abajo al centro", bd: "Abajo derecha" };
 export function drawScreen(g, W, H, it, img) {
-  const ratio = (it.h || img.naturalHeight) / (it.w || img.naturalWidth);
+  const preset = it.key && SCREEN_PRESETS[it.key];
+  const ratio = preset ? ratioOf(it.key) : (it.h || img.naturalHeight) / (it.w || img.naturalWidth);
   let w = Math.max(0.05, Math.min(1, it.s || 0.3)) * W, h = w * ratio;
   if (h > H * 0.45) { h = H * 0.45; w = h / ratio; }
-  const m = Math.min(W, H) * 0.03, pos = SCREEN_POS[it.pos] ? it.pos : "bd", v = pos[0], u = pos[1];
+  const pos = SCREEN_POS[it.pos] ? it.pos : "bd", v = pos[0], u = pos[1];
+  const m = preset && v !== "a" ? 0 : Math.min(W, H) * 0.03;   // the ready-made corners touch the edges
   const x = u === "i" ? m : u === "d" ? W - m - w : (W - w) / 2;
   const underLogo = x < W * 0.7 && x + w > W * 0.3;   // it would reach the logo at the top center: it goes under it
   const y = v === "a" ? (underLogo ? Math.max(m, H * 0.11) : m) : v === "b" ? H - m - h : (H - h) / 2;
-  g.drawImage(img, x, y, w, h);
+  if (preset && preset.side && u !== "c" && u !== preset.side) { g.save(); g.translate(x + w, y); g.scale(-1, 1); g.drawImage(img, 0, 0, w, h); g.restore(); }   // a corner on the other side: mirrored
+  else g.drawImage(img, x, y, w, h);
 }
 
 // ---------- particles that come out of the mouth ----------
@@ -379,6 +435,7 @@ function particleTextures(THREE, effect) {
   if (effect === "flores") return [make(g => marigold(g, 48, 48, 40)), make(g => marigold(g, 48, 48, 40, ["#ffb000", "#ffc94d", "#ffe08a"])), make(g => blossom(g, 48, 48, 42, "#e4007c"))];
   return [make(g => { g.fillStyle = "#fff"; g.beginPath(); g.arc(48, 48, 30, 0, TAU); g.fill(); }), make(g => { g.fillStyle = "#fff"; g.fillRect(28, 14, 40, 68); }), make(g => { g.beginPath(); starPath(g, 48, 52, 40); g.fillStyle = "#fff"; g.fill(); })];
 }
+const IMG_CACHE = new Map();   // pictures already loaded (the creator builds the filter again on every change)
 const TINTS = { corazones: ["#ff2d55", "#ff7aa8", "#e4007c", "#ff4f8b"], estrellas: ["#ffd23f", "#fff4b0", "#ffb000", "#ffffff"], flores: ["#ffffff"], confeti: ["#ffcf4d", "#ff6b8b", "#7dffc0", "#6fc8ff", "#c99bff", "#ff8c00"] };
 
 /**
@@ -389,7 +446,10 @@ const TINTS = { corazones: ["#ff2d55", "#ff7aa8", "#e4007c", "#ff4f8b"], estrell
 export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvAt, cfg, mediaUrl = id => id, onHint = () => {}, source = null, mirror = false }) {
   const F = cfg.filtro || {}, color = okColor(F.color), made = [], textures = [];
   const keep = t => { textures.push(t); return t; };
-  const loadImg = url => new Promise(ok => { if (!url) return ok(null); const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => ok(i); i.onerror = () => ok(null); i.src = url; });
+  const loadImg = url => { if (!url) return Promise.resolve(null); if (!IMG_CACHE.has(url)) IMG_CACHE.set(url, new Promise(ok => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => ok(i); i.onerror = () => { IMG_CACHE.delete(url); ok(null); }; i.src = url; })); return IMG_CACHE.get(url); };
+  // start loading every picture at once (they are awaited one by one below)
+  for (const it of (cfg.items || [])) loadImg(it.type === "sticker" ? STICKERS[it.key] && STICKERS[it.key].src : it.type === "pantalla" && it.key ? (SCREEN_PRESETS[it.key] ? assetUrl(it.key) : null) : mediaUrl(it));
+  for (const k of PARTICLES[F.effect] || []) loadImg(assetUrl(k));
   // paint (the creator's own one is the item of type "pintura")
   if (faceMesh) {
     const own = F.paint === "propia" ? (cfg.items || []).find(i => i.type === "pintura") : null;
@@ -406,7 +466,9 @@ export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvA
   const placeMesh = (m, it, side, z) => { m.position.set((it.x || 0) * side, it.y || 0, z); m.scale.setScalar(it.s || 6); m.rotation.z = THREE.MathUtils.degToRad(-(it.r || 0) * side); };
   for (const it of (cfg.items || [])) {
     let src = null, ratio = 1, z = 0.8;
-    if (it.type === "sticker" && STICKERS[it.key]) { src = stickerCanvas(it.key, color); ratio = STICKERS[it.key].ratio; z = STICKERS[it.key].z; }
+    const st = it.type === "sticker" && STICKERS[it.key];
+    if (st && st.src) { src = await loadImg(st.src); if (!src) continue; ratio = st.ratio; z = st.z; }
+    else if (st) { src = stickerCanvas(it.key, color); ratio = st.ratio; z = st.z; }
     else if (it.type === "image") { src = await loadImg(mediaUrl(it)); if (!src) continue; ratio = (it.h || src.naturalHeight) / (it.w || src.naturalWidth); }
     else continue;
     const tex = keep(new THREE.CanvasTexture(src.tagName === "IMG" ? (() => { const c = document.createElement("canvas"); const k = Math.min(1, 1024 / Math.max(src.naturalWidth, src.naturalHeight)); c.width = Math.round(src.naturalWidth * k); c.height = Math.round(src.naturalHeight * k); c.getContext("2d").drawImage(src, 0, 0, c.width, c.height); return c; })() : src));
@@ -425,9 +487,14 @@ export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvA
   const fx = F.effect && F.effect !== "ninguno" && EFFECTS[F.effect] ? F.effect : null, parts = [];
   const mouthA = fx ? [anchor(MOUTH[0]), anchor(MOUTH[1])] : null;
   if (fx) {
-    const texs = particleTextures(THREE, fx).map(keep), tints = TINTS[fx] || ["#fff"], geo = new THREE.PlaneGeometry(1, 1);
+    // the pictures of the effect (their own colors); the drawn ones if they do not load
+    const imgs = (await Promise.all((PARTICLES[fx] || []).map(k => loadImg(assetUrl(k))))).filter(Boolean);
+    let looks;
+    if (imgs.length) looks = imgs.map(im => { const t = keep(new THREE.Texture(im)); t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true; const r = im.naturalHeight / im.naturalWidth; return { t, geo: new THREE.PlaneGeometry(r > 1 ? 1 / r : 1, r > 1 ? 1 : r), tint: ["#ffffff"] }; });
+    else { const geo = new THREE.PlaneGeometry(1, 1), tint = TINTS[fx] || ["#ffffff"]; looks = particleTextures(THREE, fx in TINTS ? fx : "confeti").map(keep).map(t => ({ t, geo, tint })); }
     for (let i = 0; i < 90; i++) {
-      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: texs[i % texs.length], color: tints[(i * 7) % tints.length], transparent: true, depthTest: false, depthWrite: false, toneMapped: false }));
+      const lk = looks[i % looks.length];
+      const m = new THREE.Mesh(lk.geo, new THREE.MeshBasicMaterial({ map: lk.t, color: lk.tint[(i * 7) % lk.tint.length], transparent: true, depthTest: false, depthWrite: false, toneMapped: false }));
       m.visible = false; m.renderOrder = 30; scene.add(m); made.push(m);
       parts.push({ m, life: 0, p: new THREE.Vector3(), v: new THREE.Vector3(), spin: 0, size: 1, ph: 0 });
     }
@@ -438,7 +505,7 @@ export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvA
   ov.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: ov.tex, transparent: true, depthTest: false, depthWrite: false, toneMapped: false }));
   // images on the screen (type "pantalla"): each one stuck to an edge or corner, its width a part of the screen width
   const screens = [];
-  for (const it of (cfg.items || [])) if (it.type === "pantalla") { const img = await loadImg(mediaUrl(it)); if (img) screens.push({ it, img }); }
+  for (const it of (cfg.items || [])) if (it.type === "pantalla") { const img = await loadImg(it.key ? (SCREEN_PRESETS[it.key] ? assetUrl(it.key) : null) : mediaUrl(it)); if (img) screens.push({ it, img }); }
   ov.scene.add(ov.quad); ov.on = !!(F.frame && F.frame !== "ninguno" && FRAMES[F.frame]) || screens.length > 0;
   let view = { fx: 1, fy: 1, w: 0, h: 0 };
   function setView(v) {

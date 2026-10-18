@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Guía de accesorios para filtros · Vórtice VR</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Brief to generate the face-filter accessories in ChatGPT, one image per "siguiente". Printed to PDF with Chrome headless. */
+@page{size:Letter;margin:16mm 15mm}
+*{box-sizing:border-box}
+body{margin:0;font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:10.5pt;line-height:1.45;color:#1d1430}
+h1,h2,h3{font-family:Sora,system-ui,sans-serif;margin:0}
+h1{font-size:22pt;line-height:1.1;color:#5a1f8f}
+h2{font-size:13.5pt;color:#5a1f8f;margin:18px 0 6px;padding-bottom:4px;border-bottom:2px solid #e9dcfa}
+.kick{font:700 8.5pt Sora,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#d17a00}
+p{margin:0 0 7px}
+.box{border:1.5px solid #8b3fd6;border-radius:10px;padding:11px 13px;background:#f7f1ff;margin:8px 0}
+.box.warn{border-color:#e5243b;background:#fff3f4}
+.box h3{font-size:10.5pt;margin-bottom:5px;color:#5a1f8f}
+.box.warn h3{color:#b3122a}
+ol,ul{margin:4px 0 4px 18px;padding:0}
+li{margin:2px 0}
+code,.file{font-family:ui-monospace,Consolas,monospace;font-size:9.5pt;background:#efe6fb;border-radius:4px;padding:1px 5px}
+table{width:100%;border-collapse:collapse;font-size:9pt;margin:6px 0}
+th,td{border:1px solid #ddd0f0;padding:3px 7px;text-align:left;vertical-align:top}
+th{background:#efe6fb;font-family:Sora,sans-serif;font-size:8.5pt}
+td.g{background:#faf7ff;font:700 8.5pt Sora,sans-serif;color:#5a1f8f}
+.swatches span{display:inline-block;padding:2px 8px;border-radius:999px;color:#fff;font:600 8.5pt Sora,sans-serif;margin:2px 3px 2px 0}
+.tpl{font-size:9.5pt;color:#6b5a85;margin:0 0 4px}
+.item{border:1px solid #ddd0f0;border-radius:10px;padding:9px 12px;margin:8px 0;break-inside:avoid}
+.item .hd{display:flex;align-items:baseline;gap:10px;margin-bottom:5px}
+.item .n{font:800 15pt Sora,sans-serif;color:#8b3fd6;min-width:30px}
+.item .t{font:700 11pt Sora,sans-serif}
+.item .meta{margin-left:auto;font-size:8.5pt;color:#6b5a85;text-align:right}
+.prompt{background:#faf7ff;border-left:3px solid #8b3fd6;padding:6px 9px;border-radius:0 6px 6px 0}
+.page{break-before:page}
+</style>
+</head>
+<body>
+
+<span class="kick">Vórtice VR · Filtros para la cara</span>
+<h1>Guía para generar los accesorios de las plantillas</h1>
+<p style="margin-top:6px">35 imágenes en PNG con fondo transparente para 6 plantillas: <b>Catrina, Catrín, Navidad, Fiesta, Gatito y Amor</b>, más unos lentes futuristas de Vórtice VR. Son accesorios, partículas (salen de la boca) y adornos para las orillas de la pantalla. Se generan <b>una por mensaje</b>, en orden.</p>
+
+<div class="box">
+  <h3>Instrucciones para ChatGPT (léelas antes de empezar)</h3>
+  <ol>
+    <li>Vas a generar <b>35 imágenes, una por mensaje</b>, en el orden exacto de la lista de este documento (de la 1 a la 35).</li>
+    <li><b>Antes de cada imagen</b> escribe una sola línea con este formato: <code>Imagen N de 35 — nombre-del-archivo.png</code>. Así los dos llevamos la cuenta.</li>
+    <li>Empieza con la <b>Imagen 1</b> en tu primera respuesta.</li>
+    <li>Cuando escriba <b>"siguiente"</b>, genera la imagen <b>N + 1</b>, donde N es la última que generaste. <b>Nunca repitas una imagen anterior</b> y nunca te saltes una.</li>
+    <li>Cada imagen es un objeto <b>distinto</b>. Si lo que vas a generar se parece a la imagen anterior, detente: revisa el número y el nombre en la lista y genera el que toca.</li>
+    <li>Si escribo un número (por ejemplo <b>"la 8"</b>), genera esa imagen y luego continúa desde ahí.</li>
+    <li>Si escribo <b>"otra vez"</b>, vuelve a generar la misma imagen (mismo número) con otra versión.</li>
+    <li>Usa siempre la <b>guía de estilo</b> y las <b>reglas técnicas</b> de la página siguiente, en todas las imágenes.</li>
+    <li>Después de la imagen 35 escribe: <b>"Terminamos: 35 de 35"</b>.</li>
+  </ol>
+</div>
+
+<div class="box warn">
+  <h3>Para ti, César: si se confunde</h3>
+  <ul>
+    <li>Si repite una imagen, no le escribas "siguiente": escribe el número y el nombre exactos, por ejemplo <b>"Imagen 12 — gorro-santa.png"</b> (cópialo de la tabla).</li>
+    <li>Si se confunde varias veces, abre un chat nuevo, súbele otra vez este PDF y escribe <b>"empieza en la 12"</b>. Cada imagen se entiende sola.</li>
+    <li>Revisa que el fondo sea <b>transparente de verdad</b>: si ves una cuadrícula gris y blanca dibujada o un fondo blanco, escríbele <b>"fondo transparente real, PNG con canal alfa"</b> y que la repita.</li>
+    <li>Descarga cada imagen y <b>ponle el número y el nombre de la tabla</b>, por ejemplo <span class="file">12-gorro-santa.png</span>. Al final pásamelas todas juntas.</li>
+  </ul>
+</div>
+
+<h2>La lista completa</h2>
+<table>
+  <tr><th>#</th><th>Archivo</th><th>Qué es</th><th>Lienzo</th></tr>
+  <tr><td class="g" colspan="4">Catrina · Día de Muertos</td></tr>
+  <tr><td>1</td><td>corona-flores.png</td><td>Corona de flores de cempasúchil</td><td>Horizontal</td></tr>
+  <tr><td>2</td><td>lentes-catrina.png</td><td>Lentes con flores de cempasúchil</td><td>Horizontal</td></tr>
+  <tr><td>3</td><td>particula-cempasuchil.png</td><td>Flor de cempasúchil suelta</td><td>Cuadrado</td></tr>
+  <tr><td>4</td><td>particula-petalo.png</td><td>Pétalo suelto</td><td>Cuadrado</td></tr>
+  <tr><td>5</td><td>papel-picado.png</td><td>Tira de papel picado</td><td>Horizontal</td></tr>
+  <tr><td>6</td><td>esquina-cempasuchil.png</td><td>Ramo de cempasúchil para la esquina</td><td>Cuadrado</td></tr>
+  <tr><td class="g" colspan="4">Catrín · Día de Muertos</td></tr>
+  <tr><td>7</td><td>sombrero-copa.png</td><td>Sombrero de copa de catrín</td><td>Horizontal</td></tr>
+  <tr><td>8</td><td>lentes-catrin.png</td><td>Lentes redondos dorados</td><td>Horizontal</td></tr>
+  <tr><td>9</td><td>bigote-catrin.png</td><td>Bigote de catrín</td><td>Horizontal</td></tr>
+  <tr><td>10</td><td>mono-catrin.png</td><td>Corbata de moño</td><td>Horizontal</td></tr>
+  <tr><td>11</td><td>particula-calaverita.png</td><td>Calaverita de azúcar</td><td>Cuadrado</td></tr>
+  <tr><td class="g" colspan="4">Navidad</td></tr>
+  <tr><td>12</td><td>gorro-santa.png</td><td>Gorro de Santa</td><td>Horizontal</td></tr>
+  <tr><td>13</td><td>diadema-reno.png</td><td>Diadema con cuernos de reno</td><td>Horizontal</td></tr>
+  <tr><td>14</td><td>nariz-reno.png</td><td>Nariz roja de reno</td><td>Cuadrado</td></tr>
+  <tr><td>15</td><td>lentes-navidad.png</td><td>Lentes navideños</td><td>Horizontal</td></tr>
+  <tr><td>16</td><td>particula-copo.png</td><td>Copo de nieve</td><td>Cuadrado</td></tr>
+  <tr><td>17</td><td>particula-esfera.png</td><td>Esfera navideña</td><td>Cuadrado</td></tr>
+  <tr><td>18</td><td>luces-navidad.png</td><td>Tira de luces navideñas</td><td>Horizontal</td></tr>
+  <tr><td>19</td><td>esquina-pino.png</td><td>Rama de pino con esferas para la esquina</td><td>Cuadrado</td></tr>
+  <tr><td class="g" colspan="4">Fiesta</td></tr>
+  <tr><td>20</td><td>gorro-fiesta.png</td><td>Gorro de fiesta en cono</td><td>Vertical</td></tr>
+  <tr><td>21</td><td>lentes-fiesta.png</td><td>Lentes de estrella</td><td>Horizontal</td></tr>
+  <tr><td>22</td><td>particula-serpentina.png</td><td>Serpentina de confeti</td><td>Cuadrado</td></tr>
+  <tr><td>23</td><td>particula-estrella.png</td><td>Estrella dorada</td><td>Cuadrado</td></tr>
+  <tr><td>24</td><td>guirnalda-banderines.png</td><td>Guirnalda de banderines</td><td>Horizontal</td></tr>
+  <tr><td>25</td><td>esquina-globos.png</td><td>Globos para la esquina</td><td>Cuadrado</td></tr>
+  <tr><td class="g" colspan="4">Gatito</td></tr>
+  <tr><td>26</td><td>orejas-gato.png</td><td>Par de orejas de gato</td><td>Horizontal</td></tr>
+  <tr><td>27</td><td>nariz-gato.png</td><td>Nariz de gato con bigotes</td><td>Horizontal</td></tr>
+  <tr><td>28</td><td>lentes-gato.png</td><td>Lentes ojo de gato</td><td>Horizontal</td></tr>
+  <tr><td>29</td><td>particula-huella.png</td><td>Huellita de gato</td><td>Cuadrado</td></tr>
+  <tr><td class="g" colspan="4">Amor</td></tr>
+  <tr><td>30</td><td>lentes-corazon.png</td><td>Lentes de corazón</td><td>Horizontal</td></tr>
+  <tr><td>31</td><td>diadema-corazones.png</td><td>Diadema con antenitas de corazón</td><td>Horizontal</td></tr>
+  <tr><td>32</td><td>corazon-mejilla.png</td><td>Corazón para la mejilla</td><td>Cuadrado</td></tr>
+  <tr><td>33</td><td>particula-corazon.png</td><td>Corazón brillante</td><td>Cuadrado</td></tr>
+  <tr><td>34</td><td>esquina-corazones.png</td><td>Corazones para la esquina</td><td>Cuadrado</td></tr>
+  <tr><td class="g" colspan="4">Vórtice VR</td></tr>
+  <tr><td>35</td><td>lentes-vortice.png</td><td>Visor futurista holográfico</td><td>Horizontal</td></tr>
+</table>
+
+<div class="page"></div>
+<h2>Guía de estilo (todas las imágenes)</h2>
+<p><b>Estilo Vórtice VR:</b> <b>render 3D estilizado</b>, como los íconos 3D modernos de las apps: formas limpias y redondeadas, volumen suave, iluminación de estudio, materiales con brillo (plástico satinado, metal pulido, vidrio). Con un <b>toque futurista sutil</b>: un borde de luz <b>morada</b> suave, reflejos metálicos o holográficos donde tenga sentido. Acabado <b>premium y profesional</b>, nada infantil ni caricaturesco. Mismo estilo en las 35 imágenes, como si fueran de la misma colección.</p>
+<p><b>Importante:</b> el toque futurista es un detalle, no cambia el objeto. Un cempasúchil se ve como cempasúchil, un gorro de Santa como gorro de Santa.</p>
+<p><b>Paleta de Vórtice VR</b> (además de los colores propios de cada objeto):</p>
+<p class="swatches"><span style="background:#8b3fd6">Morado #8B3FD6</span><span style="background:#a77de0">Lavanda #D2B8FF</span><span style="background:#d9a43a">Dorado #FFBE55</span><span style="background:#ff8c00">Cempasúchil #FF8C00</span><span style="background:#e4007c">Magenta #E4007C</span><span style="background:#1aa6d6">Turquesa #29C5F6</span><span style="background:#c8102e">Rojo navidad #C8102E</span><span style="background:#16a663">Verde #16A663</span></p>
+
+<h2>Reglas técnicas (todas las imágenes)</h2>
+<ul>
+  <li><b>PNG con fondo transparente real</b> (canal alfa). Nada de fondo blanco, de color ni cuadrícula de transparencia dibujada.</li>
+  <li><b>Vista de frente</b>, sin perspectiva ni inclinación: se van a pegar sobre una cara vista de frente en la cámara del celular.</li>
+  <li>El objeto <b>centrado</b>, ocupando casi todo el lienzo, con un pequeño margen transparente alrededor.</li>
+  <li><b>Sin texto, letras, números, logos ni marcas de agua.</b></li>
+  <li><b>Sin sombra proyectada</b> sobre el fondo y sin contorno blanco de sticker. Un brillo suave pegado al objeto sí está bien.</li>
+  <li>Lienzo: <b>Horizontal = 1536×1024</b>, <b>Vertical = 1024×1536</b>, <b>Cuadrado = 1024×1024</b>.</li>
+  <li>Cuando diga <b>simétrico</b>, la mitad izquierda y la derecha deben ser espejo exacto.</li>
+  <li>Los <b>lentes</b>: siempre de frente, muy anchos y bajitos, con micas que dejen ver un poco a través (semitransparentes), salvo que se diga otra cosa.</li>
+</ul>
+
+<h2>Catrina · Día de Muertos</h2>
+<p class="tpl">Elegante, floral y colorida. Se usa con la pintura de catrina que ya tiene la plataforma.</p>
+
+<div class="item"><div class="hd"><span class="n">1</span><span class="t">corona-flores.png</span><span class="meta">Horizontal 1536×1024 · arriba de la cabeza</span></div>
+<div class="prompt">Corona de flores para la cabeza estilo Día de Muertos, vista de frente: un <b>arco</b> de flores de <b>cempasúchil</b> naranjas y amarillas (grandes, pétalos rizados con volumen) alternadas con flores <b>magenta</b> más pequeñas y hojas verdes. El arco se abre <b>hacia abajo</b>, como una diadema vista de frente sobre una cabeza: la flor más grande arriba al centro y las de las puntas más abajo. El centro del arco queda vacío (transparente). <b>Simétrico.</b></div></div>
+
+<div class="item"><div class="hd"><span class="n">2</span><span class="t">lentes-catrina.png</span><span class="meta">Horizontal 1536×1024 · en los ojos</span></div>
+<div class="prompt">Lentes de catrina, vista de frente: armazón redondo <b>negro brillante</b> con pequeñas <b>flores de cempasúchil</b> y magenta en las esquinas de arriba y una flor chiquita en el puente, micas moradas oscuras semitransparentes con un reflejo suave. <b>Simétricos</b>, muy anchos y bajitos.</div></div>
+
+<div class="item"><div class="hd"><span class="n">3</span><span class="t">particula-cempasuchil.png</span><span class="meta">Cuadrado 1024×1024 · partícula</span></div>
+<div class="prompt">Una sola flor de <b>cempasúchil</b> vista de frente, naranja intenso con centro más oscuro, pétalos rizados con volumen. Centrada. Se verá muy chiquita: forma clara y legible.</div></div>
+
+<div class="item"><div class="hd"><span class="n">4</span><span class="t">particula-petalo.png</span><span class="meta">Cuadrado 1024×1024 · partícula</span></div>
+<div class="prompt">Un solo <b>pétalo</b> suelto de cempasúchil, naranja con la orilla ondulada y un degradado suave a amarillo. Centrado, un poco inclinado.</div></div>
+
+<div class="item"><div class="hd"><span class="n">5</span><span class="t">papel-picado.png</span><span class="meta">Horizontal 1536×1024 · arriba de la pantalla</span></div>
+<div class="prompt">Una <b>tira horizontal de papel picado</b> mexicano: cinco banderitas rectangulares de colores (magenta, naranja, morado, turquesa y amarillo) colgando de un hilo que cruza de lado a lado, cada una con calados finos (flores, corazones, calaveritas) y la orilla de abajo en picos. Las banderitas <b>llenan todo el ancho</b> y quedan en la parte de arriba del lienzo.</div></div>
+
+<div class="item"><div class="hd"><span class="n">6</span><span class="t">esquina-cempasuchil.png</span><span class="meta">Cuadrado 1024×1024 · esquina de abajo</span></div>
+<div class="prompt">Un <b>ramo de flores</b> de cempasúchil naranjas y amarillas con algunas flores magenta, hojas verdes y una vela encendida, <b>pegado a la esquina inferior izquierda</b> del lienzo: sale desde esa esquina y se abre hacia arriba y hacia la derecha, ocupando solo la mitad de abajo a la izquierda. El resto, transparente.</div></div>
+
+<h2>Catrín · Día de Muertos</h2>
+<p class="tpl">El caballero elegante de la catrina: negro, dorado y un toque de cempasúchil.</p>
+
+<div class="item"><div class="hd"><span class="n">7</span><span class="t">sombrero-copa.png</span><span class="meta">Horizontal 1536×1024 · arriba de la cabeza</span></div>
+<div class="prompt">Sombrero de <b>copa</b> elegante de catrín, vista de frente: negro satinado, banda <b>morada</b> con una <b>flor de cempasúchil</b> y una pluma a un lado, ala recta. Centrado.</div></div>
+
+<div class="item"><div class="hd"><span class="n">8</span><span class="t">lentes-catrin.png</span><span class="meta">Horizontal 1536×1024 · en los ojos</span></div>
+<div class="prompt">Lentes de catrín <b>redondos estilo vintage</b>, vista de frente: armazón <b>dorado</b> delgado y pulido, micas oscuras semitransparentes con un reflejo suave. <b>Simétricos</b>, muy anchos y bajitos.</div></div>
+
+<div class="item"><div class="hd"><span class="n">9</span><span class="t">bigote-catrin.png</span><span class="meta">Horizontal 1536×1024 · sobre la boca</span></div>
+<div class="prompt">Bigote elegante de catrín, vista de frente: negro con brillo, delgado y largo, con las <b>puntas enroscadas hacia arriba</b>. <b>Simétrico</b>, ancho y bajito.</div></div>
+
+<div class="item"><div class="hd"><span class="n">10</span><span class="t">mono-catrin.png</span><span class="meta">Horizontal 1536×1024 · debajo de la barbilla</span></div>
+<div class="prompt">Una <b>corbata de moño</b>, vista de frente: negra satinada con un pequeño estampado de flores magenta y un nudo central. <b>Simétrica</b>, centrada.</div></div>
+
+<div class="item"><div class="hd"><span class="n">11</span><span class="t">particula-calaverita.png</span><span class="meta">Cuadrado 1024×1024 · partícula</span></div>
+<div class="prompt">Una sola <b>calaverita de azúcar</b> pequeña y simpática, vista de frente: blanca con adornos de colores (flores magenta y turquesa en la frente y alrededor de los ojos). Centrada. Se verá muy chiquita: forma clara.</div></div>
+
+<h2>Navidad</h2>
+<p class="tpl">Cálida y brillante: rojo, verde, dorado y blanco nieve.</p>
+
+<div class="item"><div class="hd"><span class="n">12</span><span class="t">gorro-santa.png</span><span class="meta">Horizontal 1536×1024 · arriba de la cabeza</span></div>
+<div class="prompt">Gorro de <b>Santa Claus</b>, vista de frente: rojo terciopelo con borde ancho de <b>peluche blanco</b> abajo, la punta cayendo hacia un lado con un pompón blanco. La base es recta y ancha (se pone sobre la cabeza).</div></div>
+
+<div class="item"><div class="hd"><span class="n">13</span><span class="t">diadema-reno.png</span><span class="meta">Horizontal 1536×1024 · arriba de la cabeza</span></div>
+<div class="prompt">Diadema con <b>cuernos de reno</b>, vista de frente: dos cuernos cafés ramificados, uno a cada lado, con pequeñas <b>lucecitas</b> de colores enredadas y un moño rojo en la base de cada cuerno. <b>Mucho espacio vacío entre los cuernos</b> (ahí va la cabeza), sin la diadema visible. <b>Simétrica.</b></div></div>
+
+<div class="item"><div class="hd"><span class="n">14</span><span class="t">nariz-reno.png</span><span class="meta">Cuadrado 1024×1024 · en la nariz</span></div>
+<div class="prompt">La <b>nariz roja de reno</b>: una esfera roja muy brillante, con un reflejo blanco y un ligero resplandor rojo alrededor. Centrada.</div></div>
+
+<div class="item"><div class="hd"><span class="n">15</span><span class="t">lentes-navidad.png</span><span class="meta">Horizontal 1536×1024 · en los ojos</span></div>
+<div class="prompt">Lentes de fiesta <b>navideños</b>, vista de frente: armazón <b>rojo</b> brillante con pequeñas hojas de acebo verdes y bolitas rojas en las esquinas, micas verdes semitransparentes con copitos de nieve sutiles. <b>Simétricos</b>, muy anchos y bajitos.</div></div>
+
+<div class="item"><div class="hd"><span class="n">16</span><span class="t">particula-copo.png</span><span class="meta">Cuadrado 1024×1024 · partícula</span></div>
+<div class="prompt">Un solo <b>copo de nieve</b> de seis picos, blanco con reflejos azul hielo y un brillo suave, como de cristal. Centrado.</div></div>
+
+<div class="item"><div class="hd"><span class="n">17</span><span class="t">particula-esfera.png</span><span class="meta">Cuadrado 1024×1024 · partícula</span></div>
+<div class="prompt">Una sola <b>esfera navideña</b> roja brillante con su tapita dorada y un reflejo blanco. Centrada.</div></div>
+
+<div class="item"><div class="hd"><span class="n">18</span><span class="t">luces-navidad.png</span><span class="meta">Horizontal 1536×1024 · arriba de la pantalla</span></div>
+<div class="prompt">Una <b>tira de luces navideñas</b> que cruza de lado a lado haciendo una curva suave: cable verde oscuro con focos de colores (rojo, verde, dorado, azul y morado) encendidos con un pequeño resplandor. Ocupa <b>todo el ancho</b>, en la parte de arriba del lienzo.</div></div>
+
+<div class="item"><div class="hd"><span class="n">19</span><span class="t">esquina-pino.png</span><span class="meta">Cuadrado 1024×1024 · esquina de abajo</span></div>
+<div class="prompt">Una <b>rama de pino</b> con esferas rojas y doradas, hojas de acebo y un poco de nieve, <b>pegada a la esquina inferior izquierda</b> del lienzo: sale desde esa esquina hacia arriba y hacia la derecha, ocupando solo la mitad de abajo a la izquierda. El resto, transparente.</div></div>
+
+<h2>Fiesta</h2>
+<p class="tpl">Divertida y brillante: morado, dorado y confeti.</p>
+
+<div class="item"><div class="hd"><span class="n">20</span><span class="t">gorro-fiesta.png</span><span class="meta">Vertical 1024×1536 · arriba de la cabeza</span></div>
+<div class="prompt">Gorro de fiesta en forma de <b>cono</b>, vista de frente: <b>metalizado morado</b> con rayas doradas en espiral, un <b>pompón</b> de tiras doradas brillantes en la punta y un borde de olanes en la base. Recto, sin inclinar.</div></div>
+
+<div class="item"><div class="hd"><span class="n">21</span><span class="t">lentes-fiesta.png</span><span class="meta">Horizontal 1536×1024 · en los ojos</span></div>
+<div class="prompt">Lentes de fiesta con <b>micas en forma de estrella</b>, vista de frente: armazón <b>dorado metalizado</b> con brillos, micas moradas semitransparentes y pequeños destellos alrededor. <b>Simétricos</b>, muy anchos y bajitos.</div></div>
+
+<div class="item"><div class="hd"><span class="n">22</span><span class="t">particula-serpentina.png</span><span class="meta">Cuadrado 1024×1024 · partícula</span></div>
+<div class="prompt">Una sola <b>serpentina</b> de confeti rizada en espiral, color morado metalizado con brillo. Centrada.</div></div>
+
+<div class="item"><div class="hd"><span class="n">23</span><span class="t">particula-estrella.png</span><span class="meta">Cuadrado 1024×1024 · partícula</span></div>
+<div class="prompt">Una sola <b>estrella dorada</b> de cinco puntas redondeadas, metalizada y brillante, con un pequeño destello blanco. Centrada.</div></div>
+
+<div class="item"><div class="hd"><span class="n">24</span><span class="t">guirnalda-banderines.png</span><span class="meta">Horizontal 1536×1024 · arriba de la pantalla</span></div>
+<div class="prompt">Una <b>guirnalda de banderines</b> triangulares de fiesta colgando de un hilo que cruza de lado a lado con una curva suave: banderines morados, dorados, magenta y turquesa, algunos metalizados. Ocupa <b>todo el ancho</b>, en la parte de arriba del lienzo.</div></div>
+
+<div class="item"><div class="hd"><span class="n">25</span><span class="t">esquina-globos.png</span><span class="meta">Cuadrado 1024×1024 · esquina de abajo</span></div>
+<div class="prompt">Un grupo de <b>globos</b> brillantes (morados, dorados y magenta, algunos metalizados) <b>pegado a la esquina inferior izquierda</b> del lienzo, subiendo hacia arriba y a la derecha, con algo de confeti. Ocupa solo la mitad de abajo a la izquierda. El resto, transparente.</div></div>
+
+<h2>Gatito</h2>
+<p class="tpl">Tierno pero con estilo: negro, rosa y un toque morado.</p>
+
+<div class="item"><div class="hd"><span class="n">26</span><span class="t">orejas-gato.png</span><span class="meta">Horizontal 1536×1024 · arriba de la cabeza</span></div>
+<div class="prompt">Un <b>par de orejas de gato</b>, vista de frente: dos orejas con puntas redondeadas, por fuera negras con pelo suave y por dentro rosas, con un pequeño brillo morado en la orilla. Una en el <b>extremo izquierdo</b> y otra en el <b>extremo derecho</b> del lienzo, con <b>mucho espacio vacío entre ellas</b> (ahí va la cabeza). Sin diadema. <b>Simétricas.</b></div></div>
+
+<div class="item"><div class="hd"><span class="n">27</span><span class="t">nariz-gato.png</span><span class="meta">Horizontal 1536×1024 · en la nariz</span></div>
+<div class="prompt">Nariz de gato con bigotes, vista de frente: una <b>naricita rosa</b> en forma de triángulo redondeado al centro y <b>tres bigotes</b> negros finos y largos saliendo hacia cada lado. <b>Simétrica</b>, muy ancha y bajita.</div></div>
+
+<div class="item"><div class="hd"><span class="n">28</span><span class="t">lentes-gato.png</span><span class="meta">Horizontal 1536×1024 · en los ojos</span></div>
+<div class="prompt">Lentes <b>ojo de gato</b> (cat-eye) retro, vista de frente: armazón negro brillante con las esquinas de arriba en punta hacia afuera y pequeños detalles rosas, micas rosadas semitransparentes. <b>Simétricos</b>, muy anchos y bajitos.</div></div>
+
+<div class="item"><div class="hd"><span class="n">29</span><span class="t">particula-huella.png</span><span class="meta">Cuadrado 1024×1024 · partícula</span></div>
+<div class="prompt">Una sola <b>huellita de gato</b> rosa (almohadilla grande y cuatro deditos), suave y brillante. Centrada.</div></div>
+
+<h2>Amor</h2>
+<p class="tpl">Romántico y brillante: rosa, rojo y magenta.</p>
+
+<div class="item"><div class="hd"><span class="n">30</span><span class="t">lentes-corazon.png</span><span class="meta">Horizontal 1536×1024 · en los ojos</span></div>
+<div class="prompt">Lentes con <b>micas en forma de corazón</b>, vista de frente: armazón rosa intenso brillante, micas rosas semitransparentes con un reflejo blanco en cada una, puente curvo entre los dos corazones. <b>Simétricos</b>, muy anchos y bajitos.</div></div>
+
+<div class="item"><div class="hd"><span class="n">31</span><span class="t">diadema-corazones.png</span><span class="meta">Horizontal 1536×1024 · arriba de la cabeza</span></div>
+<div class="prompt">Dos <b>antenitas</b> con un <b>corazón</b> rojo brillante en la punta de cada una (resortes delgados), vista de frente: una hacia la izquierda y otra hacia la derecha, con <b>mucho espacio vacío entre ellas</b>. Sin la diadema visible. <b>Simétricas.</b></div></div>
+
+<div class="item"><div class="hd"><span class="n">32</span><span class="t">corazon-mejilla.png</span><span class="meta">Cuadrado 1024×1024 · en las mejillas</span></div>
+<div class="prompt">Un <b>corazón</b> rojo-rosa con aspecto de calcomanía brillante, plano y redondito, con un reflejo blanco arriba a la izquierda. Solo uno, centrado.</div></div>
+
+<div class="item"><div class="hd"><span class="n">33</span><span class="t">particula-corazon.png</span><span class="meta">Cuadrado 1024×1024 · partícula</span></div>
+<div class="prompt">Un solo <b>corazón</b> rosa-rojo tipo caramelo, con volumen y mucho brillo. Distinto al de la imagen 32: más inflado y brillante. Centrado.</div></div>
+
+<div class="item"><div class="hd"><span class="n">34</span><span class="t">esquina-corazones.png</span><span class="meta">Cuadrado 1024×1024 · esquina de abajo</span></div>
+<div class="prompt">Varios <b>corazones</b> rosas, rojos y magenta de distintos tamaños, como globos metalizados flotando, <b>agrupados en la esquina inferior derecha</b> del lienzo (los grandes en la esquina y los chiquitos subiendo hacia el centro). El resto, transparente.</div></div>
+
+<h2>Vórtice VR</h2>
+<p class="tpl">El accesorio de la marca: futurista.</p>
+
+<div class="item"><div class="hd"><span class="n">35</span><span class="t">lentes-vortice.png</span><span class="meta">Horizontal 1536×1024 · en los ojos</span></div>
+<div class="prompt"><b>Visor futurista</b> de realidad virtual estilizado, vista de frente: una sola mica continua que cubre los dos ojos, <b>holográfica</b> con reflejos morados, turquesa y magenta, semitransparente, armazón delgado de metal oscuro con una línea de luz <b>morada neón</b> en el borde. <b>Simétrico</b>, muy ancho y bajito.</div></div>
+
+<div class="box" style="margin-top:14px">
+  <h3>Al terminar</h3>
+  <p style="margin:0">Pásale las 35 imágenes a Claude con su número y nombre (por ejemplo <span class="file">01-corona-flores.png</span>). Claude recorta el espacio transparente sobrante, arma las 6 plantillas (Catrina, Catrín, Navidad, Fiesta, Gatito y Amor) con miniaturas reales y las prueba en la vista previa.</p>
+</div>
+
+</body>
+</html>

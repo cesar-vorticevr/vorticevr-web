@@ -402,7 +402,7 @@ async function api(request, env, ctx, url) {
     const uploads = [];
     let total = 0;
     for (const it of data.items) {
-      if (it.type === "text" || it.type === "sticker") continue;   // stickers of a face filter are drawn in code
+      if (it.type === "text" || it.type === "sticker" || (it.type === "pantalla" && it.key)) continue;   // a face filter's stickers and ready-made screen pictures have no upload
       const file = form.get("f_" + it.id);
       if (file && typeof file !== "string") {
         if (it.type === "video" && (file.size > P.videoMB * 1048576 || !/^video\/(mp4|webm|quicktime)$/.test(file.type))) return json({ error: `Cada video debe ser MP4, WebM o MOV de máximo ${P.videoMB} MB.` }, 400);
@@ -825,8 +825,14 @@ function cleanTrivia(t) {
 // The image of the experience (exp/<slug>/image) is a picture of the creator's preview, for the dashboard and the intro.
 const FILTRO = {
   items: 6, anchors: ["cabeza", "frente", "ojos", "nariz", "boca", "barbilla", "mejillas"],
-  stickers: ["lentes-corazon", "lentes-sol", "corona", "flores", "orejas", "bigote", "gorro", "corazon"],
-  paints: ["ninguna", "catrina", "corazones", "mexico", "brillos", "gatito", "propia"], effects: ["ninguno", "corazones", "estrellas", "flores", "confeti"],
+  // drawn in code (the first ones, kept for the filters made with them) and pictures in assets/filtros/
+  stickers: ["lentes-corazon", "lentes-sol", "corona", "flores", "orejas", "bigote", "gorro", "corazon",
+    "corona-flores", "lentes-catrina", "sombrero-copa", "lentes-catrin", "bigote-catrin", "mono-catrin", "gorro-santa", "diadema-reno", "nariz-reno",
+    "lentes-navidad", "gorro-fiesta", "lentes-fiesta", "orejas-gato", "nariz-gato", "lentes-gato", "diadema-corazones", "corazon-mejilla", "lentes-vortice"],
+  paints: ["ninguna", "catrina", "corazones", "mexico", "brillos", "gatito", "propia"],
+  effects: ["ninguno", "corazones", "estrellas", "flores", "confeti", "calaveritas", "nieve", "huellas"],
+  // ready-made screen decorations (pictures in assets/filtros/, no upload)
+  screenKeys: ["papel-picado", "esquina-cempasuchil", "luces-navidad", "esquina-pino", "guirnalda-banderines", "esquina-globos", "esquina-corazones"],
   frames: ["ninguno", "muertos", "brillo", "cinta", "polaroid"],
   looks: ["ninguno", "vivo", "calido", "frio", "bn", "sepia", "retro", "sueno"],
   screen: 4, screenPos:["ai", "ac", "ad", "mi", "md", "bi", "bc", "bd"],
@@ -854,10 +860,11 @@ function cleanFiltro(f, list, P) {
     ids.add(id); items.push({ id, type: "pintura", w: 1024, h: 1024 });
   }
   for (const m of screen) {
-    const id = String(m.id || ""), w = Math.round(n(m.w, 1, 8000, 0)), h = Math.round(n(m.h, 1, 8000, 0));
-    if (!/^[a-z0-9]{6,16}$/.test(id) || ids.has(id) || !w || !h) return { error: "Una de tus imágenes de la pantalla no es válida." };
+    const id = String(m.id || ""), key = FILTRO.screenKeys.includes(m.key) ? m.key : null, w = Math.round(n(m.w, 1, 8000, 0)), h = Math.round(n(m.h, 1, 8000, 0));
+    if (!/^[a-z0-9]{6,16}$/.test(id) || ids.has(id) || (!key && (!w || !h)) || (m.key && !key)) return { error: "Una de tus imágenes de la pantalla no es válida." };
     ids.add(id);
-    const it = { id, type: "pantalla", pos: FILTRO.screenPos.includes(m.pos) ? m.pos : "bd", s: n(m.s, 0.05, 1, 0.3), w, h };
+    const it = { id, type: "pantalla", pos: FILTRO.screenPos.includes(m.pos) ? m.pos : "bd", s: n(m.s, 0.05, 1, 0.3) };
+    if (key) it.key = key; else { it.w = w; it.h = h; }   // a ready-made one has no file
     const name = String(m.name || "").trim().slice(0, 40); if (name) it.name = name;
     items.push(it);
   }

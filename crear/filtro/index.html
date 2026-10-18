@@ -59,11 +59,16 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
 .seg button{font:600 .85rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
 /* templates */
-.tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
 .tpl{border:1.5px solid var(--line);border-radius:14px;background:rgba(5,2,11,.5);padding:10px 8px;text-align:center;cursor:pointer;color:var(--ink);font:600 .85rem var(--fd);transition:border-color .2s,transform .2s,background .2s}
 .tpl:hover{border-color:var(--lav);transform:translateY(-2px)}
 .tpl[aria-pressed="true"]{border-color:var(--sun);background:rgba(255,190,85,.1);box-shadow:0 0 18px rgba(255,190,85,.2)}
-.tpl span{display:block;font-size:1.7rem;line-height:1.3}
+.tpl .tim{display:grid;place-items:center;aspect-ratio:9/14;border-radius:10px;margin-bottom:6px;overflow:hidden;background:radial-gradient(90% 60% at 50% 40%,#3b2a58,#140b26)}
+.tpl .tim img{width:100%;height:100%;object-fit:cover;display:block;animation:tIn .4s ease}
+.tpl .tim i{font:300 2.4rem var(--fd);color:var(--lav);font-style:normal}
+@keyframes tIn{from{opacity:0}}
+.sg{font:700 .72rem var(--fd);letter-spacing:.14em;text-transform:uppercase;color:var(--sun);grid-column:1/-1;margin:6px 0 -2px}
+.stk img{width:64px;height:40px;object-fit:contain}
 .tpl small{display:block;font:500 .72rem var(--fb);color:var(--mute);margin-top:2px}
 /* accessories */
 .stk{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
@@ -190,7 +195,9 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
       <section class="step" id="s5">
         <h2><span class="n done">6</span>Tu pantalla</h2>
         <p class="hint">Imágenes pegadas a una orilla o esquina de la pantalla: tu logo, un hashtag, flores en las esquinas… Se acomodan solas a cualquier celular y salen en las fotos y videos.</p>
-        <button class="addq" id="scrUp" type="button">+ Subir imagen para la pantalla (PNG)</button>
+        <label class="f">Adornos listos</label>
+        <div class="stk" id="scrPre"></div>
+        <button class="addq" id="scrUp" type="button" style="margin-top:12px">+ Subir mi propia imagen (PNG)</button>
         <input type="file" id="scrFile" accept="image/png,image/webp,image/jpeg,image/svg+xml" hidden>
         <div class="items" id="scrItems"></div>
         <label class="f">Marco dibujado (opcional)</label>
@@ -254,17 +261,18 @@ const S={token:null,email:null,mine:null,P:null,tpl:"catrina",sel:null,screen:[]
 // uploaded images: id → {file (Blob, new) | url (kept from the version being edited), w, h}
 const IMG=new Map();
 const sticker=(key,o={})=>{ const st=FL.STICKERS[key]; return {id:rid(),type:"sticker",key,anchor:st.anchor,x:st.x,y:st.y,s:st.s,r:st.r||0,...o}; };
+const scr=(key,pos)=>{ const p=FL.SCREEN_PRESETS[key]; return {id:rid(),type:"pantalla",key,name:p.name,pos:pos||p.pos,s:p.s}; };
 const TEMPLATES=[
-  {id:"catrina",icon:"💀",name:"Catrina",sub:"Día de Muertos",f:{paint:"catrina",effect:"flores",frame:"muertos",color:"#e4007c",text:"Día de Muertos",look:"calido",vig:0.4},items:()=>[sticker("flores")]},
-  {id:"fiesta",icon:"🥳",name:"Fiesta",sub:"Gorro y confeti",f:{paint:"brillos",effect:"confeti",frame:"cinta",color:"#8b3fd6",text:"¡A celebrar!",look:"vivo",vig:0},items:()=>[sticker("gorro"),sticker("lentes-sol")]},
-  {id:"realeza",icon:"👑",name:"Rey o reina",sub:"Corona y brillos",f:{paint:"brillos",effect:"estrellas",frame:"brillo",color:"#ffbe55",text:"",look:"calido",vig:0.3},items:()=>[sticker("corona")]},
-  {id:"amor",icon:"💘",name:"Amor",sub:"Lentes de corazón",f:{paint:"corazones",effect:"corazones",frame:"brillo",color:"#ff2d55",text:"",look:"sueno",vig:0.2},items:()=>[sticker("lentes-corazon")]},
-  {id:"gatito",icon:"🐱",name:"Gatito",sub:"Orejas y bigotes",f:{paint:"gatito",effect:"corazones",frame:"ninguno",color:"#ff7aa8",text:""},items:()=>[sticker("orejas")]},
-  {id:"mexico",icon:"🌵",name:"México",sub:"Bandera y bigote",f:{paint:"mexico",effect:"confeti",frame:"cinta",color:"#006847",text:"¡Viva México!",look:"vivo",vig:0},items:()=>[sticker("bigote")]},
-  {id:"cero",icon:"✨",name:"Desde cero",sub:"Tú lo armas",f:{paint:"ninguna",effect:"ninguno",frame:"ninguno",color:"#8b3fd6",text:""},items:()=>[]},
+  {id:"catrina",name:"Catrina",f:{paint:"catrina",effect:"flores",frame:"ninguno",color:"#e4007c",text:"",look:"calido",vig:0.35},items:()=>[sticker("corona-flores"),sticker("lentes-catrina")],screen:()=>[scr("papel-picado"),scr("esquina-cempasuchil","bi"),scr("esquina-cempasuchil","bd")]},
+  {id:"catrin",name:"Catrín",f:{paint:"catrina",effect:"calaveritas",frame:"ninguno",color:"#8b3fd6",text:"",look:"calido",vig:0.45},items:()=>[sticker("sombrero-copa"),sticker("lentes-catrin"),sticker("bigote-catrin"),sticker("mono-catrin")],screen:()=>[scr("papel-picado"),scr("esquina-cempasuchil","bi"),scr("esquina-cempasuchil","bd")]},
+  {id:"navidad",name:"Navidad",f:{paint:"brillos",effect:"nieve",frame:"ninguno",color:"#c8102e",text:"",look:"vivo",vig:0.2},items:()=>[sticker("gorro-santa"),sticker("lentes-navidad"),sticker("nariz-reno")],screen:()=>[scr("luces-navidad"),scr("esquina-pino","bi"),scr("esquina-pino","bd")]},
+  {id:"fiesta",name:"Fiesta",f:{paint:"brillos",effect:"confeti",frame:"ninguno",color:"#8b3fd6",text:"",look:"vivo",vig:0},items:()=>[sticker("gorro-fiesta"),sticker("lentes-fiesta")],screen:()=>[scr("guirnalda-banderines"),scr("esquina-globos","bi"),scr("esquina-globos","bd")]},
+  {id:"gatito",name:"Gatito",f:{paint:"ninguna",effect:"huellas",frame:"ninguno",color:"#ff7aa8",text:"",look:"sueno",vig:0.2},items:()=>[sticker("orejas-gato"),sticker("nariz-gato"),sticker("lentes-gato")],screen:()=>[scr("esquina-corazones","bd")]},
+  {id:"amor",name:"Amor",f:{paint:"ninguna",effect:"corazones",frame:"ninguno",color:"#ff2d55",text:"",look:"sueno",vig:0.2},items:()=>[sticker("diadema-corazones"),sticker("lentes-corazon"),sticker("corazon-mejilla")],screen:()=>[scr("esquina-corazones","bi"),scr("esquina-corazones","bd")]},
+  {id:"cero",name:"Desde cero",f:{paint:"ninguna",effect:"ninguno",frame:"ninguno",color:"#8b3fd6",text:"",look:"ninguno",vig:0},items:()=>[],screen:()=>[]},
 ];
-function applyTemplate(t){ S.tpl=t.id; S.f={...t.f}; S.items=t.items(); for(const id of [...IMG.keys()]) if((!S.pintura||id!==S.pintura.id)&&!S.screen.some(x=>x.id===id)) IMG.delete(id); S.sel=S.items[0]?S.items[0].id:null; $("ftext").value=S.f.text; render(); }
-$("tpls").innerHTML=TEMPLATES.map(t=>`<button type="button" class="tpl" data-t="${t.id}"><span aria-hidden="true">${t.icon}</span>${esc(t.name)}<small>${esc(t.sub)}</small></button>`).join("");
+function applyTemplate(t){ S.tpl=t.id; S.f={...t.f}; S.items=t.items(); S.screen=S.screen.filter(x=>!x.key).concat(t.screen()).slice(0,MAX_SCREEN); renderScreen(); for(const id of [...IMG.keys()]) if((!S.pintura||id!==S.pintura.id)&&!S.screen.some(x=>x.id===id)) IMG.delete(id); S.sel=S.items[0]?S.items[0].id:null; $("ftext").value=S.f.text; render(); }
+$("tpls").innerHTML=TEMPLATES.map(t=>`<button type="button" class="tpl" data-t="${t.id}"><span class="tim">${t.id==="cero"?"<i>+</i>":""}</span>${esc(t.name)}</button>`).join("");
 $("tpls").addEventListener("click",e=>{ const b=e.target.closest("[data-t]"); if(b) applyTemplate(TEMPLATES.find(t=>t.id===b.dataset.t)); });
 
 // ---------- choices ----------
@@ -277,9 +285,13 @@ $("colors").addEventListener("click",e=>{ const b=e.target.closest("[data-c]"); 
 $("ftext").addEventListener("input",()=>{ S.f.text=$("ftext").value; schedule(); });
 
 // accessories: the presets (drawn with the filter's own code) and "upload"
-const thumb=(key,color)=>{ const c=FL.stickerCanvas(key,color,160), t=document.createElement("canvas"); t.width=128; t.height=80; const g=t.getContext("2d"), k=Math.min(128/c.width,80/c.height); g.drawImage(c,(128-c.width*k)/2,(80-c.height*k)/2,c.width*k,c.height*k); return t; };
+const thumb=(key,color)=>{ const st=FL.STICKERS[key]; if(st.src){ const im=new Image(); im.src=st.src; im.alt=""; im.loading="lazy"; return im; } const c=FL.stickerCanvas(key,color,160), t=document.createElement("canvas"); t.width=128; t.height=80; const g=t.getContext("2d"), k=Math.min(128/c.width,80/c.height); g.drawImage(c,(128-c.width*k)/2,(80-c.height*k)/2,c.width*k,c.height*k); return t; };
 function paintStickers(){
-  $("stk").replaceChildren(...Object.entries(FL.STICKERS).map(([k,st])=>{ const b=document.createElement("button"); b.type="button"; b.dataset.add=k; b.append(thumb(k,S.f.color),st.name); return b; }),
+  const groups=["Día de Muertos","Navidad","Fiesta","Gatito","Amor","Vórtice VR"].filter(g=>Object.values(FL.STICKERS).some(st=>!st.legacy&&st.group===g)), out=[];
+  for(const gname of groups){ out.push(Object.assign(document.createElement("div"),{className:"sg",textContent:gname}));
+    for(const [k,st] of Object.entries(FL.STICKERS)) if(!st.legacy&&st.group===gname){ const b=document.createElement("button"); b.type="button"; b.dataset.add=k; b.append(thumb(k,S.f.color),st.name); out.push(b); } }
+  out.push(Object.assign(document.createElement("div"),{className:"sg",textContent:"Tuyo"}));
+  $("stk").replaceChildren(...out,
     Object.assign(document.createElement("button"),{type:"button",className:"up",innerHTML:"<b>+</b>Subir imagen",onclick:()=>$("upFile").click()}));
 }
 $("stk").addEventListener("click",e=>{ const b=e.target.closest("[data-add]"); if(!b) return; if(S.items.length>=MAX_ITEMS) return say(`Puedes poner hasta ${MAX_ITEMS} accesorios.`); const it=sticker(b.dataset.add); S.items.push(it); S.sel=it.id; S.tpl=null; render(); });
@@ -387,7 +399,7 @@ function deform(){   // open the jaw: the points under the mouth go down, less t
 }
 function size(){ const r=cv.getBoundingClientRect(); if(!r.width) return; R.setSize(r.width,r.height,false); cam.aspect=r.width/r.height; cam.updateProjectionMatrix(); if(filter) filter.setView({fx:1,fy:1,w:r.width,h:r.height}); }
 new ResizeObserver(size).observe(cv);
-cam.position.set(0,1.5,84); cam.lookAt(0,1.5,0);
+cam.position.set(0,2.5,96); cam.lookAt(0,2.5,0);   // about how a selfie frames the head
 
 let filter=null, building=0, schedT=0;
 // in the preview the "camera image" is the phone background (a color look or vignette grades it like the camera)
@@ -399,10 +411,15 @@ function renderScreen(){
   $("scrItems").innerHTML=S.screen.map(it=>`<div class="it" data-id="${it.id}"><div class="ih"><span class="tn"></span><b>${esc(it.name||"Imagen en pantalla")}</b><button type="button" data-del="1" title="Quitar" aria-label="Quitar">✕</button></div>
     <div class="sitem" style="margin-top:10px"><div class="mini" role="group" aria-label="Lugar en la pantalla">${POS.map(p=>p?`<button type="button" data-pos="${p}" aria-pressed="${it.pos===p}" title="${FL.SCREEN_POS[p]}" aria-label="${FL.SCREEN_POS[p]}"></button>`:"<span></span>").join("")}</div>
     <div class="sctl"><span>Lugar: <b style="color:var(--ink)">${FL.SCREEN_POS[it.pos]}</b></span><span>Tamaño</span><input type="range" data-f="s" min="0.08" max="1" step="0.01" value="${it.s}" aria-label="Tamaño en la pantalla"></div></div></div>`).join("");
-  $("scrItems").querySelectorAll(".it").forEach(el=>{ const im=new Image(); im.src=IMG.get(el.dataset.id)?.url||""; im.alt=""; el.querySelector(".tn").replaceWith(im); });
+  $("scrItems").querySelectorAll(".it").forEach(el=>{ const it=S.screen.find(x=>x.id===el.dataset.id), im=new Image(); im.src=it&&it.key?FL.assetUrl(it.key):IMG.get(el.dataset.id)?.url||""; im.alt=""; el.querySelector(".tn").replaceWith(im); });
+  $("scrPre").querySelectorAll("button").forEach(b=>b.disabled=S.screen.length>=MAX_SCREEN);
   $("scrUp").hidden=S.screen.length>=MAX_SCREEN;
 }
 $("scrUp").addEventListener("click",()=>$("scrFile").click());
+$("scrPre").innerHTML=Object.entries(FL.SCREEN_PRESETS).map(([k,p])=>`<button type="button" data-pre="${k}" title="${esc(p.group)}"><img src="${FL.assetUrl(k)}" alt="" loading="lazy">${esc(p.name)}</button>`).join("");
+$("scrPre").addEventListener("click",e=>{ const b=e.target.closest("[data-pre]"); if(!b||S.screen.length>=MAX_SCREEN) return; const p=FL.SCREEN_PRESETS[b.dataset.pre], used=new Set(S.screen.map(x=>x.pos));
+  let pos=p.pos; if(used.has(pos)&&pos[1]!=="c"){ const other=pos[0]+(pos[1]==="i"?"d":"i"); if(!used.has(other)) pos=other; }
+  S.screen.push({...scr(b.dataset.pre),pos}); S.tpl=null; renderScreen(); schedule(); check(); });
 $("scrFile").addEventListener("change",e=>{ const f=e.target.files[0]; e.target.value=""; if(!f||S.screen.length>=MAX_SCREEN) return;
   const i=new Image(), u=URL.createObjectURL(f);
   i.onload=()=>{ URL.revokeObjectURL(u); const k=Math.min(1,1024/Math.max(i.naturalWidth||1024,i.naturalHeight||1024)), c=document.createElement("canvas"); c.width=Math.max(1,Math.round((i.naturalWidth||1024)*k)); c.height=Math.max(1,Math.round((i.naturalHeight||1024)*k)); c.getContext("2d").drawImage(i,0,0,c.width,c.height);
@@ -428,7 +445,7 @@ $("ownFile").addEventListener("change",e=>{
   i.onerror=()=>{ URL.revokeObjectURL(u); m.className="msg bad"; m.textContent="No se pudo leer esa imagen. Súbela en PNG."; }; i.src=u; });
 function schedule(){ clearTimeout(schedT); schedT=setTimeout(rebuild,80); }
 async function rebuild(){
-  if(!faceMesh) return;
+  if(!faceMesh||thumbing) return;   // the template cards are being drawn: it builds right after
   const my=++building;
   const next=await FL.createFilter({THREE,scene,camera:cam,anchor,faceMesh,uvAt:i=>FACE.uvs[i],cfg:cfg(),mediaUrl:it=>IMG.get(it.id)?.url||"",onHint:t=>{ $("pvHint").textContent=t?"✦ "+t:""; },source:BG});
   if(my!==building){ next.dispose(); return; }
@@ -480,7 +497,24 @@ function loop(){
   if(filter) filter.update(dt,{face:true,mouth:mouthOpen*1.2});
   if(filter) filter.draw(R,dt); else R.render(scene,cam);
 }
-buildHead().then(()=>{ size(); rebuild(); loop(); }).catch(e=>{ console.error(e); $("pvLoad").textContent="No se pudo cargar la vista previa. Revisa tu conexión."; });
+// the template cards show the template itself on the head (rendered here, one by one, before the live preview)
+let thumbing=false;
+async function makeThumbs(){
+  const r=cv.getBoundingClientRect(); if(!r.width) return;
+  thumbing=true; if(filter){ filter.dispose(); filter=null; }
+  head.rotation.set(0,.28,0); mouthOpen=0; deform(); head.updateMatrixWorld(true);
+  for(const t of TEMPLATES){ if(t.id==="cero") continue;
+    try{
+      const f=await FL.createFilter({THREE,scene,camera:cam,anchor,faceMesh,uvAt:i=>FACE.uvs[i],cfg:{filtro:t.f,items:t.items().concat(t.screen())},source:BG});
+      f.setView({fx:1,fy:1,w:r.width,h:r.height}); await new Promise(ok=>setTimeout(ok,60)); f.setView({fx:1,fy:1,w:r.width,h:r.height});
+      f.update(0,{face:true,mouth:0}); f.draw(R,0);
+      const c=document.createElement("canvas"); c.width=180; c.height=280; const g=c.getContext("2d"), sw=cv.width, sh=cv.height, k=Math.max(180/sw,280/sh);
+      g.drawImage(cv,(180-sw*k)/2,(280-sh*k)/2,sw*k,sh*k); f.dispose();
+      const box=$("tpls").querySelector(`[data-t="${t.id}"] .tim`); if(box) box.replaceChildren(Object.assign(new Image(),{src:c.toDataURL("image/jpeg",.85),alt:""}));
+    }catch(e){ console.error(e); }
+  }
+}
+buildHead().then(async()=>{ size(); try{ await makeThumbs(); } finally{ thumbing=false; } rebuild(); loop(); }).catch(e=>{ console.error(e); $("pvLoad").textContent="No se pudo cargar la vista previa. Revisa tu conexión."; });
 // a picture of the preview for "Mis experiencias" (and the intro of the link)
 async function snapshot(){
   if(!filter) return null;
@@ -514,7 +548,7 @@ function check(){
 }
 $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Publicando…"; bar.hidden=false; $("publish").disabled=true;
-  const items=ownItems().map(it=>({id:it.id,type:"pintura",w:1024,h:1024})).concat(S.items.map(it=>{ const o={id:it.id,type:it.type,anchor:it.anchor,x:it.x,y:it.y,s:it.s,r:it.r}; if(it.type==="sticker") o.key=it.key; else { o.w=it.w; o.h=it.h; if(it.name) o.name=it.name; } return o; }),S.screen.map(it=>({id:it.id,type:"pantalla",pos:it.pos,s:it.s,w:it.w,h:it.h,name:it.name})));
+  const items=ownItems().map(it=>({id:it.id,type:"pintura",w:1024,h:1024})).concat(S.items.map(it=>{ const o={id:it.id,type:it.type,anchor:it.anchor,x:it.x,y:it.y,s:it.s,r:it.r}; if(it.type==="sticker") o.key=it.key; else { o.w=it.w; o.h=it.h; if(it.name) o.name=it.name; } return o; }),S.screen.map(it=>it.key?{id:it.id,type:"pantalla",key:it.key,pos:it.pos,s:it.s,name:it.name}:{id:it.id,type:"pantalla",pos:it.pos,s:it.s,w:it.w,h:it.h,name:it.name}));
   const meta={kind:"filtro",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),filtro:{...S.f,text:S.f.text.trim()},items,buttons:{}};
   const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta));
