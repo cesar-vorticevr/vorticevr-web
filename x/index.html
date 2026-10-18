@@ -259,6 +259,7 @@ async function load(){
     $("steps").innerHTML=`<li><span>Toca <b>Probar el filtro</b> y, si te lo pregunta, <b>Permitir</b> la cámara.</span></li>${fx?"<li><span><b>Abre la boca</b> y mira lo que pasa.</span></li>":""}<li><span>Toma una <b>foto</b> o graba un <b>video</b> y compártelo.</span></li>`;
     startBtn.disabled=false; libsP=filtroLibs().catch(e=>{ console.error(e); libsP=null; }); return;
   }
+  if(CFG.kind==="menu"){ startMenu(); return; }   // a restaurant menu: no camera, it opens right away (assets/menu.js)
   if(CFG.kind==="colorear"){   // a coloring page: no camera, the drawing is painted on screen (assets/colorear.js)
     document.title=(CFG.title||"Colorea")+" · Vórtice VR"; $("title").textContent=CFG.title||"Colorea este dibujo";
     $("kick").textContent="Colorea este dibujo"; startBtn.textContent="Empezar a colorear";
@@ -387,6 +388,19 @@ async function startColorear(){
     await C.run({root:$("ar"),image:`${CFG.base}/m/${CFG.slug}/image`,th:CFG.color&&CFG.color.th,palette:CFG.color&&CFG.color.palette,title:CFG.title,slug:CFG.slug,key:CFG.slug,buttons,logo:CFG.brand==="none"?null:CFG.brand==="own"?`${CFG.base}/m/${CFG.slug}/logo`:"/assets/logo-vorticevr.png"});
     $("intro").hidden=true;
   }catch(e){ console.error(e); startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false; $("err").textContent="No se pudo abrir el dibujo. Revisa tu conexión e intenta de nuevo."; }
+}
+async function startMenu(){
+  document.title=(CFG.title||"Menú")+" · Vórtice VR"; $("intro").hidden=true; $("brand").hidden=true;
+  const theme=CFG.menu&&CFG.menu.theme, dark=theme==="oscuro";
+  document.querySelector('meta[name="theme-color"]').content=dark?"#0f0c10":theme==="claro"?"#ffffff":"#f6efe3";
+  try{
+    const M=await import("/assets/menu.js");
+    // the logo goes inside the menu (it scrolls with it): Vórtice VR in purple or white, the brand's own or none (Premium)
+    const brand=CFG.brand==="none"?null:CFG.brand==="own"?{src:`${CFG.base}/m/${CFG.slug}/logo`,own:true,href:CFG.buttons&&CFG.buttons.web}:{src:dark?"/assets/logo-vorticevr-blanco.png":"/assets/logo-vorticevr.png",href:"https://vorticevr.mx/"};
+    const buttons=ORDER.filter(k=>CFG.buttons&&CFG.buttons[k]).map(k=>({href:socialHref(k,CFG.buttons[k]),label:LABEL[k],svg:`<svg viewBox="0 0 24 24">${ICONS[k]}</svg>`}));
+    const files=new Map((CFG.items||[]).map(i=>[i.id,i.file]));
+    M.run({root:$("ar"),cfg:CFG,brand,buttons,src:id=>files.get(id)?`${CFG.base||location.origin}/m/${CFG.slug}/${files.get(id)}?v=${CFG.updated||""}`:""});
+  }catch(e){ console.error(e); message("No se pudo abrir el menú","Revisa tu conexión y vuelve a abrir el link."); }
 }
 async function startFiltro(){
   startBtn.disabled=true; startBtn.textContent="Cargando…"; $("err").hidden=true;

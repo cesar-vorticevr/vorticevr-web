@@ -1,7 +1,7 @@
 // "Logo de la experiencia" for the makers (/crear/, /crear/trivia/, /crear/colorear/): Vórtice VR (every plan), the
 // customer's own brand or no logo at all (both on plans with `brand`: Premium). The logo goes on top of the experience and on its photos and
 // videos. Any image (PNG, JPG, WebP or SVG) is turned into a PNG of at most 800 px here; the server keeps it as exp/<slug>/logo.
-// Usage: const m = VVRMarca.mount(element, { plan, exp, api, base }); m.get() → { brand: "own"|"none"|"vortice", file, ok }.
+// Usage: const m = VVRMarca.mount(element, { plan, exp, api, base }); m.get() → { brand: "own"|"none"|"vortice", file, ok, preview }.
 (function () {
   const CSS = `
 .vm-seg{display:flex;gap:6px;flex-wrap:wrap}
@@ -56,7 +56,10 @@
       paint();
     });
     paint();
-    return { get: () => ({ brand: st.brand, file: st.brand === "own" ? st.file : null, ok: st.brand !== "own" || !!(st.file || st.url) }) };
+    // preview = a URL of the logo to show it in a live preview (the menu maker)
+    let pvFile = null, pvUrl = null;
+    const pv = () => { if (st.file && st.file !== pvFile) { pvFile = st.file; pvUrl = URL.createObjectURL(st.file); } return st.file ? pvUrl : st.url; };
+    return { get: () => ({ brand: st.brand, file: st.brand === "own" ? st.file : null, ok: st.brand !== "own" || !!(st.file || st.url), preview: st.brand === "own" ? pv() : null }) };
   }
 
   // any image → PNG, longest side at most 800 px, transparency kept

@@ -393,7 +393,7 @@ async function api(request, env, ctx, url) {
     const isNew = !mine;
     if (data.kind === "trivia" && data.trivia.logo && !image && !(mine && (JSON.parse(mine.data || "{}").trivia || {}).logo)) data.trivia.logo = false;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
-    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
+    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
     if (target && target.size > LIMITS.targetBytes) return json({ error: "La imagen no se pudo preparar. Intenta con otra." }, 400);
     // each element's file: uploaded now (field f_<id>) or kept from the version being edited (same id and type)
@@ -406,7 +406,7 @@ async function api(request, env, ctx, url) {
       const file = form.get("f_" + it.id);
       if (file && typeof file !== "string") {
         if (it.type === "video" && (file.size > P.videoMB * 1048576 || !/^video\/(mp4|webm|quicktime)$/.test(file.type))) return json({ error: `Cada video debe ser MP4, WebM o MOV de máximo ${P.videoMB} MB.` }, 400);
-        if (["image", "pintura", "pantalla"].includes(it.type) && (file.size > ITEM_LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(file.type))) return json({ error: "Cada imagen debe ser JPG, PNG o WebP de máximo 5 MB." }, 400);
+        if (["image", "pintura", "pantalla", "foto", "pagina"].includes(it.type) && (file.size > ITEM_LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(file.type))) return json({ error: "Cada imagen debe ser JPG, PNG o WebP de máximo 5 MB." }, 400);
         if (it.type === "model") {
           if (file.size > P.modelMB * 1048576) return json({ error: `Cada objeto 3D debe pesar máximo ${P.modelMB} MB.` }, 400);
           if (new TextDecoder().decode(new Uint8Array(await file.slice(0, 4).arrayBuffer())) !== "glTF") return json({ error: "Los objetos 3D deben ser archivos GLB." }, 400);
@@ -452,7 +452,7 @@ async function api(request, env, ctx, url) {
       .bind(slug, who, data.title, JSON.stringify(data), created, now, expires, mine ? mine.views || 0 : 0).run();
     const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(slug).first();
     const out = ownerExp(row, request, env);
-    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
+    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
     return json({ ok: true, experience: out });
   }
 
@@ -714,6 +714,7 @@ function publicKind(row, d) {
   if (d.kind === "trivia") return { slug: row.slug, kind: "trivia", title: row.title, trivia: d.trivia, buttons: d.buttons, expires: row.expires };
   if (d.kind === "filtro") return { slug: row.slug, kind: "filtro", title: row.title, filtro: d.filtro, items: d.items || [], buttons: d.buttons, expires: row.expires };
   if (d.kind === "colorear") return { slug: row.slug, kind: "colorear", title: row.title, img: d.img, color: d.color, buttons: d.buttons, expires: row.expires };
+  if (d.kind === "menu") return { slug: row.slug, kind: "menu", title: row.title, menu: d.menu, items: d.items || [], buttons: d.buttons, updated: row.updated, expires: row.expires };
   return { slug: row.slug, kind: "ra", title: row.title, img: d.img, place: d.place || "mesa", scenes: d.scenes || 1, items: itemsOf(d), buttons: d.buttons, expires: row.expires };
 }
 function ownerExp(row, request, env) {
@@ -884,6 +885,73 @@ function cleanColor(c) {
   const th = Math.round(Number(c && c.th));
   return { palette: COLOREAR.palettes.includes(c && c.palette) ? c.palette : "vivos", th: th >= COLOREAR.th[0] && th <= COLOREAR.th[1] ? th : 170 };
 }
+// Interactive menu for restaurants (assets/menu.js): sections (kind comida | bebida | postre) with dishes (name, price,
+// description, tags for the "¿Qué se te antoja?" helper), each with an optional photo (item "foto"); the special ones may
+// have a 3D model (item "model", a GLB made with Polycam; cm = its real width, so it sits on the table at its size).
+// pages = the restaurant's original menu (PDF pages or pictures, items "pagina"). logo = an item "foto". The image of the
+// experience (exp/<slug>/image) is a card drawn by the creator for the dashboard. Files are referenced by item id.
+const MENU = {
+  cats: 30, dishes: 250, pages: 12, photos: 150, models: { gratis: 1, other: 3 },
+  kinds: ["comida", "bebida", "postre"], themes: ["clasico", "oscuro", "claro"],
+  tags: ["picante", "vegetariano", "carne", "pollo", "mariscos", "ligero", "abundante", "compartir", "fria", "caliente", "alcohol", "nuevo"],
+};
+function cleanMenu(mn, list, P) {
+  mn = mn || {};
+  const str = (v, max) => String(v || "").replace(/\s+/g, " ").trim().slice(0, max);
+  const idOk = v => /^[a-z0-9]{6,16}$/.test(String(v || ""));
+  const byId = new Map();
+  for (const m of Array.isArray(list) ? list : []) {
+    if (!m || !idOk(m.id) || byId.has(m.id) || !["foto", "pagina", "model"].includes(m.type)) return { error: "Uno de tus archivos no es válido." };
+    const it = { id: m.id, type: m.type };
+    if (m.type !== "model") { it.w = Math.round(Number(m.w)) || 0; it.h = Math.round(Number(m.h)) || 0; if (!(it.w > 0 && it.w <= 8000 && it.h > 0 && it.h <= 8000)) return { error: "Faltan las medidas de una de tus imágenes." }; }
+    byId.set(m.id, it);
+  }
+  const used = new Set();
+  const ref = (v, type) => { const it = idOk(v) && byId.get(v); if (!it || it.type !== type) return null; used.add(v); return v; };
+  const cats = Array.isArray(mn.cats) ? mn.cats : [];
+  if (!cats.length) return { error: "Agrega al menos una sección con un platillo." };
+  if (cats.length > MENU.cats) return { error: `Puedes poner hasta ${MENU.cats} secciones.` };
+  const out = [], ids = new Set(); let dishes = 0, models = 0;
+  const maxModels = P.id === "gratis" ? MENU.models.gratis : MENU.models.other;
+  for (const c of cats) {
+    const name = str(c && c.name, 60), id = String(c && c.id || "");
+    if (!name) return { error: "Una de tus secciones no tiene nombre." };
+    if (!idOk(id) || ids.has(id)) return { error: "Una de tus secciones no es válida." };
+    ids.add(id);
+    const cat = { id, name, kind: MENU.kinds.includes(c.kind) ? c.kind : "comida", dishes: [] };
+    for (const d of Array.isArray(c.dishes) ? c.dishes : []) {
+      const dn = str(d && d.name, 80), did = String(d && d.id || "");
+      if (!dn) return { error: `Un platillo de "${name}" no tiene nombre.` };
+      if (!idOk(did) || ids.has(did)) return { error: "Uno de tus platillos no es válido." };
+      ids.add(did);
+      if (++dishes > MENU.dishes) return { error: `Puedes poner hasta ${MENU.dishes} platillos.` };
+      const dish = { id: did, name: dn };
+      const price = str(d.price, 24), desc = String(d.desc || "").replace(/\r/g, "").trim().slice(0, 300);
+      if (price) dish.price = price;
+      if (desc) dish.desc = desc;
+      const tags = [...new Set((Array.isArray(d.tags) ? d.tags : []).filter(t => MENU.tags.includes(t)))];
+      if (tags.length) dish.tags = tags;
+      const photo = ref(d.photo, "foto"); if (photo) dish.photo = photo;
+      if (d.special) dish.special = true;
+      const model = d.special ? ref(d.model, "model") : null;
+      if (model) {
+        if (++models > maxModels) return { error: `Tu plan ${P.name} permite ${maxModels === 1 ? "un platillo" : maxModels + " platillos"} en 3D.` };
+        dish.model = model; const cm = Math.round(Number(d.cm)); dish.cm = cm >= 5 && cm <= 120 ? cm : 28;
+      }
+      cat.dishes.push(dish);
+    }
+    out.push(cat);
+  }
+  if (!dishes) return { error: "Agrega al menos un platillo." };
+  const pages = (Array.isArray(mn.pages) ? mn.pages : []).map(v => ref(v, "pagina")).filter(Boolean).slice(0, MENU.pages);
+  const menu = { cats: out, pages, color: HEX.test(String(mn.color || "")) ? String(mn.color).toLowerCase() : "#b8322a",
+    theme: MENU.themes.includes(mn.theme) ? mn.theme : "clasico", currency: str(mn.currency, 4) || "$", note: str(mn.note, 200), helper: mn.helper !== false };
+  const sub = str(mn.sub, 80); if (sub) menu.sub = sub;
+  const logo = ref(mn.logo, "foto"); if (logo) menu.logo = logo;
+  const items = [...byId.values()].filter(i => used.has(i.id));
+  if (items.filter(i => i.type === "foto").length > MENU.photos) return { error: `Puedes poner hasta ${MENU.photos} fotos.` };
+  return { menu, items };
+}
 function cleanMeta(m, P) {
   const title = String(m.title || "").trim().slice(0, 80);
   if (!title) return { error: "Escribe un título." };
@@ -892,6 +960,10 @@ function cleanMeta(m, P) {
   if (m.kind === "filtro") {
     const f = cleanFiltro(m.filtro, m.items, P);
     return f.error ? f : { kind: "filtro", title, filtro: f.filtro, items: f.items, buttons: {} };
+  }
+  if (m.kind === "menu") {
+    const mn = cleanMenu(m.menu, m.items, P);
+    return mn.error ? mn : { kind: "menu", title, menu: mn.menu, items: mn.items, buttons };
   }
   if (m.kind === "trivia") {
     const trivia = cleanTrivia(m.trivia);

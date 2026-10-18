@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Crea tu menú interactivo · Vórtice VR</title>
+<meta name="description" content="Convierte el menú de tu restaurante en una carta digital con link y QR: te ayuda a elegir con preguntas y muestra tu platillo especial en 3D sobre la mesa.">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../../assets/icono.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Menu maker: the restaurant, its menu (imported from a PDF or photos, or typed), the special dish in 3D and the helper on the
+   left; a phone with the live menu on the right (above on a phone). The menu itself is assets/menu.js (also at the link). */
+:root{--void:#05020b;--panel:rgba(20,9,40,.7);--line:rgba(190,150,255,.2);--line2:rgba(190,150,255,.45);--vortex:#8b3fd6;--vortex-d:#5a1f8f;--lav:#d2b8ff;--ink:#f2ecff;--mute:#a99bcb;--sun:#ffbe55;--ok:#74e8ba;--bad:#ff8a9e;
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55;min-height:100vh}
+a{color:var(--lav)}
+:focus-visible{outline:2px solid var(--lav);outline-offset:3px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1180px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 8px}
+header img{height:38px;width:auto;display:block}
+@media (max-width:480px){header img{height:28px}}
+header a.back{font-family:var(--fd);font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--mute)}
+header .acts{display:flex;align-items:center;gap:14px}
+.mybtn{font-family:var(--fd);font-weight:600;letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;border:1px solid var(--line2);border-radius:999px;padding:9px 14px;background:rgba(139,63,214,.2);color:var(--ink);cursor:pointer;text-decoration:none}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+.hero{padding:28px 0 26px}
+.kick{font-family:var(--fd);font-size:.78rem;letter-spacing:.26em;text-transform:uppercase;color:var(--sun);font-weight:600}
+h1{font-family:var(--fd);font-size:clamp(2rem,5vw,3.2rem);line-height:1.02;margin:8px 0 10px;text-wrap:balance}
+.hero p{margin:0;color:var(--mute);max-width:62ch}
+.allx{display:inline-flex;align-items:center;gap:6px;margin:12px 16px 0 0;font:600 .85rem var(--fd);color:var(--lav);text-decoration:none}
+.step{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:20px;margin-bottom:16px}
+.step h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font-family:var(--fd);font-size:1.2rem}
+.step h2 .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--fm);font-size:.85rem;background:rgba(139,63,214,.3);border:1px solid var(--line2);flex:none}
+.step h2 .n.done{background:var(--ok);color:#0b2a1e;border-color:var(--ok)}
+.step>p.hint{margin:0 0 14px;color:var(--mute);font-size:.92rem}
+.drop{display:flex;align-items:center;gap:14px;border:1.5px dashed var(--line2);border-radius:12px;padding:16px;cursor:pointer;transition:border-color .2s,background .2s}
+.drop:hover,.drop.over{border-color:var(--lav);background:rgba(139,63,214,.12)}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.drop .big{font-size:2rem;flex:none}
+.drop b{display:block}
+.drop small{color:var(--mute)}
+.bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--vortex),var(--sun));transition:width .2s}
+.msg{font-size:.88rem;margin-top:8px}
+.msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+label.f{display:block;font-size:.8rem;font-family:var(--fd);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:12px 0 6px}
+input[type=text],input[type=tel],input[type=number],textarea,select{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:10px 12px}
+textarea{resize:vertical;min-height:64px}
+input:focus,textarea:focus,select:focus{border-color:var(--lav);outline:none}
+.slugrow{display:flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:rgba(5,2,11,.7);overflow:hidden}
+.slugrow input{border:0;background:transparent;border-radius:0;text-align:right;padding-right:2px;min-width:0}
+.slugrow span{padding:11px 12px 11px 0;color:var(--mute);white-space:nowrap;font-family:var(--fm);font-size:.9rem}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{font:600 .85rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--fd);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:.85rem;border:1px solid var(--line2);border-radius:999px;padding:13px 22px;color:var(--ink);background:rgba(20,9,40,.6);cursor:pointer;text-decoration:none}
+.btn.sm{padding:9px 14px;font-size:.74rem}
+.btn.primary{background:linear-gradient(135deg,var(--vortex),var(--vortex-d));border-color:var(--lav);box-shadow:0 0 26px rgba(139,63,214,.45)}
+.btn.sun{background:linear-gradient(135deg,#ffd27f,#ff9f3a);color:#1a0d00;border-color:var(--sun)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.note{font-size:.85rem;color:var(--mute)}
+.legal{font-size:.8rem;color:var(--mute);margin-top:10px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+@media (max-width:560px){.two{grid-template-columns:1fr}}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:28px;align-items:start}
+.side{position:sticky;top:16px}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.side{position:static;order:-1}}
+.colors{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.colors button{width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.25);cursor:pointer;padding:0}
+.colors button[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 3px var(--vortex)}
+.colors input[type=color]{width:40px;height:34px;border:1px solid var(--line2);border-radius:8px;background:none;padding:2px;cursor:pointer}
+.logoBox{display:flex;align-items:center;gap:14px}
+.logoBox .lg{width:64px;height:64px;border-radius:50%;background:#fff;display:grid;place-items:center;overflow:hidden;flex:none}
+.logoBox .lg img{width:86%;height:86%;object-fit:contain}
+.logoBox .lg.none{background:rgba(255,255,255,.08);color:var(--mute);font-size:1.6rem}
+/* import */
+.pages{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.pages figure{position:relative;margin:0;width:70px}
+.pages img{width:70px;height:92px;object-fit:cover;border-radius:6px;background:#fff;display:block}
+.pages button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:var(--bad);color:#2a0010;font-weight:800;cursor:pointer;line-height:1;font-size:.8rem}
+.found{margin-top:12px;padding:14px;border-radius:12px;border:1px solid rgba(255,190,85,.5);background:rgba(255,190,85,.07)}
+.found b{color:var(--sun)}
+details.paste{margin-top:12px}
+details.paste summary{cursor:pointer;color:var(--lav);font-size:.92rem}
+.tog{display:flex;gap:12px;align-items:flex-start;cursor:pointer;margin-top:12px}
+.tog input{width:20px;height:20px;accent-color:#8b3fd6;flex:none;margin-top:3px}
+.tog b{display:block}.tog small{color:var(--mute);font-size:.86rem}
+/* menu editor */
+.cats{display:grid;gap:12px;margin-top:16px}
+.cat{border:1px solid var(--line2);border-radius:14px;background:rgba(5,2,11,.45);overflow:hidden}
+.ch{display:flex;gap:8px;align-items:center;padding:10px;background:rgba(139,63,214,.12)}
+.ch input{font-family:var(--fd);font-weight:700;font-size:1rem;flex:1;min-width:0}
+.ch select{width:auto;flex:none;padding:9px 8px}
+.ib{width:36px;height:36px;flex:none;border-radius:9px;border:1px solid var(--line2);background:rgba(5,2,11,.6);color:var(--ink);cursor:pointer;display:grid;place-items:center;font-size:.95rem;padding:0}
+.ib:hover{border-color:var(--lav)}
+.ib.del:hover{border-color:var(--bad);color:var(--bad)}
+.dish{border-top:1px solid var(--line)}
+.dh{display:flex;gap:10px;align-items:center;padding:10px 12px;cursor:pointer}
+.dh:hover{background:rgba(139,63,214,.08)}
+.dh .tn{width:40px;height:40px;border-radius:8px;object-fit:cover;flex:none;background:rgba(255,255,255,.06);display:grid;place-items:center;font-size:1.1rem}
+.dh .nm{flex:1;min-width:0}
+.dh .nm b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.dh .nm small{color:var(--mute);font-size:.8rem}
+.dh .pr{font-family:var(--fm);font-size:.88rem;color:var(--sun);flex:none}
+.dh .st{color:var(--sun);flex:none}
+.dh .chev{color:var(--mute);flex:none;transition:transform .2s}
+.dish.open .dh .chev{transform:rotate(90deg)}
+.dish.open .dh{background:rgba(139,63,214,.14)}
+.de{padding:4px 12px 14px;display:grid;gap:4px}
+.de .two{gap:0 10px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.tags button{font:500 .82rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:6px 11px;cursor:pointer}
+.tags button[aria-pressed="true"]{background:rgba(139,63,214,.55);border-color:var(--lav)}
+.photo{display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap}
+.photo img{width:64px;height:64px;border-radius:10px;object-fit:cover}
+.spec{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,190,85,.45);background:rgba(255,190,85,.07);margin-top:8px;cursor:pointer}
+.spec input{width:20px;height:20px;accent-color:#ffbe55;flex:none}
+.spec b{color:var(--sun)}
+.spec small{display:block;color:var(--mute);font-size:.82rem}
+.drow{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.addd{display:block;width:100%;border:0;border-top:1px dashed var(--line2);background:none;color:var(--lav);padding:11px;font:600 .9rem var(--fb);cursor:pointer;text-align:left}
+.addd:hover{background:rgba(139,63,214,.1)}
+.empty{padding:16px;border:1.5px dashed var(--line2);border-radius:12px;color:var(--mute);text-align:center;margin-top:14px}
+/* 3D */
+.guide{margin:4px 0 14px;border:1px solid var(--line2);border-radius:12px;background:rgba(5,2,11,.5)}
+.guide summary{cursor:pointer;padding:12px 14px;font-weight:600;color:var(--lav);display:flex;gap:10px;align-items:center}
+.guide summary::marker{content:""}
+.guide summary .pc{font:700 .7rem var(--fd);letter-spacing:.12em;background:#fff;color:#111;border-radius:6px;padding:3px 7px}
+.guide ol{margin:0;padding:0 16px 6px 34px;color:var(--ink);font-size:.92rem}
+.guide ol li{margin-bottom:8px}
+.guide ol li b{color:var(--sun)}
+.guide .tipz{margin:0 14px 14px;padding:10px 12px;border-radius:10px;background:rgba(139,63,214,.14);font-size:.86rem;color:var(--mute)}
+.m3d{border:1px solid rgba(255,190,85,.45);border-radius:12px;padding:12px;margin-top:10px;background:rgba(255,190,85,.05)}
+.m3d h3{margin:0 0 8px;font-family:var(--fd);font-size:1rem}
+.m3d .row{margin-top:8px}
+.m3d input[type=number]{width:110px}
+/* helper */
+.qs{display:grid;gap:8px;margin-top:10px}
+.qs div{padding:10px 12px;border-radius:12px;background:rgba(5,2,11,.55);border:1px solid var(--line)}
+.qs b{display:block;font-family:var(--fd);font-size:.95rem}
+.qs span{font-size:.84rem;color:var(--mute)}
+/* buttons */
+.socials{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+@media (max-width:560px){.socials{grid-template-columns:1fr}}
+/* phone */
+.pv{border:1px solid var(--line2);border-radius:18px;background:#120826;padding:14px}
+.pv h3{margin:0 0 10px;font-family:var(--fd);font-size:1rem;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pv h3 small{font:500 .78rem var(--fb);color:var(--mute)}
+.phone{position:relative;margin:0 auto;width:100%;max-width:360px;height:min(72vh,700px);border-radius:34px;border:9px solid #1d1430;background:#000;overflow:hidden;box-shadow:0 30px 60px -30px rgba(139,63,214,.7)}
+.phone .screen{position:absolute;inset:0}
+.pvacts{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header><a href="../../" aria-label="Vórtice VR, inicio"><img src="../../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a class="mybtn" href="../../cuenta/">Mi cuenta</a><a class="back" href="../../">← Sitio</a></div></header>
+<main class="wrap">
+  <div class="hero">
+    <span class="kick" id="kick">Gratis · prueba de 15 días</span>
+    <h1>Crea tu menú interactivo</h1>
+    <p>Sube el menú de tu restaurante (PDF o fotos) y conviértelo en una carta con link y QR: ayuda a tus clientes a elegir con unas preguntas y muestra tu platillo especial en 3D sobre su mesa.</p>
+    <a class="allx" href="../">← Todas las experiencias</a>
+  </div>
+  <div class="grid">
+    <div>
+      <section class="step" id="full" hidden>
+        <h2>Ya usaste todas tus experiencias</h2>
+        <p class="hint" id="fullText"></p>
+        <div class="row"><a class="btn" href="../../cuenta/#planes">Ver planes</a><a class="btn" href="../../cuenta/">Ir a mi cuenta</a></div>
+      </section>
+
+      <section class="step" id="s1">
+        <h2><span class="n" id="n1">1</span>Tu restaurante</h2>
+        <div class="two">
+          <div><label class="f" for="title">Nombre</label><input type="text" id="title" maxlength="80" placeholder="Ej. La Choza de Tabasco"></div>
+          <div><label class="f" for="sub">Frase (opcional)</label><input type="text" id="sub" maxlength="80" placeholder="Ej. Cocina tabasqueña desde 1998"></div>
+        </div>
+        <label class="f">Logo (opcional)</label>
+        <div class="logoBox"><div class="lg none" id="logoPv">🍽️</div>
+          <div class="row" style="margin:0"><label class="btn sm" for="logoFile" style="margin:0">Subir logo</label><input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden><button class="btn sm" id="logoDel" type="button" hidden>Quitar</button></div></div>
+        <label class="f">Estilo</label>
+        <div class="seg" id="theme"><button type="button" data-v="clasico" aria-pressed="true">Clásico</button><button type="button" data-v="oscuro" aria-pressed="false">Oscuro</button><button type="button" data-v="claro" aria-pressed="false">Claro</button></div>
+        <label class="f">Color de tu marca</label>
+        <div class="colors" id="colors"></div>
+      </section>
+
+      <section class="step" id="s2">
+        <h2><span class="n" id="n2">2</span>Tu menú</h2>
+        <p class="hint">Sube tu menú en PDF o en fotos: lo mostramos tal cual como “Menú original” y, si es un PDF con texto, sacamos tus platillos y precios para armar la carta. Revísalos y complétalos abajo.</p>
+        <label class="drop" id="drop"><input type="file" id="menuFile" accept="application/pdf,image/png,image/jpeg,image/webp" multiple><span class="big" aria-hidden="true">📄</span><span><b>Elige o suelta tu menú</b><small>PDF o fotos (JPG, PNG). Hasta 12 páginas.</small></span></label>
+        <div class="bar" id="bImp" hidden><i></i></div><div class="msg" id="mImp"></div>
+        <div class="pages" id="pages"></div>
+        <label class="tog" id="origTog" hidden><input type="checkbox" id="origOn" checked><span><b>Mostrar también el menú original</b><small>Tus clientes pueden abrirlo tal como lo subiste (botón “Menú original”).</small></span></label>
+        <div class="row" id="ocrRow" hidden><button class="btn sm" id="ocr" type="button">Leer el texto de las fotos (beta)</button><span class="note">Tarda unos segundos por página; luego revisa lo que encontró.</span></div>
+        <div class="found" id="found" hidden></div>
+        <details class="paste"><summary>¿Tienes tu menú en texto? Pégalo aquí</summary>
+          <textarea id="pasteTxt" rows="7" placeholder="ENTRADAS&#10;Guacamole con totopos $95&#10;Nachos para compartir $120&#10;BEBIDAS&#10;Agua de horchata $45"></textarea>
+          <div class="row"><button class="btn sm" id="pasteGo" type="button">Convertir en platillos</button><span class="note">Una línea por platillo con su precio al final; los títulos en MAYÚSCULAS son secciones.</span></div>
+        </details>
+        <div class="cats" id="cats"></div>
+        <div class="row"><button class="btn sm" id="addCat" type="button">+ Agregar sección</button><button class="btn sm" id="clearAll" type="button" hidden>Borrar todo</button></div>
+      </section>
+
+      <section class="step" id="s3">
+        <h2><span class="n" id="n3">3</span>✦ Platillo especial en 3D <small class="note" style="font-family:var(--fb)">(opcional)</small></h2>
+        <p class="hint">Marca un platillo como <b style="color:var(--sun)">★ Especial</b> y sale arriba de tu menú. Si subes su modelo 3D, tus clientes lo giran con el dedo y con “Verlo en tu mesa” aparece sobre su mesa en realidad aumentada, de su tamaño real.</p>
+        <details class="guide" id="guide">
+          <summary><span class="pc">POLYCAM</span>Cómo escanear tu platillo en 3D con el celular (gratis)</summary>
+          <ol>
+            <li>Descarga <b>Polycam</b> en tu celular (App Store o Google Play) y crea tu cuenta gratis.</li>
+            <li>Pon el platillo recién servido sobre una mesa, con <b>luz pareja</b> (sin sol directo ni sombras fuertes) y espacio para caminar alrededor. Un mantel liso ayuda.</li>
+            <li>Elige el modo <b>Foto</b> (Photo). Rodea el plato despacio tomando fotos: una vuelta a la altura del plato, otra más arriba (unos 45°) y algunas desde arriba. Entre <b>60 y 100 fotos</b>, cada una encimada con la anterior. No muevas el plato.</li>
+            <li>Toca <b>Procesar</b> (Process) y espera unos minutos.</li>
+            <li>Usa <b>Recortar</b> (Crop) para quitar la mesa y lo que sobre alrededor del plato.</li>
+            <li>Toca <b>Exportar</b> → formato <b>GLB</b> y guárdalo en tu celular o mándalo a tu computadora.</li>
+            <li>Súbelo aquí abajo y escribe cuánto mide el plato de ancho (en cm) para que aparezca de su tamaño real.</li>
+          </ol>
+          <p class="tipz">Tips: los platos mate salen mejor que los muy brillosos; evita líquidos transparentes (caldos claros, vasos). Si el archivo pesa mucho, exporta en calidad media. ¿Tienes el modelo en FBX u OBJ? Ábrelo en Blender → Exportar → glTF 2.0 (.glb).</p>
+        </details>
+        <div id="m3d"></div>
+      </section>
+
+      <section class="step" id="s4">
+        <h2><span class="n" id="n4">4</span>“¿No sabes qué pedir?”</h2>
+        <p class="hint">Un asistente le hace a tu cliente hasta 4 preguntas y le recomienda 3 platillos. Elige solo las preguntas que sirven con tu menú, según las etiquetas de cada platillo (picante, mariscos, ligero, con alcohol…).</p>
+        <label class="tog" style="margin-top:0"><input type="checkbox" id="helperOn" checked><span><b>Mostrar “¿No sabes qué pedir?”</b><small>Un botón llamativo arriba de tu menú.</small></span></label>
+        <div id="qsBox"><label class="f">Con tu menú puede preguntar</label><div class="qs" id="qs"></div><div class="msg" id="mTags"></div>
+        <div class="row"><button class="btn sm sun" id="tryHelp" type="button">Probar las preguntas en la vista previa</button></div></div>
+      </section>
+
+      <section class="step" id="s5">
+        <h2><span class="n" id="n5">5</span>Link, redes y detalles</h2>
+        <label class="f" for="slug">Tu link</label>
+        <div class="slugrow"><input type="text" id="slug" maxlength="30" placeholder="tu-restaurante" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="root">.vorticevr.mx</span></div>
+        <div class="msg" id="mSlug"></div>
+        <div class="socials">
+          <div><label class="f" for="b_whatsapp">WhatsApp (pedidos o reservas)</label><input type="tel" id="b_whatsapp" placeholder="10 dígitos"></div>
+          <div><label class="f" for="b_instagram">Instagram</label><input type="text" id="b_instagram" placeholder="usuario"></div>
+          <div><label class="f" for="b_facebook">Facebook</label><input type="text" id="b_facebook" placeholder="usuario o link"></div>
+          <div><label class="f" for="b_tiktok">TikTok</label><input type="text" id="b_tiktok" placeholder="usuario"></div>
+          <div><label class="f" for="b_web">Sitio web</label><input type="text" id="b_web" placeholder="turestaurante.com"></div>
+          <div><label class="f" for="cur">Moneda</label><input type="text" id="cur" maxlength="4" value="$"></div>
+        </div>
+        <label class="f" for="note">Nota al pie (opcional)</label>
+        <input type="text" id="note" maxlength="200" placeholder="Ej. Precios en pesos mexicanos, IVA incluido.">
+      </section>
+      <section class="step" id="sMarca" hidden></section>
+      <section class="step" id="s6">
+        <h2><span class="n" id="n6">6</span>Publicar</h2>
+        <div id="mine" hidden style="margin:0 0 12px"></div>
+        <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
+        <button class="btn primary" id="publish" type="button" disabled>Publicar mi menú</button>
+        <div class="bar" id="bPub" hidden><i></i></div><div class="msg" id="mPub"></div>
+        <p class="legal">Al publicar confirmas que tienes derecho a usar el menú, las fotos y los modelos 3D. Vórtice VR puede retirar contenido inapropiado (<a href="../../terminos/">términos</a>). <span id="legalDays">La experiencia se borra a los 15 días; puedes editarla o borrarla desde tu cuenta.</span></p>
+      </section>
+    </div>
+    <aside class="side">
+      <div class="pv">
+        <h3>Vista previa <small>así lo verán en el celular</small></h3>
+        <div class="phone"><div class="screen" id="screen"></div></div>
+        <div class="pvacts"><button class="btn sm sun" id="pvHelp" type="button">✦ Probar “¿Qué se te antoja?”</button></div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="../../assets/marca.js"></script>
+<script src="../../assets/plataforma.js" data-api="../.."></script>
+<script type="module">
+import { run, TAGS, TAGS_FOR, KINDS, THEMES, parseMenuText, pdfLines, guessKind, guessTags, possibleQuestions, flatten, onAccent, priceText } from "../../assets/menu.js";
+const $=id=>document.getElementById(id);
+const API=VVR.api;
+const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
+$("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
+const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const rid=()=>Array.from(crypto.getRandomValues(new Uint8Array(10)),b=>"abcdefghijklmnopqrstuvwxyz0123456789"[b%36]).join("");
+const LIMIT={pages:12,dishes:250,cats:30,models:1,modelMB:15};
+// S.menu is what gets published; S.files = files picked here (id → {type, blob, url, w, h}); S.old = the published items
+const S={token:null,email:null,mine:null,plan:null,files:new Map(),old:new Map(),open:null,
+  menu:{cats:[],pages:[],color:"#b8322a",theme:"clasico",currency:"$",note:"",sub:"",helper:true,logo:null}};
+const fileUrl=id=>{ const f=S.files.get(id); if(f) return f.url; const o=S.old.get(id); return o&&S.mine?`${API}/m/${S.mine.slug}/${o.file}?v=${S.mine.updated||""}`:""; };
+const loadImg=src=>new Promise((ok,bad)=>{ const i=new Image(); i.crossOrigin="anonymous"; i.onload=()=>ok(i); i.onerror=bad; i.src=src; });
+// an image → a lighter file (WebP when the browser can, JPEG if not)
+async function shrink(src,max,q=.84,type="image/webp"){
+  const im=await loadImg(src), k=Math.min(1,max/Math.max(im.naturalWidth||max,im.naturalHeight||max));
+  const c=document.createElement("canvas"); c.width=Math.round((im.naturalWidth||max)*k); c.height=Math.round((im.naturalHeight||max)*k);
+  const x=c.getContext("2d"); if(type!=="image/png"){ x.fillStyle="#fff"; x.fillRect(0,0,c.width,c.height); } x.drawImage(im,0,0,c.width,c.height);
+  let b=await new Promise(r=>c.toBlob(r,type,q)); if(!b||(type==="image/webp"&&b.type!=="image/webp")) b=await new Promise(r=>c.toBlob(r,"image/jpeg",q));
+  return {blob:b,w:c.width,h:c.height};
+}
+const addFile=(type,f)=>{ const id=rid(); S.files.set(id,{type,blob:f.blob,url:URL.createObjectURL(f.blob),w:f.w,h:f.h}); return id; };
+
+// ---------- 1. restaurant ----------
+const COLORS=["#b8322a","#e0662b","#d9a21b","#2f7d4f","#1f6f8b","#2c3e8f","#7a2e8e","#c2185b","#5d4037","#222222"];
+function drawColors(){ const box=$("colors"); box.innerHTML=COLORS.map(c=>`<button type="button" style="background:${c}" data-c="${c}" aria-label="Color ${c}" aria-pressed="${c===S.menu.color}"></button>`).join("")+`<input type="color" id="colorIn" value="${S.menu.color}" aria-label="Otro color">`;
+  box.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{ S.menu.color=b.dataset.c; drawColors(); changed(); });
+  $("colorIn").addEventListener("input",e=>{ S.menu.color=e.target.value; box.querySelectorAll("[data-c]").forEach(b=>b.setAttribute("aria-pressed","false")); changed(); }); }
+drawColors();
+$("theme").querySelectorAll("button").forEach(b=>b.onclick=()=>{ S.menu.theme=b.dataset.v; $("theme").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b))); changed(); });
+$("title").addEventListener("input",()=>{ if(!slugIn.dataset.touched&&!S.mine){ slugIn.value=toSlug($("title").value).replace(/-$/,""); checkSlug(); } changed(); });
+$("sub").addEventListener("input",()=>{ S.menu.sub=$("sub").value; changed(); });
+$("logoFile").addEventListener("change",async e=>{ const f=e.target.files[0]; if(!f) return; try{ const r=await shrink(URL.createObjectURL(f),600,.9,"image/png"); S.menu.logo=addFile("foto",r); drawLogo(); changed(); }catch(err){ alert("No pude abrir esa imagen."); } e.target.value=""; });
+$("logoDel").onclick=()=>{ S.menu.logo=null; drawLogo(); changed(); };
+function drawLogo(){ const u=S.menu.logo&&fileUrl(S.menu.logo); $("logoPv").className="lg"+(u?"":" none"); $("logoPv").innerHTML=u?`<img src="${esc(u)}" alt="">`:"🍽️"; $("logoDel").hidden=!u; }
+
+// ---------- 2. import (PDF or photos) ----------
+let pdfP=null;
+const pdfjs=()=>pdfP||(pdfP=new Promise((ok,bad)=>{ const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"; s.onload=()=>{ pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; ok(pdfjsLib); }; s.onerror=()=>{ pdfP=null; bad(); }; document.head.appendChild(s); }));
+let found=null;   // dishes read from the files, waiting to be added
+async function importFiles(files){
+  const m=$("mImp"), bar=$("bImp"); m.className="msg"; bar.hidden=false; bar.firstElementChild.style.width="0%";
+  const lines=[]; let n=0, imgs=0;
+  try{
+    for(const f of files){
+      if(S.menu.pages.length>=LIMIT.pages){ m.textContent=`Tu menú original puede tener hasta ${LIMIT.pages} páginas.`; break; }
+      if(f.type==="application/pdf"){
+        m.textContent="Abriendo tu PDF…"; const lib=await pdfjs(); const pdf=await lib.getDocument({data:await f.arrayBuffer()}).promise;
+        const total=Math.min(pdf.numPages,LIMIT.pages-S.menu.pages.length);
+        for(let i=1;i<=total;i++){
+          m.textContent=`Leyendo la página ${i} de ${total}…`; bar.firstElementChild.style.width=(i/total*100)+"%";
+          const pg=await pdf.getPage(i), v1=pg.getViewport({scale:1}), sc=Math.min(3,1500/v1.width), vp=pg.getViewport({scale:sc});
+          const tc=await pg.getTextContent(); lines.push(...pdfLines(tc.items,v1.width)); n++;
+          // the picture of the page (if drawing it stalls, the text is still used)
+          const c=document.createElement("canvas"); c.width=Math.round(vp.width); c.height=Math.round(vp.height);
+          const drawn=await Promise.race([pg.render({canvasContext:c.getContext("2d"),viewport:vp}).promise.then(()=>true),new Promise(r=>setTimeout(()=>r(false),20000))]);
+          if(drawn){ const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",.84)); S.menu.pages.push(addFile("pagina",{blob,w:c.width,h:c.height})); }
+        }
+      } else if(/^image\//.test(f.type)){
+        m.textContent="Preparando tu foto…"; const r=await shrink(URL.createObjectURL(f),1600,.85,"image/jpeg"); S.menu.pages.push(addFile("pagina",r)); imgs++; n++;
+      }
+    }
+  }catch(e){ console.error(e); bar.hidden=true; m.className="msg bad"; m.textContent="No pude leer ese archivo. Prueba con otro PDF o con fotos del menú."; drawPages(); return; }
+  bar.hidden=true; drawPages(); changed();
+  const cats=lines.length?parseMenuText(lines):[];
+  const dn=cats.reduce((a,c)=>a+c.dishes.length,0);
+  if(dn){ offer(cats,"tu PDF"); m.className="msg ok"; m.textContent=`Listo: ${n} ${n===1?"página":"páginas"}.`; }
+  else if(imgs){ m.className="msg ok"; m.textContent=`Listo: ${n} ${n===1?"página":"páginas"} en tu menú original. Para armar la carta, toca “Leer el texto de las fotos” o captura tus platillos abajo.`; }
+  else { m.className="msg"; m.textContent=`Listo: ${n} ${n===1?"página":"páginas"}. No encontré texto con precios en el PDF (quizá es una imagen escaneada): toca “Leer el texto” o captura tus platillos abajo.`; }
+  $("ocrRow").hidden=!S.menu.pages.some(id=>S.files.has(id));
+}
+function offer(cats,from){
+  const dn=cats.reduce((a,c)=>a+c.dishes.length,0);
+  if(!countDishes()){ addParsed(cats); $("found").hidden=false; $("found").innerHTML=`<b>✦ Encontré ${dn} platillos en ${cats.length} ${cats.length===1?"sección":"secciones"}</b> en ${from}. Ya están abajo: revisa nombres, precios y etiquetas.`; return; }
+  found=cats; $("found").hidden=false;
+  $("found").innerHTML=`<b>✦ Encontré ${dn} platillos en ${cats.length} ${cats.length===1?"sección":"secciones"}</b> en ${from}.<div class="row"><button class="btn sm sun" type="button" id="fAdd">Agregarlos a mi menú</button><button class="btn sm" type="button" id="fRep">Reemplazar mi menú</button><button class="btn sm" type="button" id="fNo">No, gracias</button></div>`;
+  $("fAdd").onclick=()=>{ addParsed(found); found=null; $("found").hidden=true; };
+  $("fRep").onclick=()=>{ if(!confirm("¿Reemplazar todas tus secciones y platillos por los que encontré?")) return; S.menu.cats=[]; addParsed(found); found=null; $("found").hidden=true; };
+  $("fNo").onclick=()=>{ found=null; $("found").hidden=true; };
+}
+function addParsed(cats){
+  for(const c of cats){
+    if(S.menu.cats.length>=LIMIT.cats) break;
+    S.menu.cats.push({id:rid(),name:c.name,kind:c.kind,dishes:c.dishes.slice(0,Math.max(0,LIMIT.dishes-countDishes())).map(d=>({id:rid(),name:d.name,price:d.price||"",desc:d.desc||"",tags:d.tags||[]}))});
+  }
+  drawCats(); changed();
+}
+function drawPages(){
+  $("pages").innerHTML=S.menu.pages.map((id,i)=>`<figure><img src="${esc(fileUrl(id))}" alt="Página ${i+1}"><button type="button" data-p="${i}" aria-label="Quitar página ${i+1}">×</button></figure>`).join("");
+  $("pages").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{ S.menu.pages.splice(+b.dataset.p,1); drawPages(); changed(); });
+  $("origTog").hidden=!S.menu.pages.length;
+}
+$("origOn").addEventListener("change",changed);
+$("menuFile").addEventListener("change",e=>{ const fs=[...e.target.files]; e.target.value=""; if(fs.length) importFiles(fs); });
+const drop=$("drop");
+["dragenter","dragover"].forEach(t=>drop.addEventListener(t,e=>{ e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{ e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop",e=>{ const fs=[...e.dataTransfer.files].filter(f=>f.type==="application/pdf"||/^image\//.test(f.type)); if(fs.length) importFiles(fs); });
+// OCR of the pages picked here (Tesseract, in the browser; nothing is sent anywhere)
+$("ocr").addEventListener("click",async()=>{
+  const ids=S.menu.pages.filter(id=>S.files.has(id)); if(!ids.length) return;
+  const m=$("mImp"), bar=$("bImp"); m.className="msg"; bar.hidden=false; $("ocr").disabled=true;
+  try{
+    if(!window.Tesseract) await new Promise((ok,bad)=>{ const s=document.createElement("script"); s.src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"; s.onload=ok; s.onerror=bad; document.head.appendChild(s); });
+    m.textContent="Preparando el lector de texto…";
+    const w=await Tesseract.createWorker("spa"); const lines=[];
+    for(const [i,id] of ids.entries()){ m.textContent=`Leyendo la página ${i+1} de ${ids.length}…`; bar.firstElementChild.style.width=((i+.5)/ids.length*100)+"%";
+      const {data}=await w.recognize(S.files.get(id).blob); lines.push(...data.text.split(/\n/)); }
+    await w.terminate(); bar.hidden=true;
+    const cats=parseMenuText(lines), dn=cats.reduce((a,c)=>a+c.dishes.length,0);
+    if(dn){ m.className="msg ok"; m.textContent="Listo. Revisa bien lo que leí: en fotos puede haber errores."; offer(cats,"tus fotos"); }
+    else { m.className="msg bad"; m.textContent="No pude leer platillos con precio en esas fotos. Pega el texto o captúralos abajo."; }
+  }catch(e){ console.error(e); bar.hidden=true; m.className="msg bad"; m.textContent="No se pudo leer el texto. Revisa tu conexión e intenta de nuevo."; }
+  $("ocr").disabled=false;
+});
+$("pasteGo").onclick=()=>{ const cats=parseMenuText($("pasteTxt").value.split(/\n/)); if(!cats.length){ $("mImp").className="msg bad"; $("mImp").textContent="No encontré platillos con precio en ese texto."; return; } offer(cats,"tu texto"); $("pasteTxt").value=""; };
+
+// ---------- the menu editor ----------
+const countDishes=()=>S.menu.cats.reduce((a,c)=>a+c.dishes.length,0);
+const findDish=id=>{ for(const c of S.menu.cats){ const d=c.dishes.find(x=>x.id===id); if(d) return [c,d]; } return [null,null]; };
+function dishHead(c,d){
+  const th=d.photo?`<img class="tn" src="${esc(fileUrl(d.photo))}" alt="">`:`<span class="tn">${KINDS[c.kind].e}</span>`;
+  const ic=(d.tags||[]).map(t=>TAGS[t].e).join("");
+  return `<div class="dh" data-open="${d.id}">${th}<span class="nm"><b>${esc(d.name||"Platillo sin nombre")}</b><small>${ic||"Sin etiquetas"}</small></span>${d.special?'<span class="st" title="Platillo especial">★</span>':""}<span class="pr">${esc(priceText(d.price,S.menu.currency||"$"))}</span><span class="chev">›</span></div>`;
+}
+function dishEdit(c,d){
+  return `<div class="de">
+    <div class="two"><div><label class="f">Nombre</label><input type="text" data-k="name" maxlength="80" value="${esc(d.name)}"></div><div><label class="f">Precio</label><input type="text" data-k="price" maxlength="24" value="${esc(d.price)}" placeholder="Ej. 120 o 90/150" inputmode="decimal"></div></div>
+    <label class="f">Descripción (opcional)</label><textarea data-k="desc" maxlength="300" rows="2" placeholder="Ingredientes, tamaño, cómo se sirve…">${esc(d.desc)}</textarea>
+    <label class="f">Etiquetas <span style="text-transform:none;letter-spacing:0">(el asistente pregunta con ellas)</span></label>
+    <div class="tags">${TAGS_FOR[c.kind].map(t=>`<button type="button" data-tag="${t}" aria-pressed="${(d.tags||[]).includes(t)}">${TAGS[t].e} ${TAGS[t].t}</button>`).join("")}</div>
+    <div class="photo">${d.photo?`<img src="${esc(fileUrl(d.photo))}" alt=""><button class="btn sm" type="button" data-phdel>Quitar foto</button>`:""}<label class="btn sm" style="margin:0">${d.photo?"Cambiar foto":"📷 Agregar foto"}<input type="file" data-photo accept="image/png,image/jpeg,image/webp" hidden></label></div>
+    <label class="spec"><input type="checkbox" data-special ${d.special?"checked":""}><span><b>★ Platillo especial</b><small>Sale destacado arriba del menú; puedes subirle su modelo 3D en el paso 3.</small></span></label>
+    <div class="drow"><button class="ib" type="button" data-dmv="-1" title="Subir">↑</button><button class="ib" type="button" data-dmv="1" title="Bajar">↓</button><button class="ib del" type="button" data-ddel title="Borrar platillo">🗑</button></div>
+  </div>`;
+}
+function drawCats(){
+  const box=$("cats");
+  if(!S.menu.cats.length){ box.innerHTML=`<div class="empty">Sube tu menú arriba o agrega una sección (Entradas, Platos fuertes, Bebidas, Postres…).</div>`; $("clearAll").hidden=true; draw3d(); drawQs(); return; }
+  box.innerHTML=S.menu.cats.map((c,ci)=>`<div class="cat" data-c="${c.id}">
+    <div class="ch"><input type="text" data-cn maxlength="60" value="${esc(c.name)}" placeholder="Nombre de la sección" aria-label="Nombre de la sección">
+      <select data-ck aria-label="Tipo de sección">${Object.entries(KINDS).map(([k,v])=>`<option value="${k}" ${k===c.kind?"selected":""}>${v.e} ${v.t}</option>`).join("")}</select>
+      <button class="ib" type="button" data-cmv="-1" title="Subir sección" ${ci?"":"disabled"}>↑</button><button class="ib" type="button" data-cmv="1" title="Bajar sección" ${ci<S.menu.cats.length-1?"":"disabled"}>↓</button><button class="ib del" type="button" data-cdel title="Borrar sección">🗑</button></div>
+    ${c.dishes.map(d=>`<div class="dish${S.open===d.id?" open":""}" data-d="${d.id}">${dishHead(c,d)}${S.open===d.id?dishEdit(c,d):""}</div>`).join("")}
+    <button class="addd" type="button" data-add>+ Agregar platillo</button></div>`).join("");
+  $("clearAll").hidden=false; draw3d(); drawQs();
+}
+$("addCat").onclick=()=>{ if(S.menu.cats.length>=LIMIT.cats) return alert(`Puedes poner hasta ${LIMIT.cats} secciones.`); const id=rid(); S.menu.cats.push({id,name:"",kind:"comida",dishes:[]}); drawCats(); changed(); const i=document.querySelector(`[data-c="${id}"] [data-cn]`); if(i) i.focus(); };
+$("clearAll").onclick=()=>{ if(!confirm("¿Borrar todas las secciones y platillos?")) return; S.menu.cats=[]; S.open=null; drawCats(); changed(); };
+const cats=$("cats");
+cats.addEventListener("click",async e=>{
+  const t=e.target, cEl=t.closest("[data-c]"); if(!cEl) return; const c=S.menu.cats.find(x=>x.id===cEl.dataset.c); if(!c) return;
+  const dEl=t.closest("[data-d]"), d=dEl&&c.dishes.find(x=>x.id===dEl.dataset.d);
+  if(t.closest("[data-open]")){ S.open=S.open===d.id?null:d.id; drawCats(); return; }
+  if(t.closest("[data-add]")){ if(countDishes()>=LIMIT.dishes) return alert(`Puedes poner hasta ${LIMIT.dishes} platillos.`); const nd={id:rid(),name:"",price:"",desc:"",tags:[]}; c.dishes.push(nd); S.open=nd.id; drawCats(); changed(); const i=document.querySelector(`[data-d="${nd.id}"] [data-k="name"]`); if(i) i.focus(); return; }
+  const cm=t.closest("[data-cmv]"); if(cm){ const i=S.menu.cats.indexOf(c), j=i+ +cm.dataset.cmv; if(j<0||j>=S.menu.cats.length) return; S.menu.cats.splice(i,1); S.menu.cats.splice(j,0,c); drawCats(); changed(); return; }
+  if(t.closest("[data-cdel]")){ if(c.dishes.length&&!confirm(`¿Borrar la sección “${c.name||"sin nombre"}” y sus ${c.dishes.length} platillos?`)) return; S.menu.cats.splice(S.menu.cats.indexOf(c),1); drawCats(); changed(); return; }
+  if(!d) return;
+  const tg=t.closest("[data-tag]"); if(tg){ const k=tg.dataset.tag; d.tags=d.tags||[]; d.tagsTouched=true; d.tags=d.tags.includes(k)?d.tags.filter(x=>x!==k):[...d.tags,k];
+    if(k==="vegetariano"&&d.tags.includes(k)) d.tags=d.tags.filter(x=>!["carne","pollo","mariscos"].includes(x)); if(["carne","pollo","mariscos"].includes(k)&&d.tags.includes(k)) d.tags=d.tags.filter(x=>x!=="vegetariano");
+    if(k==="fria"&&d.tags.includes(k)) d.tags=d.tags.filter(x=>x!=="caliente"); if(k==="caliente"&&d.tags.includes(k)) d.tags=d.tags.filter(x=>x!=="fria");
+    drawCats(); changed(); return; }
+  if(t.closest("[data-phdel]")){ d.photo=null; drawCats(); changed(); return; }
+  const mv=t.closest("[data-dmv]"); if(mv){ const i=c.dishes.indexOf(d), j=i+ +mv.dataset.dmv; if(j<0||j>=c.dishes.length) return; c.dishes.splice(i,1); c.dishes.splice(j,0,d); drawCats(); changed(); return; }
+  if(t.closest("[data-ddel]")){ c.dishes.splice(c.dishes.indexOf(d),1); S.open=null; drawCats(); changed(); return; }
+});
+cats.addEventListener("change",async e=>{
+  const t=e.target, cEl=t.closest("[data-c]"); if(!cEl) return; const c=S.menu.cats.find(x=>x.id===cEl.dataset.c);
+  if(t.matches("[data-ck]")){ c.kind=t.value; c.kindSet=true; if(!c.name) c.name=KINDS[c.kind].t; for(const d of c.dishes) d.tags=(d.tags||[]).filter(x=>TAGS_FOR[c.kind].includes(x)); drawCats(); changed(); return; }
+  const dEl=t.closest("[data-d]"), d=dEl&&c.dishes.find(x=>x.id===dEl.dataset.d); if(!d) return;
+  if(t.matches("[data-photo]")&&t.files[0]){ try{ const r=await shrink(URL.createObjectURL(t.files[0]),900,.82); d.photo=addFile("foto",r); drawCats(); changed(); }catch(err){ alert("No pude abrir esa foto."); } return; }
+  if(t.matches("[data-special]")){ d.special=t.checked; if(!d.special) d.model=null; else if(!d.cm) d.cm=28; drawCats(); changed(); return; }
+});
+cats.addEventListener("input",e=>{
+  const t=e.target, cEl=t.closest("[data-c]"); if(!cEl) return; const c=S.menu.cats.find(x=>x.id===cEl.dataset.c);
+  if(t.matches("[data-cn]")){ c.name=t.value; if(!c.kindSet&&!c.dishes.length){ c.kind=guessKind(t.value); cEl.querySelector("[data-ck]").value=c.kind; } changed(); return; }
+  const dEl=t.closest("[data-d]"), d=dEl&&c.dishes.find(x=>x.id===dEl.dataset.d); if(!d||!t.dataset.k) return;
+  d[t.dataset.k]=t.value;
+  // suggest tags while the name is typed, only on a new dish without tags chosen by hand
+  if(t.dataset.k==="name"&&!d.tagsTouched&&!(d.tags||[]).length){ const g=guessTags(c.name+" "+d.name,c.kind); if(g.length){ d.tags=g; const box=dEl.querySelector(".tags"); if(box) box.querySelectorAll("[data-tag]").forEach(b=>b.setAttribute("aria-pressed",String(g.includes(b.dataset.tag)))); } }
+  const h=dEl.querySelector(".dh"); if(h){ h.querySelector(".nm b").textContent=d.name||"Platillo sin nombre"; h.querySelector(".pr").textContent=priceText(d.price,S.menu.currency||"$"); }
+  changed();
+});
+
+// ---------- 3. special dishes in 3D ----------
+function draw3d(){
+  const box=$("m3d"), sp=[]; for(const c of S.menu.cats) for(const d of c.dishes) if(d.special) sp.push(d);
+  if(!sp.length){ box.innerHTML=`<div class="empty" style="margin-top:0">Todavía no marcas ningún platillo como <b style="color:var(--sun)">★ Especial</b>. Ábrelo en el paso 2 y activa “Platillo especial”.</div>`; return; }
+  const used=sp.filter(d=>d.model).length;
+  box.innerHTML=sp.map(d=>`<div class="m3d" data-sd="${d.id}"><h3>★ ${esc(d.name||"Platillo sin nombre")}</h3>
+    ${d.model?`<div class="note">✓ Modelo 3D listo${S.files.get(d.model)?` (${(S.files.get(d.model).blob.size/1048576).toFixed(1)} MB)`:""}. Gíralo en la vista previa.</div>`:`<div class="note">Sin modelo 3D: se muestra con su foto.</div>`}
+    <div class="row"><label class="btn sm" style="margin:0">${d.model?"Cambiar GLB":"Subir modelo 3D (GLB)"}<input type="file" data-glb accept=".glb,model/gltf-binary" hidden ${!d.model&&used>=LIMIT.models?"disabled":""}></label>${d.model?'<button class="btn sm" type="button" data-glbdel>Quitar 3D</button>':""}
+      <label class="note" style="display:flex;align-items:center;gap:8px">Ancho real <input type="number" data-cm min="5" max="120" step="1" value="${d.cm||28}"> cm</label></div>
+    ${!d.model&&used>=LIMIT.models?`<div class="msg bad">Tu plan permite ${LIMIT.models===1?"un platillo":LIMIT.models+" platillos"} en 3D. <a href="../../cuenta/#planes">Ver planes</a></div>`:""}
+    <div class="msg" data-m></div></div>`).join("");
+}
+$("m3d").addEventListener("change",async e=>{
+  const t=e.target, el=t.closest("[data-sd]"); if(!el) return; const [,d]=findDish(el.dataset.sd); if(!d) return;
+  if(t.matches("[data-glb]")&&t.files[0]){ const f=t.files[0], m=el.querySelector("[data-m]");
+    if(f.size>LIMIT.modelMB*1048576){ m.className="msg bad"; m.textContent=`Tu modelo pesa ${(f.size/1048576).toFixed(1)} MB. Tu plan permite hasta ${LIMIT.modelMB} MB: en Polycam exporta en calidad media.`; return; }
+    const head=new TextDecoder().decode(new Uint8Array(await f.slice(0,4).arrayBuffer()));
+    if(head!=="glTF"){ m.className="msg bad"; m.textContent="Ese archivo no es un GLB. En Polycam: Exportar → GLB."; return; }
+    const id=rid(); S.files.set(id,{type:"model",blob:f,url:URL.createObjectURL(f)}); d.model=id; draw3d(); changed(); }
+  if(t.matches("[data-cm]")){ d.cm=Math.max(5,Math.min(120,Math.round(+t.value)||28)); changed(); }
+});
+$("m3d").addEventListener("click",e=>{ const el=e.target.closest("[data-sd]"); if(!el||!e.target.closest("[data-glbdel]")) return; const [,d]=findDish(el.dataset.sd); d.model=null; draw3d(); changed(); });
+
+// ---------- 4. helper ----------
+function drawQs(){
+  const qs=possibleQuestions(S.menu), all=flatten(S.menu), bare=all.filter(d=>!(d.tags||[]).length).length;
+  $("qs").innerHTML=qs.length?qs.map(q=>`<div><b>${esc(q.q)}</b><span>${q.opts.map(esc).join(" · ")}</span></div>`).join(""):`<div><span>Agrega platillos con etiquetas para que el asistente pueda preguntar.</span></div>`;
+  $("mTags").className="msg"+(bare?" bad":""); $("mTags").textContent=all.length?(bare?`${bare} de ${all.length} platillos no tienen etiquetas: agrégalas para mejores recomendaciones.`:"✓ Todos tus platillos tienen etiquetas."):"";
+  $("qsBox").hidden=!S.menu.helper;
+}
+$("helperOn").addEventListener("change",()=>{ S.menu.helper=$("helperOn").checked; drawQs(); changed(); });
+const tryHelp=()=>{ if(!app) return; if(flatten(S.menu).length<2){ alert("Agrega al menos 2 platillos para probar el asistente."); return; } app.openHelper(); if(innerWidth<900) document.querySelector(".side").scrollIntoView({behavior:"smooth"}); };
+$("tryHelp").onclick=tryHelp; $("pvHelp").onclick=tryHelp;
+
+// ---------- 5. buttons, currency, note ----------
+const BTN=["whatsapp","instagram","facebook","tiktok","web"];
+const SOC={instagram:"https://instagram.com/",facebook:"https://facebook.com/",tiktok:"https://tiktok.com/@"};
+const ICONS={whatsapp:'<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm4.5 12.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 2.9 2.9 0 0 0-.9 2.2 5 5 0 0 0 1 2.6 11.4 11.4 0 0 0 4.4 3.9c1.6.7 2.3.8 3.1.6a2.6 2.6 0 0 0 1.7-1.2 2.1 2.1 0 0 0 .2-1.2c-.1-.1-.3-.2-.5-.3z"/>',instagram:'<path d="M7.8 2h8.4A5.8 5.8 0 0 1 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8A5.8 5.8 0 0 1 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2zm-.2 2A3.6 3.6 0 0 0 4 7.6v8.8A3.6 3.6 0 0 0 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6A3.6 3.6 0 0 0 16.4 4H7.6zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>',facebook:'<path d="M20 2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8.6v-7.7H10v-3h2.6V9c0-2.6 1.6-4 3.9-4 1.1 0 2.1.1 2.3.1v2.7h-1.6c-1.3 0-1.5.6-1.5 1.5v1.9h3l-.4 3h-2.6V22H20a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>',tiktok:'<path d="M16.6 3c.4 2.2 1.8 3.7 4 3.9v3a7.4 7.4 0 0 1-4-1.3v6.2A5.8 5.8 0 1 1 10.8 9v3.1a2.8 2.8 0 1 0 2.8 2.8V3h3z"/>',web:'<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm7.9 9h-3a15.6 15.6 0 0 0-1.3-5.5A8 8 0 0 1 19.9 11zM12 4c.9 1.1 1.8 3.6 2 7h-4c.2-3.4 1.1-5.9 2-7zM4.1 13h3c.1 2 .6 3.9 1.3 5.5A8 8 0 0 1 4.1 13zm3-2h-3a8 8 0 0 1 4.3-5.5A15.6 15.6 0 0 0 7.1 11zM12 20c-.9-1.1-1.8-3.6-2-7h4c-.2 3.4-1.1 5.9-2 7zm3.6-1.5c.7-1.6 1.2-3.5 1.3-5.5h3a8 8 0 0 1-4.3 5.5z"/>'};
+const LBL={whatsapp:"WhatsApp",instagram:"Instagram",facebook:"Facebook",tiktok:"TikTok",web:"Sitio web"};
+function previewButtons(){ return BTN.map(k=>{ const v=$("b_"+k).value.trim(); if(!v) return null; let href=v;
+  if(k==="whatsapp"){ let n=v.replace(/\D/g,""); if(n.length===10) n="52"+n; href="https://wa.me/"+n; } else if(SOC[k]&&!/^https?:/i.test(v)&&!v.includes("/")) href=SOC[k]+v.replace(/^@/,""); else if(!/^https?:/i.test(v)) href="https://"+v;
+  return {href,label:LBL[k],svg:`<svg viewBox="0 0 24 24">${ICONS[k]}</svg>`}; }).filter(Boolean); }
+BTN.forEach(k=>$("b_"+k).addEventListener("input",changed));
+$("cur").addEventListener("input",()=>{ S.menu.currency=$("cur").value.trim()||"$"; drawCats(); changed(); });
+$("note").addEventListener("input",()=>{ S.menu.note=$("note").value; changed(); });
+
+// ---------- live preview ----------
+let app=null, pvT=0;
+function cfgNow(){ const m={...S.menu,pages:$("origOn").checked?S.menu.pages:[]}; return {title:$("title").value.trim(),menu:m}; }
+function brand(){ const mk=S.marca&&S.marca.get(); if(mk&&mk.brand==="none") return null;
+  if(mk&&mk.brand==="own"&&mk.preview) return {src:mk.preview,own:true};
+  return {src:THEMES[S.menu.theme].dark?"../../assets/logo-vorticevr-blanco.png":"../../assets/logo-vorticevr.png"}; }
+function preview(){ const c=cfgNow();
+  if(!app) app=run({root:$("screen"),cfg:c,src:fileUrl,brand:brand(),buttons:previewButtons(),embedded:true});
+  else { app.destroy(); app=run({root:$("screen"),cfg:c,src:fileUrl,brand:brand(),buttons:previewButtons(),embedded:true}); } }
+function changed(){ clearTimeout(pvT); pvT=setTimeout(()=>{ if(app){ app.update(cfgNow()); } else preview(); check(); drawQs(); },220); check(); }
+
+// ---------- link ----------
+const slugIn=$("slug"); let slugOk=false, slugTimer=0;
+const toSlug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9-]+/g,"-").replace(/-+/g,"-").replace(/^-/,"").slice(0,30);
+slugIn.addEventListener("input",()=>{ const c=slugIn.selectionStart; slugIn.value=toSlug(slugIn.value); slugIn.setSelectionRange(c,c); checkSlug(); });
+slugIn.addEventListener("keydown",()=>slugIn.dataset.touched="1");
+function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false; check(); const s=slugIn.value.replace(/-$/,"");
+  if(s.length<3){ m.className="msg"; m.textContent=""; return; }
+  if(S.mine&&S.mine.slug===s){ slugOk=true; m.className="msg ok"; m.textContent="Es tu link actual."; check(); return; }
+  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
+const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
+
+// ---------- publish ----------
+function problems(){
+  const all=flatten(S.menu);
+  if(!$("title").value.trim()) return "Escribe el nombre de tu restaurante.";
+  if(!all.length) return "Agrega al menos un platillo.";
+  const noName=S.menu.cats.find(c=>!c.name.trim()); if(noName) return "Una de tus secciones no tiene nombre.";
+  for(const c of S.menu.cats) if(c.dishes.some(d=>!d.name.trim())) return `Un platillo de “${c.name}” no tiene nombre.`;
+  if(!slugOk) return "Elige un link disponible.";
+  if(!S.token) return "Inicia sesión de nuevo.";
+  const mk=S.marca&&S.marca.get(); if(mk&&!mk.ok) return "Sube el logo de tu marca o elige el de Vórtice VR.";
+  return "";
+}
+function check(){
+  const p=problems();
+  $("n1").classList.toggle("done",!!$("title").value.trim()); $("n2").classList.toggle("done",flatten(S.menu).length>0);
+  $("n3").classList.toggle("done",flatten(S.menu).some(d=>d.special)); $("n4").classList.toggle("done",S.menu.helper&&flatten(S.menu).length>1); $("n5").classList.toggle("done",slugOk);
+  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
+}
+// a card for the dashboard: the restaurant's color, its logo and its name
+async function thumb(){
+  const c=document.createElement("canvas"); c.width=800; c.height=600; const x=c.getContext("2d"), ac=S.menu.color, ink=onAccent(ac);
+  const g=x.createLinearGradient(0,0,800,600); g.addColorStop(0,ac); g.addColorStop(1,"#000"); x.fillStyle=ac; x.fillRect(0,0,800,600); x.globalAlpha=.35; x.fillStyle=g; x.fillRect(0,0,800,600); x.globalAlpha=1;
+  let y=150;
+  if(S.menu.logo){ try{ const im=await loadImg(fileUrl(S.menu.logo)); x.fillStyle="#fff"; x.beginPath(); x.arc(400,190,110,0,Math.PI*2); x.fill(); const k=Math.min(170/im.naturalWidth,170/im.naturalHeight); x.drawImage(im,400-im.naturalWidth*k/2,190-im.naturalHeight*k/2,im.naturalWidth*k,im.naturalHeight*k); y=360; }catch(e){} }
+  else { x.font="140px serif"; x.textAlign="center"; x.fillText("🍽️",400,250); y=360; }
+  x.fillStyle=ink==="#ffffff"?"#fff":"#1b1208"; x.textAlign="center"; x.font="700 56px Sora, sans-serif";
+  let t=$("title").value.trim()||"Menú"; while(x.measureText(t).width>720&&t.length>4) t=t.slice(0,-2)+"…"; x.fillText(t,400,y+40);
+  x.font="600 30px 'IBM Plex Sans', sans-serif"; x.globalAlpha=.85; x.fillText("MENÚ INTERACTIVO",400,y+100); x.globalAlpha=1;
+  return new Promise(r=>c.toBlob(r,"image/png"));
+}
+$("publish").addEventListener("click",async()=>{
+  const p=problems(); if(p){ check(); return; }
+  const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Preparando…"; bar.hidden=false; bar.firstElementChild.style.width="0%"; $("publish").disabled=true;
+  const menu={cats:S.menu.cats.map(c=>({id:c.id,name:c.name.trim(),kind:c.kind,dishes:c.dishes.map(d=>({id:d.id,name:d.name.trim(),price:(d.price||"").trim(),desc:(d.desc||"").trim(),tags:d.tags||[],photo:d.photo||undefined,special:!!d.special||undefined,model:d.special&&d.model||undefined,cm:d.special&&d.model?d.cm||28:undefined}))})),
+    pages:$("origOn").checked?S.menu.pages:[],color:S.menu.color,theme:S.menu.theme,currency:S.menu.currency,note:S.menu.note.trim(),sub:S.menu.sub.trim(),helper:S.menu.helper,logo:S.menu.logo||undefined};
+  const used=new Set([menu.logo,...menu.pages,...menu.cats.flatMap(c=>c.dishes.flatMap(d=>[d.photo,d.model]))].filter(Boolean));
+  const items=[], fd=new FormData();
+  for(const id of used){ const f=S.files.get(id), o=S.old.get(id); const it=f?{id,type:f.type,w:f.w,h:f.h}:o?{id,type:o.type,w:o.w,h:o.h}:null; if(!it) continue; if(it.type==="model"){ delete it.w; delete it.h; } items.push(it); if(f) fd.append("f_"+id,f.blob,id+(f.type==="model"?".glb":".img")); }
+  const buttons={}; BTN.forEach(k=>{ const v=$("b_"+k).value.trim(); if(v) buttons[k]=v; });
+  const meta={kind:"menu",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),menu,items,buttons};
+  const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
+  fd.append("meta",JSON.stringify(meta));
+  if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
+  fd.append("image",await thumb(),"menu.png");
+  const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc,linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/","Escanea y mira nuestro menú");
+  fd.append("qr",await new Promise(r=>qrc.toBlob(r,"image/png")),"qr.png");
+  m.textContent="Publicando…";
+  const xhr=new XMLHttpRequest(); xhr.open("POST",`${API}/api/publish`); xhr.setRequestHeader("Authorization","Bearer "+S.token);
+  xhr.upload.onprogress=e=>{ if(e.lengthComputable) bar.firstElementChild.style.width=(e.loaded/e.total*100)+"%"; };
+  xhr.onload=()=>{ bar.hidden=true; let j={}; try{ j=JSON.parse(xhr.responseText); }catch(e){}
+    if(xhr.status!==200){ m.className="msg bad"; m.textContent=j.error||"No se pudo publicar."; $("publish").disabled=false; if(xhr.status===401){ VVR.clearSession(); location.href="../../cuenta/?siguiente=crear"; } return; }
+    m.textContent="¡Publicado! Abriendo tu cuenta…"; location.href="../../cuenta/?publicada="+encodeURIComponent(j.experience.slug); };
+  xhr.onerror=()=>{ bar.hidden=true; m.className="msg bad"; m.textContent="Se cortó la conexión. Intenta de nuevo."; $("publish").disabled=false; };
+  xhr.send(fd);
+});
+
+// ---------- start: session, plan, editing ----------
+(async()=>{
+  const ed=new URLSearchParams(location.search).get("editar");
+  const toLogin=()=>location.replace("../../cuenta/?siguiente=crear");
+  const sess=VVR.session(); if(!sess){ toLogin(); return; }
+  S.token=sess.token; S.email=sess.user&&sess.user.email;
+  drawCats(); drawPages(); preview(); check();
+  try{
+    const r=await VVR.call("me"); S.email=r.user.email;
+    const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1}, LIM=r.limit??P.exp, member=r.team&&r.team.role==="member";
+    S.plan=P; LIMIT.models=P.id==="gratis"?1:3; LIMIT.modelMB=P.modelMB||15;
+    if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name}`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
+    const exp=ed?r.experiences.find(x=>x.slug===ed):null;
+    if(window.VVRMarca){ S.marca=VVRMarca.mount($("sMarca"),{plan:P,exp,api:API,base:"../../",onChange:()=>{ check(); clearTimeout(pvT); pvT=setTimeout(()=>{ if(app){ app.destroy(); app=null; } preview(); },200); }}); $("sMarca").hidden=false; }
+    if(exp&&exp.kind!=="menu"){ location.replace((exp.kind==="ra"?"../":"../"+exp.kind+"/")+"?editar="+encodeURIComponent(ed)); return; }
+    if(exp){
+      S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza.`;
+      for(const it of exp.items||[]) S.old.set(it.id,it);
+      const mn=exp.menu||{};
+      S.menu={cats:(mn.cats||[]).map(c=>({...c,dishes:(c.dishes||[]).map(d=>({price:"",desc:"",tags:[],...d,tagsTouched:true}))})),pages:mn.pages||[],color:mn.color||"#b8322a",theme:mn.theme||"clasico",currency:mn.currency||"$",note:mn.note||"",sub:mn.sub||"",helper:mn.helper!==false,logo:mn.logo||null};
+      $("title").value=exp.title; $("sub").value=S.menu.sub; $("note").value=S.menu.note; $("cur").value=S.menu.currency; $("helperOn").checked=S.menu.helper;
+      $("theme").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===S.menu.theme)));
+      for(const k of BTN){ let v=(exp.buttons||{})[k]||""; if(k==="whatsapp") v=v.replace(/^52(?=\d{10}$)/,""); else if(SOC[k]&&v.startsWith(SOC[k])) v=v.slice(SOC[k].length); $("b_"+k).value=v; }
+      drawColors(); drawLogo(); drawPages(); drawCats();
+      slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
+      $("publish").textContent="Guardar cambios";
+      if(app){ app.destroy(); app=null; } preview();
+    } else if(r.experiences.filter(x=>!x.paused).length>=LIM){
+      document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); document.querySelector(".side").hidden=true; $("full").hidden=false;
+      $("fullText").textContent=member?"Tu equipo te asignó todas las que puedes usar. Borra una o pide más a quien administra tu equipo.":`Tu plan ${P.name} incluye ${LIM.toLocaleString("es-MX")} ${LIM===1?"experiencia":"experiencias"}. Borra una desde tu cuenta o mejora tu plan para crear tu menú.`;
+    }
+  }catch(e){ if(e.status===401){ toLogin(); return; } }
+  draw3d(); check();
+})();
+</script>
+<script src="../../assets/magia.js" defer></script>
+</body>
+</html>

@@ -275,7 +275,7 @@ $("publish").addEventListener("click",async()=>{
     if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name}`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
     const exp=ed?r.experiences.find(x=>x.slug===ed):null;
     if(window.VVRMarca){ S.marca=VVRMarca.mount($("sMarca"),{plan:P,exp,api:API,base:"../../",onChange:()=>check()}); $("sMarca").hidden=false; }
-    if(exp&&exp.kind!=="colorear"){ location.replace((exp.kind==="trivia"||exp.kind==="filtro"?"../"+exp.kind+"/":"../")+"?editar="+encodeURIComponent(ed)); return; }
+    if(exp&&exp.kind!=="colorear"){ location.replace((exp.kind==="trivia"||exp.kind==="filtro"||exp.kind==="menu"?"../"+exp.kind+"/":"../")+"?editar="+encodeURIComponent(ed)); return; }
     if(exp){
       S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza.`;
       S.th=(exp.color&&exp.color.th)||170; $("th").value=S.th; $("thBox").hidden=false;
