@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Crea tu filtro para la cara · Vórtice VR</title>
-<meta name="description" content="Crea un filtro para la cara sin programar: catrina, lentes, coronas, efectos al abrir la boca y un marco con tu marca. Comparte el link y el código QR.">
+<meta name="description" content="Crea un filtro para la cara sin programar: catrina, lentes, coronas, efectos al abrir la boca y adornos en pantalla con tu marca. Comparte el link y el código QR.">
 <meta name="theme-color" content="#05020b">
 <link rel="icon" href="../../assets/icono.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -142,7 +142,7 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
   <div class="hero">
     <span class="kick" id="kick">Gratis · prueba de 15 días</span>
     <h1>Crea tu filtro para la cara</h1>
-    <p>Quien abra tu link se ve con tu filtro en la cámara frontal: pintura de catrina, lentes, coronas, un marco con tu marca y una sorpresa al abrir la boca. Se toma fotos y videos y los comparte.</p>
+    <p>Quien abra tu link se ve con tu filtro en la cámara frontal: catrina, lentes, sombreros, adornos con tu marca en la pantalla y una sorpresa al abrir la boca. Se toma fotos y videos y los comparte.</p>
     <a class="allx" href="../">← Todas las experiencias</a>
   </div>
   <div class="grid">
@@ -161,6 +161,8 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
         <h2><span class="n done">2</span>Pintura de cara</h2>
         <p class="hint">Se pinta sobre la piel y sigue cada gesto.</p>
         <div class="seg" id="paint"></div>
+        <div id="colorBox"><label class="f">Color de las flores</label>
+        <div class="colors" id="colors"></div></div>
         <div class="own" id="own" hidden>
           <p><b>Tu propia pintura.</b> Descarga el machote (la cara "desdoblada" con guías), píntalo en Procreate, Photoshop, Canva o donde quieras, en una capa encima de la guía, y súbelo en PNG. Los ojos y la boca quedan libres solos.</p>
           <div class="row"><button class="btn" type="button" id="tplDown">⬇ Descargar machote</button><button class="btn primary" type="button" id="ownUp">⬆ Subir mi pintura</button></div>
@@ -200,12 +202,6 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
         <button class="addq" id="scrUp" type="button" style="margin-top:12px">+ Subir mi propia imagen (PNG)</button>
         <input type="file" id="scrFile" accept="image/png,image/webp,image/jpeg,image/svg+xml" hidden>
         <div class="items" id="scrItems"></div>
-        <label class="f">Marco dibujado (opcional)</label>
-        <div class="seg" id="frame"></div>
-        <label class="f">Color</label>
-        <div class="colors" id="colors"></div>
-        <label class="f" for="ftext">Texto del marco (opcional)</label>
-        <input type="text" id="ftext" maxlength="32" placeholder="Ej. #DíaDeMuertos">
       </section>
       <section class="step" id="s6">
         <h2><span class="n" id="n6">7</span>Título y link</h2>
@@ -271,7 +267,7 @@ const TEMPLATES=[
   {id:"amor",name:"Amor",f:{paint:"ninguna",effect:"corazones",frame:"ninguno",color:"#ff2d55",text:"",look:"sueno",vig:0.2},items:()=>[sticker("diadema-corazones"),sticker("lentes-corazon"),sticker("corazon-mejilla")],screen:()=>[scr("esquina-corazones","bi"),scr("esquina-corazones","bd")]},
   {id:"cero",name:"Desde cero",f:{paint:"ninguna",effect:"ninguno",frame:"ninguno",color:"#8b3fd6",text:"",look:"ninguno",vig:0},items:()=>[],screen:()=>[]},
 ];
-function applyTemplate(t){ S.tpl=t.id; S.f={...t.f}; S.items=t.items(); S.screen=S.screen.filter(x=>!x.key).concat(t.screen()).slice(0,MAX_SCREEN); renderScreen(); for(const id of [...IMG.keys()]) if((!S.pintura||id!==S.pintura.id)&&!S.screen.some(x=>x.id===id)) IMG.delete(id); S.sel=S.items[0]?S.items[0].id:null; $("ftext").value=S.f.text; render(); }
+function applyTemplate(t){ S.tpl=t.id; S.f={...t.f}; S.items=t.items(); S.screen=S.screen.filter(x=>!x.key).concat(t.screen()).slice(0,MAX_SCREEN); renderScreen(); for(const id of [...IMG.keys()]) if((!S.pintura||id!==S.pintura.id)&&!S.screen.some(x=>x.id===id)) IMG.delete(id); S.sel=S.items[0]?S.items[0].id:null; render(); }
 $("tpls").innerHTML=TEMPLATES.map(t=>`<button type="button" class="tpl" data-t="${t.id}"><span class="tim">${t.id==="cero"?"<i>+</i>":""}</span>${esc(t.name)}</button>`).join("");
 $("tpls").addEventListener("click",e=>{ const b=e.target.closest("[data-t]"); if(b) applyTemplate(TEMPLATES.find(t=>t.id===b.dataset.t)); });
 
@@ -279,10 +275,9 @@ $("tpls").addEventListener("click",e=>{ const b=e.target.closest("[data-t]"); if
 const seg=(el,map,key)=>{ $(el).innerHTML=Object.entries(map).map(([k,v])=>`<button type="button" data-k="${k}">${esc(v)}</button>`).join("");
   $(el).addEventListener("click",e=>{ const b=e.target.closest("[data-k]"); if(!b) return; S.f[key]=b.dataset.k; S.tpl=null; render(); }); };
 seg("paint",FL.PAINTS,"paint"); seg("look",FL.LOOKS,"look");
-$("vig").addEventListener("input",()=>{ S.f.vig=+$("vig").value/100; S.tpl=null; $("vigN").textContent=$("vig").value+" %"; schedule(); }); seg("effect",FL.EFFECTS,"effect"); seg("frame",FL.FRAMES,"frame");
+$("vig").addEventListener("input",()=>{ S.f.vig=+$("vig").value/100; S.tpl=null; $("vigN").textContent=$("vig").value+" %"; schedule(); }); seg("effect",FL.EFFECTS,"effect");
 const COLORS=["#e4007c","#ff2d55","#ff8c00","#ffbe55","#16a663","#006847","#00a6d6","#1e88e5","#8b3fd6","#212121"];
 $("colors").addEventListener("click",e=>{ const b=e.target.closest("[data-c]"); if(b){ S.f.color=b.dataset.c; render(); } });
-$("ftext").addEventListener("input",()=>{ S.f.text=$("ftext").value; schedule(); });
 
 // accessories: the presets (drawn with the filter's own code) and "upload"
 const thumb=(key,color)=>{ const st=FL.STICKERS[key]; if(st.src){ const im=new Image(); im.src=st.src; im.alt=""; im.loading="lazy"; return im; } const c=FL.stickerCanvas(key,color,160), t=document.createElement("canvas"); t.width=128; t.height=80; const g=t.getContext("2d"), k=Math.min(128/c.width,80/c.height); g.drawImage(c,(128-c.width*k)/2,(80-c.height*k)/2,c.width*k,c.height*k); return t; };
@@ -354,12 +349,12 @@ $("items").addEventListener("change",e=>{ if(e.target.dataset.f!=="anchor") retu
 
 function render(){
   S.f.look=S.f.look||"ninguno"; S.f.vig=S.f.vig||0; $("vig").value=Math.round(S.f.vig*100); $("vigN").textContent=$("vig").value+" %";
-  for(const [el,key] of [["paint","paint"],["effect","effect"],["frame","frame"],["look","look"]]) $(el).querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.k===S.f[key])));
+  for(const [el,key] of [["paint","paint"],["effect","effect"],["look","look"]]) $(el).querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.k===S.f[key])));
   $("tpls").querySelectorAll(".tpl").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.t===S.tpl)));
   $("colors").innerHTML=COLORS.map(c=>`<button type="button" data-c="${c}" style="background:${c}" aria-label="Color ${c}" aria-pressed="${c===S.f.color}"></button>`).join("")+`<label>Otro <input type="color" id="cPick" value="${S.f.color}"></label>`;
   $("cPick").addEventListener("input",e=>{ S.f.color=e.target.value; clearTimeout(cTimer); cTimer=setTimeout(render,120); });
   $("own").hidden=S.f.paint!=="propia"; $("ownUp").textContent=S.pintura?"⬆ Cambiar mi pintura":"⬆ Subir mi pintura";
-  $("ftext").closest("section").querySelector("label[for=ftext]").hidden=$("ftext").hidden=S.f.frame==="ninguno";
+  $("colorBox").hidden=S.f.paint!=="catrina";   // the color only changes the catrina's flowers
   paintStickers(); renderItems(); schedule(); check();
 }
 let cTimer=0;
@@ -538,7 +533,7 @@ function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false;
 const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
 
 // ---------- publishing ----------
-const something=()=>S.f.paint!=="ninguna"||S.items.length||S.screen.length||S.f.effect!=="ninguno"||S.f.frame!=="ninguno";
+const something=()=>S.f.paint!=="ninguna"||S.items.length||S.screen.length||S.f.effect!=="ninguno"||S.f.look!=="ninguno"||S.f.vig>0;
 const ownMissing=()=>S.f.paint==="propia"&&!S.pintura;
 function check(){
   $("n6").classList.toggle("done",!!($("title").value.trim()&&slugOk));
@@ -580,7 +575,7 @@ $("publish").addEventListener("click",async()=>{
     if(exp&&exp.kind!=="filtro"){ location.replace((exp.kind==="ra"?"../":"../"+exp.kind+"/")+"?editar="+encodeURIComponent(ed)); return; }
     if(exp){
       S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza.`;
-      S.tpl=null; S.f={paint:"ninguna",effect:"ninguno",frame:"ninguno",color:"#8b3fd6",text:"",...exp.filtro}; $("ftext").value=S.f.text||"";
+      S.tpl=null; S.f={paint:"ninguna",effect:"ninguno",color:"#8b3fd6",...exp.filtro,frame:"ninguno",text:""};
       IMG.clear(); const all=(exp.items||[]).map(it=>{ if(it.type==="image"||it.type==="pintura"||it.type==="pantalla") IMG.set(it.id,{url:`${API}/m/${exp.slug}/${it.file}?v=${exp.updated||exp.created}`,w:it.w,h:it.h}); return {...it}; });
       S.pintura=all.find(it=>it.type==="pintura")||null; S.screen=all.filter(it=>it.type==="pantalla"); S.items=all.filter(it=>it.type!=="pintura"&&it.type!=="pantalla"); renderScreen();
       S.sel=null; $("title").value=exp.title; slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
