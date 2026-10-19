@@ -233,12 +233,12 @@ a.xc.tap{transform:scale(.98);transition-duration:.1s;transition-delay:0s!import
   </div>
   <section id="catalog" aria-label="Experiencias que puedes crear">
     <div class="cgrid">
-      <a class="xc" data-x="ra" href="?tipo=ra"><span class="tags"></span><span class="ic" aria-hidden="true">🪄</span><h3>Realidad aumentada</h3><p>Tu imagen impresa cobra vida con videos, fotos, textos y objetos 3D al apuntarle con el celular.</p><span class="go">Crear →</span></a>
-      <a class="xc" data-x="colorear" href="colorear/"><span class="tags"><span class="tag new">Nuevo</span></span><span class="ic" aria-hidden="true">🎨</span><h3>Colorea mi dibujo</h3><p>Comparte un dibujo y que todos lo pinten con el dedo, lo guarden y lo compartan.</p><span class="go">Crear →</span></a>
-      <a class="xc" data-x="trivia" href="trivia/"><span class="tags"></span><span class="ic" aria-hidden="true">🤔</span><h3>Trivia con tu cara</h3><p>Preguntas que flotan sobre tu cabeza y se contestan inclinándola. Con confeti al final.</p><span class="go">Crear →</span></a>
-      <a class="xc" data-x="filtro" href="filtro/"><span class="tags"><span class="tag new">Nuevo</span></span><span class="ic" aria-hidden="true">🕶️</span><h3>Filtro para tu cara</h3><p>Catrina, Navidad, fiesta y más: lentes, sombreros y efectos para que se tomen selfies y videos.</p><span class="go">Crear →</span></a>
-      <a class="xc" data-x="menu" href="menu/"><span class="tags"><span class="tag new">Nuevo</span></span><span class="ic" aria-hidden="true">🍽️</span><h3>Menú interactivo</h3><p>Tu menú con link y QR: ayuda a elegir con preguntas y muestra tu platillo especial en 3D sobre la mesa.</p><span class="go">Crear →</span></a>
-      <a class="xc" data-x="links" href="links/"><span class="tags"><span class="tag new">Nuevo</span></span><span class="ic" aria-hidden="true">🔗</span><h3>Todos tus links</h3><p>Tus redes, tu WhatsApp y tus links en una sola página, como Linktree. Perfecta para tu tarjeta NFC: cambias tus links sin volver a grabarla.</p><span class="go">Crear →</span></a>
+      <a class="xc" data-x="ra" href="?tipo=ra"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🪄</span><h3>Realidad aumentada</h3><p>Tu imagen impresa cobra vida con videos, fotos, textos y objetos 3D al apuntarle con el celular.</p><span class="go">Crear →</span></a>
+      <a class="xc" data-x="colorear" href="colorear/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🎨</span><h3>Colorea mi dibujo</h3><p>Comparte un dibujo y que todos lo pinten con el dedo, lo guarden y lo compartan.</p><span class="go">Crear →</span></a>
+      <a class="xc" data-x="trivia" href="trivia/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🤔</span><h3>Trivia con tu cara</h3><p>Preguntas que flotan sobre tu cabeza y se contestan inclinándola. Con confeti al final.</p><span class="go">Crear →</span></a>
+      <a class="xc" data-x="filtro" href="filtro/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🕶️</span><h3>Filtro para tu cara</h3><p>Catrina, Navidad, fiesta y más: lentes, sombreros y efectos para que se tomen selfies y videos.</p><span class="go">Crear →</span></a>
+      <a class="xc" data-x="menu" href="menu/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🍽️</span><h3>Menú interactivo</h3><p>Tu menú con link y QR: ayuda a elegir con preguntas y muestra tu platillo especial en 3D sobre la mesa.</p><span class="go">Crear →</span></a>
+      <a class="xc" data-x="links" href="links/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🔗</span><h3>Todos tus links</h3><p>Tus redes, tu WhatsApp y tus links en una sola página, como Linktree. Perfecta para tu tarjeta NFC: cambias tus links sin volver a grabarla.</p><span class="go">Crear →</span></a>
       <div class="xc soon" data-x="ruleta" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span><span class="tag pro">✦ Premium</span></span><span class="ic" aria-hidden="true">🎡</span><h3>Ruleta de premios</h3><p>Gira y gana: tú pones los premios, cuántos hay y qué tan fácil sale cada uno.</p><span class="go">Muy pronto</span></div>
       <div class="xc soon" data-x="rasca" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span><span class="tag pro">✦ Premium</span></span><span class="ic" aria-hidden="true">🎟️</span><h3>Rasca y gana</h3><p>Raspa con el dedo y descubre si ganaste. Ideal para promociones y eventos.</p><span class="go">Muy pronto</span></div>
       <div class="xc soon" data-x="atrapa" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span></span><span class="ic" aria-hidden="true">🧺</span><h3>Atrapa y gana</h3><p>Minijuego: atrapa lo que cae (tus productos o tu logo) y suma puntos.</p><span class="go">Muy pronto</span></div>
@@ -759,6 +759,12 @@ document.addEventListener("click",e=>{
   const a=e.target.closest("a.xc"); if(!a||a.classList.contains("tap")||e.ctrlKey||e.metaKey||e.shiftKey||!matchMedia("(hover: none)").matches) return;
   e.preventDefault(); a.classList.add("tap"); setTimeout(()=>{ location.href=a.href; setTimeout(()=>a.classList.remove("tap"),600); },320);
 });
+</script>
+
+<script>
+// "Nuevo" lasts until the last day of the month after the experience went live (data-hasta, Mexico time)
+(()=>{ const hoy=new Date().toLocaleDateString("sv-SE",{timeZone:"America/Mexico_City"});
+  document.querySelectorAll(".tag.new[data-hasta]").forEach(t=>{ if(hoy>t.dataset.hasta) t.remove(); }); })();
 </script>
 </body>
 </html>
