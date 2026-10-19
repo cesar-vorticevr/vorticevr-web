@@ -70,6 +70,7 @@ export default {
     const keys = results.flatMap(r => mediaKeys(r.slug, r.data));
     for (let i = 0; i < keys.length; i += 1000) await env.MEDIA.delete(keys.slice(i, i + 1000));
     if (results.length) await env.DB.prepare("DELETE FROM experiences WHERE slug IN (SELECT slug FROM experiences WHERE expires < ? LIMIT 2000)").bind(now).run();
+    await env.DB.prepare("DELETE FROM clicks WHERE slug NOT IN (SELECT slug FROM experiences)").run();
     await env.DB.prepare("DELETE FROM otp WHERE expires < ?").bind(Date.now() - 864e5).run();
     await env.DB.prepare("DELETE FROM sessions WHERE expires < ?").bind(Date.now()).run();
     await env.DB.prepare("DELETE FROM users WHERE verified = 0 AND created < ?").bind(Date.now() - 7 * 864e5).run();
@@ -220,6 +221,22 @@ async function api(request, env, ctx, url) {
     return json(out, 200, { "Cache-Control": "no-store" });
   }
 
+  // link page: one tap on a button (navigator.sendBeacon); only counted for a link page that is live
+  m = path.match(/^\/api\/click\/([a-z0-9-]+)\/([a-z0-9]{1,16})$/);
+  if (m && M === "POST") {
+    ctx.waitUntil(env.DB.prepare("INSERT INTO clicks (slug, id, n) SELECT slug, ?, 1 FROM experiences WHERE slug = ? AND paused = 0 AND expires > ? AND data LIKE '%\"kind\":\"links\"%' ON CONFLICT(slug, id) DO UPDATE SET n = n + 1")
+      .bind(m[2], m[1], Date.now()).run().catch(e => console.error("click", e.message)));
+    return new Response(null, { status: 204 });
+  }
+  // link page: "Guardar contacto" downloads its vCard
+  m = path.match(/^\/api\/vcard\/([a-z0-9-]+)$/);
+  if (m && M === "GET") {
+    const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(m[1]).first();
+    const d = row && JSON.parse(row.data || "{}");
+    if (!row || row.expires < Date.now() || row.paused || d.kind !== "links" || !(d.links && d.links.contact && d.links.contact.on)) return json({ error: "No encontrado" }, 404);
+    return new Response(await vcard(env, row, request), { headers: { "Content-Type": "text/vcard; charset=utf-8", "Content-Disposition": `attachment; filename="${row.slug}.vcf"`, "Cache-Control": "no-store" } });
+  }
+
   // contact form of the home page → email to CONTACT_TO (hola@vorticevr.mx); reply goes straight to the person
   if (path === "/api/contact" && M === "POST") {
     const b = await request.json().catch(() => ({}));
@@ -353,8 +370,18 @@ async function api(request, env, ctx, url) {
     if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
     const exp = await env.DB.prepare("SELECT slug, data FROM experiences WHERE slug = ? AND email = ?").bind(m[1], who).first();
     if (!exp) return json({ error: "No encontramos esa experiencia en tu cuenta." }, 404);
-    await deleteMedia(env, exp.slug, exp.data); await env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(exp.slug).run();
+    await deleteMedia(env, exp.slug, exp.data);
+    await env.DB.batch([env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(exp.slug), env.DB.prepare("DELETE FROM clicks WHERE slug = ?").bind(exp.slug)]);
     return json({ ok: true });
+  }
+
+  m = path.match(/^\/api\/clicks\/([a-z0-9-]+)$/);
+  if (m && M === "GET") {
+    if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
+    const exp = await env.DB.prepare("SELECT slug FROM experiences WHERE slug = ? AND email = ?").bind(m[1], who).first();
+    if (!exp) return json({ error: "No encontramos esa experiencia en tu cuenta." }, 404);
+    const { results } = await env.DB.prepare("SELECT id, n FROM clicks WHERE slug = ?").bind(exp.slug).all();
+    return json({ clicks: Object.fromEntries(results.map(r => [r.id, r.n])) });
   }
 
   if (path === "/api/publish" && M === "POST") {
@@ -393,7 +420,7 @@ async function api(request, env, ctx, url) {
     const isNew = !mine;
     if (data.kind === "trivia" && data.trivia.logo && !image && !(mine && (JSON.parse(mine.data || "{}").trivia || {}).logo)) data.trivia.logo = false;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
-    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
+    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu" && data.kind !== "links"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
     if (target && target.size > LIMITS.targetBytes) return json({ error: "La imagen no se pudo preparar. Intenta con otra." }, 400);
     // each element's file: uploaded now (field f_<id>) or kept from the version being edited (same id and type)
@@ -433,7 +460,7 @@ async function api(request, env, ctx, url) {
       for (const u of uploads) moving.delete(u[0]);
       for (const k of moving) { const o = await env.MEDIA.get(`exp/${mine.slug}/${k}`); if (o) await env.MEDIA.put(`exp/${slug}/${k}`, o.body, { httpMetadata: o.httpMetadata }); }
       await deleteMedia(env, mine.slug, mine.data);
-      await env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(mine.slug).run();
+      await env.DB.batch([env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(mine.slug), env.DB.prepare("DELETE FROM clicks WHERE slug = ?").bind(slug), env.DB.prepare("UPDATE clicks SET slug = ? WHERE slug = ?").bind(slug, mine.slug)]);
     }
     if (image) await env.MEDIA.put(`exp/${slug}/image`, await image.arrayBuffer(), { httpMetadata: { contentType: image.type } });
     if (target) await env.MEDIA.put(`exp/${slug}/target`, await target.arrayBuffer(), { httpMetadata: { contentType: "application/octet-stream" } });
@@ -452,7 +479,7 @@ async function api(request, env, ctx, url) {
       .bind(slug, who, data.title, JSON.stringify(data), created, now, expires, mine ? mine.views || 0 : 0).run();
     const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(slug).first();
     const out = ownerExp(row, request, env);
-    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
+    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "links" ? "Tu página de links está lista" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
     return json({ ok: true, experience: out });
   }
 
@@ -715,6 +742,7 @@ function publicKind(row, d) {
   if (d.kind === "filtro") return { slug: row.slug, kind: "filtro", title: row.title, filtro: d.filtro, items: d.items || [], buttons: d.buttons, expires: row.expires };
   if (d.kind === "colorear") return { slug: row.slug, kind: "colorear", title: row.title, img: d.img, color: d.color, buttons: d.buttons, expires: row.expires };
   if (d.kind === "menu") return { slug: row.slug, kind: "menu", title: row.title, menu: d.menu, items: d.items || [], buttons: d.buttons, updated: row.updated, expires: row.expires };
+  if (d.kind === "links") return { slug: row.slug, kind: "links", title: row.title, links: d.links, items: d.items || [], updated: row.updated, expires: row.expires };
   return { slug: row.slug, kind: "ra", title: row.title, img: d.img, place: d.place || "mesa", scenes: d.scenes || 1, items: itemsOf(d), buttons: d.buttons, expires: row.expires };
 }
 function ownerExp(row, request, env) {
@@ -959,6 +987,120 @@ function cleanMenu(mn, list, P) {
   if (items.filter(i => i.type === "foto").length > MENU.photos) return { error: `Puedes poner hasta ${MENU.photos} fotos.` };
   return { menu, items };
 }
+// Link page, like Linktree (assets/links.js): a photo, name and short text, a row of social icons and a list of big buttons
+// (links or section titles, each with an optional picture), plus "Guardar contacto" (a vCard from /api/vcard/<slug>).
+// It is meant for NFC cards: the link never changes, the buttons do. Each tap on a button is counted (table clicks).
+// social: [{k, v}] with v = the final href (wa.me, mailto:, tel: or https). Pictures are items "foto" referenced by id.
+const LINKS = {
+  list: 60, social: 16,
+  themes: ["vortice", "noche", "claro", "crema", "degradado", "pastel"], fonts: ["sora", "playfair", "plex", "bebas", "pacifico"],
+  btns: ["relleno", "contorno", "sombra", "cristal"], shapes: ["pill", "round", "square"],
+  base: { instagram: "https://instagram.com/", tiktok: "https://tiktok.com/@", facebook: "https://facebook.com/", youtube: "https://youtube.com/@", x: "https://x.com/",
+    linkedin: "https://linkedin.com/in/", threads: "https://threads.net/@", telegram: "https://t.me/", pinterest: "https://pinterest.com/", twitch: "https://twitch.tv/",
+    snapchat: "https://snapchat.com/add/", spotify: null, web: null, whatsapp: null, email: null, phone: null, maps: null },
+};
+// a link typed by a person: https (also without the scheme), mailto: or tel:
+function linkHref(v) {
+  v = String(v || "").trim().slice(0, 500);
+  if (!v) return "";
+  if (/^mailto:/i.test(v)) { const e = normEmail(v.slice(7)); return e ? "mailto:" + e : null; }
+  if (/^tel:/i.test(v)) { const d = v.slice(4).replace(/[^\d+]/g, ""); return d.replace(/\D/g, "").length >= 7 ? "tel:" + d : null; }
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(v) && /^[^\s/@]+@[^\s/@]+\.[a-z]{2,}$/i.test(v)) return "mailto:" + v.toLowerCase();
+  if (!/^https?:\/\//i.test(v)) { if (/^[a-z][a-z0-9+.-]*:\/\//i.test(v)) return null; v = "https://" + v; }
+  try { const u = new URL(v); if (!/^https?:$/.test(u.protocol) || !u.hostname.includes(".")) return null; return u.href; } catch { return null; }
+}
+const phoneDigits = v => { let d = String(v || "").replace(/\D/g, ""); if (d.length === 10) d = "52" + d; return d.length >= 10 && d.length <= 15 ? d : null; };
+function socialHref(k, v) {
+  v = String(v || "").trim().slice(0, 300);
+  if (!v) return "";
+  if (k === "whatsapp") { if (/wa\.me\/|whatsapp\.com/i.test(v)) return linkHref(v); const d = phoneDigits(v); return d ? "https://wa.me/" + d : null; }
+  if (k === "phone") { const d = phoneDigits(v.replace(/^tel:/i, "")); return d ? "tel:+" + d : null; }
+  if (k === "email") { const e = normEmail(v.replace(/^mailto:/i, "")); return e ? "mailto:" + e : null; }
+  const base = LINKS.base[k];
+  if (base && !/^https?:/i.test(v) && !v.includes("/")) {   // just the user (juan.perez or @juan.perez)
+    const u = v.replace(/^@/, "");
+    return /^[A-Za-z0-9._-]{1,60}$/.test(u) ? base + u : null;
+  }
+  const h = linkHref(v); return h && /^https?:/.test(h) ? h : null;
+}
+const SOCIAL_NAMES = { web: "sitio web", email: "correo", phone: "teléfono", whatsapp: "WhatsApp (10 dígitos)", maps: "link de Google Maps", x: "usuario de X" };
+function cleanLinks(lk, list) {
+  lk = lk || {};
+  const str = (v, max) => String(v || "").replace(/\s+/g, " ").trim().slice(0, max);
+  const idOk = v => /^[a-z0-9]{6,16}$/.test(String(v || ""));
+  const byId = new Map();
+  for (const m of Array.isArray(list) ? list : []) {
+    if (!m || !idOk(m.id) || byId.has(m.id) || m.type !== "foto") return { error: "Una de tus imágenes no es válida." };
+    const it = { id: m.id, type: "foto", w: Math.round(Number(m.w)) || 0, h: Math.round(Number(m.h)) || 0 };
+    if (!(it.w > 0 && it.w <= 4000 && it.h > 0 && it.h <= 4000)) return { error: "Faltan las medidas de una de tus imágenes." };
+    byId.set(m.id, it);
+  }
+  const used = new Set();
+  const ref = v => { if (!idOk(v) || !byId.has(v)) return null; used.add(v); return v; };
+  const social = [], seen = new Set();
+  for (const s of Array.isArray(lk.social) ? lk.social : []) {
+    const k = String(s && s.k || "");
+    if (!(k in LINKS.base) || seen.has(k)) continue;
+    const v = socialHref(k, s.v);
+    if (v === "") continue;
+    if (!v) return { error: `Revisa tu ${SOCIAL_NAMES[k] || "usuario de " + k[0].toUpperCase() + k.slice(1)}.` };
+    seen.add(k); social.push({ k, v });
+    if (social.length >= LINKS.social) break;
+  }
+  const out = [], ids = new Set();
+  const raw = Array.isArray(lk.list) ? lk.list : [];
+  if (raw.length > LINKS.list) return { error: `Puedes poner hasta ${LINKS.list} botones.` };
+  for (const b of raw) {
+    const id = String(b && b.id || "");
+    if (!idOk(id) || ids.has(id)) return { error: "Uno de tus botones no es válido." };
+    ids.add(id);
+    const t = str(b.t, 80);
+    if (b.type === "header") { if (t) out.push(b.off ? { id, type: "header", t, off: true } : { id, type: "header", t }); continue; }
+    const url = linkHref(b.url);
+    if (!t && !url) continue;
+    if (!t) return { error: "Uno de tus botones no tiene texto." };
+    if (!url) return { error: `El link del botón “${t}” no es válido.` };
+    const it = { id, type: "link", t, url };
+    const thumb = ref(b.thumb); if (thumb) it.thumb = thumb;
+    if (b.hi) it.hi = true;
+    if (b.off) it.off = true;   // hidden for now (kept in the list)
+    out.push(it);
+  }
+  const c = lk.contact || {};
+  const contact = { on: !!c.on, org: str(c.org, 80), role: str(c.role, 80), phone: str(c.phone, 24).replace(/[^\d+ ()-]/g, ""), email: normEmail(c.email) || "", web: c.web ? linkHref(c.web) || "" : "" };
+  if (contact.on && !contact.phone && !contact.email) return { error: "Para “Guardar contacto” pon al menos tu teléfono o tu correo." };
+  if (!out.some(b => b.type === "link" && !b.off) && !social.length && !contact.on) return { error: "Agrega al menos un link o una red social." };
+  const links = { bio: String(lk.bio || "").replace(/\r/g, "").trim().slice(0, 240), list: out, social, contact,
+    theme: LINKS.themes.includes(lk.theme) ? lk.theme : "vortice", font: LINKS.fonts.includes(lk.font) ? lk.font : "sora",
+    btn: LINKS.btns.includes(lk.btn) ? lk.btn : "relleno", shape: LINKS.shapes.includes(lk.shape) ? lk.shape : "pill",
+    color: HEX.test(String(lk.color || "")) ? String(lk.color).toLowerCase() : "#8b3fd6", share: lk.share !== false };
+  const avatar = ref(lk.avatar); if (avatar) links.avatar = avatar;
+  const bg = ref(lk.bg); if (bg) links.bg = bg;
+  return { links, items: [...byId.values()].filter(i => used.has(i.id)) };
+}
+// the contact card ("Guardar contacto"), with the profile picture when it is a JPEG
+async function vcard(env, row, request) {
+  const d = JSON.parse(row.data || "{}"), lk = d.links || {}, c = lk.contact || {};
+  const v = s => String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/([,;])/g, "\\$1");
+  const lines = ["BEGIN:VCARD", "VERSION:3.0", `FN:${v(row.title)}`, `N:;${v(row.title)};;;`];
+  if (c.org) lines.push(`ORG:${v(c.org)}`);
+  if (c.role) lines.push(`TITLE:${v(c.role)}`);
+  if (c.phone) { const p = c.phone.replace(/[^\d+]/g, ""); lines.push(`TEL;TYPE=CELL:${/^\d{10}$/.test(p) ? "+52" + p : p}`); }   // a Mexican number without its country code
+  if (c.email) lines.push(`EMAIL;TYPE=INTERNET:${c.email}`);
+  if (c.web) lines.push(`URL:${c.web}`);
+  lines.push(`URL:${expUrl(row.slug, request, env)}`);
+  for (const s of lk.social || []) if (/^https:/.test(s.v) && !["web", "whatsapp", "maps"].includes(s.k)) lines.push(`X-SOCIALPROFILE;TYPE=${s.k}:${s.v}`);
+  if (lk.bio) lines.push(`NOTE:${v(lk.bio)}`);
+  const av = lk.avatar && (d.items || []).find(i => i.id === lk.avatar);
+  if (av && av.file) {
+    const o = await env.MEDIA.get(`exp/${row.slug}/${av.file}`);
+    if (o && o.httpMetadata && o.httpMetadata.contentType === "image/jpeg" && o.size < 200e3) lines.push(`PHOTO;ENCODING=b;TYPE=JPEG:${b64(await o.arrayBuffer())}`);
+    else if (o) await o.body.cancel();
+  }
+  lines.push("END:VCARD");
+  // vCard lines are folded at 75 characters
+  return lines.map(l => l.length <= 75 ? l : l.match(/.{1,74}/gu).join("\r\n ")).join("\r\n") + "\r\n";
+}
 function cleanMeta(m, P) {
   const title = String(m.title || "").trim().slice(0, 80);
   if (!title) return { error: "Escribe un título." };
@@ -971,6 +1113,10 @@ function cleanMeta(m, P) {
   if (m.kind === "menu") {
     const mn = cleanMenu(m.menu, m.items, P);
     return mn.error ? mn : { kind: "menu", title, menu: mn.menu, items: mn.items, buttons };
+  }
+  if (m.kind === "links") {
+    const lk = cleanLinks(m.links, m.items);
+    return lk.error ? lk : { kind: "links", title, links: lk.links, items: lk.items, buttons: {} };
   }
   if (m.kind === "trivia") {
     const trivia = cleanTrivia(m.trivia);
@@ -1021,6 +1167,8 @@ async function schema(env) {
     // one row per day (Mexico time) for the admin charts
     // one row per Stripe invoice paid by a referred customer: 10% for the referrer (pendiente → disponible → abonada (saldo a favor) | pagada (by hand) | cancelada)
     env.DB.prepare("CREATE TABLE IF NOT EXISTS commissions (id TEXT PRIMARY KEY, referrer_id INTEGER NOT NULL, user_id INTEGER NOT NULL, invoice TEXT, plan TEXT, amount INTEGER, commission INTEGER, status TEXT, created INTEGER, available_at INTEGER, paid_at INTEGER, note TEXT)"),
+    // taps on each button of a link page (assets/links.js); id = the button's id or the social network
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS clicks (slug TEXT NOT NULL, id TEXT NOT NULL, n INTEGER DEFAULT 0, PRIMARY KEY (slug, id))"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS stats (day TEXT PRIMARY KEY, views INTEGER DEFAULT 0, signups INTEGER DEFAULT 0, publishes INTEGER DEFAULT 0, contacts INTEGER DEFAULT 0)"),
   ]);
   await migrate(env);
