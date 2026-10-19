@@ -191,6 +191,12 @@ body:not(.cat) #catalog,body:not(.cat) .hero .cat{display:none}
 .cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:14px}
 .xc{position:relative;display:flex;flex-direction:column;gap:8px;padding:18px;border-radius:18px;border:1px solid var(--line2);background:linear-gradient(160deg,rgba(139,63,214,.22),rgba(20,9,40,.75) 55%);text-decoration:none;color:var(--ink);transition:transform .25s,border-color .25s,box-shadow .25s;min-height:180px}
 a.xc:hover{transform:translateY(-4px);border-color:var(--lav);box-shadow:0 18px 40px -16px rgba(139,63,214,.7)}
+/* gold glow: mouse over, keyboard focus and a tap on the phone (.tap, the link opens a moment later) */
+a.xc{-webkit-tap-highlight-color:transparent}
+a.xc:hover,a.xc:focus-visible,a.xc.tap{border-color:var(--sun);background:linear-gradient(160deg,rgba(255,190,85,.2),rgba(139,63,214,.24) 42%,rgba(18,8,38,.85) 78%);box-shadow:0 0 0 1px rgba(255,190,85,.6),0 0 30px -4px rgba(255,190,85,.55),0 20px 44px -16px rgba(139,63,214,.75)}
+a.xc:hover .ic,a.xc:focus-visible .ic,a.xc.tap .ic{border-color:rgba(255,190,85,.75);background:rgba(255,190,85,.14);box-shadow:0 0 18px rgba(255,190,85,.4)}
+a.xc:hover h3,a.xc:focus-visible h3,a.xc.tap h3{color:#ffe1a3}
+a.xc.tap{transform:scale(.98);transition-duration:.1s;transition-delay:0s!important}
 .xc .ic{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;font-size:1.8rem;background:rgba(5,2,11,.55);border:1px solid var(--line2)}
 .xc h3{margin:4px 0 0;font:700 1.1rem var(--fd)}
 .xc p{margin:0;color:var(--mute);font-size:.9rem;line-height:1.45}
@@ -746,5 +752,13 @@ $("tutBtn").addEventListener("click",()=>window.vvrTutorial&&vvrTutorial.start()
 </script>
 <script src="../assets/magia.js" defer></script>
 <script src="../assets/tutorial.js" defer></script>
+
+<script>
+// a tap on a phone shows the gold glow of the card for a moment before opening it (there is no mouse over on a phone)
+document.addEventListener("click",e=>{
+  const a=e.target.closest("a.xc"); if(!a||a.classList.contains("tap")||e.ctrlKey||e.metaKey||e.shiftKey||!matchMedia("(hover: none)").matches) return;
+  e.preventDefault(); a.classList.add("tap"); setTimeout(()=>{ location.href=a.href; setTimeout(()=>a.classList.remove("tap"),600); },320);
+});
+</script>
 </body>
 </html>

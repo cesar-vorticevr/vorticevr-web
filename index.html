@@ -331,6 +331,12 @@ footer .legal a:hover{color:var(--ink)}
 .tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:14px}
 .xt{position:relative;display:flex;flex-direction:column;gap:8px;padding:20px;border-radius:18px;border:1px solid var(--line2);background:linear-gradient(160deg,rgba(139,63,214,.24),rgba(18,8,38,.85) 55%);text-decoration:none;color:var(--ink);min-height:190px;transition:transform .3s var(--ease),border-color .3s,box-shadow .3s}
 a.xt:hover{transform:translateY(-5px);border-color:var(--lav);box-shadow:0 20px 44px -16px rgba(139,63,214,.75)}
+/* gold glow: mouse over, keyboard focus and a tap on the phone (.tap, the link opens a moment later) */
+a.xt{-webkit-tap-highlight-color:transparent}
+a.xt:hover,a.xt:focus-visible,a.xt.tap{border-color:var(--sun);background:linear-gradient(160deg,rgba(255,190,85,.2),rgba(139,63,214,.24) 42%,rgba(18,8,38,.85) 78%);box-shadow:0 0 0 1px rgba(255,190,85,.6),0 0 30px -4px rgba(255,190,85,.55),0 20px 44px -16px rgba(139,63,214,.75)}
+a.xt:hover .ic,a.xt:focus-visible .ic,a.xt.tap .ic{border-color:rgba(255,190,85,.75);background:rgba(255,190,85,.14);box-shadow:0 0 18px rgba(255,190,85,.4)}
+a.xt:hover h3,a.xt:focus-visible h3,a.xt.tap h3{color:#ffe1a3}
+a.xt.tap{transform:scale(.98);transition-duration:.1s;transition-delay:0s!important}
 .xt .ic{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;font-size:1.9rem;background:rgba(5,2,11,.55);border:1px solid var(--line2)}
 .xt h3{margin:4px 0 0;font:700 1.15rem var(--fd)}
 .xt p{margin:0;color:var(--mute);font-size:.94rem;line-height:1.45}
@@ -799,5 +805,13 @@ init().catch(e=>{ console.error(e); fallback(); });
 </script>
 <script src="assets/cuenta-chip.js"></script>
 <script src="assets/magia.js" defer></script>
+
+<script>
+// a tap on a phone shows the gold glow of the card for a moment before opening it (there is no mouse over on a phone)
+document.addEventListener("click",e=>{
+  const a=e.target.closest("a.xt"); if(!a||a.classList.contains("tap")||e.ctrlKey||e.metaKey||e.shiftKey||!matchMedia("(hover: none)").matches) return;
+  e.preventDefault(); a.classList.add("tap"); setTimeout(()=>{ location.href=a.href; setTimeout(()=>a.classList.remove("tap"),600); },320);
+});
+</script>
 </body>
 </html>
