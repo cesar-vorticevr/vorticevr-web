@@ -315,7 +315,7 @@ a.xc.tap{transform:scale(.98);transition-duration:.1s;transition-delay:0s!import
           </aside>
         </div>
         <input type="file" id="fAdd" hidden>
-        <p class="fmt">Videos MP4 (para quitarles el fondo, grábalos con pantalla verde). Imágenes PNG con fondo transparente para logos. Objetos 3D en <b>GLB</b>; si tienes FBX u OBJ, ábrelo en Blender (gratis) → <b>Archivo → Exportar → glTF 2.0 (.glb)</b>.</p>
+        <p class="fmt">Videos MP4 (para quitarles el fondo, grábalos con pantalla verde). Imágenes PNG con fondo transparente para logos. Objetos 3D en <b>GLB</b> (se comprimen solos antes de subirlos); si tienes FBX u OBJ, ábrelo en Blender (gratis) → <b>Archivo → Exportar → glTF 2.0 (.glb)</b>.</p>
       </section>
 
       <section class="step narrow" id="s4">
@@ -411,6 +411,7 @@ let ED=null, edP=null;
 const IC={video:'<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',image:'<svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zm2 2v8l4-4 3 3 2-2 3 3V7z"/></svg>',text:'<svg viewBox="0 0 24 24"><path d="M5 4h14v4h-2V6h-4v12h2v2H9v-2h2V6H7v2H5z"/></svg>',model:'<svg viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.7 8 12 11.7 5.3 8zM5 9.7l6 3.3v6.7l-6-3.3zm8 10V13l6-3.3v6.7z"/></svg>'};
 const TYPE={video:"Video",image:"Imagen",text:"Texto",model:"Objeto 3D"};
 const ACCEPT={video:"video/mp4,video/webm,video/quicktime",image:"image/png,image/jpeg,image/webp",model:".glb,model/gltf-binary"};
+const MODEL_IN_MB=150;   // a GLB this big can still be opened; it is compressed in the browser and must end ≤ plan.modelMB
 const TIPS={none:"Toca un elemento para editarlo · arrastra el fondo para girar la vista",mover:"Arrastra el elemento o sus flechas · rueda o pellizco: tamaño",girar:"Arrastra un anillo para girarlo en ese eje",escalar:"Arrastra un cuadro para cambiar su tamaño"};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const uid=()=>Array.from(crypto.getRandomValues(new Uint8Array(10)),b=>"abcdefghijklmnopqrstuvwxyz0123456789"[b%36]).join("");
@@ -479,10 +480,19 @@ async function fromFile(t,file){
     addItem({type:"image",name:file.name,w,h,s:.4,_file:blob,_url:URL.createObjectURL(blob),_fname:"imagen."+(blob.type==="image/webp"?"webp":"png")});
   } else {
     if(/\.(fbx|obj|gltf|stl|dae|blend|3ds|usdz)$/i.test(file.name)) return msgAdd("bad","Ese formato no se puede ver en el celular. Conviértelo a GLB (abajo te decimos cómo).");
-    if(file.size>S.plan.modelMB*1048576) return msgAdd("bad",`El objeto pesa ${(file.size/1048576).toFixed(1)} MB. El máximo es ${S.plan.modelMB} MB.`);
-    const buf=await file.arrayBuffer();
+    if(file.size>MODEL_IN_MB*1048576) return msgAdd("bad",`El objeto pesa ${(file.size/1048576).toFixed(1)} MB. Se pueden abrir hasta ${MODEL_IN_MB} MB: en Blender o Polycam expórtalo con texturas más chicas.`);
+    let buf=await file.arrayBuffer(), blob=file;
     if(new TextDecoder().decode(new Uint8Array(buf,0,4))!=="glTF") return msgAdd("bad","Ese archivo no es un GLB. Expórtalo como glTF 2.0 en formato .glb.");
-    addItem({type:"model",name:file.name.replace(/\.glb$/i,""),s:.6,rx:90,anim:0,_file:file,_buffer:buf,_fname:"modelo.glb"});   // standing on the image
+    // shrink it in the browser before uploading (textures, mesh); if that fails, the original goes as it is
+    const mb=n=>(n/1048576).toFixed(1);
+    let done="";
+    try{ const {compressGLB}=await import("../assets/comprimir-3d.js");
+      const r=await compressGLB(buf,t=>msgAdd("",`Comprimiendo tu 3D (${mb(file.size)} MB): ${t}`));
+      if(r.changed){ buf=r.buffer; blob=new Blob([buf],{type:"model/gltf-binary"}); done=`Listo: tu 3D pasó de ${mb(r.before)} MB a ${mb(r.after)} MB.`; }
+    }catch(e){ console.warn("No se pudo comprimir el 3D",e); }
+    if(buf.byteLength>S.plan.modelMB*1048576) return msgAdd("bad",`Aun comprimido, el objeto pesa ${mb(buf.byteLength)} MB. Tu plan permite ${S.plan.modelMB} MB por objeto 3D: en Blender o Polycam expórtalo con texturas más chicas o menos detalle.`);
+    await addItem({type:"model",name:file.name.replace(/\.glb$/i,""),s:.6,rx:90,anim:0,_file:blob,_buffer:buf,_fname:"modelo.glb"});   // standing on the image
+    if(done&&S.items.some(i=>i._buffer===buf)) msgAdd("ok",done);
   }
 }
 async function addItem(p){
