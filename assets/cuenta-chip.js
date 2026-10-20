@@ -1,4 +1,4 @@
-// Header account button on the public pages (home, /estudio/): "Iniciar sesión" for visitors, "Mi cuenta" with the
+// Header account button on the public pages (home, /educacion/): "Iniciar sesión" for visitors, "Mi cuenta" with the
 // initial when there is a session (vvr-sesion, saved by /cuenta/). With a session, "Crear gratis" links go straight to /crear/.
 (function () {
   const a = document.getElementById("acct"); if (!a) return;
