@@ -88,7 +88,7 @@ const CSS = `
 .rl-k{font:700 .74rem "Sora",sans-serif;letter-spacing:.22em;text-transform:uppercase;color:var(--rl-acc)}
 .rl h1{font:800 clamp(1.5rem,6.4vw,2.1rem)/1.1 "Sora",system-ui,sans-serif;margin:8px 0 0;text-wrap:balance;overflow-wrap:anywhere}
 .rl-sub{margin:8px 0 0;color:var(--rl-mute);max-width:36ch;line-height:1.45;white-space:pre-line}
-.rl-wheel{position:relative;width:min(100%,430px,calc(100vh - 290px));min-width:250px;aspect-ratio:1;margin:20px auto 0;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.rl-wheel{position:relative;width:min(100%,430px,calc(100vh - 330px));width:min(100%,430px,calc(100dvh - 330px));min-width:250px;aspect-ratio:1;margin:20px auto 0;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
 .rl-wheel.spin{cursor:default}
 .rl-wheel>svg{position:absolute;inset:0;width:100%;height:100%;display:block;filter:drop-shadow(0 18px 30px rgba(0,0,0,.4))}
 .rl-rot{transform-origin:0 0;will-change:transform}

@@ -60,11 +60,11 @@ const SND_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5
 const CSS = `
 .sf-snd{position:absolute;right:14px;top:10px;z-index:2;width:44px;height:44px;border-radius:50%;border:1px solid rgba(210,184,255,.35);background:rgba(10,4,22,.62);display:grid;place-items:center;cursor:pointer}
 .sf-snd svg{width:22px;height:22px;fill:#fff}
-.sf{position:fixed;inset:0;display:flex;flex-direction:column;background:radial-gradient(90% 60% at 50% 35%,#22104a,#05020b 72%);color:#f2ecff;font-family:"IBM Plex Sans",system-ui,sans-serif}
+.sf{position:fixed;inset:0;display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;background:radial-gradient(90% 60% at 50% 35%,#22104a,#05020b 72%);color:#f2ecff;font-family:"IBM Plex Sans",system-ui,sans-serif}
 .sf-top{padding:calc(62px + env(safe-area-inset-top,0px)) 20px 0;text-align:center}
 .sf-k{font:600 .74rem "Sora",system-ui,sans-serif;letter-spacing:.24em;text-transform:uppercase;color:#ffbe55}
 .sf h1{font:700 clamp(1.4rem,5.6vw,2.1rem)/1.12 "Sora",system-ui,sans-serif;margin:8px auto 0;max-width:20ch;text-wrap:balance}
-.sf-stage{position:relative;flex:1;min-height:200px}
+.sf-stage{position:relative;flex:1 0 auto;min-height:180px}
 .sf-stage model-viewer{position:absolute;inset:0;width:100%;height:100%;--poster-color:transparent;background:transparent}
 .sf-stage model-viewer::part(default-ar-button){display:none}
 .sf-load{position:absolute;inset:0;display:grid;place-items:center;color:#b9addb;font-weight:600;text-align:center;padding:20px}
@@ -117,7 +117,7 @@ export async function run(o) {
   // Android (WebXR): our own view, with photo and video with the logo (assets/superficie-xr.js). iPhone: Quick Look.
   let XR = null;
   try { if (navigator.xr && await navigator.xr.isSessionSupported("immersive-ar")) XR = await import("./superficie-xr.js"); } catch (e) { XR = null; }
-  steps.lastElementChild.innerHTML = XR ? "3. Toca la pantalla para ponerlo, camina a su alrededor y toma tu <b>foto o video</b>." : "3. Camina a su alrededor. Para tu foto o video usa el botón de la cámara que aparece abajo.";
+  steps.lastElementChild.innerHTML = XR ? "3. Toca la pantalla para ponerlo, camina a su alrededor y toma tu <b>foto o video</b>." : "3. Camina a su alrededor. Para tu <b>foto</b>, toca el botón blanco de abajo; para <b>video</b>, mantenlo presionado.";
   mv.addEventListener("load", () => {
     load.remove();
     stage.appendChild(Object.assign(document.createElement("span"), { className: "sf-hint", textContent: "Gíralo con el dedo" }));

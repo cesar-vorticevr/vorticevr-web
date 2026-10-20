@@ -446,7 +446,7 @@ function ensureEditor(){
     ED=await createEditor($("stage3d"),{items:()=>S.items,src:srcOf,
       change:(it,end)=>{ syncProps(it); if(end) commit(); },
       select:id=>{ S.sel=id; renderLayers(); renderProps(); tools(); },
-      loaded:(it,n)=>{ it._loading=false; it._clips=n.clips; renderLayers(); if(S.sel===it.id) renderProps(); check(); }});
+      loaded:(it,n)=>{ it._loading=false; it._clips=n.clips; renderLayers(); if(S.sel===it.id&&!$("props").contains(document.activeElement)) renderProps(); check(); }});
     ED.setPlace(S.place); ED.setScene(S.scene); if(S.sf) ED.setSurface(true);
     $("empty").hidden=true; $("tools").hidden=false; $("views").hidden=false; $("tip").hidden=false; $("scenes").hidden=false;
     renderScenes(); tools();

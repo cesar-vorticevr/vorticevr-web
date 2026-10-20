@@ -128,7 +128,7 @@ const CSS = `
 .clr-okrow{display:flex;gap:10px;align-items:center;margin-top:12px}
 .clr-now{flex:1;height:44px;border-radius:12px;display:grid;place-items:center;font:600 .85rem "IBM Plex Mono",monospace;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
 .clr-ok{flex:none;height:44px;border-radius:999px;border:1px solid #d2b8ff;background:linear-gradient(135deg,#8b3fd6,#5a1f8f);font:700 .85rem "Sora",system-ui,sans-serif!important;letter-spacing:.08em;text-transform:uppercase;padding:0 22px}
-.clr-pop{max-height:calc(100vh - 140px);overflow-y:auto}
+.clr-pop{max-height:calc(100vh - 140px);max-height:calc(100dvh - 140px);overflow-y:auto}
 .clr.mini .clr-pop{max-height:340px}
 .clr-menu{display:grid;gap:4px}
 .clr-menu button,.clr-menu a{display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;padding:12px;border-radius:10px;border:0;background:rgba(255,255,255,.04);color:#f2ecff;text-decoration:none;font-size:.95rem}
