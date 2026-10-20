@@ -221,10 +221,10 @@ async function api(request, env, ctx, url) {
     return json(out, 200, { "Cache-Control": "no-store" });
   }
 
-  // link page: one tap on a button (navigator.sendBeacon); only counted for a link page that is live
+  // link page: one tap on a button; prize wheel: spins, each prize that came out, "lose", review… (navigator.sendBeacon); only counted while it is live
   m = path.match(/^\/api\/click\/([a-z0-9-]+)\/([a-z0-9]{1,16})$/);
   if (m && M === "POST") {
-    ctx.waitUntil(env.DB.prepare("INSERT INTO clicks (slug, id, n) SELECT slug, ?, 1 FROM experiences WHERE slug = ? AND paused = 0 AND expires > ? AND data LIKE '%\"kind\":\"links\"%' ON CONFLICT(slug, id) DO UPDATE SET n = n + 1")
+    ctx.waitUntil(env.DB.prepare("INSERT INTO clicks (slug, id, n) SELECT slug, ?, 1 FROM experiences WHERE slug = ? AND paused = 0 AND expires > ? AND (data LIKE '%\"kind\":\"links\"%' OR data LIKE '%\"kind\":\"ruleta\"%') ON CONFLICT(slug, id) DO UPDATE SET n = n + 1")
       .bind(m[2], m[1], Date.now()).run().catch(e => console.error("click", e.message)));
     return new Response(null, { status: 204 });
   }
@@ -420,7 +420,7 @@ async function api(request, env, ctx, url) {
     const isNew = !mine;
     if (data.kind === "trivia" && data.trivia.logo && !image && !(mine && (JSON.parse(mine.data || "{}").trivia || {}).logo)) data.trivia.logo = false;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
-    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu" && data.kind !== "links" && data.kind !== "superficie"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
+    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu" && data.kind !== "links" && data.kind !== "ruleta" && data.kind !== "superficie"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
     if (target && target.size > LIMITS.targetBytes) return json({ error: "La imagen no se pudo preparar. Intenta con otra." }, 400);
     // each element's file: uploaded now (field f_<id>) or kept from the version being edited (same id and type)
@@ -480,7 +480,7 @@ async function api(request, env, ctx, url) {
       .bind(slug, who, data.title, JSON.stringify(data), created, now, expires, mine ? mine.views || 0 : 0).run();
     const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(slug).first();
     const out = ownerExp(row, request, env);
-    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "links" ? "Tu página de links está lista" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
+    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "links" ? "Tu página de links está lista" : data.kind === "ruleta" ? "Tu ruleta de premios está lista" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
     return json({ ok: true, experience: out });
   }
 
@@ -744,6 +744,7 @@ function publicKind(row, d) {
   if (d.kind === "colorear") return { slug: row.slug, kind: "colorear", title: row.title, img: d.img, color: d.color, buttons: d.buttons, expires: row.expires };
   if (d.kind === "menu") return { slug: row.slug, kind: "menu", title: row.title, menu: d.menu, items: d.items || [], buttons: d.buttons, updated: row.updated, expires: row.expires };
   if (d.kind === "links") return { slug: row.slug, kind: "links", title: row.title, links: d.links, items: d.items || [], updated: row.updated, expires: row.expires };
+  if (d.kind === "ruleta") return { slug: row.slug, kind: "ruleta", title: row.title, ruleta: d.ruleta, items: d.items || [], updated: row.updated, expires: row.expires };
   if (d.kind === "superficie") return { slug: row.slug, kind: "superficie", title: row.title, img: d.img, items: d.items || [], buttons: d.buttons, updated: row.updated, expires: row.expires };
   return { slug: row.slug, kind: "ra", title: row.title, img: d.img, place: d.place || "mesa", scenes: d.scenes || 1, items: itemsOf(d), buttons: d.buttons, expires: row.expires };
 }
@@ -1084,6 +1085,45 @@ function cleanLinks(lk, list) {
   const bg = ref(lk.bg); if (bg) links.bg = bg;
   return { links, items: [...byId.values()].filter(i => used.has(i.id)) };
 }
+// Prize wheel (assets/ruleta.js): 10 spaces, all equally likely. 3 to 10 prizes {id, t}; with fewer than 10, fill = "repetir"
+// (the prizes repeat) or "suerte" (the rest is "Suerte para la próxima"). The spin happens on the phone and the prize is kept
+// there (a coupon with a code, the date and its days of validity; the business only looks at it). limit = spins per phone: una,
+// dia (one a day) or libre. review = an optional link to leave a review, shown apart from the prize (Google does not allow
+// prizes for reviews). logo = an item "foto" in the middle of the wheel. Spins and prizes are counted in clicks.
+const RULETA = { min: 3, max: 10, fills: ["repetir", "suerte"], limits: ["una", "dia", "libre"], days: [0, 1, 3, 7, 15, 30], themes: ["vortice", "color", "claro"] };
+function cleanRuleta(r, list) {
+  r = r || {};
+  const str = (v, max) => String(v || "").replace(/\s+/g, " ").trim().slice(0, max);
+  const idOk = v => /^[a-z0-9]{6,16}$/.test(String(v || ""));
+  const prizes = [], ids = new Set();
+  for (const p of Array.isArray(r.prizes) ? r.prizes.slice(0, 40) : []) {
+    const t = str(p && p.t, 40);
+    if (!t) continue;
+    if (!idOk(p.id) || ids.has(p.id)) return { error: "Uno de tus premios no es válido." };
+    ids.add(p.id); prizes.push({ id: p.id, t });
+  }
+  if (prizes.length < RULETA.min) return { error: `Escribe al menos ${RULETA.min} premios.` };
+  if (prizes.length > RULETA.max) return { error: `Puedes poner hasta ${RULETA.max} premios.` };
+  const ruleta = { prizes, fill: RULETA.fills.includes(r.fill) ? r.fill : "repetir", limit: RULETA.limits.includes(r.limit) ? r.limit : "una",
+    days: RULETA.days.includes(Number(r.days)) ? Number(r.days) : 0, theme: RULETA.themes.includes(r.theme) ? r.theme : "vortice",
+    color: HEX.test(String(r.color || "")) ? String(r.color).toLowerCase() : "#8b3fd6", color2: HEX.test(String(r.color2 || "")) ? String(r.color2).toLowerCase() : "#ffbe55" };
+  const sub = String(r.sub || "").replace(/\r/g, "").trim().slice(0, 160); if (sub) ruleta.sub = sub;
+  const cond = String(r.cond || "").replace(/\r/g, "").trim().slice(0, 200); if (cond) ruleta.cond = cond;
+  if (r.review && String(r.review.url || "").trim()) {
+    const url = linkHref(r.review.url);
+    if (!url || !/^https?:/.test(url)) return { error: "El link para dejar tu reseña no es válido." };
+    ruleta.review = { url, t: str(r.review.t, 40) || "Déjanos tu reseña" };
+  }
+  let items = [];
+  if (r.logo) {
+    const m = (Array.isArray(list) ? list : []).find(i => i && i.id === r.logo);
+    if (!m || !idOk(m.id) || m.type !== "foto") return { error: "Tu logo no es válido." };
+    const it = { id: m.id, type: "foto", w: Math.round(Number(m.w)) || 0, h: Math.round(Number(m.h)) || 0 };
+    if (!(it.w > 0 && it.w <= 4000 && it.h > 0 && it.h <= 4000)) return { error: "Faltan las medidas de tu logo." };
+    items = [it]; ruleta.logo = it.id;
+  }
+  return { ruleta, items };
+}
 // the contact card ("Guardar contacto"), with the profile picture when it is a JPEG
 async function vcard(env, row, request) {
   const d = JSON.parse(row.data || "{}"), lk = d.links || {}, c = lk.contact || {};
@@ -1123,6 +1163,10 @@ function cleanMeta(m, P) {
   if (m.kind === "links") {
     const lk = cleanLinks(m.links, m.items);
     return lk.error ? lk : { kind: "links", title, links: lk.links, items: lk.items, buttons: {} };
+  }
+  if (m.kind === "ruleta") {
+    const rl = cleanRuleta(m.ruleta, m.items);
+    return rl.error ? rl : { kind: "ruleta", title, ruleta: rl.ruleta, items: rl.items, buttons: {} };
   }
   if (m.kind === "trivia") {
     const trivia = cleanTrivia(m.trivia);

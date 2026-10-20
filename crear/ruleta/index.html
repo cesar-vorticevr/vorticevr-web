@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Crea tu ruleta de premios · Vórtice VR</title>
+<meta name="description" content="Una ruleta de premios con tu logo y tus colores, con link y QR propios. Tus clientes giran desde su celular, ganan un cupón y pueden dejarte una reseña.">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../../assets/icono.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Prize wheel maker: the wheel, its prizes (3 to 10 in 10 spaces), the coupon, the review link and the design on the left;
+   a phone with the live wheel on the right (above on a phone). The wheel itself is assets/ruleta.js (also at the link). */
+:root{--void:#05020b;--panel:rgba(20,9,40,.7);--line:rgba(190,150,255,.2);--line2:rgba(190,150,255,.45);--vortex:#8b3fd6;--vortex-d:#5a1f8f;--lav:#d2b8ff;--ink:#f2ecff;--mute:#a99bcb;--sun:#ffbe55;--ok:#74e8ba;--bad:#ff8a9e;
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55;min-height:100vh}
+a{color:var(--lav)}
+:focus-visible{outline:2px solid var(--lav);outline-offset:3px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1180px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 8px}
+header img{height:38px;width:auto;display:block}
+@media (max-width:480px){header img{height:28px}}
+header a.back{font-family:var(--fd);font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--mute)}
+header .acts{display:flex;align-items:center;gap:14px}
+.mybtn{font-family:var(--fd);font-weight:600;letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;border:1px solid var(--line2);border-radius:999px;padding:9px 14px;background:rgba(139,63,214,.2);color:var(--ink);cursor:pointer;text-decoration:none}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+@media (max-width:480px){.wrap{padding:0 16px 80px}}
+.hero{padding:28px 0 26px}
+.kick{font-family:var(--fd);font-size:.78rem;letter-spacing:.26em;text-transform:uppercase;color:var(--sun);font-weight:600}
+h1{font-family:var(--fd);font-size:clamp(2rem,5vw,3.2rem);line-height:1.02;margin:8px 0 10px;text-wrap:balance}
+.hero p{margin:0;color:var(--mute);max-width:62ch}
+.allx{display:inline-flex;align-items:center;gap:6px;margin:12px 16px 0 0;font:600 .85rem var(--fd);color:var(--lav);text-decoration:none}
+.step{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:20px;margin-bottom:16px}
+@media (max-width:480px){.step{padding:16px}}
+.step h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font-family:var(--fd);font-size:1.2rem}
+.step h2 .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--fm);font-size:.85rem;background:rgba(139,63,214,.3);border:1px solid var(--line2);flex:none}
+.step h2 .n.done{background:var(--ok);color:#0b2a1e;border-color:var(--ok)}
+.step>p.hint{margin:0 0 14px;color:var(--mute);font-size:.92rem}
+.bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--vortex),var(--sun));transition:width .2s}
+.msg{font-size:.88rem;margin-top:8px}
+.msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+label.f{display:block;font-size:.8rem;font-family:var(--fd);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:12px 0 6px}
+input[type=text],input[type=url],textarea,select{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:10px 12px}
+textarea{resize:vertical;min-height:64px}
+input:focus,textarea:focus,select:focus{border-color:var(--lav);outline:none}
+input.bad{border-color:var(--bad)}
+.slugrow{display:flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:rgba(5,2,11,.7);overflow:hidden}
+.slugrow input{border:0;background:transparent;border-radius:0;text-align:right;padding-right:2px;min-width:0}
+.slugrow span{padding:11px 12px 11px 0;color:var(--mute);white-space:nowrap;font-family:var(--fm);font-size:.9rem}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{font:600 .85rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--fd);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:.85rem;border:1px solid var(--line2);border-radius:999px;padding:13px 22px;color:var(--ink);background:rgba(20,9,40,.6);cursor:pointer;text-decoration:none}
+.btn.sm{padding:9px 14px;font-size:.74rem}
+.btn.primary{background:linear-gradient(135deg,var(--vortex),var(--vortex-d));border-color:var(--lav);box-shadow:0 0 26px rgba(139,63,214,.45)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.note{font-size:.85rem;color:var(--mute)}
+.legal{font-size:.8rem;color:var(--mute);margin-top:10px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:28px;align-items:start}
+.side{position:sticky;top:16px}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.side{position:static;order:-1}}
+.colors{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.colors button{width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.25);cursor:pointer;padding:0}
+.colors button[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 3px var(--vortex)}
+.colors input[type=color]{width:40px;height:34px;border:1px solid var(--line2);border-radius:8px;background:none;padding:2px;cursor:pointer}
+.tog{display:flex;gap:12px;align-items:flex-start;cursor:pointer;margin-top:12px}
+.tog input{width:20px;height:20px;accent-color:#8b3fd6;flex:none;margin-top:3px}
+.tog b{display:block}.tog small{color:var(--mute);font-size:.86rem}
+details.more{margin-top:12px}
+details.more summary{cursor:pointer;color:var(--lav);font-size:.92rem;margin-bottom:6px}
+details.more ol{margin:6px 0 0;padding-left:20px;color:var(--mute);font-size:.9rem}
+/* logo */
+.prof{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.prof .av{width:76px;height:76px;border-radius:50%;background:#fff;display:grid;place-items:center;overflow:hidden;flex:none;font-size:1.6rem;color:#8b3fd6;border:3px solid var(--sun)}
+.prof .av img{width:84%;height:84%;object-fit:contain}
+/* prizes */
+.pzs{display:grid;gap:8px}
+.pz{display:flex;align-items:center;gap:8px}
+.pz .i{width:30px;height:30px;flex:none;border-radius:50%;display:grid;place-items:center;font:600 .8rem var(--fm);background:rgba(139,63,214,.25);border:1px solid var(--line2)}
+.pz input{flex:1;min-width:0}
+.pz .clk{font:500 .74rem var(--fm);color:var(--sun);white-space:nowrap}
+.ib{height:38px;min-width:38px;flex:none;border-radius:10px;border:1px solid var(--line2);background:rgba(5,2,11,.6);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font:500 .9rem var(--fb)}
+.ib:hover{border-color:var(--bad);color:var(--bad)}
+.ib:disabled{opacity:.3;cursor:default}
+.count{font:600 .85rem var(--fm);color:var(--sun)}
+.sugg{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.sugg button{font:500 .82rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px dashed var(--line2);border-radius:999px;padding:6px 12px;cursor:pointer}
+.sugg button:hover{border-color:var(--lav)}
+.fill{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+@media (max-width:520px){.fill{grid-template-columns:1fr}}
+.fill button{text-align:left;border:2px solid var(--line);border-radius:14px;padding:12px 14px;background:rgba(5,2,11,.5);color:var(--ink);cursor:pointer;font:inherit}
+.fill button[aria-pressed="true"]{border-color:var(--sun);box-shadow:0 0 0 3px rgba(255,190,85,.2)}
+.fill b{display:block;font-family:var(--fd)}.fill small{color:var(--mute);font-size:.85rem;line-height:1.4;display:block;margin-top:2px}
+.odds{margin-top:14px;display:grid;gap:6px}
+.odds div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;font-size:.9rem}
+.odds span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.odds em{font:500 .8rem var(--fm);color:var(--mute);font-style:normal}
+.odds i{grid-column:1/-1;display:block;height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+.odds i::after{content:"";display:block;height:100%;width:var(--w);background:linear-gradient(90deg,var(--vortex),var(--sun))}
+.odds .lose span{color:var(--mute)}
+.odds .lose i::after{background:rgba(255,255,255,.3)}
+.lims{display:grid;gap:8px}
+.lims button{display:block;text-align:left;border:2px solid var(--line);border-radius:12px;padding:10px 14px;background:rgba(5,2,11,.5);color:var(--ink);cursor:pointer;font:inherit}
+.lims button[aria-pressed="true"]{border-color:var(--sun)}
+.lims b{font-family:var(--fd);font-size:.95rem}.lims small{display:block;color:var(--mute);font-size:.85rem}
+.warn{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:rgba(255,190,85,.08);border:1px solid rgba(255,190,85,.4);margin:12px 0 0;font-size:.88rem;color:var(--ink)}
+.warn .e{font-size:1.2rem;line-height:1.2}
+/* stats */
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.stats div{flex:1;min-width:120px;padding:10px 14px;border-radius:12px;background:rgba(255,190,85,.07);border:1px solid rgba(255,190,85,.35)}
+.stats b{display:block;font:700 1.3rem var(--fd);color:var(--sun)}
+.stats span{font-size:.82rem;color:var(--mute)}
+/* phone */
+.pv{border:1px solid var(--line2);border-radius:18px;background:#120826;padding:14px}
+.pv h3{margin:0 0 10px;font-family:var(--fd);font-size:1rem;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pv h3 small{font:500 .78rem var(--fb);color:var(--mute)}
+.phone{position:relative;margin:0 auto;width:100%;max-width:360px;height:min(72vh,700px);border-radius:34px;border:9px solid #1d1430;background:#000;overflow:hidden;box-shadow:0 30px 60px -30px rgba(139,63,214,.7)}
+@media (max-width:900px){.phone{height:min(70vh,620px)}}
+.phone .screen{position:absolute;inset:0}
+</style>
+</head>
+<body>
+<header><a href="../../" aria-label="Vórtice VR, inicio"><img src="../../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a class="mybtn" href="../../cuenta/">Mi cuenta</a><a class="back" href="../../">← Sitio</a></div></header>
+<main class="wrap">
+  <div class="hero">
+    <span class="kick" id="kick">Gratis · prueba de 15 días</span>
+    <h1>Crea tu ruleta de premios</h1>
+    <p>Tus clientes escanean el QR, giran la ruleta en su celular y ganan un cupón que te muestran para canjearlo. Al final pueden dejarte una reseña.</p>
+    <a class="allx" href="../">← Todas las experiencias</a>
+  </div>
+  <div class="grid">
+    <div>
+      <section class="step" id="full" hidden>
+        <h2>Ya usaste todas tus experiencias</h2>
+        <p class="hint" id="fullText"></p>
+        <div class="row"><a class="btn" href="../../cuenta/#planes">Ver planes</a><a class="btn" href="../../cuenta/">Ir a mi cuenta</a></div>
+      </section>
+
+      <section class="step" id="statsBox" hidden>
+        <h2>✦ Cómo va tu ruleta</h2>
+        <div class="stats" id="stats"></div>
+        <p class="hint" style="margin:0">Cuántas veces salió cada premio aparece abajo, junto a cada uno.</p>
+      </section>
+
+      <section class="step" id="s1">
+        <h2><span class="n" id="n1">1</span>Tu ruleta</h2>
+        <label class="f" for="title" style="margin-top:0">Nombre de tu negocio o tu promoción</label>
+        <input type="text" id="title" maxlength="80" placeholder="Ej. Café La Esquina">
+        <label class="f" for="sub">Texto corto (opcional)</label>
+        <textarea id="sub" maxlength="160" rows="2" placeholder="Ej. Gira y gana un premio para tu próxima visita ☕"></textarea>
+        <label class="f">Tu logo (opcional)</label>
+        <div class="prof">
+          <div class="av" id="lgPv">★</div>
+          <div class="row" style="margin:0"><label class="btn sm" for="lgFile" style="margin:0">Subir logo</label><input type="file" id="lgFile" accept="image/png,image/jpeg,image/webp" hidden><button class="btn sm" id="lgDel" type="button" hidden>Quitar</button></div>
+          <span class="note">Va en el centro de la ruleta y en el cupón. Mejor PNG con fondo transparente.</span>
+        </div>
+      </section>
+
+      <section class="step" id="s2">
+        <h2><span class="n" id="n2">2</span>Tus premios <span class="count" id="pzN" style="margin-left:auto"></span></h2>
+        <p class="hint">La ruleta tiene 10 espacios y todos tienen la misma probabilidad. Escribe de 3 a 10 premios; si repites uno, sale más seguido.</p>
+        <div class="pzs" id="pzs"></div>
+        <div class="row"><button class="btn sm primary" id="addPz" type="button">+ Agregar premio</button></div>
+        <div class="sugg" id="sugg"></div>
+        <div id="fillBox" hidden>
+          <label class="f" id="fillLbl">Los espacios que sobran</label>
+          <div class="fill" id="fill">
+            <button type="button" data-v="repetir"><b>Repetir mis premios</b><small>Siempre se gana algo.</small></button>
+            <button type="button" data-v="suerte"><b>“Suerte para la próxima”</b><small>Los espacios libres no dan premio.</small></button>
+          </div>
+        </div>
+        <div class="odds" id="odds"></div>
+      </section>
+
+      <section class="step" id="s3">
+        <h2><span class="n done" id="n3">3</span>El cupón y los giros</h2>
+        <p class="hint">Quien gana ve su premio como cupón con un código, la fecha y un reloj que se mueve (así se nota si es una captura). Te lo muestra para canjearlo.</p>
+        <label class="f" style="margin-top:0">El premio vale</label>
+        <div class="seg" id="daysSeg"></div>
+        <label class="f" for="cond">Condiciones (opcional)</label>
+        <textarea id="cond" maxlength="200" rows="2" placeholder="Ej. Válido en tu próxima visita con consumo mínimo de $150. Uno por persona."></textarea>
+        <label class="f">¿Cuántas veces puede girar cada persona?</label>
+        <div class="lims" id="limSeg">
+          <button type="button" data-v="una"><b>Una vez por persona</b><small>Lo más común. Al volver al link ve el premio que ya ganó.</small></button>
+          <button type="button" data-v="dia"><b>Una vez al día</b><small>Para que regresen: pueden girar otra vez cada día.</small></button>
+          <button type="button" data-v="libre"><b>Sin límite</b><small>Para eventos, con la ruleta en una pantalla o tableta.</small></button>
+        </div>
+        <p class="note" style="margin:10px 0 0">El giro se cuenta en cada celular. Quien sepa cómo podría volver a girar (por ejemplo, en una ventana privada); para premios grandes, revisa el código y la fecha del cupón.</p>
+      </section>
+
+      <section class="step" id="s4">
+        <h2><span class="n" id="n4">4</span>Reseña <small class="note" style="font-family:var(--fb)">(opcional)</small></h2>
+        <p class="hint">Después del premio, aparte, sale “¿Te gustó tu visita?” con un botón a tu página de reseñas (Google Maps, TripAdvisor, Facebook…). Se abre en otra pestaña: el premio no se pierde.</p>
+        <label class="tog" style="margin-top:0"><input type="checkbox" id="rvOn"><span><b>Invitar a dejar una reseña</b><small>Sale debajo del premio.</small></span></label>
+        <div id="rvBox" hidden>
+          <label class="f" for="rvUrl">Link para dejar tu reseña</label>
+          <input type="url" id="rvUrl" maxlength="500" placeholder="Ej. g.page/r/tu-negocio/review" autocapitalize="off" spellcheck="false">
+          <label class="f" for="rvT">Texto del botón</label>
+          <input type="text" id="rvT" maxlength="40" placeholder="Déjanos tu reseña">
+          <div class="msg" id="mRv"></div>
+          <details class="more"><summary>¿Dónde consigo el link de reseñas de Google?</summary><ol>
+            <li>Entra a <b>Google Maps</b> (o busca tu negocio en Google) con la cuenta que administra tu negocio.</li>
+            <li>Toca <b>Pedir reseñas</b> (o “Obtener más reseñas”) en tu Perfil de Negocio.</li>
+            <li>Copia el link y pégalo aquí. Al abrirlo, la gente cae directo a escribir su reseña.</li>
+          </ol></details>
+          <div class="warn"><span class="e" aria-hidden="true">⚠️</span><span><b>No pidas la reseña a cambio del premio.</b> Google no permite dar premios por reseñas y puede borrarlas. Aquí el premio se da siempre; la reseña es una invitación aparte.</span></div>
+        </div>
+      </section>
+
+      <section class="step" id="s5">
+        <h2><span class="n done" id="n5">5</span>Diseño</h2>
+        <label class="f" style="margin-top:0">Fondo</label>
+        <div class="seg" id="themeSeg"></div>
+        <label class="f">Color 1 de la ruleta</label>
+        <div class="colors" id="colors1"></div>
+        <label class="f">Color 2 de la ruleta</label>
+        <div class="colors" id="colors2"></div>
+      </section>
+
+      <section class="step" id="s6">
+        <h2><span class="n" id="n6">6</span>Tu link</h2>
+        <label class="f" for="slug" style="margin-top:0">Tu link</label>
+        <div class="slugrow"><input type="text" id="slug" maxlength="30" placeholder="tu-negocio" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="root">.vorticevr.mx</span></div>
+        <div class="msg" id="mSlug"></div>
+      </section>
+      <section class="step" id="sMarca" hidden></section>
+      <section class="step" id="s7">
+        <h2><span class="n" id="n7">7</span>Publicar</h2>
+        <div id="mine" hidden style="margin:0 0 12px"></div>
+        <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
+        <button class="btn primary" id="publish" type="button" disabled>Publicar mi ruleta</button>
+        <div class="bar" id="bPub" hidden><i></i></div><div class="msg" id="mPub"></div>
+        <p class="legal">Al publicar confirmas que tú entregas los premios a quien los gane y que respetas las reglas del sitio de reseñas que enlaces. Vórtice VR puede retirar contenido inapropiado (<a href="../../terminos/">términos</a>). <span id="legalDays">La experiencia se borra a los 15 días; puedes editarla o borrarla desde tu cuenta.</span></p>
+      </section>
+    </div>
+    <aside class="side">
+      <div class="pv">
+        <h3>Vista previa <small>gírala para probar</small></h3>
+        <div class="phone"><div class="screen" id="screen"></div></div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="../../assets/marca.js"></script>
+<script src="../../assets/plataforma.js" data-api="../.."></script>
+<script type="module">
+import { run, wheelSvg, odds, THEMES, LOSE, SLOTS } from "../../assets/ruleta.js";
+const $=id=>document.getElementById(id);
+const API=VVR.api;
+const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
+$("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
+const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const rid=()=>Array.from(crypto.getRandomValues(new Uint8Array(10)),b=>"abcdefghijklmnopqrstuvwxyz0123456789"[b%36]).join("");
+const MIN=3, MAX=10;
+// S.r is what gets published; S.files = the logo picked here (id → {blob,url,w,h}); S.old = the published one
+const S={token:null,email:null,mine:null,files:new Map(),old:new Map(),clicks:null,
+  r:{prizes:[{id:rid(),t:""},{id:rid(),t:""},{id:rid(),t:""}],fill:"repetir",limit:"una",days:7,cond:"",sub:"",review:{on:false,url:"",t:""},color:"#8b3fd6",color2:"#ffbe55",theme:"vortice",logo:null}};
+const fileUrl=id=>{ if(!id) return ""; const f=S.files.get(id); if(f) return f.url; const o=S.old.get(id); return o&&S.mine?`${API}/m/${S.mine.slug}/${o.file}?v=${S.mine.updated||""}`:""; };
+const loadImg=src=>new Promise((ok,bad)=>{ const i=new Image(); i.crossOrigin="anonymous"; i.onload=()=>ok(i); i.onerror=bad; i.src=src; });
+async function shrink(file,max){
+  const url=URL.createObjectURL(file); const im=await loadImg(url); URL.revokeObjectURL(url);
+  const k=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)), c=document.createElement("canvas"); c.width=Math.round(im.naturalWidth*k); c.height=Math.round(im.naturalHeight*k);
+  c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+  let b=await new Promise(r=>c.toBlob(r,"image/webp",.9)); if(!b||b.type!=="image/webp") b=await new Promise(r=>c.toBlob(r,"image/png"));
+  return {blob:b,w:c.width,h:c.height};
+}
+const clk=id=>S.clicks?`<span class="clk" title="Veces que salió">${(S.clicks[id]||0).toLocaleString("es-MX")} ${(S.clicks[id]||0)===1?"vez":"veces"}</span>`:"";
+const filled=()=>S.r.prizes.filter(p=>p.t.trim());
+
+// ---------- 1. the wheel ----------
+function drawLogo(){ const u=fileUrl(S.r.logo); $("lgPv").innerHTML=u?`<img src="${esc(u)}" alt="">`:"★"; $("lgDel").hidden=!u; }
+$("lgFile").addEventListener("change",async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  try{ const r=await shrink(f,400), id=rid(); S.files.set(id,{blob:r.blob,url:URL.createObjectURL(r.blob),w:r.w,h:r.h}); S.r.logo=id; drawLogo(); changed(); }catch(err){ alert("No pude abrir esa imagen."); } });
+$("lgDel").onclick=()=>{ S.r.logo=null; drawLogo(); changed(); };
+$("title").addEventListener("input",()=>{ if(!slugIn.dataset.touched&&!S.mine){ slugIn.value=toSlug($("title").value).replace(/-$/,""); checkSlug(); } changed(); });
+$("sub").addEventListener("input",()=>{ S.r.sub=$("sub").value; changed(); });
+
+// ---------- 2. prizes ----------
+const SUGG=["10% de descuento","Postre gratis","Bebida gratis","2x1","Café gratis","Envío gratis","15% de descuento","Una sorpresa"];
+$("sugg").innerHTML=`<span class="note" style="align-self:center">Ideas:</span>`+SUGG.map(t=>`<button type="button" data-t="${esc(t)}">+ ${esc(t)}</button>`).join("");
+$("sugg").addEventListener("click",e=>{ const b=e.target.closest("[data-t]"); if(!b) return;
+  const empty=S.r.prizes.find(p=>!p.t.trim()); if(empty) empty.t=b.dataset.t; else if(S.r.prizes.length<MAX) S.r.prizes.push({id:rid(),t:b.dataset.t}); else return alert(`Puedes poner hasta ${MAX} premios.`);
+  drawPrizes(); changed(); });
+function drawPrizes(){
+  const P=S.r.prizes;
+  $("pzs").innerHTML=P.map((p,i)=>`<div class="pz" data-id="${p.id}"><span class="i">${i+1}</span><input type="text" maxlength="40" value="${esc(p.t)}" placeholder="${i===0?"Ej. 10% de descuento":i===1?"Ej. Postre gratis":"Ej. Bebida gratis"}" aria-label="Premio ${i+1}">${p.t.trim()?clk(p.id):""}<button class="ib" type="button" data-del title="Quitar" ${P.length<=MIN?"disabled":""}>🗑</button></div>`).join("");
+  $("addPz").disabled=P.length>=MAX; drawOdds(); }
+function drawOdds(){
+  const n=filled().length;
+  $("pzN").textContent=`${n} de ${MAX}`;
+  $("fillBox").hidden=!(n>=1&&n<SLOTS);
+  $("fillLbl").textContent=`Los ${SLOTS-n} ${SLOTS-n===1?"espacio que sobra":"espacios que sobran"}`;
+  $("fill").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===S.r.fill)));
+  if(n<1){ $("odds").innerHTML=""; return; }
+  const O=odds(rNow()).sort((a,b)=>(a.p?0:1)-(b.p?0:1)||b.n-a.n);
+  $("odds").innerHTML=`<label class="f" style="margin:4px 0 2px">Qué tan seguido sale cada uno</label>`+O.map(o=>`<div class="${o.p?"":"lose"}"><span>${esc(o.p?o.p.t:LOSE)}</span><em>${o.n} de ${SLOTS} · ${o.n*100/SLOTS}%</em><i style="--w:${o.n*100/SLOTS}%"></i></div>`).join("")
+    +(S.clicks&&S.clicks.lose?`<p class="note" style="margin:4px 0 0">“${LOSE}” ha salido ${S.clicks.lose.toLocaleString("es-MX")} ${S.clicks.lose===1?"vez":"veces"}.</p>`:"");
+}
+$("addPz").onclick=()=>{ if(S.r.prizes.length>=MAX) return; const p={id:rid(),t:""}; S.r.prizes.push(p); drawPrizes(); changed(); document.querySelector(`[data-id="${p.id}"] input`)?.focus(); };
+$("pzs").addEventListener("input",e=>{ const el=e.target.closest("[data-id]"); if(!el) return; const p=S.r.prizes.find(x=>x.id===el.dataset.id); if(p){ p.t=e.target.value; drawOdds(); changed(); } });
+$("pzs").addEventListener("click",e=>{ if(!e.target.closest("[data-del]")) return; const el=e.target.closest("[data-id]"); if(S.r.prizes.length<=MIN) return;
+  S.r.prizes=S.r.prizes.filter(x=>x.id!==el.dataset.id); drawPrizes(); changed(); });
+$("fill").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.r.fill=b.dataset.v; drawOdds(); changed(); });
+
+// ---------- 3. coupon and spins ----------
+const DAYS=[[0,"Sin fecha límite"],[1,"Solo hoy"],[3,"3 días"],[7,"7 días"],[15,"15 días"],[30,"30 días"]];
+function drawDays(){ $("daysSeg").innerHTML=DAYS.map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="${S.r.days===v}">${t}</button>`).join(""); }
+$("daysSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.r.days=+b.dataset.v; drawDays(); changed(); });
+$("cond").addEventListener("input",()=>{ S.r.cond=$("cond").value; changed(); });
+function drawLim(){ $("limSeg").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===S.r.limit))); }
+$("limSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.r.limit=b.dataset.v; drawLim(); changed(); });
+
+// ---------- 4. review ----------
+function linkHref(v){ v=String(v||"").trim(); if(!v) return "";
+  if(!/^https?:\/\//i.test(v)){ if(/^[a-z][a-z0-9+.-]*:/i.test(v)) return null; v="https://"+v; }
+  try{ const u=new URL(v); return /^https?:$/.test(u.protocol)&&u.hostname.includes(".")?u.href:null; }catch(e){ return null; } }
+$("rvOn").addEventListener("change",()=>{ S.r.review.on=$("rvOn").checked; $("rvBox").hidden=!S.r.review.on; changed(); });
+$("rvUrl").addEventListener("input",()=>{ S.r.review.url=$("rvUrl").value; $("rvUrl").classList.toggle("bad",linkHref(S.r.review.url)===null); changed(); });
+$("rvT").addEventListener("input",()=>{ S.r.review.t=$("rvT").value; changed(); });
+
+// ---------- 5. design ----------
+const COLORS=["#8b3fd6","#ffbe55","#ff5c8a","#e0402f","#ff8a3d","#2fb67c","#1f8fd6","#2c3e8f","#16151a","#ffffff"];
+function drawTheme(){ $("themeSeg").innerHTML=Object.entries(THEMES).map(([k,T])=>`<button type="button" data-v="${k}" aria-pressed="${S.r.theme===k}">${T.t}</button>`).join(""); }
+$("themeSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.r.theme=b.dataset.v; drawTheme(); changed(); });
+function drawColors(key,box){ box.innerHTML=COLORS.map(c=>`<button type="button" style="background:${c}" data-c="${c}" aria-label="Color ${c}" aria-pressed="${c===S.r[key]}"></button>`).join("")+`<input type="color" value="${S.r[key]}" aria-label="Otro color">`;
+  box.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{ S.r[key]=b.dataset.c; drawColors(key,box); changed(); });
+  box.querySelector("input").addEventListener("input",e=>{ S.r[key]=e.target.value; box.querySelectorAll("[data-c]").forEach(b=>b.setAttribute("aria-pressed","false")); changed(); }); }
+function drawDesign(){ drawTheme(); drawColors("color",$("colors1")); drawColors("color2",$("colors2")); }
+
+// ---------- live preview ----------
+let app=null, pvT=0;
+function rNow(){ const r=S.r; return {prizes:r.prizes.filter(p=>p.t.trim()).map(p=>({id:p.id,t:p.t.trim()})),fill:r.fill,limit:r.limit,days:r.days,cond:r.cond.trim(),sub:r.sub.trim(),
+  review:r.review.on&&linkHref(r.review.url)?{url:linkHref(r.review.url),t:r.review.t.trim()}:undefined,color:r.color,color2:r.color2,theme:r.theme,logo:r.logo||undefined}; }
+// with no prizes yet the preview shows examples, so the wheel does not look empty
+function cfgNow(){ const r=rNow(); if(!r.prizes.length) r.prizes=["Tu premio 1","Tu premio 2","Tu premio 3"].map((t,i)=>({id:"ejemplo"+i,t}));
+  return {slug:"vista-previa",title:$("title").value.trim()||"Tu negocio",ruleta:r}; }
+function brand(){ const mk=S.marca&&S.marca.get(); if(mk&&mk.brand==="none") return null;
+  if(mk&&mk.brand==="own"&&mk.preview) return {src:mk.preview,own:true};
+  return {src:S.r.theme==="claro"?"../../assets/logo-vorticevr.png":"../../assets/logo-vorticevr-blanco.png"}; }
+function preview(){ if(app) app.destroy(); app=run({root:$("screen"),cfg:cfgNow(),src:fileUrl,brand:brand(),embedded:true}); }
+function changed(){ clearTimeout(pvT); pvT=setTimeout(()=>{ if(app) app.update(cfgNow(),brand()); else preview(); },140); check(); }
+
+// ---------- link ----------
+const slugIn=$("slug"); let slugOk=false, slugTimer=0;
+const toSlug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9-]+/g,"-").replace(/-+/g,"-").replace(/^-/,"").slice(0,30);
+slugIn.addEventListener("input",()=>{ const c=slugIn.selectionStart; slugIn.value=toSlug(slugIn.value); slugIn.setSelectionRange(c,c); checkSlug(); });
+slugIn.addEventListener("keydown",()=>slugIn.dataset.touched="1");
+function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false; check(); const s=slugIn.value.replace(/-$/,"");
+  if(s.length<3){ m.className="msg"; m.textContent=""; return; }
+  if(S.mine&&S.mine.slug===s){ slugOk=true; m.className="msg ok"; m.textContent="Es tu link actual."; check(); return; }
+  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
+const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
+
+// ---------- publish ----------
+function problems(){
+  if(!$("title").value.trim()) return "Escribe el nombre de tu negocio o tu promoción.";
+  const n=filled().length; if(n<MIN) return `Escribe al menos ${MIN} premios (llevas ${n}).`;
+  if(S.r.review.on){ if(!S.r.review.url.trim()) return "Pega el link para dejar tu reseña o apaga esa opción."; if(!linkHref(S.r.review.url)) return "El link de tu reseña no es válido."; }
+  if(!slugOk) return "Elige un link disponible.";
+  if(!S.token) return "Inicia sesión de nuevo.";
+  const mk=S.marca&&S.marca.get(); if(mk&&!mk.ok) return "Sube el logo de tu marca o elige el de Vórtice VR.";
+  return "";
+}
+function check(){
+  const p=problems();
+  $("n1").classList.toggle("done",!!$("title").value.trim()); $("n2").classList.toggle("done",filled().length>=MIN);
+  $("n4").classList.toggle("done",S.r.review.on&&!!linkHref(S.r.review.url)); $("n6").classList.toggle("done",slugOk);
+  $("mRv").className="msg bad"; $("mRv").textContent=S.r.review.on&&S.r.review.url.trim()&&!linkHref(S.r.review.url)?"Revisa el link.":"";
+  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
+}
+// a card for the dashboard: the wheel on its background
+async function thumb(){
+  const c=document.createElement("canvas"); c.width=800; c.height=600; const x=c.getContext("2d"), r=S.r;
+  const g=x.createRadialGradient(400,0,40,400,300,700);
+  if(r.theme==="claro"){ g.addColorStop(0,"#ffffff"); g.addColorStop(1,"#ebe3f5"); } else if(r.theme==="color"){ g.addColorStop(0,r.color); g.addColorStop(1,"#000"); } else { g.addColorStop(0,"#3a1670"); g.addColorStop(1,"#05020b"); }
+  x.fillStyle=g; x.fillRect(0,0,800,600);
+  try{ const svg=wheelSvg(cfgNow(),{id:"th"}).replace("<svg ",'<svg width="540" height="540" ');
+    const im=await loadImg("data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg)); x.drawImage(im,130,40,540,540); }catch(e){ console.error(e); }
+  if(r.logo){ try{ const im=await loadImg(fileUrl(r.logo)); const s=76*540/540, k=Math.min(s/im.naturalWidth,s/im.naturalHeight); x.drawImage(im,400-im.naturalWidth*k/2,310-im.naturalHeight*k/2,im.naturalWidth*k,im.naturalHeight*k); }catch(e){} }
+  // the pointer
+  x.save(); x.translate(400,48); x.fillStyle="#ffbe55"; x.strokeStyle="#3b1d05"; x.lineWidth=3; x.beginPath(); x.moveTo(0,48); x.lineTo(-22,0); x.arc(0,0,22,Math.PI,0); x.closePath(); x.fill(); x.stroke(); x.restore();
+  return new Promise(res=>c.toBlob(res,"image/png"));
+}
+$("publish").addEventListener("click",async()=>{
+  const p=problems(); if(p){ check(); return; }
+  const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Preparando…"; bar.hidden=false; bar.firstElementChild.style.width="0%"; $("publish").disabled=true;
+  const ruleta=rNow(), items=[], fd=new FormData();
+  if(ruleta.logo){ const id=ruleta.logo, f=S.files.get(id), o=S.old.get(id); const it=f?{id,type:"foto",w:f.w,h:f.h}:o?{id,type:"foto",w:o.w,h:o.h}:null; if(it){ items.push(it); if(f) fd.append("f_"+id,f.blob,id+".img"); } else delete ruleta.logo; }
+  const meta={kind:"ruleta",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),ruleta,items,buttons:{}};
+  const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
+  fd.append("meta",JSON.stringify(meta));
+  if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
+  fd.append("image",await thumb(),"ruleta.png");
+  const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc,linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/","Escanea, gira y gana");
+  fd.append("qr",await new Promise(r=>qrc.toBlob(r,"image/png")),"qr.png");
+  m.textContent="Publicando…";
+  const xhr=new XMLHttpRequest(); xhr.open("POST",`${API}/api/publish`); xhr.setRequestHeader("Authorization","Bearer "+S.token);
+  xhr.upload.onprogress=e=>{ if(e.lengthComputable) bar.firstElementChild.style.width=(e.loaded/e.total*100)+"%"; };
+  xhr.onload=()=>{ bar.hidden=true; let j={}; try{ j=JSON.parse(xhr.responseText); }catch(e){}
+    if(xhr.status!==200){ m.className="msg bad"; m.textContent=j.error||"No se pudo publicar."; $("publish").disabled=false; if(xhr.status===401){ VVR.clearSession(); location.href="../../cuenta/?siguiente=crear"; } return; }
+    m.textContent="¡Publicada! Abriendo tu cuenta…"; location.href="../../cuenta/?publicada="+encodeURIComponent(j.experience.slug); };
+  xhr.onerror=()=>{ bar.hidden=true; m.className="msg bad"; m.textContent="Se cortó la conexión. Intenta de nuevo."; $("publish").disabled=false; };
+  xhr.send(fd);
+});
+
+// ---------- start: session, plan, editing ----------
+function drawAll(){ drawLogo(); drawPrizes(); drawDays(); drawLim(); drawDesign(); }
+(async()=>{
+  const ed=new URLSearchParams(location.search).get("editar");
+  const toLogin=()=>location.replace("../../cuenta/?siguiente=crear");
+  const sess=VVR.session(); if(!sess){ toLogin(); return; }
+  S.token=sess.token; S.email=sess.user&&sess.user.email;
+  drawAll(); preview(); check();
+  try{
+    const r=await VVR.call("me"); S.email=r.user.email;
+    const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1}, LIM=r.limit??P.exp, member=r.team&&r.team.role==="member";
+    if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name}`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
+    const exp=ed?r.experiences.find(x=>x.slug===ed):null;
+    if(window.VVRMarca){ S.marca=VVRMarca.mount($("sMarca"),{plan:P,exp,api:API,base:"../../",onChange:()=>{ check(); clearTimeout(pvT); pvT=setTimeout(preview,200); }}); $("sMarca").hidden=false; }
+    if(exp&&exp.kind!=="ruleta"){ location.replace((exp.kind==="ra"?"../":"../"+exp.kind+"/")+"?editar="+encodeURIComponent(ed)); return; }
+    if(exp){
+      S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza en el mismo link (tu QR sigue funcionando). Los premios que ya ganó la gente siguen guardados en su celular.`;
+      for(const it of exp.items||[]) S.old.set(it.id,it);
+      const R=exp.ruleta||{};
+      S.r={prizes:(R.prizes||[]).map(p=>({id:p.id,t:p.t})),fill:R.fill||"repetir",limit:R.limit||"una",days:R.days??0,cond:R.cond||"",sub:R.sub||"",
+        review:{on:!!(R.review&&R.review.url),url:R.review?R.review.url.replace(/^https:\/\//,""):"",t:R.review&&R.review.t!=="Déjanos tu reseña"?R.review.t:""},color:R.color||"#8b3fd6",color2:R.color2||"#ffbe55",theme:R.theme||"vortice",logo:R.logo||null};
+      while(S.r.prizes.length<MIN) S.r.prizes.push({id:rid(),t:""});
+      $("title").value=exp.title; $("sub").value=S.r.sub; $("cond").value=S.r.cond;
+      $("rvOn").checked=S.r.review.on; $("rvBox").hidden=!S.r.review.on; $("rvUrl").value=S.r.review.url; $("rvT").value=S.r.review.t;
+      slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
+      $("publish").textContent="Guardar cambios";
+      try{ const k=await VVR.call("clicks/"+encodeURIComponent(exp.slug)); S.clicks=k.clicks||{};
+        const won=(R.prizes||[]).reduce((a,p)=>a+(S.clicks[p.id]||0),0), n=v=>(v||0).toLocaleString("es-MX");
+        $("stats").innerHTML=`<div><b>${n(exp.views)}</b><span>visitas</span></div><div><b>${n(S.clicks.spin)}</b><span>giros</span></div><div><b>${n(won)}</b><span>premios ganados</span></div>${R.review?`<div><b>${n(S.clicks.review)}</b><span>fueron a dejar su reseña</span></div>`:""}`;
+        $("statsBox").hidden=false; }catch(e){}
+      drawAll(); preview();
+    } else if(r.experiences.filter(x=>!x.paused).length>=LIM){
+      document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); document.querySelector(".side").hidden=true; $("full").hidden=false;
+      $("fullText").textContent=member?"Tu equipo te asignó todas las que puedes usar. Borra una o pide más a quien administra tu equipo.":`Tu plan ${P.name} incluye ${LIM.toLocaleString("es-MX")} ${LIM===1?"experiencia":"experiencias"}. Borra una desde tu cuenta o mejora tu plan para crear tu ruleta.`;
+    }
+  }catch(e){ if(e.status===401){ toLogin(); return; } }
+  check();
+})();
+</script>
+<script src="../../assets/magia.js" defer></script>
+</body>
+</html>

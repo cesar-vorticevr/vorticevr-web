@@ -591,7 +591,7 @@ $("pUpgrade").addEventListener("click",()=>{ menu(false); openPlans(true); });
 $("plansClose").addEventListener("click",()=>openPlans(false));
 
 // kinds of experience (data.kind; "ra" when there is none)
-const KINDS={ra:["🪄","Realidad aumentada con imagen"],superficie:["🛋️","Realidad aumentada en superficie"],colorear:["🎨","Colorea mi dibujo"],trivia:["🤔","Trivia"],filtro:["🕶️","Filtro"],menu:["🍽️","Menú"],links:["🔗","Links"]};
+const KINDS={ra:["🪄","Realidad aumentada con imagen"],superficie:["🛋️","Realidad aumentada en superficie"],colorear:["🎨","Colorea mi dibujo"],trivia:["🤔","Trivia"],filtro:["🕶️","Filtro"],menu:["🍽️","Menú"],links:["🔗","Links"],ruleta:["🎡","Ruleta"]};
 const kindOf=x=>KINDS[x.kind]?x.kind:"ra";
 let kindSel="all";
 // experiences: kind chips, search, sort and a "paused" filter; 24 at a time
@@ -624,7 +624,7 @@ function card(exp){
     <div class="bd"><h3>${esc(exp.title)}</h3>
       <div class="meta"><span><b>${nf(exp.views)}</b>${free?`/${nf(vlim)}`:""} ${exp.views===1&&!free?"vista":"vistas"}</span><span>${status}</span></div>
       <div class="acts">${exp.paused?`<button class="btn sun" type="button" data-a="up">Mejorar plan</button>`
-        :`<a class="btn" href="../crear/${exp.kind==="trivia"||exp.kind==="colorear"||exp.kind==="filtro"||exp.kind==="menu"||exp.kind==="links"?exp.kind+"/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="copy">Copiar link</button>`}
+        :`<a class="btn" href="../crear/${exp.kind==="trivia"||exp.kind==="colorear"||exp.kind==="filtro"||exp.kind==="menu"||exp.kind==="links"||exp.kind==="ruleta"?exp.kind+"/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="copy">Copiar link</button>`}
         <button class="btn del" type="button" data-a="del" aria-label="Borrar ${esc(exp.title)}">Borrar</button></div></div>`;
   const on=(a,f)=>{ const b=el.querySelector(`[data-a=${a}]`); if(b) b.addEventListener("click",f); };
   if(exp.demo){ // sample card: only the QR works; the rest explains itself
