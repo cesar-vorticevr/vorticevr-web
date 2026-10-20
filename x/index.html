@@ -420,7 +420,8 @@ async function startSuperficie(){
   try{
     const SF=await import("/assets/superficie.js");
     const buttons=ORDER.filter(k=>CFG.buttons&&CFG.buttons[k]).map(k=>({href:socialHref(k,CFG.buttons[k]),label:LABEL[k],svg:`<svg viewBox="0 0 24 24">${ICONS[k]}</svg>`}));
-    await SF.run({root:$("ar"),cfg:CFG,buttons,url:it=>`${CFG.base||location.origin}/m/${CFG.slug}/${it.file}?v=${CFG.updated||""}`});
+    const brand=CFG.brand==="none"?null:CFG.brand==="own"?{src:`${CFG.base}/m/${CFG.slug}/logo`,own:true}:{src:"/assets/logo-vorticevr-blanco.png"};   // on the photos and videos (Android)
+    await SF.run({root:$("ar"),cfg:CFG,buttons,brand,url:it=>`${CFG.base||location.origin}/m/${CFG.slug}/${it.file}?v=${CFG.updated||""}`});
   }catch(e){ console.error(e); message("No se pudo abrir la experiencia","Revisa tu conexión y vuelve a abrir el link."); }
 }
 async function startLinks(){

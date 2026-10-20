@@ -85,7 +85,7 @@ const CSS = `
 @media (prefers-reduced-motion:reduce){.sf-load::before{animation:none}}
 `;
 
-// o: { root, cfg, url(it), buttons: [{href, label, svg}] }
+// o: { root, cfg, url(it), buttons: [{href, label, svg}], brand: {src, own} | null (logo on the captures) }
 export async function run(o) {
   const cfg = o.cfg;
   if (!document.getElementById("sf-css")) document.head.appendChild(Object.assign(document.createElement("style"), { id: "sf-css", textContent: CSS }));
@@ -114,11 +114,15 @@ export async function run(o) {
     ["environment-image", "neutral"], ["exposure", "1.05"], ["ar", ""], ["ar-modes", "webxr quick-look"], ["ar-scale", "fixed"], ["ar-placement", "floor"],
     ["interaction-prompt", "none"], ["touch-action", "pan-y"], ["camera-orbit", "0deg 70deg auto"]]) mv.setAttribute(k, v);
   mv.setAttribute("src", URL.createObjectURL(new Blob([glb], { type: "model/gltf-binary" })));
+  // Android (WebXR): our own view, with photo and video with the logo (assets/superficie-xr.js). iPhone: Quick Look.
+  let XR = null;
+  try { if (navigator.xr && await navigator.xr.isSessionSupported("immersive-ar")) XR = await import("./superficie-xr.js"); } catch (e) { XR = null; }
+  steps.lastElementChild.innerHTML = XR ? "3. Toca la pantalla para ponerlo, camina a su alrededor y toma tu <b>foto o video</b>." : "3. Camina a su alrededor. Para tu foto o video usa el botón de la cámara que aparece abajo.";
   mv.addEventListener("load", () => {
     load.remove();
     stage.appendChild(Object.assign(document.createElement("span"), { className: "sf-hint", textContent: "Gíralo con el dedo" }));
     const show = () => {
-      const can = !!mv.canActivateAR, phone = matchMedia("(hover: none)").matches;
+      const can = !!XR || !!mv.canActivateAR, phone = matchMedia("(hover: none)").matches;
       btn.hidden = !can; steps.hidden = !can; note.hidden = can;
       note.textContent = phone ? "Tu celular no permite ver esto en tu espacio. Puedes girarlo aquí con el dedo." : "Abre este link en tu celular para verlo en tu espacio, sobre el piso o una mesa.";
     };
@@ -143,6 +147,15 @@ export async function run(o) {
     if (st === "failed") { note.hidden = false; note.textContent = "No se pudo abrir la cámara. Prueba en Chrome (Android) o Safari (iPhone), no dentro de Instagram o WhatsApp."; }
     if (audio && (st === "not-presenting" || st === "failed")) audio.pause();
   });
-  btn.onclick = () => { if (audio) { try { audio.currentTime = 0; } catch (e) {} audio.play().catch(() => {}); } mv.activateAR(); };
+  btn.onclick = () => {
+    if (XR) {   // the session is asked for right inside this tap
+      if (sndBtn) sndBtn.hidden = true;
+      XR.startXR({ glb, brand: o.brand, slug: cfg.slug, title: cfg.title, audio, onEnd: () => { if (sndBtn) sndBtn.hidden = false; } })
+        .catch(e => { console.error(e); if (sndBtn) sndBtn.hidden = false; note.hidden = false; note.textContent = "No se pudo abrir la cámara. Prueba en Chrome, no dentro de Instagram o WhatsApp."; });
+      return;
+    }
+    if (audio) { try { audio.currentTime = 0; } catch (e) {} audio.play().catch(() => {}); }
+    mv.activateAR();
+  };
   stage.prepend(mv);
 }
