@@ -37,10 +37,10 @@ const REF = { plans: ["pro", "premium", "empresarial"], rate: 0.10, discount: 10
 const ADMIN_SLUGS = new Set(["ejemplo"]); // only an admin can take these (the home page demo uses "ejemplo")
 const VIDEO = /\.(mp4|m4v|webm|mov)$/i;
 const MEDIA_KEYS = ["video", "target", "image", "model", "qr", "logo"]; // R2 files of an experience: exp/<slug>/<key> (+ i/<id> of its elements)
-const ITEM_TYPES = ["video", "image", "text", "model"];
+const ITEM_TYPES = ["video", "image", "text", "model", "audio"];
 const ENTRANCES = ["aparecer", "crecer", "rebote", "girar", "subir", "ninguna"];
 const FONTS = ["Sora", "Bebas Neue", "Pacifico", "Playfair Display", "Permanent Marker", "IBM Plex Sans"];
-const ITEM_LIMITS = { videos: 2, scenes: 5, imageBytes: 5 * 1024 * 1024 };
+const ITEM_LIMITS = { videos: 2, scenes: 5, imageBytes: 5 * 1024 * 1024, audioBytes: 10 * 1024 * 1024 };   // audio: one per scene
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])$/;
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i;
 const BUTTONS = ["whatsapp", "facebook", "instagram", "youtube", "x", "tiktok", "web"];
@@ -434,6 +434,7 @@ async function api(request, env, ctx, url) {
       if (file && typeof file !== "string") {
         if (it.type === "video" && (file.size > P.videoMB * 1048576 || !/^video\/(mp4|webm|quicktime)$/.test(file.type))) return json({ error: `Cada video debe ser MP4, WebM o MOV de máximo ${P.videoMB} MB.` }, 400);
         if (["image", "pintura", "pantalla", "foto", "pagina"].includes(it.type) && (file.size > ITEM_LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(file.type))) return json({ error: "Cada imagen debe ser JPG, PNG o WebP de máximo 5 MB." }, 400);
+        if (it.type === "audio" && (file.size > ITEM_LIMITS.audioBytes || !/^audio\/(mpeg|mp3|mp4|x-m4a|m4a|aac)$/.test(file.type))) return json({ error: "Cada audio debe ser MP3 o M4A de máximo 10 MB." }, 400);
         if (it.type === "model") {
           if (file.size > P.modelMB * 1048576) return json({ error: `Cada objeto 3D debe pesar máximo ${P.modelMB} MB.` }, 400);
           if (new TextDecoder().decode(new Uint8Array(await file.slice(0, 4).arrayBuffer())) !== "glTF") return json({ error: "Los objetos 3D deben ser archivos GLB." }, 400);
@@ -793,7 +794,7 @@ function cleanItems(list, P) {
   if (!Array.isArray(list) || !list.length) return { error: "Agrega al menos un elemento: un video, una imagen, un texto o un objeto 3D." };
   if (list.length > P.items) return { error: `Tu plan ${P.name} permite hasta ${P.items} elementos por experiencia.` };
   const out = [], ids = new Set();
-  let sound = false, videos = 0;
+  let sound = false, videos = 0; const audioScenes = new Set();
   for (const m of list) {
     const id = String(m && m.id || "");
     if (!/^(video|model|[a-z0-9]{6,16})$/.test(id) || ids.has(id) || !ITEM_TYPES.includes(m.type)) return { error: "Uno de tus elementos no es válido." };
@@ -825,6 +826,10 @@ function cleanItems(list, P) {
       it.stroke = HEX.test(m.stroke) ? m.stroke : null;
     }
     if (m.type === "model") it.anim = int(m.anim, -1, 99) ?? 0;
+    if (m.type === "audio") {   // MP3 / M4A: plays while its scene is on view; loop or once
+      if (audioScenes.has(it.scene)) return { error: "Puedes poner un audio por escena." };
+      audioScenes.add(it.scene); it.loop = m.loop !== false; delete it.link;
+    }
     out.push(it);
   }
   return { items: out };

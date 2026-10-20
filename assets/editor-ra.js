@@ -104,7 +104,7 @@ export async function createEditor(box, cb) {
   function select(id) { selected = id || null; attach(); cb.select && cb.select(selected); }
   function attach() {
     const n = selected && nodes.get(selected);
-    if (!n) { tc.detach(); return; }
+    if (!n || n.audio) { tc.detach(); return; }   // an audio has nothing to move
     tc.setMode(mode === "girar" ? "rotate" : mode === "escalar" ? "scale" : "translate");
     tc.setSpace(mode === "mover" ? "world" : "local");
     tc.attach(n.root);
@@ -201,7 +201,7 @@ export async function createEditor(box, cb) {
     }
     if (playT > 3) playT = -1;
     const n = selected && nodes.get(selected);
-    sel.visible = !!n && n.root.visible;
+    sel.visible = !!n && !n.audio && n.root.visible;
     if (sel.visible) sel.setFromObject(n.root);
     orbit.update(); renderer.render(scene, camera);
   });

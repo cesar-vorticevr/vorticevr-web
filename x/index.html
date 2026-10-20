@@ -209,6 +209,11 @@ const slug=slugFromUrl();
 let CFG=null;
 // Videos: the main one (the one with sound, or the first) is #vid and goes on screen when the image is lost; the rest play muted.
 let PRIMARY=null; const VIDS=new Map();
+// Audios (one per scene): they play while their scene is on view and the image is found. quiet = the user muted the sound.
+const AUDS=new Map(); let quiet=false, sceneNow=0;
+const primaryHere=()=>!!PRIMARY&&(PRIMARY.scene||0)===sceneNow;
+const audioHere=()=>CFG&&CFG.items.some(i=>i.type==="audio"&&(i.scene||0)===sceneNow);
+const isMuted=()=>primaryHere()?vid.muted:quiet;
 function message(t,p){ $("intro").hidden=true; $("msgT").textContent=t; $("msgP").textContent=p; $("msg").hidden=false; }
 
 const ICONS={
@@ -284,6 +289,9 @@ async function load(){
     if(v!==vid){ v.playsInline=true; v.setAttribute("webkit-playsinline",""); v.loop=true; v.preload="auto"; v.crossOrigin="anonymous"; $("vids").appendChild(v); }
     v.muted=!it.sound; v.src=m+it.file; VIDS.set(it.id,v);
   }
+  for(const it of CFG.items.filter(i=>i.type==="audio")){
+    const a=new Audio(); a.preload="auto"; a.crossOrigin="anonymous"; a.loop=it.loop!==false; a.src=m+it.file; AUDS.set(it.id,a);
+  }
   socialButtons();
   startBtn.disabled=false;
   libsP=libs().catch(e=>{ console.error(e); libsP=null; });
@@ -296,11 +304,12 @@ const I_SON='<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 
 const I_SOFF='<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm16.6 3 2.1-2.1-1.4-1.4-2.1 2.1-2.1-2.1-1.4 1.4 2.1 2.1-2.1 2.1 1.4 1.4 2.1-2.1 2.1 2.1 1.4-1.4-2.1-2.1z"/></svg>';
 let userPaused=false;
 const showCtl=()=>{ $("play").innerHTML=vid.paused?I_PLAY:I_PAUSE; $("play").setAttribute("aria-label",vid.paused?"Reproducir video":"Pausar video");
-  $("snd").innerHTML=vid.muted?I_SOFF:I_SON; $("snd").setAttribute("aria-label",vid.muted?"Activar sonido":"Silenciar"); };
+  $("snd").innerHTML=isMuted()?I_SOFF:I_SON; $("snd").setAttribute("aria-label",isMuted()?"Activar sonido":"Silenciar"); };
 ["play","pause","volumechange"].forEach(e=>vid.addEventListener(e,showCtl));
 const playVid=()=>vid.play().catch(()=>{ vid.muted=true; return vid.play().catch(()=>{}); });
 $("play").addEventListener("click",()=>{ if(vid.paused){ userPaused=false; playVid(); } else { userPaused=true; vid.pause(); } });
-$("snd").addEventListener("click",()=>{ vid.muted=!vid.muted; if(vid.paused&&!userPaused) playVid(); });
+$("snd").addEventListener("click",()=>{ const m=!isMuted(); quiet=m; for(const a of AUDS.values()) a.muted=m;   // one button for the video and the audio
+  if(primaryHere()){ vid.muted=m; if(vid.paused&&!userPaused) playVid(); } showCtl(); });
 let setMode=()=>{};
 const cssFull=on=>{ vbox.classList.toggle("full",on); setMode(); };
 $("fs").addEventListener("click",()=>{
@@ -341,7 +350,7 @@ function setupCapture(mind,opts={}){
     wantRec=true; }
   function beginRec(){
     const stream=out.captureStream(30);
-    if(AUDIO.dest && !vid.muted) AUDIO.dest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
+    if(AUDIO.dest) AUDIO.dest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));   // muted elements add silence
     const type=pickType(); recorder=new MediaRecorder(stream,type?{mimeType:type,videoBitsPerSecond:6e6}:undefined); chunks=[];
     recorder.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
     recorder.onstop=()=>{ const t=recorder.mimeType||type||"video/webm"; recorder=null; show(new Blob(chunks,{type:t}),"video"); };
@@ -367,8 +376,10 @@ function setupCapture(mind,opts={}){
 }
 // Audio of the video for recordings: routed through WebAudio once (created inside the user's tap).
 const AUDIO={};
-function setupAudio(){ try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; const ac=new AC(); const src=ac.createMediaElementSource(vid);
-  const dest=ac.createMediaStreamDestination(); src.connect(ac.destination); src.connect(dest); AUDIO.ac=ac; AUDIO.dest=dest; ac.resume&&ac.resume(); }catch(e){} }
+function setupAudio(){ try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; const ac=new AC();
+  const dest=ac.createMediaStreamDestination();
+  for(const el of [PRIMARY&&PRIMARY.sound?vid:null,...AUDS.values()]){ if(!el) continue; const src=ac.createMediaElementSource(el); src.connect(ac.destination); src.connect(dest); }
+  AUDIO.ac=ac; AUDIO.dest=dest; ac.resume&&ac.resume(); }catch(e){} }
 
 async function startTrivia(record=true){
   startBtn.disabled=true; startBtn.textContent="Cargando…"; $("err").hidden=true; if($("solo")) $("solo").hidden=true;
@@ -443,7 +454,9 @@ async function start(){
   if(CFG.kind==="filtro") return startFiltro();
   if(CFG.kind==="trivia") return startTrivia();
   if(CFG.kind==="colorear") return startColorear();
-  if(PRIMARY){ vid.muted=!PRIMARY.sound; vid.play().then(()=>vid.pause()).catch(()=>{}); if(PRIMARY.sound) setupAudio(); }   // unlock sound inside the tap (iOS)
+  if(PRIMARY){ vid.muted=!PRIMARY.sound; vid.play().then(()=>vid.pause()).catch(()=>{}); }   // unlock sound inside the tap (iOS)
+  for(const a of AUDS.values()) a.play().then(()=>a.pause()).catch(()=>{});
+  if((PRIMARY&&PRIMARY.sound)||AUDS.size) setupAudio();
   for(const v of VIDS.values()) if(v!==vid) v.play().then(()=>v.pause()).catch(()=>{});
   startBtn.disabled=true; startBtn.textContent="Cargando…"; $("err").hidden=true;
   try{ await (libsP||libs()); if(!THREE||!MindARThree||!ESC) throw 0; }
@@ -484,18 +497,23 @@ async function start(){
     };
 
     let found=false, started=false;
-    const primaryHere=()=>PRIMARY&&(PRIMARY.scene||0)===cur;
     // videos of the scene on view play; the main one keeps playing on screen while the image is out of view
     const playScene=()=>{ for(const [id,v] of VIDS){ const n=nodes.find(x=>x.it.id===id), on=!!n&&inScene(n);
       if(v===vid){ if(!on) v.pause(); else if(found&&!userPaused) playVid(); }
-      else if(on&&found) v.play().catch(()=>{}); else v.pause(); } };
+      else if(on&&found) v.play().catch(()=>{}); else v.pause(); }
+      // the audio of the scene on view plays while the image is found; one that plays once stays done
+      for(const [id,a] of AUDS){ const on=(CFG.items.find(i=>i.id===id).scene||0)===cur;
+        if(on&&found){ if(!a.ended||a.loop) a.play().catch(()=>{}); } else a.pause(); } };
     setMode=()=>{ const here=primaryHere(), full=vbox.classList.contains("full"), onScreen=!!here&&!PRIMARY.chroma&&started&&(!found||full);
-      vbox.classList.toggle("on",onScreen); vbox.setAttribute("aria-hidden",String(!onScreen)); $("vctl").hidden=!(here&&started);
+      vbox.classList.toggle("on",onScreen); vbox.setAttribute("aria-hidden",String(!onScreen)); $("vctl").hidden=!((here||audioHere())&&started);
+      $("play").hidden=$("fs").hidden=!here; showCtl();   // with only an audio: just the sound button
       guide.classList.toggle("off",found&&!full); guide.classList.toggle("mini",started&&!found); };
     anchor.onTargetFound=()=>{ found=true; if(!started){ started=true; if(PRIMARY) vid.currentTime=0; } sceneT=0; playScene(); setMode(); };
     anchor.onTargetLost=()=>{ found=false; playScene(); setMode(); };
     // scenes: arrows at the bottom
-    const go=k=>{ cur=(k+scenes)%scenes; sceneT=0; $("sLbl").textContent=`Escena ${cur+1} de ${scenes}`; playScene(); setMode(); };
+    const go=k=>{ cur=(k+scenes)%scenes; sceneNow=cur; sceneT=0;
+      for(const [id,a] of AUDS) if((CFG.items.find(i=>i.id===id).scene||0)===cur){ try{ a.currentTime=0; }catch(e){} }   // its audio starts over
+      $("sLbl").textContent=`Escena ${cur+1} de ${scenes}`; playScene(); setMode(); };
     $("sPrev").addEventListener("click",()=>go(cur-1)); $("sNext").addEventListener("click",()=>go(cur+1)); go(0);
     // tapping an element with a link opens it
     const ray=new THREE.Raycaster(), ptr=new THREE.Vector2();

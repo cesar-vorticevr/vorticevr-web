@@ -23,6 +23,7 @@ function glowing(m) {
 
 // items → GLB (ArrayBuffer). url(it): its file.
 export async function sceneGLB(items, url) {
+  items = items.filter(i => i.type !== "audio");   // the page plays it
   if (items.some(i => i.type === "text") && !document.getElementById("fonts")) document.head.appendChild(Object.assign(document.createElement("link"), { id: "fonts", rel: "stylesheet", href: ESC.FONT_CSS }));
   const world = new THREE.Group(); world.name = "escena"; world.rotation.x = -Math.PI / 2;   // the editor's floor, lying down
   const clips = [];
@@ -54,7 +55,11 @@ export async function sceneGLB(items, url) {
 }
 
 const AR_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5zm0 2.3 6.7 3.7L12 11.7 5.3 8 12 4.3zM5 9.7l6 3.4v6.6l-6-3.3V9.7zm8 10V13l6-3.4v6.7l-6 3.4z"/></svg>';
+const SND_ON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>';
+const SND_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm16.6 3 2.1-2.1-1.4-1.4-2.1 2.1-2.1-2.1-1.4 1.4 2.1 2.1-2.1 2.1 1.4 1.4 2.1-2.1 2.1 2.1 1.4-1.4-2.1-2.1z"/></svg>';
 const CSS = `
+.sf-snd{position:absolute;right:14px;top:10px;z-index:2;width:44px;height:44px;border-radius:50%;border:1px solid rgba(210,184,255,.35);background:rgba(10,4,22,.62);display:grid;place-items:center;cursor:pointer}
+.sf-snd svg{width:22px;height:22px;fill:#fff}
 .sf{position:fixed;inset:0;display:flex;flex-direction:column;background:radial-gradient(90% 60% at 50% 35%,#22104a,#05020b 72%);color:#f2ecff;font-family:"IBM Plex Sans",system-ui,sans-serif}
 .sf-top{padding:calc(62px + env(safe-area-inset-top,0px)) 20px 0;text-align:center}
 .sf-k{font:600 .74rem "Sora",system-ui,sans-serif;letter-spacing:.24em;text-transform:uppercase;color:#ffbe55}
@@ -120,7 +125,24 @@ export async function run(o) {
     show(); setTimeout(show, 700); setTimeout(show, 2500);   // canActivateAR is known a moment after the model loads
   });
   mv.addEventListener("error", () => fail("No se pudo mostrar la experiencia."));
-  mv.addEventListener("ar-status", e => { if (e.detail.status === "failed") { note.hidden = false; note.textContent = "No se pudo abrir la cámara. Prueba en Chrome (Android) o Safari (iPhone), no dentro de Instagram o WhatsApp."; } });
-  btn.onclick = () => mv.activateAR();
+
+  // its audio: it starts with "Verlo en tu espacio" (inside the tap, so phones let it sound) and stops when the camera
+  // closes (Android); the button on the stage plays or stops it at any time (also to try it here)
+  const au = (cfg.items || []).find(i => i.type === "audio");
+  let audio = null, sndBtn = null;
+  if (au) {
+    audio = new Audio(); audio.preload = "auto"; audio.loop = au.loop !== false; audio.src = o.url(au);
+    sndBtn = Object.assign(document.createElement("button"), { type: "button", className: "sf-snd" });
+    const paint = () => { sndBtn.innerHTML = audio.paused ? SND_OFF : SND_ON; sndBtn.setAttribute("aria-label", audio.paused ? "Escuchar el audio" : "Parar el audio"); };
+    ["play", "pause", "ended"].forEach(ev => audio.addEventListener(ev, paint)); paint();
+    sndBtn.onclick = () => { if (audio.paused) { if (audio.ended) audio.currentTime = 0; audio.play().catch(() => {}); } else audio.pause(); };
+    stage.appendChild(sndBtn);
+  }
+  mv.addEventListener("ar-status", e => {
+    const st = e.detail.status;
+    if (st === "failed") { note.hidden = false; note.textContent = "No se pudo abrir la cámara. Prueba en Chrome (Android) o Safari (iPhone), no dentro de Instagram o WhatsApp."; }
+    if (audio && (st === "not-presenting" || st === "failed")) audio.pause();
+  });
+  btn.onclick = () => { if (audio) { try { audio.currentTime = 0; } catch (e) {} audio.play().catch(() => {}); } mv.activateAR(); };
   stage.prepend(mv);
 }

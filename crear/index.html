@@ -46,8 +46,6 @@ h1{font-family:var(--fd);font-size:clamp(2rem,5vw,3.2rem);line-height:1.02;margi
 .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:10px}
 .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--vortex),var(--sun));transition:width .2s}
 .msg{font-size:.88rem;margin-top:8px}
-.tutlink{margin-top:10px;font:600 .8rem var(--fd);letter-spacing:.1em;text-transform:uppercase;color:var(--sun);background:rgba(255,190,85,.08);border:1px solid rgba(255,190,85,.4);border-radius:999px;padding:8px 14px;cursor:pointer}
-.tutlink:hover{background:rgba(255,190,85,.16)}
 .quality{display:flex;gap:12px;align-items:flex-start;margin-top:10px;padding:12px 14px;border-radius:12px;border:1px solid var(--line2);background:rgba(5,2,11,.6);font-size:.9rem;color:var(--mute)}
 .quality b{display:block;color:var(--ink);font-family:var(--fd);font-size:.85rem;letter-spacing:.06em;margin-bottom:2px}
 .quality .stars{font-size:1.35rem;letter-spacing:2px;color:#ffbe55;text-shadow:0 0 12px rgba(255,190,85,.7);white-space:nowrap;line-height:1.2}
@@ -186,7 +184,7 @@ body.cat main>:not(.hero):not(#catalog){display:none!important}
 body.cat .hero .ra{display:none}
 body:not(.cat) #catalog,body:not(.cat) .hero .cat{display:none}
 /* "Realidad aumentada en superficie" (?tipo=superficie): the same editor on a floor, without the image step or videos */
-body:not(.sf) .hero .sfo,body.cat .hero .sfo,body.sf .hero .rao,body.sf #s1,body.sf [data-add="video"],body.sf #scenes,body.sf [data-v="play"],body.sf #tutBtn{display:none!important}
+body:not(.sf) .hero .sfo,body.cat .hero .sfo,body.sf .hero .rao,body.sf #s1,body.sf [data-add="video"],body.sf #scenes,body.sf [data-v="play"]{display:none!important}
 .allx{display:inline-flex;align-items:center;gap:6px;margin:12px 16px 0 0;font:600 .85rem var(--fd);color:var(--lav);text-decoration:none}
 .allx:hover{color:var(--ink)}
 #catalog{margin-top:6px}
@@ -233,7 +231,6 @@ a.xc.tap{transform:scale(.98);transition-duration:.1s;transition-delay:0s!import
     <p class="ra sfo">Pon objetos 3D, imágenes y textos que aparecen en el piso o en la mesa de quien abra tu link, a su tamaño real. Sin imagen que enfocar: apunta, toca y camina a su alrededor. Recibes un link propio y un código QR para compartir.</p>
     <p class="ra rao">Sube una imagen y ponle encima videos, fotos, textos u objetos 3D. Cuando alguien apunte su celular a la imagen, todo cobra vida. Recibes un link propio y un código QR para compartir.</p>
     <a class="allx ra" href="./">← Todas las experiencias</a>
-    <button class="tutlink ra" id="tutBtn" type="button">✦ Ver tutorial</button>
   </div>
   <section id="catalog" aria-label="Experiencias que puedes crear">
     <div class="cgrid">
@@ -278,6 +275,7 @@ a.xc.tap{transform:scale(.98);transition-duration:.1s;transition-delay:0s!import
             <button type="button" class="add" data-add="image" title="Agregar una imagen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 13h16l-5-6-4 5-3-3zM8 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>Imagen</button>
             <button type="button" class="add" data-add="text" title="Agregar un texto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v4h-2V6h-5v12h2v2H9v-2h2V6H6v2H4z"/></svg>Texto</button>
             <button type="button" class="add" data-add="model" title="Agregar un objeto 3D (GLB)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.7 8 12 11.7 5.3 8zM5 9.7l6 3.3v6.7l-6-3.3zm8 10V13l6-3.3v6.7z"/></svg>3D</button>
+            <button type="button" class="add" data-add="audio" title="Agregar un audio (MP3 o M4A)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v10.6A3.5 3.5 0 1 0 11 18V8h7v6.6a3.5 3.5 0 1 0 2 3.2V4H9z"/></svg>Audio</button>
           </nav>
           <div class="cv">
             <div class="stage3d" id="stage3d">
@@ -320,7 +318,7 @@ a.xc.tap{transform:scale(.98);transition-duration:.1s;transition-delay:0s!import
           </aside>
         </div>
         <input type="file" id="fAdd" hidden>
-        <p class="fmt" id="fmt">Videos MP4 (para quitarles el fondo, grábalos con pantalla verde). Imágenes PNG con fondo transparente para logos. Objetos 3D en <b>GLB</b> (se comprimen solos antes de subirlos); si tienes FBX u OBJ, ábrelo en Blender (gratis) → <b>Archivo → Exportar → glTF 2.0 (.glb)</b>.</p>
+        <p class="fmt" id="fmt">Videos MP4 (para quitarles el fondo, grábalos con pantalla verde). Audios MP3 o M4A de hasta 10 MB, uno por escena. Imágenes PNG con fondo transparente para logos. Objetos 3D en <b>GLB</b> (se comprimen solos antes de subirlos); si tienes FBX u OBJ, ábrelo en Blender (gratis) → <b>Archivo → Exportar → glTF 2.0 (.glb)</b>.</p>
       </section>
 
       <section class="step narrow" id="s4">
@@ -416,8 +414,8 @@ function surfaceMode(){
   S.sf=true; document.body.classList.add("sf"); document.title="Realidad aumentada en superficie · Vórtice VR";
   $("n2").textContent="1"; $("n4").textContent="2"; $("n6").textContent="3";
   $("h2").textContent="Agrega lo que aparecerá en el piso o en la mesa de quien abra tu link. Cada cuadro mide 25 cm: así de grande se verá.";
-  $("fmt").innerHTML="Objetos 3D en <b>GLB</b> (se comprimen solos antes de subirlos); si tienes FBX u OBJ, ábrelo en Blender (gratis) → <b>Archivo → Exportar → glTF 2.0 (.glb)</b>. Imágenes PNG con fondo transparente para logos. En iPhone las animaciones del 3D no se ven.";
-  $("noItems").textContent="Usa los botones de la izquierda para agregar un objeto 3D, una imagen o un texto.";
+  $("fmt").innerHTML="Objetos 3D en <b>GLB</b> (se comprimen solos antes de subirlos); si tienes FBX u OBJ, ábrelo en Blender (gratis) → <b>Archivo → Exportar → glTF 2.0 (.glb)</b>. Imágenes PNG con fondo transparente para logos. Un audio MP3 o M4A de hasta 10 MB. En iPhone las animaciones del 3D no se ven.";
+  $("noItems").textContent="Usa los botones de la izquierda para agregar un objeto 3D, una imagen, un texto o un audio.";
   $("empty").textContent="Cargando…";
   setTimeout(()=>ensureEditor(),0);   // no image to wait for: the floor shows right away
 }
@@ -425,9 +423,10 @@ if(S.sf) surfaceMode();
 
 // ---------- step 2: content (elements on the image; the 3D editor is assets/editor-ra.js) ----------
 let ED=null, edP=null;
-const IC={video:'<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',image:'<svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zm2 2v8l4-4 3 3 2-2 3 3V7z"/></svg>',text:'<svg viewBox="0 0 24 24"><path d="M5 4h14v4h-2V6h-4v12h2v2H9v-2h2V6H7v2H5z"/></svg>',model:'<svg viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.7 8 12 11.7 5.3 8zM5 9.7l6 3.3v6.7l-6-3.3zm8 10V13l6-3.3v6.7z"/></svg>'};
-const TYPE={video:"Video",image:"Imagen",text:"Texto",model:"Objeto 3D"};
-const ACCEPT={video:"video/mp4,video/webm,video/quicktime",image:"image/png,image/jpeg,image/webp",model:".glb,model/gltf-binary"};
+const IC={video:'<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',image:'<svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zm2 2v8l4-4 3 3 2-2 3 3V7z"/></svg>',text:'<svg viewBox="0 0 24 24"><path d="M5 4h14v4h-2V6h-4v12h2v2H9v-2h2V6H7v2H5z"/></svg>',model:'<svg viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.7 8 12 11.7 5.3 8zM5 9.7l6 3.3v6.7l-6-3.3zm8 10V13l6-3.3v6.7z"/></svg>',audio:'<svg viewBox="0 0 24 24"><path d="M9 4v10.6A3.5 3.5 0 1 0 11 18V8h7v6.6a3.5 3.5 0 1 0 2 3.2V4H9z"/></svg>'};
+const TYPE={video:"Video",image:"Imagen",text:"Texto",model:"Objeto 3D",audio:"Audio"};
+const ACCEPT={video:"video/mp4,video/webm,video/quicktime",image:"image/png,image/jpeg,image/webp",model:".glb,model/gltf-binary",audio:"audio/mpeg,audio/mp4,audio/x-m4a,.mp3,.m4a"};
+const AUDIO_MB=10;   // one audio per scene (MP3 or M4A), it plays while that scene is on view
 const MODEL_IN_MB=150;   // a GLB this big can still be opened; it is compressed in the browser and must end ≤ plan.modelMB
 const TIPS={none:"Toca un elemento para editarlo · arrastra el fondo para girar la vista",mover:"Arrastra el elemento o sus flechas · rueda o pellizco: tamaño",girar:"Arrastra un anillo para girarlo en ese eje",escalar:"Arrastra un cuadro para cambiar su tamaño"};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -456,7 +455,7 @@ function ensureEditor(){
 }
 function tools(){
   const has=!!sel();
-  document.querySelectorAll("#acts button").forEach(b=>b.disabled=!has);
+  document.querySelectorAll("#acts button").forEach(b=>b.disabled=!has||(sel().type==="audio"&&b.dataset.act!=="del"));   // an audio can only be removed
   $("tip").textContent=has?TIPS[mode]:TIPS.none;
   document.querySelector('[data-act="undo"]').disabled=!H.past.length; document.querySelector('[data-act="redo"]').disabled=!H.future.length;
 }
@@ -466,6 +465,7 @@ function canAdd(t){
   if(S.sf&&t==="video"){ msgAdd("bad","En superficie no van videos: usa objetos 3D, imágenes y textos."); return false; }
   if(!S.imgW&&!S.sf){ msgAdd("bad","Primero sube tu imagen (paso 1)."); return false; }
   if(S.items.length>=S.plan.items){ msgAdd("bad",`Tu plan ${S.plan.name} permite hasta ${S.plan.items} elementos por experiencia.`); return false; }
+  if(t==="audio"&&S.items.some(i=>i.type==="audio"&&(i.scene||0)===S.scene)){ msgAdd("bad",S.scenes>1?"Esta escena ya tiene un audio. Quítalo para poner otro.":"Ya tienes un audio. Quítalo para poner otro."); return false; }
   if(t==="video"&&S.items.filter(i=>i.type==="video").length>=2){ msgAdd("bad","Puedes poner hasta 2 videos por experiencia."); return false; }
   msgAdd(); return true;
 }
@@ -476,8 +476,8 @@ document.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()
 { const d=$("ed"); d.addEventListener("dragover",e=>{ if(![...e.dataTransfer.types].includes("Files")) return; e.preventDefault(); $("adds").classList.add("over"); });
   d.addEventListener("dragleave",()=>$("adds").classList.remove("over"));
   d.addEventListener("drop",e=>{ const file=e.dataTransfer.files[0]; $("adds").classList.remove("over"); if(!file) return; e.preventDefault();
-    const t=/^video\//.test(file.type)?"video":/^image\//.test(file.type)?"image":/\.glb$/i.test(file.name)?"model":null;
-    if(!t){ msgAdd("bad","Ese tipo de archivo no se puede usar. Videos MP4, imágenes PNG/JPG u objetos 3D GLB."); return; }
+    const t=/^video\//.test(file.type)?"video":/^image\//.test(file.type)?"image":/\.glb$/i.test(file.name)?"model":/^audio\//.test(file.type)||/\.(mp3|m4a)$/i.test(file.name)?"audio":null;
+    if(!t){ msgAdd("bad","Ese tipo de archivo no se puede usar. Videos MP4, imágenes PNG/JPG, objetos 3D GLB o audios MP3."); return; }
     if(canAdd(t)) fromFile(t,file); }); }
 async function fromFile(t,file){
   if(!file) return; msgAdd("","Abriendo "+file.name+"…");
@@ -488,6 +488,14 @@ async function fromFile(t,file){
     if(!ok) return msgAdd("bad","No pude abrir ese video. Expórtalo como MP4 (H.264).");
     // the video goes over the whole width of the image; then it can be moved and resized
     addItem({type:"video",name:file.name,w:v.videoWidth,h:v.videoHeight,s:1,sound:!S.items.some(i=>i.type==="video"&&i.sound),chroma:null,_file:file,_url:url,_fname:file.name});
+  } else if(t==="audio"){
+    const known=/^audio\/(mpeg|mp3|mp4|x-m4a|m4a|aac)$/.test(file.type);
+    if(!known&&!/\.(mp3|m4a)$/i.test(file.name)) return msgAdd("bad","Usa un audio MP3 o M4A.");
+    if(file.size>AUDIO_MB*1048576) return msgAdd("bad",`El audio pesa ${(file.size/1048576).toFixed(1)} MB. El máximo es ${AUDIO_MB} MB: expórtalo en MP3 a 128 kbps.`);
+    const blob=known?file:new Blob([file],{type:/\.m4a$/i.test(file.name)?"audio/mp4":"audio/mpeg"}), url=URL.createObjectURL(blob), a=new Audio(); a.preload="metadata"; a.src=url;
+    const dur=await new Promise(r=>{ a.onloadedmetadata=()=>r(a.duration); a.onerror=()=>r(0); });
+    if(!dur) return msgAdd("bad","No pude abrir ese audio. Expórtalo como MP3.");
+    addItem({type:"audio",name:file.name.replace(/\.(mp3|m4a)$/i,""),loop:true,_file:blob,_url:url,_fname:file.name});
   } else if(t==="image"){
     if(!/^image\/(png|jpeg|webp)$/.test(file.type)) return msgAdd("bad","Usa una imagen PNG, JPG o WebP.");
     const bmp=await createImageBitmap(file).catch(()=>null); if(!bmp) return msgAdd("bad","No pude abrir esa imagen.");
@@ -588,6 +596,19 @@ function renderProps(){
   box.hidden=false; fresh=it.id;
   const ESC=S.ESC, fonts=ESC?ESC.FONTS:["Sora"], ent=ESC?ESC.ENTRADAS:[["aparecer","Aparecer"]];
   let h=`<div class="pt"><span class="ico">${IC[it.type]}</span>${esc(TYPE[it.type])}${it.type!=="text"&&it.name?`<small>${esc(it.name)}</small>`:""}</div>`;
+  if(it.type==="audio"){   // its player, loop or once, and its scene
+    h+=`<audio id="pAudio" controls preload="metadata" style="width:100%;margin-top:10px"></audio>
+      <label class="chk"><input type="checkbox" id="pLoop">Repetir en bucle</label>
+      <p class="hint" style="margin:6px 0 0">${S.sf?"Suena cuando ven tu experiencia en su espacio.":"Suena mientras la cámara ve tu imagen"+(S.scenes>1?" en esta escena":"")+"."}</p>
+      ${S.scenes>1&&!S.sf?`<label class="f" for="pScene">Escena</label><select id="pScene">${Array.from({length:S.scenes},(_,i)=>`<option value="${i}">Escena ${i+1}</option>`).join("")}</select>`:""}`;
+    box.innerHTML=h;
+    const src=srcOf(it).url; if(src) $("pAudio").src=src;
+    $("pLoop").checked=it.loop!==false; $("pLoop").addEventListener("change",()=>{ it.loop=$("pLoop").checked; commit(); });
+    if($("pScene")){ $("pScene").value=String(it.scene||0); $("pScene").addEventListener("change",()=>{ const k=Number($("pScene").value);
+      if(S.items.some(i=>i!==it&&i.type==="audio"&&(i.scene||0)===k)){ $("pScene").value=String(it.scene||0); msgAdd("bad","Esa escena ya tiene un audio."); return; }
+      it.scene=k; setScene(k); commit(); }); }
+    return;
+  }
   if(it.type==="text") h+=`<textarea id="pText" maxlength="300" aria-label="Texto" style="margin-top:10px"></textarea>
     <div class="line"><select id="pFont" aria-label="Letra">${fonts.map(f=>`<option style="font-family:'${f}'">${f}</option>`).join("")}</select><input type="color" id="pColor" title="Color" aria-label="Color del texto"></div>
     <div class="line"><label class="chk" style="margin:0"><input type="checkbox" id="pStrokeOn">Contorno</label><input type="color" id="pStroke" title="Color del contorno" aria-label="Color del contorno"></div>`;
@@ -673,7 +694,7 @@ function full(on){ $("ed").classList.toggle("full",on); document.body.classList.
 $("fsBtn").addEventListener("click",()=>full(!$("ed").classList.contains("full")));
 // keyboard: W/E/R tools, Supr quitar, Ctrl+D duplicar, Ctrl+Z / Ctrl+Y, Esc
 addEventListener("keydown",e=>{
-  if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)||document.getElementById("vt-shade")||!ED) return;
+  if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)||!ED) return;
   const k=e.key.toLowerCase(), c=e.ctrlKey||e.metaKey;
   if(c&&k==="z"){ e.preventDefault(); e.shiftKey?redo():undo(); }
   else if(c&&k==="y"){ e.preventDefault(); redo(); }
@@ -731,7 +752,7 @@ $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Subiendo…"; bar.hidden=false; $("publish").disabled=true;
   const meta={original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),img:{w:S.imgW,h:S.imgH},place:S.place,scenes:S.scenes,items:S.items,buttons:{}};
   let shot=null;   // on a surface the picture of Mi cuenta is the editor's view
-  if(S.sf){ meta.kind="superficie"; meta.scenes=1; try{ ED.view("inicio"); await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))); shot=await ED.shot(); meta.img={w:shot.w,h:shot.h}; }catch(e){ console.error(e); } }
+  if(S.sf){ meta.kind="superficie"; meta.scenes=1; try{ ED.view("inicio"); shot=await ED.shot(); meta.img={w:shot.w,h:shot.h}; }catch(e){ console.error(e); } }
   for(const [k] of SOC){ const v=toHandle(k,$("b_"+k).value); if(v) meta.buttons[k]=v; }
   const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta,(k,v)=>k.startsWith("_")?undefined:v));   // _x = only for this page
@@ -753,7 +774,6 @@ $("publish").addEventListener("click",async()=>{
 // ---------- start: require an account, load the experience to edit ----------
 (async()=>{
   const ed=new URLSearchParams(location.search).get("editar");
-  let tour=false;
   const toLogin=()=>location.replace("../cuenta/?siguiente=crear"+(ed?"&editar="+encodeURIComponent(ed):""));
   const sess=VVR.session(); if(!sess){ toLogin(); return; }
   S.token=sess.token; S.email=sess.user&&sess.user.email;
@@ -776,15 +796,11 @@ $("publish").addEventListener("click",async()=>{
     else if(active.length>=LIM) LIM===1
       ? block("Ya tienes tu experiencia",`${tiene}. Puedes editarla, borrarla para crear otra, o ${more}.`,active[0]&&active[0].slug)
       : block("Ya usaste todas tus experiencias",`${tiene}. Edita o borra una desde tu cuenta, o ${more}.`,null);
-    else tour=!document.body.classList.contains("cat")&&!S.sf;   // creating a new one: the first time, the guided tour
   }catch(e){ if(e.status===401){ toLogin(); return; } }
   check(); renderAll(); commit();
-  if(tour){ const go=()=>window.vvrTutorial&&vvrTutorial.maybeStart(); window.vvrTutorial?setTimeout(go,500):addEventListener("load",()=>setTimeout(go,500)); }
 })();
-$("tutBtn").addEventListener("click",()=>window.vvrTutorial&&vvrTutorial.start());
 </script>
 <script src="../assets/magia.js" defer></script>
-<script src="../assets/tutorial.js" defer></script>
 
 <script>
 // a tap on a phone shows the gold glow of the card for a moment before opening it (there is no mouse over on a phone)

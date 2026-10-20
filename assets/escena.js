@@ -88,6 +88,11 @@ export async function build(it, o = {}) {
   const root = new THREE.Group(), turn = new THREE.Group(), inner = new THREE.Group();
   root.add(turn); turn.add(inner);
   const n = { it, root, turn, inner, size: new THREE.Vector3(1, 1, 0), mats: [], update: () => {}, plane: it.type !== "model", clips: [] };
+  if (it.type === "audio") {   // nothing to draw: the page plays it (n.audio)
+    n.audio = true; n.plane = false; n.size.set(0, 0, 0);
+    n.dispose = () => { if (root.parent) root.parent.remove(root); };
+    return n;
+  }
   if (it.type === "model") {
     const loader = await gltfLoader();
     const gltf = o.buffer ? await loader.parseAsync(o.buffer, "") : await loader.loadAsync(o.url);
