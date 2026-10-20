@@ -259,6 +259,7 @@ async function load(){
     $("steps").innerHTML=`<li><span>Toca <b>Probar el filtro</b> y, si te lo pregunta, <b>Permitir</b> la cámara.</span></li>${fx?"<li><span><b>Abre la boca</b> y mira lo que pasa.</span></li>":""}<li><span>Toma una <b>foto</b> o graba un <b>video</b> y compártelo.</span></li>`;
     startBtn.disabled=false; libsP=filtroLibs().catch(e=>{ console.error(e); libsP=null; }); return;
   }
+  if(CFG.kind==="superficie"){ startSuperficie(); return; }   // 3D, images and texts on the floor or a table: no image to look for (assets/superficie.js)
   if(CFG.kind==="menu"){ startMenu(); return; }
   if(CFG.kind==="links"){ startLinks(); return; }   // a link page (like Linktree): no camera, it opens right away (assets/links.js)   // a restaurant menu: no camera, it opens right away (assets/menu.js)
   if(CFG.kind==="colorear"){   // a coloring page: no camera, the drawing is painted on screen (assets/colorear.js)
@@ -402,6 +403,14 @@ async function startMenu(){
     const files=new Map((CFG.items||[]).map(i=>[i.id,i.file]));
     M.run({root:$("ar"),cfg:CFG,brand,buttons,src:id=>files.get(id)?`${CFG.base||location.origin}/m/${CFG.slug}/${files.get(id)}?v=${CFG.updated||""}`:""});
   }catch(e){ console.error(e); message("No se pudo abrir el menú","Revisa tu conexión y vuelve a abrir el link."); }
+}
+async function startSuperficie(){
+  document.title=(CFG.title||"Realidad aumentada")+" · Vórtice VR"; $("intro").hidden=true;
+  try{
+    const SF=await import("/assets/superficie.js");
+    const buttons=ORDER.filter(k=>CFG.buttons&&CFG.buttons[k]).map(k=>({href:socialHref(k,CFG.buttons[k]),label:LABEL[k],svg:`<svg viewBox="0 0 24 24">${ICONS[k]}</svg>`}));
+    await SF.run({root:$("ar"),cfg:CFG,buttons,url:it=>`${CFG.base||location.origin}/m/${CFG.slug}/${it.file}?v=${CFG.updated||""}`});
+  }catch(e){ console.error(e); message("No se pudo abrir la experiencia","Revisa tu conexión y vuelve a abrir el link."); }
 }
 async function startLinks(){
   document.title=CFG.title||"Mis links"; $("intro").hidden=true; $("brand").hidden=true;

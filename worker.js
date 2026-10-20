@@ -420,7 +420,7 @@ async function api(request, env, ctx, url) {
     const isNew = !mine;
     if (data.kind === "trivia" && data.trivia.logo && !image && !(mine && (JSON.parse(mine.data || "{}").trivia || {}).logo)) data.trivia.logo = false;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
-    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu" && data.kind !== "links"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
+    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu" && data.kind !== "links" && data.kind !== "superficie"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
     if (target && target.size > LIMITS.targetBytes) return json({ error: "La imagen no se pudo preparar. Intenta con otra." }, 400);
     // each element's file: uploaded now (field f_<id>) or kept from the version being edited (same id and type)
@@ -743,6 +743,7 @@ function publicKind(row, d) {
   if (d.kind === "colorear") return { slug: row.slug, kind: "colorear", title: row.title, img: d.img, color: d.color, buttons: d.buttons, expires: row.expires };
   if (d.kind === "menu") return { slug: row.slug, kind: "menu", title: row.title, menu: d.menu, items: d.items || [], buttons: d.buttons, updated: row.updated, expires: row.expires };
   if (d.kind === "links") return { slug: row.slug, kind: "links", title: row.title, links: d.links, items: d.items || [], updated: row.updated, expires: row.expires };
+  if (d.kind === "superficie") return { slug: row.slug, kind: "superficie", title: row.title, img: d.img, items: d.items || [], buttons: d.buttons, updated: row.updated, expires: row.expires };
   return { slug: row.slug, kind: "ra", title: row.title, img: d.img, place: d.place || "mesa", scenes: d.scenes || 1, items: itemsOf(d), buttons: d.buttons, expires: row.expires };
 }
 function ownerExp(row, request, env) {
@@ -1128,6 +1129,12 @@ function cleanMeta(m, P) {
   if (m.kind === "colorear") return { kind: "colorear", title, img, color: cleanColor(m.color), items: [], buttons };
   const ci = cleanItems(m.items, P);
   if (ci.error) return ci;
+  // on the floor or a table (img = the picture of the scene for Mi cuenta): 3D, images and texts, one scene, no links
+  if (m.kind === "superficie") {
+    if (ci.items.some(i => i.type === "video")) return { error: "La realidad aumentada en superficie no lleva videos: usa objetos 3D, imágenes y textos." };
+    if (!ci.items.some(i => i.type === "model")) return { error: "Agrega al menos un objeto 3D." };
+    return { kind: "superficie", title, img, items: ci.items.map(i => { delete i.link; i.scene = 0; return i; }), buttons };
+  }
   const items = ci.items, scenes = Math.min(ITEM_LIMITS.scenes, Math.max(1, num(m.scenes, 1, ITEM_LIMITS.scenes) || 1, ...items.map(i => i.scene + 1)));
   const place = m.place === "pared" ? "pared" : "mesa";   // how the editor shows the image (on a table or on a wall)
   return { title, img, place, scenes, items, buttons };

@@ -185,6 +185,8 @@ body.edfull{overflow:hidden}
 body.cat main>:not(.hero):not(#catalog){display:none!important}
 body.cat .hero .ra{display:none}
 body:not(.cat) #catalog,body:not(.cat) .hero .cat{display:none}
+/* "Realidad aumentada en superficie" (?tipo=superficie): the same editor on a floor, without the image step or videos */
+body:not(.sf) .hero .sfo,body.cat .hero .sfo,body.sf .hero .rao,body.sf #s1,body.sf [data-add="video"],body.sf #scenes,body.sf [data-v="play"],body.sf #tutBtn{display:none!important}
 .allx{display:inline-flex;align-items:center;gap:6px;margin:12px 16px 0 0;font:600 .85rem var(--fd);color:var(--lav);text-decoration:none}
 .allx:hover{color:var(--ink)}
 #catalog{margin-top:6px}
@@ -219,21 +221,24 @@ a.xc.tap{transform:scale(.98);transition-duration:.1s;transition-delay:0s!import
 </script>
 </head>
 <body>
-<script>{ const q=new URLSearchParams(location.search); if(!q.get("editar")&&q.get("tipo")!=="ra") document.body.classList.add("cat"); }</script>
+<script>{ const q=new URLSearchParams(location.search); if(!q.get("editar")&&q.get("tipo")!=="ra"&&q.get("tipo")!=="superficie") document.body.classList.add("cat"); if(q.get("tipo")==="superficie") document.body.classList.add("sf"); }</script>
 <header><a href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a class="mybtn" href="../cuenta/" style="text-decoration:none">Mi cuenta</a><a class="back" href="../">← Sitio</a></div></header>
 <main class="wrap">
   <div class="hero">
     <span class="kick" id="kick">Gratis · prueba de 15 días</span>
     <h1 class="cat">Crea tu experiencia</h1>
     <p class="cat">Elige qué quieres crear. Llenas unos campos, publicas y recibes un link propio y un código QR para compartir. Sin programar y sin que nadie instale apps.</p>
-    <h1 class="ra">Realidad aumentada</h1>
-    <p class="ra">Sube una imagen y ponle encima videos, fotos, textos u objetos 3D. Cuando alguien apunte su celular a la imagen, todo cobra vida. Recibes un link propio y un código QR para compartir.</p>
+    <h1 class="ra rao">Realidad aumentada con imagen</h1>
+    <h1 class="ra sfo">Realidad aumentada en superficie</h1>
+    <p class="ra sfo">Pon objetos 3D, imágenes y textos que aparecen en el piso o en la mesa de quien abra tu link, a su tamaño real. Sin imagen que enfocar: apunta, toca y camina a su alrededor. Recibes un link propio y un código QR para compartir.</p>
+    <p class="ra rao">Sube una imagen y ponle encima videos, fotos, textos u objetos 3D. Cuando alguien apunte su celular a la imagen, todo cobra vida. Recibes un link propio y un código QR para compartir.</p>
     <a class="allx ra" href="./">← Todas las experiencias</a>
     <button class="tutlink ra" id="tutBtn" type="button">✦ Ver tutorial</button>
   </div>
   <section id="catalog" aria-label="Experiencias que puedes crear">
     <div class="cgrid">
-      <a class="xc" data-x="ra" href="?tipo=ra"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🪄</span><h3>Realidad aumentada</h3><p>Tu imagen impresa cobra vida con videos, fotos, textos y objetos 3D al apuntarle con el celular.</p><span class="go">Crear →</span></a>
+      <a class="xc" data-x="ra" href="?tipo=ra"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🪄</span><h3>Realidad aumentada con imagen</h3><p>Tu imagen impresa cobra vida con videos, fotos, textos y objetos 3D al apuntarle con el celular.</p><span class="go">Crear →</span></a>
+      <a class="xc" data-x="superficie" href="?tipo=superficie"><span class="tags"><span class="tag new" data-hasta="2026-12-31">Nuevo</span></span><span class="ic" aria-hidden="true">🛋️</span><h3>Realidad aumentada en superficie</h3><p>Tus objetos 3D aparecen en el piso o la mesa de quien abra tu link, a tamaño real, para caminar a su alrededor.</p><span class="go">Crear →</span></a>
       <a class="xc" data-x="colorear" href="colorear/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🎨</span><h3>Colorea mi dibujo</h3><p>Comparte un dibujo y que todos lo pinten con el dedo, lo guarden y lo compartan.</p><span class="go">Crear →</span></a>
       <a class="xc" data-x="trivia" href="trivia/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🤔</span><h3>Trivia con tu cara</h3><p>Preguntas que flotan sobre tu cabeza y se contestan inclinándola. Con confeti al final.</p><span class="go">Crear →</span></a>
       <a class="xc" data-x="filtro" href="filtro/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🕶️</span><h3>Filtro para tu cara</h3><p>Catrina, Navidad, fiesta y más: lentes, sombreros y efectos para que se tomen selfies y videos.</p><span class="go">Crear →</span></a>
@@ -266,7 +271,7 @@ a.xc.tap{transform:scale(.98);transition-duration:.1s;transition-delay:0s!import
 
       <section class="step" id="s2">
         <h2><span class="n" id="n2">2</span>Tu contenido</h2>
-        <p class="hint">Agrega lo que aparecerá sobre tu imagen. Toca un elemento para moverlo, girarlo o cambiar su tamaño.</p>
+        <p class="hint" id="h2">Agrega lo que aparecerá sobre tu imagen. Toca un elemento para moverlo, girarlo o cambiar su tamaño.</p>
         <div class="ed" id="ed">
           <nav class="rail" id="adds" aria-label="Agregar">
             <button type="button" class="add" data-add="video" title="Agregar un video"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h11a2 2 0 0 1 2 2v2.5l4-2.5v10l-4-2.5V17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg>Video</button>
@@ -315,7 +320,7 @@ a.xc.tap{transform:scale(.98);transition-duration:.1s;transition-delay:0s!import
           </aside>
         </div>
         <input type="file" id="fAdd" hidden>
-        <p class="fmt">Videos MP4 (para quitarles el fondo, grábalos con pantalla verde). Imágenes PNG con fondo transparente para logos. Objetos 3D en <b>GLB</b> (se comprimen solos antes de subirlos); si tienes FBX u OBJ, ábrelo en Blender (gratis) → <b>Archivo → Exportar → glTF 2.0 (.glb)</b>.</p>
+        <p class="fmt" id="fmt">Videos MP4 (para quitarles el fondo, grábalos con pantalla verde). Imágenes PNG con fondo transparente para logos. Objetos 3D en <b>GLB</b> (se comprimen solos antes de subirlos); si tienes FBX u OBJ, ábrelo en Blender (gratis) → <b>Archivo → Exportar → glTF 2.0 (.glb)</b>.</p>
       </section>
 
       <section class="step narrow" id="s4">
@@ -351,7 +356,7 @@ $("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
 const IMG_MAX=1000;
 
 const S={imgBlob:null,imgW:0,imgH:0,target:null,compiling:false,token:null,email:null,mine:null,keepImg:false,
-  items:[],sel:null,scene:0,scenes:1,place:"mesa",ESC:null,plan:{name:"Gratis",items:3,totalMB:30,videoMB:25,modelMB:15}};
+  sf:document.body.classList.contains("sf"),items:[],sel:null,scene:0,scenes:1,place:"mesa",ESC:null,plan:{name:"Gratis",items:3,totalMB:30,videoMB:25,modelMB:15}};
 
 // ---------- social buttons ----------
 const SOC=[["whatsapp","WhatsApp","","993 123 4567","tel"],["facebook","Facebook","facebook.com/","tu-pagina","text"],["instagram","Instagram","instagram.com/","tu_usuario","text"],["youtube","YouTube","youtube.com/@","tu-canal","text"],["x","X","x.com/","tu_usuario","text"],["tiktok","TikTok","tiktok.com/@","tu_usuario","text"],["web","Sitio web","","tusitio.com","text"]];
@@ -406,6 +411,18 @@ $("fImg").addEventListener("change",e=>onImage(e.target.files[0]));
 { const d=$("dImg"); d.addEventListener("dragover",e=>{e.preventDefault();d.classList.add("over");}); d.addEventListener("dragleave",()=>d.classList.remove("over"));
   d.addEventListener("drop",e=>{e.preventDefault();d.classList.remove("over");onImage(e.dataTransfer.files[0]);}); }
 
+// ---------- "Realidad aumentada en superficie": the same editor on a floor (1 unit = 1 m), no image, no videos ----------
+function surfaceMode(){
+  S.sf=true; document.body.classList.add("sf"); document.title="Realidad aumentada en superficie · Vórtice VR";
+  $("n2").textContent="1"; $("n4").textContent="2"; $("n6").textContent="3";
+  $("h2").textContent="Agrega lo que aparecerá en el piso o en la mesa de quien abra tu link. Cada cuadro mide 25 cm: así de grande se verá.";
+  $("fmt").innerHTML="Objetos 3D en <b>GLB</b> (se comprimen solos antes de subirlos); si tienes FBX u OBJ, ábrelo en Blender (gratis) → <b>Archivo → Exportar → glTF 2.0 (.glb)</b>. Imágenes PNG con fondo transparente para logos. En iPhone las animaciones del 3D no se ven.";
+  $("noItems").textContent="Usa los botones de la izquierda para agregar un objeto 3D, una imagen o un texto.";
+  $("empty").textContent="Cargando…";
+  setTimeout(()=>ensureEditor(),0);   // no image to wait for: the floor shows right away
+}
+if(S.sf) surfaceMode();
+
 // ---------- step 2: content (elements on the image; the 3D editor is assets/editor-ra.js) ----------
 let ED=null, edP=null;
 const IC={video:'<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',image:'<svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zm2 2v8l4-4 3 3 2-2 3 3V7z"/></svg>',text:'<svg viewBox="0 0 24 24"><path d="M5 4h14v4h-2V6h-4v12h2v2H9v-2h2V6H7v2H5z"/></svg>',model:'<svg viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.7 8 12 11.7 5.3 8zM5 9.7l6 3.3v6.7l-6-3.3zm8 10V13l6-3.3v6.7z"/></svg>'};
@@ -431,7 +448,7 @@ function ensureEditor(){
       change:(it,end)=>{ syncProps(it); if(end) commit(); },
       select:id=>{ S.sel=id; renderLayers(); renderProps(); tools(); },
       loaded:(it,n)=>{ it._loading=false; it._clips=n.clips; renderLayers(); if(S.sel===it.id) renderProps(); check(); }});
-    ED.setPlace(S.place); ED.setScene(S.scene);
+    ED.setPlace(S.place); ED.setScene(S.scene); if(S.sf) ED.setSurface(true);
     $("empty").hidden=true; $("tools").hidden=false; $("views").hidden=false; $("tip").hidden=false; $("scenes").hidden=false;
     renderScenes(); tools();
     return ED;
@@ -446,13 +463,14 @@ function tools(){
 
 // ---- adding elements ----
 function canAdd(t){
-  if(!S.imgW){ msgAdd("bad","Primero sube tu imagen (paso 1)."); return false; }
+  if(S.sf&&t==="video"){ msgAdd("bad","En superficie no van videos: usa objetos 3D, imágenes y textos."); return false; }
+  if(!S.imgW&&!S.sf){ msgAdd("bad","Primero sube tu imagen (paso 1)."); return false; }
   if(S.items.length>=S.plan.items){ msgAdd("bad",`Tu plan ${S.plan.name} permite hasta ${S.plan.items} elementos por experiencia.`); return false; }
   if(t==="video"&&S.items.filter(i=>i.type==="video").length>=2){ msgAdd("bad","Puedes poner hasta 2 videos por experiencia."); return false; }
   msgAdd(); return true;
 }
 document.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()=>{ const t=b.dataset.add; if(!canAdd(t)) return;
-  if(t==="text") return addItem({type:"text",text:"Tu texto",font:"Bebas Neue",color:"#ffffff",stroke:"#5a1f8f",s:.6,y:Math.round((IH()/2-.12)*1000)/1000});
+  if(t==="text") return addItem(S.sf?{type:"text",text:"Tu texto",font:"Bebas Neue",color:"#ffffff",stroke:"#5a1f8f",s:.4,y:-.35,_stand:true}:{type:"text",text:"Tu texto",font:"Bebas Neue",color:"#ffffff",stroke:"#5a1f8f",s:.6,y:Math.round((IH()/2-.12)*1000)/1000});
   const inp=$("fAdd"); inp.value=""; inp.accept=ACCEPT[t]; inp.onchange=()=>fromFile(t,inp.files[0]); inp.click(); }));
 // files dropped on the editor
 { const d=$("ed"); d.addEventListener("dragover",e=>{ if(![...e.dataTransfer.types].includes("Files")) return; e.preventDefault(); $("adds").classList.add("over"); });
@@ -477,7 +495,7 @@ async function fromFile(t,file){
     const cv=document.createElement("canvas"); cv.width=w; cv.height=h; cv.getContext("2d").drawImage(bmp,0,0,w,h);
     let blob=await new Promise(r=>cv.toBlob(r,"image/webp",.9)); if(!blob||blob.type!=="image/webp") blob=await new Promise(r=>cv.toBlob(r,"image/png"));
     if(blob.size>5*1048576) return msgAdd("bad","La imagen es demasiado pesada.");
-    addItem({type:"image",name:file.name,w,h,s:.4,_file:blob,_url:URL.createObjectURL(blob),_fname:"imagen."+(blob.type==="image/webp"?"webp":"png")});
+    addItem({type:"image",name:file.name,w,h,s:S.sf?.6:.4,_stand:S.sf,_file:blob,_url:URL.createObjectURL(blob),_fname:"imagen."+(blob.type==="image/webp"?"webp":"png")});
   } else {
     if(/\.(fbx|obj|gltf|stl|dae|blend|3ds|usdz)$/i.test(file.name)) return msgAdd("bad","Ese formato no se puede ver en el celular. Conviértelo a GLB (abajo te decimos cómo).");
     if(file.size>MODEL_IN_MB*1048576) return msgAdd("bad",`El objeto pesa ${(file.size/1048576).toFixed(1)} MB. Se pueden abrir hasta ${MODEL_IN_MB} MB: en Blender o Polycam expórtalo con texturas más chicas.`);
@@ -491,7 +509,7 @@ async function fromFile(t,file){
       if(r.changed){ buf=r.buffer; blob=new Blob([buf],{type:"model/gltf-binary"}); done=`Listo: tu 3D pasó de ${mb(r.before)} MB a ${mb(r.after)} MB.`; }
     }catch(e){ console.warn("No se pudo comprimir el 3D",e); }
     if(buf.byteLength>S.plan.modelMB*1048576) return msgAdd("bad",`Aun comprimido, el objeto pesa ${mb(buf.byteLength)} MB. Tu plan permite ${S.plan.modelMB} MB por objeto 3D: en Blender o Polycam expórtalo con texturas más chicas o menos detalle.`);
-    await addItem({type:"model",name:file.name.replace(/\.glb$/i,""),s:.6,rx:90,anim:0,_file:blob,_buffer:buf,_fname:"modelo.glb"});   // standing on the image
+    await addItem({type:"model",name:file.name.replace(/\.glb$/i,""),s:S.sf?.5:.6,rx:90,anim:0,_file:blob,_buffer:buf,_fname:"modelo.glb"});   // standing on the image
     if(done&&S.items.some(i=>i._buffer===buf)) msgAdd("ok",done);
   }
 }
@@ -499,7 +517,7 @@ async function addItem(p){
   const it={id:uid(),x:0,y:0,z:0,s:.6,rx:0,ry:0,rz:0,in:"aparecer",scene:S.scene,...p};
   S.items.push(it); it._loading=it.type!=="text"; S.sel=it.id;
   renderLayers(); renderProps(); check();
-  try{ const ed=await ensureEditor(); await ed.add(it); ed.select(it.id); msgAdd(); commit(); }
+  try{ const ed=await ensureEditor(); await ed.add(it); if(it._stand){ delete it._stand; ed.stand(it.id); } ed.select(it.id); msgAdd(); commit(); }
   catch(e){ console.error(e); removeItem(it.id,true); msgAdd("bad",it.type==="model"?"No pude abrir ese objeto 3D. Revisa que sea un GLB válido.":"No pude abrir ese archivo."); }
 }
 const GONE=new Map();   // removed elements, so "undo" can bring them back with their files
@@ -579,10 +597,10 @@ function renderProps(){
   if(it.type==="model") h+=`<label class="f" for="pAnim">Animación</label><select id="pAnim"><option value="-1">Sin animación</option>${(it._clips||[]).map((c,i)=>`<option value="${i}">${esc(c)}</option>`).join("")}</select>`;
   h+=`<div class="slide"><span>Tamaño</span><input type="range" id="pS" min="2" max="300" aria-label="Tamaño"><output id="oS"></output></div>
     <details class="more" id="more"${moreOpen?" open":""}><summary>Más opciones</summary>
-      ${it.type==="video"||it.type==="image"?`<div class="chips"><button class="chip" type="button" data-fit="w">Al ancho</button><button class="chip" type="button" data-fit="h">Al alto</button>${it.type==="video"?`<button class="chip" type="button" data-fit="fill">Toda la imagen</button>`:""}<button class="chip" type="button" data-fit="c">Centrar</button></div>`:`<div class="chips"><button class="chip" type="button" data-fit="c">Centrar</button></div>`}
-      <label class="f" for="pIn">Al aparecer</label><select id="pIn">${ent.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select>
-      ${S.scenes>1?`<label class="f" for="pScene">Escena</label><select id="pScene">${Array.from({length:S.scenes},(_,i)=>`<option value="${i}">Escena ${i+1}</option>`).join("")}</select>`:""}
-      <label class="f" for="pLink">Al tocarlo, abrir</label><input type="text" id="pLink" maxlength="300" placeholder="tusitio.com o un WhatsApp" autocapitalize="off" autocomplete="off" spellcheck="false">
+      ${S.sf?`<div class="chips"><button class="chip" type="button" data-fit="c">Centrar</button></div>`:it.type==="video"||it.type==="image"?`<div class="chips"><button class="chip" type="button" data-fit="w">Al ancho</button><button class="chip" type="button" data-fit="h">Al alto</button>${it.type==="video"?`<button class="chip" type="button" data-fit="fill">Toda la imagen</button>`:""}<button class="chip" type="button" data-fit="c">Centrar</button></div>`:`<div class="chips"><button class="chip" type="button" data-fit="c">Centrar</button></div>`}
+      <label class="f" for="pIn"${S.sf?" hidden":""}>Al aparecer</label><select id="pIn"${S.sf?" hidden":""}>${ent.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select>
+      ${S.scenes>1&&!S.sf?`<label class="f" for="pScene">Escena</label><select id="pScene">${Array.from({length:S.scenes},(_,i)=>`<option value="${i}">Escena ${i+1}</option>`).join("")}</select>`:""}
+      <label class="f" for="pLink"${S.sf?" hidden":""}>Al tocarlo, abrir</label><input type="text" id="pLink"${S.sf?" hidden":""} maxlength="300" placeholder="tusitio.com o un WhatsApp" autocapitalize="off" autocomplete="off" spellcheck="false">
       <div class="nums"><span></span><span>X</span><span>Y</span><span>Z</span>
         <span>Posición</span><input type="number" id="pX" step="1" aria-label="Posición X (%)"><input type="number" id="pY" step="1" aria-label="Posición Y (%)"><input type="number" id="pZ" step="1" aria-label="Altura (%)">
         <span>Giro</span><input type="number" id="pRX" step="5" aria-label="Giro en X (grados)"><input type="number" id="pRY" step="5" aria-label="Giro en Y (grados)"><input type="number" id="pRZ" step="5" aria-label="Giro en Z (grados)"></div>
@@ -609,7 +627,7 @@ function renderProps(){
   num("pRX",v=>it.rx=v); num("pRY",v=>it.ry=v); num("pRZ",v=>it.rz=v);
   $("more").addEventListener("toggle",e=>{ moreOpen=e.target.open; });
   box.querySelectorAll("[data-fit]").forEach(b=>b.addEventListener("click",()=>{
-    const f=b.dataset.fit, had=!!it.ar; it.x=0; it.y=0;
+    const f=b.dataset.fit, had=!!it.ar; it.x=0; it.y=0; if(S.sf){ moved(it); commit(); return; }
     if(f!=="c"){ it.rx=0; it.ry=0; it.rz=0; it.z=0; }
     if(f==="w"){ delete it.ar; it.s=1; } else if(f==="h"){ delete it.ar; it.s=Math.round(IH()*(it.w/it.h)*1000)/1000; } else if(f==="fill"){ it.s=1; it.ar=1/IH(); }
     if(had||it.ar) rebuild(it,0); moved(it); commit(); }));
@@ -689,33 +707,37 @@ function prefill(exp){
   if(!$("title").value) $("title").value=exp.title; if(!slugIn.value){ slugIn.value=exp.slug; } checkSlug();
   for(const [k] of SOC){ const el=$("b_"+k); if(!el.value&&exp.buttons&&exp.buttons[k]) el.value=k==="whatsapp"?exp.buttons[k].replace(/^52(?=\d{10}$)/,""):toHandle(k,exp.buttons[k]); }
   S.place=exp.place||"mesa"; S.scenes=exp.scenes||1;
-  if(!S.imgBlob){ S.keepImg=true; S.imgW=exp.img.w; S.imgH=exp.img.h; const u=`${API}/m/${exp.slug}/image`; $("tImg").src=u; $("tImg").hidden=false; $("lImg").textContent="Imagen actual (puedes cambiarla)"; $("n1").classList.add("done"); }
+  if(S.sf) S.keepImg=true;
+  else if(!S.imgBlob){ S.keepImg=true; S.imgW=exp.img.w; S.imgH=exp.img.h; const u=`${API}/m/${exp.slug}/image`; $("tImg").src=u; $("tImg").hidden=false; $("lImg").textContent="Imagen actual (puedes cambiarla)"; $("n1").classList.add("done"); }
   if(!S.items.length) S.items=(exp.items||[]).map(it=>({...it,_loading:it.type!=="text"}));
   renderAll(); check(); commit();
-  ensureEditor().then(ed=>{ if(!S.imgBlob) ed.setImage(`${API}/m/${exp.slug}/image`,exp.img.w,exp.img.h);
+  ensureEditor().then(ed=>{ if(!S.imgBlob&&!S.sf) ed.setImage(`${API}/m/${exp.slug}/image`,exp.img.w,exp.img.h);
     for(const it of S.items) ed.add(it).catch(e=>{ console.error(e); it._loading=false; renderLayers(); msgAdd("bad",`No pude abrir "${nameOf(it)}". Quítalo o vuelve a subirlo.`); check(); }); });
 }
 
 // ---------- step 6: publish ----------
 function check(){
-  const imgOk=(!!S.target&&!!S.imgBlob)||(S.keepImg&&!!S.mine);
+  const imgOk=S.sf||(!!S.target&&!!S.imgBlob)||(S.keepImg&&!!S.mine), has3d=!S.sf||S.items.some(i=>i.type==="model");
   const loading=S.items.some(i=>i._loading), wOk=weight(), textOk=S.items.every(i=>i.type!=="text"||String(i.text||"").trim());
-  const ok=imgOk&&S.items.length&&!loading&&wOk&&textOk&&$("title").value.trim()&&slugOk&&S.token&&!S.compiling;
+  const ok=imgOk&&has3d&&S.items.length&&!loading&&wOk&&textOk&&$("title").value.trim()&&slugOk&&S.token&&!S.compiling;
   $("n2").classList.toggle("done",S.items.length>0&&!loading);
   $("n4").classList.toggle("done",!!($("title").value.trim()&&slugOk));
   $("publish").disabled=!ok;
   $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link a ${S.email}.`:
-    S.compiling?"Estamos preparando tu imagen…":!imgOk?"Falta tu imagen.":!S.items.length?"Agrega al menos un elemento: un video, una imagen, un texto o un objeto 3D.":loading?"Estamos abriendo tus elementos…":!wOk?`Tus elementos pasan lo que permite tu plan ${S.plan.name} (${S.plan.totalMB} MB y ${S.plan.items} elementos).`:!textOk?"Uno de tus textos está vacío.":!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
+    S.compiling?"Estamos preparando tu imagen…":!imgOk?"Falta tu imagen.":!S.items.length?(S.sf?"Agrega al menos un objeto 3D.":"Agrega al menos un elemento: un video, una imagen, un texto o un objeto 3D."):!has3d?"Agrega al menos un objeto 3D.":loading?"Estamos abriendo tus elementos…":!wOk?`Tus elementos pasan lo que permite tu plan ${S.plan.name} (${S.plan.totalMB} MB y ${S.plan.items} elementos).`:!textOk?"Uno de tus textos está vacío.":!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
 }
 { const base=check; check=function(){ base(); const mk=S.marca&&S.marca.get(); if(mk&&!mk.ok&&!$("publish").disabled){ $("publish").disabled=true; $("pubHint").textContent="Sube el logo de tu marca o elige el de Vórtice VR."; } }; }
 $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Subiendo…"; bar.hidden=false; $("publish").disabled=true;
   const meta={original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),img:{w:S.imgW,h:S.imgH},place:S.place,scenes:S.scenes,items:S.items,buttons:{}};
+  let shot=null;   // on a surface the picture of Mi cuenta is the editor's view
+  if(S.sf){ meta.kind="superficie"; meta.scenes=1; try{ ED.view("inicio"); await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))); shot=await ED.shot(); meta.img={w:shot.w,h:shot.h}; }catch(e){ console.error(e); } }
   for(const [k] of SOC){ const v=toHandle(k,$("b_"+k).value); if(v) meta.buttons[k]=v; }
   const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
   const fd=new FormData(); fd.append("meta",JSON.stringify(meta,(k,v)=>k.startsWith("_")?undefined:v));   // _x = only for this page
   if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
   if(S.imgBlob&&S.target){ fd.append("image",S.imgBlob,"image.jpg"); fd.append("target",S.target,"target.mind"); }
+  if(shot&&shot.blob) fd.append("image",shot.blob,"image.jpg");
   for(const it of S.items) if(it._file) fd.append("f_"+it.id,it._file,it._fname||"archivo");
   const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc, linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/");
   const qrBlob=await new Promise(r=>qrc.toBlob(r,"image/png")); fd.append("qr",qrBlob,"qr.png");
@@ -744,6 +766,7 @@ $("publish").addEventListener("click",async()=>{
     const active=r.experiences.filter(x=>!x.paused);
     const exp=ed?r.experiences.find(x=>x.slug===ed):null;
     if(window.VVRMarca){ S.marca=VVRMarca.mount($("sMarca"),{plan:P,exp,api:API,base:"../",onChange:()=>check()}); $("sMarca").hidden=false; }
+    if(exp&&exp.kind==="superficie"&&!S.sf) surfaceMode();
     if(exp&&(exp.kind==="trivia"||exp.kind==="colorear"||exp.kind==="filtro"||exp.kind==="menu"||exp.kind==="links")){ location.replace(exp.kind+"/?editar="+encodeURIComponent(ed)); return; }
     const block=(title,text,editSlug)=>{ document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); $("full").hidden=false;
       $("fullTitle").textContent=title; $("fullText").textContent=text; $("fullEdit").hidden=!editSlug; if(editSlug) $("fullEdit").href="?editar="+encodeURIComponent(editSlug); };
@@ -753,7 +776,7 @@ $("publish").addEventListener("click",async()=>{
     else if(active.length>=LIM) LIM===1
       ? block("Ya tienes tu experiencia",`${tiene}. Puedes editarla, borrarla para crear otra, o ${more}.`,active[0]&&active[0].slug)
       : block("Ya usaste todas tus experiencias",`${tiene}. Edita o borra una desde tu cuenta, o ${more}.`,null);
-    else tour=!document.body.classList.contains("cat");   // creating a new one: the first time, the guided tour
+    else tour=!document.body.classList.contains("cat")&&!S.sf;   // creating a new one: the first time, the guided tour
   }catch(e){ if(e.status===401){ toLogin(); return; } }
   check(); renderAll(); commit();
   if(tour){ const go=()=>window.vvrTutorial&&vvrTutorial.maybeStart(); window.vvrTutorial?setTimeout(go,500):addEventListener("load",()=>setTimeout(go,500)); }

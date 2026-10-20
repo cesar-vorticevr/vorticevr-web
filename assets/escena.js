@@ -103,6 +103,7 @@ export async function build(it, o = {}) {
     model.position.set(-c.x, -box.min.y, -c.z); inner.add(model); inner.scale.setScalar(k);
     n.size.copy(size).multiplyScalar(k);
     n.clips = (gltf.animations || []).map((a, i) => a.name || `Animación ${i + 1}`);
+    n.anims = gltf.animations || [];
     if (gltf.animations && gltf.animations.length) {
       n.mixer = new THREE.AnimationMixer(model);
       n.setAnim = i => { n.mixer.stopAllAction(); if (i >= 0 && gltf.animations[i]) n.mixer.clipAction(gltf.animations[i]).play(); };

@@ -25,6 +25,8 @@ export async function createEditor(box, cb) {
   const imgMat = new THREE.MeshBasicMaterial({ color: 0x2a2140, toneMapped: false });
   const img = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), imgMat); world.add(img);
   const edge = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(1, 1)), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 })); world.add(edge);
+  // "Realidad aumentada en superficie": no image, a floor of 2 × 2 m in squares of 25 cm (1 unit = 1 meter)
+  const grid = new THREE.GridHelper(2, 8, 0xd2b8ff, 0x6a4f9a); grid.rotation.x = Math.PI / 2; grid.material.transparent = true; grid.material.opacity = 0.55; grid.visible = false; world.add(grid);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshBasicMaterial({ visible: false })); world.add(floor);   // for dragging
   const sel = new THREE.BoxHelper(undefined, 0xffbe55); sel.material.depthTest = false; sel.material.transparent = true; sel.material.opacity = 0.7; sel.renderOrder = 10; sel.visible = false; scene.add(sel);
   const orbit = new OrbitControls(camera, renderer.domElement); orbit.enableDamping = true; orbit.enablePan = false; orbit.minDistance = 0.4; orbit.maxDistance = 6;
@@ -33,7 +35,7 @@ export async function createEditor(box, cb) {
   tc.addEventListener("dragging-changed", e => { orbit.enabled = !e.value; if (e.value) startS = itemOf(selected)?.s ?? 1; else done(); });
 
   const nodes = new Map(), videos = new Map();
-  let IH = 2 / 3, place = "mesa", mode = "mover", selected = null, scene_ = 0, playT = -1, imgUrl = null;
+  let IH = 2 / 3, surface = false, lim = 0.75, place = "mesa", mode = "mover", selected = null, scene_ = 0, playT = -1, imgUrl = null;
   const items = () => cb.items();
   const itemOf = id => items().find(i => i.id === id);
   const layer = it => items().indexOf(it);
@@ -70,6 +72,19 @@ export async function createEditor(box, cb) {
   function setImage(url, w, h) {
     IH = h / w; img.scale.set(1, IH, 1); edge.scale.set(1, IH, 1);
     if (url && url !== imgUrl) { imgUrl = url; new THREE.TextureLoader().load(url, t => { t.colorSpace = THREE.SRGBColorSpace; imgMat.map = t; imgMat.color.set(0xffffff); imgMat.needsUpdate = true; }); }
+  }
+  function setSurface(on) {
+    surface = !!on; lim = surface ? 1.5 : 0.75; img.visible = edge.visible = !surface; grid.visible = surface;
+    if (surface) IH = 1.4;   // only for the distance of the view
+    view("inicio");
+  }
+  // a picture of the scene as it looks now (no handles), for the thumbnail in Mi cuenta
+  function shot(type = "image/jpeg") {
+    const keep = selected; select(null); sel.visible = false;
+    renderer.setClearColor(0x1a0d33, 1); renderer.render(scene, camera);   // on the page's purple, not on black
+    const p = new Promise(r => renderer.domElement.toBlob(r, type, 0.9));
+    renderer.setClearColor(0x000000, 0); if (keep) select(keep);
+    return p.then(blob => ({ blob, w: renderer.domElement.width, h: renderer.domElement.height }));
   }
   function setPlace(p) { place = p === "pared" ? "pared" : "mesa"; world.rotation.x = place === "mesa" ? -Math.PI / 2 : 0; view("inicio"); }
   function view(v) {
@@ -147,7 +162,7 @@ export async function createEditor(box, cb) {
     }
     if (!drag || drag.pid !== e.pointerId) return;
     const it = itemOf(drag.id), p = onImage(e); if (!it || !p) return;
-    it.x = r3(clamp(p.x - grab.x, -0.75, 0.75)); it.y = r3(clamp(p.y - grab.y, -IH / 2 - 0.25, IH / 2 + 0.25));
+    it.x = r3(clamp(p.x - grab.x, -lim, lim)); it.y = r3(surface ? clamp(p.y - grab.y, -lim, lim) : clamp(p.y - grab.y, -IH / 2 - 0.25, IH / 2 + 0.25));
     update(it); cb.change(it);
   });
   const up = e => {
@@ -191,5 +206,5 @@ export async function createEditor(box, cb) {
     orbit.update(); renderer.render(scene, camera);
   });
   setPlace("mesa");
-  return { add, remove, update, updateAll, nodeOf, stand, setImage, setPlace, view, setScene, play, select, setMode, resize, videos };
+  return { add, remove, update, updateAll, nodeOf, stand, setImage, setSurface, shot, setPlace, view, setScene, play, select, setMode, resize, videos };
 }
