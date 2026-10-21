@@ -55,6 +55,12 @@ Las tarjetas NFC y QR de clientes apuntan a `https://vorticevr.mx/<cliente>/` (`
 - La sección Nosotros solo usa datos confirmados (desde 2016, áreas); César la va a completar.
 - **Sin el nombre de César ni "Villahermosa, Tabasco" en el sitio público** (por seguridad y para verse internacional): Nosotros firma "Vórtice VR · Estudio de tecnología inmersiva", el pie solo lleva © y los enlaces legales, el aviso de privacidad dice "con domicilio en México" y los términos remiten a tribunales de México. Su nombre solo sigue en `/tarjeta/` (su tarjeta NFC impresa).
 
+## SEO (21 de octubre de 2026)
+- Búsquedas objetivo: "realidad aumentada", "realidad aumentada México", "filtros de caras", "experiencias inmersivas". Cada una tiene su página: `/realidad-aumentada/`, `/filtros-para-la-cara/`, `/experiencias-inmersivas/` (solo español; estilos de `/educacion/`, con preguntas frecuentes y JSON-LD `FAQPage` + `BreadcrumbList`). Enlazadas desde el pie de la portada ("Explora") y desde `#crea`.
+- La portada lleva `canonical`, `hreflang` (es / `?lang=en`), Open Graph con URL completa y JSON-LD `Organization` + `WebSite` + `SoftwareApplication` con los precios. Si cambian precios o tipos de experiencia, actualizar ese JSON-LD y las tres páginas.
+- **Los buscadores siempre ven español**: la portada y `/educacion/` cambiaban a inglés según el idioma del navegador, y Google navega en inglés; ahora un user agent de robot se queda en español.
+- `robots.txt` (bloquea `/api/`, `/admin/`, `/vendedor/`) y `sitemap.xml` (sin `/crear/`, que manda a iniciar sesión). Al agregar una página pública, sumarla al sitemap.
+
 ## Realidad aumentada (`/ra/ocv-johara/`)
 - MindAR 1.2.5 + three.js 0.160 desde jsDelivr (import map).
 - `targets.mind`: image target compilado desde la cara del QR de la tarjeta impresa (1050×600). Si cambia el diseño impreso, hay que regenerarlo con `tools/compilar-target.mjs` (ver abajo).
