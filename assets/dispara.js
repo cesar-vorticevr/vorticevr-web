@@ -140,18 +140,41 @@ const CSS = `
 .dp [hidden]{display:none!important}
 .dp video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .dp canvas.gl,.dp canvas.hud{position:absolute;inset:0;width:100%;height:100%;display:block}
-.dp-top{position:absolute;left:0;right:0;top:0;padding:calc(12px + env(safe-area-inset-top,0px)) 14px 0;display:flex;align-items:center;gap:10px;pointer-events:none;z-index:2}
-.dp-sc{font:800 1.5rem/1 "Sora",sans-serif;text-shadow:0 2px 10px rgba(0,0,0,.5);min-width:72px}
-.dp-sc small{font:600 .7rem "Sora",sans-serif;letter-spacing:.14em;opacity:.8;margin-left:4px}
-.dp-tb{flex:1;height:10px;border-radius:99px;background:rgba(0,0,0,.35);overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
-.dp-tb i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--dp-c),#ffd27f);transform-origin:left;transition:background .3s}
-.dp-tb.low i{background:linear-gradient(90deg,#ff3b5c,#ff8a3d)}
-.dp-tt{font:700 1rem "IBM Plex Mono",monospace;min-width:38px;text-align:right;text-shadow:0 2px 8px rgba(0,0,0,.6)}
-.dp-tt.low{color:#ff8a9e;animation:dp-beat .5s ease-in-out infinite}
+.dp-top{position:absolute;left:0;right:0;top:0;padding:calc(12px + env(safe-area-inset-top,0px)) 12px 0;display:grid;grid-template-columns:1fr auto 1fr;align-items:start;gap:8px;pointer-events:none;z-index:2}
+.dp-sc{justify-self:start;display:flex;align-items:center;gap:7px;padding:6px 14px 6px 7px;border-radius:999px;background:linear-gradient(135deg,rgba(255,226,154,.95),rgba(255,190,85,.95) 55%,rgba(255,159,58,.95));color:#2a1600;box-shadow:0 6px 20px -6px rgba(255,170,60,.8),inset 0 -2px 0 rgba(0,0,0,.15);transition:background .2s}
+.dp-sc svg{width:26px;height:26px;flex:none;fill:#fff;filter:drop-shadow(0 1px 1px rgba(120,60,0,.5))}
+.dp-sc b{font:800 1.45rem/1 "Sora",sans-serif;min-width:1.4em;display:inline-block;font-variant-numeric:tabular-nums}
+.dp-sc small{font:700 .62rem "Sora",sans-serif;letter-spacing:.14em;opacity:.75}
+.dp-sc.bump b{animation:dp-bump .35s cubic-bezier(.2,1.8,.4,1)}
+.dp-sc.loss{background:linear-gradient(135deg,#ff9aa8,#ff4d6d);color:#fff}
+@keyframes dp-bump{40%{transform:scale(1.45)}}
+.dp-tm{position:relative;width:66px;height:66px;display:grid;place-items:center;transition:transform .35s cubic-bezier(.2,1.6,.4,1)}
+.dp-tm svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);filter:drop-shadow(0 4px 10px rgba(0,0,0,.45))}
+.dp-tm .bg{fill:rgba(10,4,22,.62);stroke:rgba(255,255,255,.18);stroke-width:7}
+.dp-tm .fg{fill:none;stroke:url(#dpTg);stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset .12s linear}
+.dp-tm b{position:relative;font:800 1.5rem/1 "Sora",sans-serif;font-variant-numeric:tabular-nums;text-shadow:0 2px 6px rgba(0,0,0,.5)}
+.dp-goal{justify-self:end;display:flex;flex-direction:column;align-items:flex-end;gap:5px;padding:7px 11px;border-radius:14px;background:rgba(10,4,22,.62);border:1px solid rgba(255,190,85,.5);font:700 .78rem "Sora",sans-serif;color:#ffd27f;max-width:44vw}
+.dp-goal span{white-space:nowrap}
+.dp-goal i{display:block;width:84px;height:6px;border-radius:99px;background:rgba(255,255,255,.18);overflow:hidden}
+.dp-goal i::after{content:"";display:block;height:100%;width:var(--p,0%);background:linear-gradient(90deg,#ffbe55,#ffe29a);transition:width .25s}
+.dp-goal.done{border-color:#74e8ba;color:#74e8ba;animation:dp-beat .6s ease-in-out 3}
+.dp-goal.done i::after{background:#74e8ba}
+/* the last 5 seconds: the clock grows and turns red, the edges of the screen beat in red, each second pops in the middle */
+.dp.low .dp-tm{transform:scale(1.5) translateY(6px)}
+.dp.low .dp-tm .bg{fill:rgba(120,0,25,.75);stroke:rgba(255,80,110,.5)}
+.dp.low .dp-tm .fg{stroke:#ff3b5c}
+.dp.low .dp-tm b{color:#fff;animation:dp-beat .5s ease-in-out infinite}
+.dp-low{position:absolute;inset:0;pointer-events:none;z-index:1;opacity:0;box-shadow:inset 0 0 0 0 rgba(255,30,60,0);transition:opacity .3s}
+.dp.low .dp-low{opacity:1;box-shadow:inset 0 0 60px 18px rgba(255,30,60,.5);animation:dp-edge 1s ease-in-out infinite}
+@keyframes dp-edge{0%,100%{box-shadow:inset 0 0 40px 10px rgba(255,30,60,.35)}50%{box-shadow:inset 0 0 90px 30px rgba(255,30,60,.7)}}
+.dp-cd{position:absolute;left:50%;top:30%;transform:translate(-50%,-50%);font:800 clamp(5rem,30vw,9rem)/1 "Sora",sans-serif;color:#ff4d6d;text-shadow:0 0 40px rgba(255,40,70,.8);pointer-events:none;z-index:1;opacity:0}
+.dp-cd.go{animation:dp-cd .9s ease-out both}
+@keyframes dp-cd{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}20%{opacity:.85;transform:translate(-50%,-50%) scale(1.1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.5)}}
 .dp-combo{position:absolute;top:calc(48px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%) scale(0);font:800 1.1rem "Sora",sans-serif;color:#2a1600;background:linear-gradient(135deg,#ffe29a,#ffbe55);padding:5px 14px;border-radius:99px;transition:transform .25s cubic-bezier(.2,1.6,.4,1);z-index:2;pointer-events:none}
 .dp-combo.on{transform:translateX(-50%) scale(1)}
-.dp-aim{position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;pointer-events:none;z-index:2;transition:transform .12s}
-.dp-aim.fire{transform:scale(.8)}
+.dp-aim{position:absolute;left:50%;top:50%;width:72px;height:72px;margin:-36px 0 0 -36px;pointer-events:none;z-index:2;transition:transform .12s;filter:drop-shadow(0 0 6px rgba(0,0,0,.6))}
+.dp-aim.fire{transform:scale(.78) rotate(45deg)}
+.dp-aim.hit svg circle,.dp-aim.hit svg path{stroke:#ffd27f}
 .dp-aim.on svg circle{stroke:#ffd27f}
 .dp-hint{position:absolute;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:rgba(10,4,22,.72);padding:9px 16px;border-radius:99px;font:600 .9rem "Sora",sans-serif;white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis;pointer-events:none;opacity:0;transition:opacity .3s;z-index:2}
 .dp-hint.on{opacity:1}
@@ -239,7 +262,7 @@ const CSS = `
 .dp-cf{position:absolute;inset:0;pointer-events:none;z-index:7;width:100%;height:100%}
 .dp-toast{position:absolute;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#16151a;color:#fff;padding:11px 18px;border-radius:999px;font-size:.9rem;font-weight:600;transition:.25s;z-index:9;white-space:nowrap;max-width:90%;overflow:hidden;text-overflow:ellipsis}
 .dp-toast.on{opacity:1;transform:translate(-50%,0)}
-@media (prefers-reduced-motion:reduce){.dp-go,.dp-go::after,.dp-row img,.dp-cup .sh,.dp-tt.low{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.dp-go,.dp-go::after,.dp-row img,.dp-cup .sh,.dp.low .dp-tm b,.dp.low .dp-low,.dp-cd.go,.dp-sc.bump b{animation:none!important}}
 `;
 const ICON = {
   save: '<path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/>',
@@ -264,7 +287,10 @@ export function run(o) {
   if (!document.getElementById("dp-fonts")) document.head.appendChild(Object.assign(document.createElement("link"), { id: "dp-fonts", rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=Sora:wght@500;600;700;800&display=swap" }));
   const el = document.createElement("div"); el.className = "dp";
   el.innerHTML = `<video playsinline muted autoplay hidden></video><canvas class="gl"></canvas><canvas class="hud"></canvas>
-    <div class="dp-top" hidden><div class="dp-sc">0<small>PTS</small></div><div class="dp-tb"><i></i></div><div class="dp-tt"></div></div>
+    <div class="dp-low"></div><div class="dp-cd"></div>
+    <div class="dp-top" hidden><div class="dp-sc"><svg viewBox="0 0 24 24">${ICON.star}</svg><b>0</b><small>PTS</small></div>
+      <div class="dp-tm"><svg viewBox="0 0 66 66"><defs><linearGradient id="dpTg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe29a"/><stop offset="1" style="stop-color:var(--dp-c,#8b3fd6)"/></linearGradient></defs><circle class="bg" cx="33" cy="33" r="28"/><circle class="fg" cx="33" cy="33" r="28" stroke-dasharray="175.9" stroke-dashoffset="0"/></svg><b>30</b></div>
+      <div class="dp-goal" hidden><span></span><i></i></div></div>
     <div class="dp-combo"></div><div class="dp-aim" hidden>${AIM}</div><div class="dp-hint"></div><div class="dp-flash"></div><div class="dp-big" hidden></div><div class="dp-toast" role="status" aria-live="polite"></div>`;
   root.appendChild(el);
   const q = s => el.querySelector(s);
@@ -312,7 +338,7 @@ export function run(o) {
     qT.setFromEuler(euler).multiply(qFix).multiply(qS.setFromAxisAngle(zee, -orient));
     return qT;
   }
-  function setMode() { q(".dp-aim").hidden = !gyro; }
+  function setMode() { q(".dp-aim").hidden = !(state === "play" || state === "count"); }
   function aim(dt) {
     if (gyro && gyroData) camera.quaternion.slerp(gyroQuat(gyroData), Math.min(1, dt * 18));
     else { euler.set(pitch, yaw, 0, "YXZ"); camera.quaternion.setFromEuler(euler); }
@@ -411,13 +437,12 @@ export function run(o) {
     return best;
   }
   let laser = null;   // {x, y, t}
-  function shoot(px, py) {
+  function shoot() {
     if (state !== "play") return;
     G.shots++; sfx.laser();
-    const aimEl = q(".dp-aim"); aimEl.classList.add("fire"); setTimeout(() => aimEl.classList.remove("fire"), 110);
-    let t = hitAt(px, py); if (!t && gyro) { t = hitAt(W / 2, H / 2); if (t) { px = W / 2; py = H / 2; } }
-    if (t) { tmp.copy(t.m.position).project(camera); px = (tmp.x + 1) / 2 * W; py = (1 - tmp.y) / 2 * H; }
-    laser = { x: px, y: py, t: 0 };
+    const t = hitAt(W / 2, H / 2), aimEl = q(".dp-aim");
+    aimEl.classList.add("fire"); aimEl.classList.toggle("hit", !!t); setTimeout(() => aimEl.classList.remove("fire", "hit"), 140);
+    laser = { t: 0, hit: !!t };
     if (!t) { if (G.combo >= 3) toast("Se rompió tu combo"); G.combo = 0; G.mult = 1; drawCombo(); return; }
     const pos = t.m.position.clone();
     if (t.role === "bueno") {
@@ -437,24 +462,55 @@ export function run(o) {
     }
     removeThing(t); drawScore();
   }
-  function drawScore() { q(".dp-sc").innerHTML = `${G.score.toLocaleString("es-MX")}<small>PTS</small>`; }
+  function drawScore() {
+    const s = q(".dp-sc"), d = G.score - (G.shown ?? G.score); G.shown = G.score;
+    s.querySelector("b").textContent = G.score.toLocaleString("es-MX");
+    if (d) { s.classList.remove("bump"); void s.offsetWidth; s.classList.add("bump"); s.classList.toggle("loss", d < 0); clearTimeout(s._t); s._t = setTimeout(() => s.classList.remove("loss"), 450); }
+    const P = D().prize, g = q(".dp-goal");
+    g.hidden = !(P && canWin());
+    if (!g.hidden) {
+      const done = G.score >= P.min;
+      g.querySelector("span").textContent = done ? "🎁 ¡Premio ganado!" : `🎁 Meta ${P.min.toLocaleString("es-MX")}`;
+      g.style.setProperty("--p", Math.min(100, G.score / P.min * 100) + "%");
+      if (done && !g.classList.contains("done")) { g.classList.add("done"); sfx.sparkle(8); sfx.coin(); }
+      if (!done) g.classList.remove("done");
+    }
+  }
   function drawCombo() { const c = q(".dp-combo"); c.textContent = `¡Combo ×${G.mult}!`; c.classList.toggle("on", G.mult > 1); }
   function drawTime() {
     const T = D().time || 30, left = Math.max(0, G.t), s = Math.ceil(left);
-    q(".dp-tb i").style.transform = `scaleX(${left / T})`; q(".dp-tt").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-    const low = left <= 5; q(".dp-tb").classList.toggle("low", low); q(".dp-tt").classList.toggle("low", low);
+    q(".dp-tm .fg").setAttribute("stroke-dashoffset", (175.9 * (1 - left / T)).toFixed(1));
+    q(".dp-tm b").textContent = s;
+    const low = state === "play" && left <= 5 && left > 0;
+    el.classList.toggle("low", low);
   }
+  // each of the last 5 seconds pops big in red
+  function lastSecond(s) { const c = q(".dp-cd"); c.textContent = s; c.classList.remove("go"); void c.offsetWidth; c.classList.add("go"); if (s === 5) hint("¡Se acaba el tiempo!"); if (s === 3) hint(""); }
   function big(html, ms = 800) { const b = q(".dp-big"); b.innerHTML = html; b.hidden = false; b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); clearTimeout(b._t); if (ms) b._t = setTimeout(() => { b.hidden = true; }, ms); }
 
   // arrows on the edges toward bad things out of view
   function drawHud(dt) {
     hx.clearRect(0, 0, W, H);
     if (laser) {
-      laser.t += dt; const k = laser.t / .16;
+      laser.t += dt; const k = laser.t / .2;
       if (k >= 1) laser = null;
-      else { const g = hx.createLinearGradient(W / 2, H, laser.x, laser.y); g.addColorStop(0, "rgba(255,190,85,0)"); g.addColorStop(1, `rgba(255,236,170,${1 - k})`);
-        hx.strokeStyle = g; hx.lineWidth = 7 * (1 - k) + 1; hx.lineCap = "round"; hx.beginPath(); hx.moveTo(W / 2, H + 10); hx.lineTo(laser.x, laser.y); hx.stroke();
-        hx.fillStyle = `rgba(255,240,190,${1 - k})`; hx.beginPath(); hx.arc(laser.x, laser.y, 16 * (1 - k) + 4, 0, 7); hx.fill(); }
+      else {
+        const cx = W / 2, cy = H / 2, a = 1 - k, grow = Math.min(1, laser.t / .05);   // the beams shoot up fast, then fade
+        hx.save(); hx.lineCap = "round"; hx.globalCompositeOperation = "lighter";
+        for (const sx of [W * .12, W * .88]) {
+          const x0 = sx, y0 = H + 12, x1 = x0 + (cx - x0) * grow, y1 = y0 + (cy - y0) * grow;
+          const g = hx.createLinearGradient(x0, y0, cx, cy); g.addColorStop(0, "rgba(255,120,60,0)"); g.addColorStop(.6, `rgba(255,190,85,${.7 * a})`); g.addColorStop(1, `rgba(255,250,220,${a})`);
+          hx.strokeStyle = g; hx.lineWidth = 12 * a + 2; hx.shadowColor = "rgba(255,190,85,.9)"; hx.shadowBlur = 18;
+          hx.beginPath(); hx.moveTo(x0, y0); hx.lineTo(x1, y1); hx.stroke();
+          hx.strokeStyle = `rgba(255,255,255,${a})`; hx.lineWidth = 3 * a + 1; hx.shadowBlur = 0; hx.beginPath(); hx.moveTo(x0, y0); hx.lineTo(x1, y1); hx.stroke();
+        }
+        if (grow >= 1) {   // the impact in the crosshair
+          const r = (laser.hit ? 34 : 20) * (0.5 + k);
+          const g = hx.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, `rgba(255,255,240,${a})`); g.addColorStop(.4, `rgba(255,200,100,${.8 * a})`); g.addColorStop(1, "rgba(255,120,60,0)");
+          hx.fillStyle = g; hx.beginPath(); hx.arc(cx, cy, r, 0, 7); hx.fill();
+        }
+        hx.restore();
+      }
     }
     if (state !== "play") return;
     const shown = [];
@@ -479,8 +535,8 @@ export function run(o) {
     for (const t of things) removeThing(t); things.length = 0; spawned = 0;
     G = { t: D().time || 30, score: 0, combo: 0, mult: 1, hits: 0, goods: 0, golds: 0, shots: 0, nextSpawn: .4, nextGold: 6 + Math.random() * 6, lastSec: 99 };
     q(".dp-top").hidden = false; drawScore(); drawCombo(); drawTime(); setMode();
-    state = "count"; G.cd = 3.2; G.cdShown = 0;
-    hint(gyro ? "Gira con tu celular para encontrarlos" : "Arrastra para mirar alrededor · toca para disparar");
+    state = "count"; G.cd = 3.2; G.cdShown = 0; setMode();
+    hint(gyro ? "Gira con tu celular, pon la mira sobre los malos y toca la pantalla" : "Arrastra para apuntar con la mira · toca para disparar");
   }
   function tick(dt) {
     if (state === "count") {
@@ -491,7 +547,7 @@ export function run(o) {
     }
     if (state !== "play") return;
     G.t -= dt; drawTime();
-    const s = Math.ceil(G.t); if (s !== G.lastSec) { G.lastSec = s; if (s <= 5 && s > 0) sfx.tick(1.4); }
+    const s = Math.ceil(G.t); if (s !== G.lastSec) { G.lastSec = s; if (s <= 5 && s > 0) { sfx.tick(1.6); sfx.count(); lastSecond(s); if (navigator.vibrate) try { navigator.vibrate(30); } catch {} } }
     const T = D().time || 30, el2 = T - G.t, sp = SPEEDS[D().speed] || SPEEDS.normal;
     const maxAlive = Math.min(9, 4 + Math.floor(el2 / 8)), live = things.filter(t => !t.dead).length;
     G.nextSpawn -= dt;
@@ -504,7 +560,7 @@ export function run(o) {
     if (G.t <= 0) end();
   }
   function end() {
-    state = "over"; G.t = 0; drawTime(); hint(""); sfx.go();
+    state = "over"; G.t = 0; drawTime(); el.classList.remove("low"); hint(""); sfx.go();
     big("¡Tiempo!", 1300);
     setTimeout(() => { if (!alive) return; for (const t of things) t.age = Math.max(t.age, t.life); results(); }, 1400);
   }
@@ -677,7 +733,7 @@ export function run(o) {
   let drag = null;
   el.addEventListener("pointerdown", e => {
     if (e.target.closest(".dp-ov")) return;
-    if (gyro) { shoot(e.clientX - el.getBoundingClientRect().left, e.clientY - el.getBoundingClientRect().top); return; }
+    if (gyro) { shoot(); return; }
     drag = { x: e.clientX, y: e.clientY, moved: 0, id: e.pointerId }; try { el.setPointerCapture(e.pointerId); } catch {}
   });
   el.addEventListener("pointermove", e => {
@@ -685,7 +741,7 @@ export function run(o) {
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
     const k = camera.fov * Math.PI / 180 / H; yaw += dx * k; pitch = Math.max(-1.1, Math.min(1.1, pitch + dy * k));
   });
-  const up = e => { if (!drag || e.pointerId !== drag.id) return; const r = el.getBoundingClientRect(); if (drag.moved < 10) shoot(e.clientX - r.left, e.clientY - r.top); drag = null; };
+  const up = e => { if (!drag || e.pointerId !== drag.id) return; if (drag.moved < 10) shoot(); drag = null; };
   el.addEventListener("pointerup", up); el.addEventListener("pointercancel", () => { drag = null; });
   const onVis = () => { if (document.hidden && state === "play") { state = "paused"; } else if (!document.hidden && state === "paused") { state = "play"; toast("¡Sigue!"); } };
   document.addEventListener("visibilitychange", onVis);
