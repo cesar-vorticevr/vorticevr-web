@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Crea tu juego Dispara y gana · Vórtice VR</title>
+<meta name="description" content="Un juego 360 con la cámara, con link y QR propios: las cosas vuelan alrededor de quien juega y les dispara a los malos. Con tus imágenes, un premio opcional y un link al final.">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../../assets/icono.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* "Dispara y gana" maker: the game, its characters (malos, buenos, dorado), the rules, the optional prize and link, the color;
+   a phone with the live game on the right (above on a phone). The game itself is assets/dispara.js (also at the link). */
+:root{--void:#05020b;--panel:rgba(20,9,40,.7);--line:rgba(190,150,255,.2);--line2:rgba(190,150,255,.45);--vortex:#8b3fd6;--vortex-d:#5a1f8f;--lav:#d2b8ff;--ink:#f2ecff;--mute:#a99bcb;--sun:#ffbe55;--ok:#74e8ba;--bad:#ff8a9e;
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55;min-height:100vh}
+a{color:var(--lav)}
+:focus-visible{outline:2px solid var(--lav);outline-offset:3px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1180px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 8px}
+header img{height:38px;width:auto;display:block}
+@media (max-width:480px){header img{height:28px}}
+header a.back{font-family:var(--fd);font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--mute)}
+header .acts{display:flex;align-items:center;gap:14px}
+.mybtn{font-family:var(--fd);font-weight:600;letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;border:1px solid var(--line2);border-radius:999px;padding:9px 14px;background:rgba(139,63,214,.2);color:var(--ink);cursor:pointer;text-decoration:none}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+@media (max-width:480px){.wrap{padding:0 16px 80px}}
+.hero{padding:28px 0 26px}
+.kick{font-family:var(--fd);font-size:.78rem;letter-spacing:.26em;text-transform:uppercase;color:var(--sun);font-weight:600}
+h1{font-family:var(--fd);font-size:clamp(2rem,5vw,3.2rem);line-height:1.02;margin:8px 0 10px;text-wrap:balance}
+.hero p{margin:0;color:var(--mute);max-width:62ch}
+.allx{display:inline-flex;align-items:center;gap:6px;margin:12px 16px 0 0;font:600 .85rem var(--fd);color:var(--lav);text-decoration:none}
+.step{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:20px;margin-bottom:16px}
+@media (max-width:480px){.step{padding:16px}}
+.step h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font-family:var(--fd);font-size:1.2rem}
+.step h2 .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--fm);font-size:.85rem;background:rgba(139,63,214,.3);border:1px solid var(--line2);flex:none}
+.step h2 .n.done{background:var(--ok);color:#0b2a1e;border-color:var(--ok)}
+.step>p.hint{margin:0 0 14px;color:var(--mute);font-size:.92rem}
+.bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--vortex),var(--sun));transition:width .2s}
+.msg{font-size:.88rem;margin-top:8px}
+.msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+label.f{display:block;font-size:.8rem;font-family:var(--fd);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:12px 0 6px}
+input[type=text],input[type=url],input[type=number],textarea{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:10px 12px}
+textarea{resize:vertical;min-height:64px}
+input:focus,textarea:focus{border-color:var(--lav);outline:none}
+input.bad{border-color:var(--bad)}
+.slugrow{display:flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:rgba(5,2,11,.7);overflow:hidden}
+.slugrow input{border:0;background:transparent;border-radius:0;text-align:right;padding-right:2px;min-width:0}
+.slugrow span{padding:11px 12px 11px 0;color:var(--mute);white-space:nowrap;font-family:var(--fm);font-size:.9rem}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{font:600 .85rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--fd);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:.85rem;border:1px solid var(--line2);border-radius:999px;padding:13px 22px;color:var(--ink);background:rgba(20,9,40,.6);cursor:pointer;text-decoration:none}
+.btn.sm{padding:9px 14px;font-size:.74rem}
+.btn.primary{background:linear-gradient(135deg,var(--vortex),var(--vortex-d));border-color:var(--lav);box-shadow:0 0 26px rgba(139,63,214,.45)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.note{font-size:.85rem;color:var(--mute)}
+.legal{font-size:.8rem;color:var(--mute);margin-top:10px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:28px;align-items:start}
+.side{position:sticky;top:16px}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.side{position:static;order:-1}}
+.colors{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.colors button{width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.25);cursor:pointer;padding:0}
+.colors button[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 3px var(--vortex)}
+.colors input[type=color]{width:40px;height:34px;border:1px solid var(--line2);border-radius:8px;background:none;padding:2px;cursor:pointer}
+.tog{display:flex;gap:12px;align-items:flex-start;cursor:pointer;margin-top:12px}
+.tog input{width:20px;height:20px;accent-color:#8b3fd6;flex:none;margin-top:3px}
+.tog b{display:block}.tog small{color:var(--mute);font-size:.86rem}
+.lims{display:grid;gap:8px}
+.lims button{display:block;text-align:left;border:2px solid var(--line);border-radius:12px;padding:10px 14px;background:rgba(5,2,11,.5);color:var(--ink);cursor:pointer;font:inherit}
+.lims button[aria-pressed="true"]{border-color:var(--sun)}
+.lims b{font-family:var(--fd);font-size:.95rem}.lims small{display:block;color:var(--mute);font-size:.85rem}
+.warn{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:rgba(255,190,85,.08);border:1px solid rgba(255,190,85,.4);margin:12px 0 0;font-size:.88rem;color:var(--ink)}
+/* templates */
+.tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.tpls button{border:2px solid var(--line);border-radius:14px;background:rgba(5,2,11,.5);color:var(--ink);cursor:pointer;padding:10px 8px 12px;font:600 .9rem var(--fd);display:flex;flex-direction:column;align-items:center;gap:6px}
+.tpls button[aria-pressed="true"]{border-color:var(--sun);box-shadow:0 0 0 3px rgba(255,190,85,.2)}
+.tpls .ims{display:flex;gap:2px;height:44px;align-items:center}
+.tpls img{width:40px;height:40px;object-fit:contain}
+.tpls .zero{font-size:1.6rem;line-height:44px}
+/* characters */
+.role{margin-top:14px;padding:14px;border-radius:14px;background:rgba(5,2,11,.45);border:1px solid var(--line)}
+.role:first-of-type{margin-top:4px}
+.role h3{margin:0;font:700 1rem var(--fd);display:flex;align-items:center;gap:8px}
+.role h3 small{font:500 .82rem var(--fb);color:var(--mute)}
+.role.malo h3 b{color:var(--bad)}.role.bueno h3 b{color:var(--ok)}.role.dorado h3 b{color:var(--sun)}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.chip{position:relative;width:84px;height:84px;border-radius:14px;background:rgba(139,63,214,.18);border:1px solid var(--line2);display:grid;place-items:center}
+.chip img{width:66px;height:66px;object-fit:contain}
+.chip button{position:absolute;top:-8px;right:-8px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line2);background:#1d1430;color:var(--ink);cursor:pointer;font-size:.8rem;line-height:1}
+.chip button:hover{border-color:var(--bad);color:var(--bad)}
+.chip .clk{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);font:500 .68rem var(--fm);color:var(--sun);background:#1d1430;padding:1px 6px;border-radius:99px;white-space:nowrap}
+.add{width:84px;height:84px;border-radius:14px;border:2px dashed var(--line2);background:transparent;color:var(--lav);cursor:pointer;font:600 .8rem var(--fd);display:grid;place-items:center;text-align:center;padding:4px}
+.add:hover{border-color:var(--lav)}
+.pick{margin-top:12px;padding:12px;border-radius:12px;border:1px solid var(--line2);background:rgba(20,9,40,.9)}
+.pick .opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:8px}
+.pick .opts button{border:1px solid var(--line);border-radius:12px;background:rgba(5,2,11,.5);cursor:pointer;padding:6px 4px;color:var(--mute);font:500 .7rem var(--fb);display:flex;flex-direction:column;align-items:center;gap:2px}
+.pick .opts button:hover{border-color:var(--lav);color:var(--ink)}
+.pick .opts img{width:48px;height:48px;object-fit:contain}
+/* stats */
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.stats div{flex:1;min-width:120px;padding:10px 14px;border-radius:12px;background:rgba(255,190,85,.07);border:1px solid rgba(255,190,85,.35)}
+.stats b{display:block;font:700 1.3rem var(--fd);color:var(--sun)}
+.stats span{font-size:.82rem;color:var(--mute)}
+/* phone */
+.pv{border:1px solid var(--line2);border-radius:18px;background:#120826;padding:14px}
+.pv h3{margin:0 0 10px;font-family:var(--fd);font-size:1rem;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pv h3 small{font:500 .78rem var(--fb);color:var(--mute)}
+.phone{position:relative;margin:0 auto;width:100%;max-width:360px;height:min(72vh,700px);border-radius:34px;border:9px solid #1d1430;background:#000;overflow:hidden;box-shadow:0 30px 60px -30px rgba(139,63,214,.7)}
+@media (max-width:900px){.phone{height:min(70vh,620px)}}
+.phone .screen{position:absolute;inset:0}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+</script>
+</head>
+<body>
+<header><a href="../../" aria-label="Vórtice VR, inicio"><img src="../../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a class="mybtn" href="../../cuenta/">Mi cuenta</a><a class="back" href="../../">← Sitio</a></div></header>
+<main class="wrap">
+  <div class="hero">
+    <span class="kick" id="kick">Gratis · prueba de 15 días</span>
+    <h1>Crea tu juego Dispara y gana</h1>
+    <p>Un juego 360 con la cámara: al abrir tu link, las cosas vuelan alrededor de quien juega y tiene que girar con su celular y dispararles a los malos antes de que se acabe el tiempo. Pon tus propias imágenes y, si quieres, un premio para quien haga más puntos.</p>
+    <a class="allx" href="../">← Todas las experiencias</a>
+  </div>
+  <div class="grid">
+    <div>
+      <section class="step" id="full" hidden>
+        <h2>Ya usaste todas tus experiencias</h2>
+        <p class="hint" id="fullText"></p>
+        <div class="row"><a class="btn" href="../../cuenta/#planes">Ver planes</a><a class="btn" href="../../cuenta/">Ir a mi cuenta</a></div>
+      </section>
+
+      <section class="step" id="statsBox" hidden>
+        <h2>✦ Cómo va tu juego</h2>
+        <div class="stats" id="stats"></div>
+      </section>
+
+      <section class="step" id="s1">
+        <h2><span class="n" id="n1">1</span>Tu juego</h2>
+        <label class="f" for="dname" style="margin-top:0">Nombre de tu negocio o de tu juego</label>
+        <input type="text" id="dname" maxlength="80" placeholder="Ej. Café La Esquina">
+        <label class="f" for="sub">Texto corto (opcional)</label>
+        <textarea id="sub" maxlength="160" rows="2" placeholder="Ej. ¡Atrapa a los monstruos y gana un café!"></textarea>
+        <label class="f">Empieza con una plantilla</label>
+        <div class="tpls" id="tpls"></div>
+      </section>
+
+      <section class="step" id="s2">
+        <h2><span class="n" id="n2">2</span>Tus personajes</h2>
+        <p class="hint">Elige de los nuestros o sube tus imágenes (mejor PNG sin fondo: tu producto, tu logo, tu mascota…).</p>
+        <div class="role malo" data-role="malo"><h3><b>Malos</b> <small>a estos se les dispara · +10 · de 1 a 4</small></h3><div class="chips"></div></div>
+        <div class="role bueno" data-role="bueno"><h3><b>Buenos</b> <small>opcional · si les das, −15 · hasta 3</small></h3><div class="chips"></div></div>
+        <div class="role dorado" data-role="dorado"><h3><b>Dorado</b> <small>opcional · sale poco y vuela rápido · +50</small></h3><div class="chips"></div></div>
+        <input type="file" id="upFile" accept="image/png,image/webp,image/jpeg" hidden>
+      </section>
+
+      <section class="step" id="s3">
+        <h2><span class="n done" id="n3">3</span>Las reglas</h2>
+        <label class="f" style="margin-top:0">Tiempo</label>
+        <div class="seg" id="timeSeg"></div>
+        <label class="f">Velocidad</label>
+        <div class="seg" id="speedSeg"></div>
+        <p class="note" style="margin:10px 0 0">Malos +10 (seguidos valen doble y triple), buenos −15, dorado +50. Fallar un tiro rompe el combo.</p>
+      </section>
+
+      <section class="step" id="s4">
+        <h2><span class="n" id="n4">4</span>Premio <small class="note" style="font-family:var(--fb)">(opcional)</small></h2>
+        <p class="hint">Quien llegue al puntaje gana un cupón con código, la fecha y un reloj que se mueve (así se nota si es una captura). Te lo muestra para canjearlo.</p>
+        <label class="tog" style="margin-top:0"><input type="checkbox" id="pzOn"><span><b>Dar un premio por puntaje</b><small>Si no, se juega solo por los puntos y el récord.</small></span></label>
+        <div id="pzBox" hidden>
+          <label class="f" for="pzT">El premio</label>
+          <input type="text" id="pzT" maxlength="40" placeholder="Ej. Café gratis">
+          <label class="f" for="pzMin">Puntos para ganarlo</label>
+          <input type="number" id="pzMin" min="10" max="100000" step="10" inputmode="numeric" style="max-width:180px">
+          <div class="note" id="pzHint"></div>
+          <label class="f">El premio vale</label>
+          <div class="seg" id="daysSeg"></div>
+          <label class="f" for="pzCond">Condiciones (opcional)</label>
+          <textarea id="pzCond" maxlength="200" rows="2" placeholder="Ej. Válido en tu próxima visita. Uno por persona."></textarea>
+          <label class="f">¿Cuántas veces puede ganarlo cada persona?</label>
+          <div class="lims" id="limSeg">
+            <button type="button" data-v="una"><b>Una vez por persona</b><small>Puede seguir jugando por su récord, pero el premio sale una vez.</small></button>
+            <button type="button" data-v="dia"><b>Una vez al día</b><small>Para que regresen: pueden ganarlo otra vez cada día.</small></button>
+            <button type="button" data-v="libre"><b>Sin límite</b><small>Para eventos, con el juego en una tableta o pantalla.</small></button>
+          </div>
+          <p class="note" style="margin:10px 0 0">El premio se cuenta en cada celular. Para premios grandes, revisa el código y la fecha del cupón.</p>
+        </div>
+      </section>
+
+      <section class="step" id="s5">
+        <h2><span class="n" id="n5">5</span>Link al final <small class="note" style="font-family:var(--fb)">(opcional)</small></h2>
+        <p class="hint">Después de los puntos, aparte, sale tu mensaje con un botón: tu reseña de Google, tu Instagram, tu menú, tu tienda… Se abre en otra pestaña.</p>
+        <label class="tog" style="margin-top:0"><input type="checkbox" id="lkOn"><span><b>Poner un link al final</b><small>No condiciona el premio.</small></span></label>
+        <div id="lkBox" hidden>
+          <label class="f" for="lkMsg">Mensaje</label>
+          <textarea id="lkMsg" maxlength="140" rows="2" placeholder="Ej. ¿Te gustó? Cuéntanos cómo te fue en tu visita."></textarea>
+          <label class="f" for="lkUrl">Link</label>
+          <input type="url" id="lkUrl" maxlength="500" placeholder="Ej. g.page/r/tu-negocio/review" autocapitalize="off" spellcheck="false">
+          <label class="f" for="lkT">Texto del botón</label>
+          <input type="text" id="lkT" maxlength="40" placeholder="Visítanos">
+          <div class="msg" id="mLk"></div>
+          <div class="warn"><span aria-hidden="true">⚠️</span><span>Si es tu link de reseñas, <b>no la pidas a cambio del premio</b>: Google no lo permite. Aquí la invitación sale aparte y el premio no depende de ella.</span></div>
+        </div>
+      </section>
+
+      <section class="step" id="s6">
+        <h2><span class="n done" id="n6">6</span>Color</h2>
+        <div class="colors" id="colors"></div>
+        <p class="note" style="margin:8px 0 0">Para los destellos de los disparos y el premio.</p>
+      </section>
+
+      <section class="step" id="s7">
+        <h2><span class="n" id="n7">7</span>Título y link</h2>
+        <label class="f" for="title" style="margin-top:0">Título de la experiencia</label>
+        <input type="text" id="title" maxlength="80" placeholder="Ej. Juego de aniversario">
+        <div class="note">Es solo para ti: así la ves en Mi cuenta. Puedes hacer otro juego del mismo negocio sin cambiar su nombre.</div>
+        <label class="f" for="slug">Tu link</label>
+        <div class="slugrow"><input type="text" id="slug" maxlength="30" placeholder="tu-juego" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="root">.vorticevr.mx</span></div>
+        <div class="msg" id="mSlug"></div>
+      </section>
+      <section class="step" id="sMarca" hidden></section>
+      <section class="step" id="s8">
+        <h2><span class="n" id="n8">8</span>Publicar</h2>
+        <div id="mine" hidden style="margin:0 0 12px"></div>
+        <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
+        <button class="btn primary" id="publish" type="button" disabled>Publicar mi juego</button>
+        <div class="bar" id="bPub" hidden><i></i></div><div class="msg" id="mPub"></div>
+        <p class="legal">Al publicar confirmas que tienes derecho a usar las imágenes que subas y que tú entregas los premios a quien los gane. Vórtice VR puede retirar contenido inapropiado (<a href="../../terminos/">términos</a>). <span id="legalDays">La experiencia se borra a los 15 días; puedes editarla o borrarla desde tu cuenta.</span></p>
+      </section>
+    </div>
+    <aside class="side">
+      <div class="pv">
+        <h3>Vista previa <small>toca ¡Jugar! y arrastra para mirar</small></h3>
+        <div class="phone"><div class="screen" id="screen"></div></div>
+        <p class="note" style="margin:10px 0 0">En el celular se juega con la cámara y girando el celular.</p>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="../../assets/marca.js"></script>
+<script src="../../assets/plataforma.js" data-api="../.."></script>
+<script type="module">
+import { run, SPRITES, TEMPLATES, TIMES, SPEEDS, ROLES, spriteUrl } from "../../assets/dispara.js";
+const $=id=>document.getElementById(id);
+const API=VVR.api;
+const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
+$("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
+const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const rid=()=>Array.from(crypto.getRandomValues(new Uint8Array(10)),b=>"abcdefghijklmnopqrstuvwxyz0123456789"[b%36]).join("");
+// S.d is what gets published; S.files = images picked here (id → {blob,url,w,h}); S.old = the published ones
+const S={token:null,email:null,mine:null,files:new Map(),old:new Map(),clicks:null,tpl:"monstruos",
+  d:{objs:[],time:30,speed:"normal",color:"#8b3fd6",sub:"",prize:{on:false,t:"",min:0,days:7,cond:"",limit:"una"},link:{on:false,url:"",t:"",msg:""}}};
+const fileUrl=id=>{ if(!id) return ""; const f=S.files.get(id); if(f) return f.url; const o=S.old.get(id); return o&&S.mine?`${API}/m/${S.mine.slug}/${o.file}?v=${S.mine.updated||""}`:""; };
+const objUrl=ob=>ob.key?spriteUrl(ob.key):fileUrl(ob.img);
+const loadImg=src=>new Promise((ok,bad)=>{ const i=new Image(); i.crossOrigin="anonymous"; i.onload=()=>ok(i); i.onerror=bad; i.src=src; });
+async function shrink(file,max){
+  const url=URL.createObjectURL(file); const im=await loadImg(url); URL.revokeObjectURL(url);
+  const k=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)), c=document.createElement("canvas"); c.width=Math.round(im.naturalWidth*k); c.height=Math.round(im.naturalHeight*k);
+  c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+  let b=await new Promise(r=>c.toBlob(r,"image/webp",.9)); if(!b||b.type!=="image/webp") b=await new Promise(r=>c.toBlob(r,"image/png"));
+  return {blob:b,w:c.width,h:c.height};
+}
+const fromTpl=k=>{ const T=TEMPLATES[k]; return T?[...T.malo.map(key=>({id:rid(),role:"malo",key})),...T.bueno.map(key=>({id:rid(),role:"bueno",key})),...(T.dorado?[{id:rid(),role:"dorado",key:T.dorado}]:[])]:[]; };
+const suggestMin=()=>Math.round(S.d.time*3.4/10)*10;
+
+// ---------- 1. the game ----------
+$("dname").addEventListener("input",changed);
+$("sub").addEventListener("input",()=>{ S.d.sub=$("sub").value; changed(); });
+function drawTpls(){
+  $("tpls").innerHTML=Object.entries(TEMPLATES).map(([k,T])=>`<button type="button" data-t="${k}" aria-pressed="${S.tpl===k}"><span class="ims">${[...T.malo,...T.bueno].slice(0,3).map(key=>`<img src="${esc(spriteUrl(key))}" alt="">`).join("")}</span>${esc(T.t)}</button>`).join("")
+    +`<button type="button" data-t="propio" aria-pressed="${S.tpl==="propio"}"><span class="ims"><span class="zero">🖼️</span></span>Mis imágenes</button>`;
+}
+$("tpls").addEventListener("click",e=>{ const b=e.target.closest("[data-t]"); if(!b) return; const k=b.dataset.t;
+  const custom=S.d.objs.some(o=>o.img); if(custom&&k!=="propio"&&!confirm("Se cambiarán tus personajes por los de la plantilla. ¿Seguimos?")) return;
+  S.tpl=k; if(k==="propio"){ S.d.objs=S.d.objs.filter(o=>o.img); } else S.d.objs=fromTpl(k);
+  drawTpls(); drawCast(); changed();
+  if(k==="propio"&&!S.d.objs.some(o=>o.role==="malo")) openPick("malo"); });
+
+// ---------- 2. characters ----------
+let picking=null;
+function drawCast(){
+  document.querySelectorAll(".role").forEach(box=>{
+    const role=box.dataset.role, list=S.d.objs.filter(o=>o.role===role), max=ROLES[role].max;
+    box.querySelector(".chips").innerHTML=list.map(o=>`<div class="chip" data-id="${o.id}" title="${esc(o.key?SPRITES[o.key].t:"Tu imagen")}"><img src="${esc(objUrl(o))}" alt=""><button type="button" data-del aria-label="Quitar">✕</button></div>`).join("")
+      +(list.length<max?`<button class="add" type="button" data-add>+ Agregar</button>`:"");
+    const pk=box.querySelector(".pick"); if(pk) pk.remove();
+    if(picking===role){
+      const p=document.createElement("div"); p.className="pick";
+      p.innerHTML=`<div class="row" style="margin:0 0 10px"><button class="btn sm primary" type="button" data-up>Subir mi imagen</button><span class="note">o elige uno:</span></div><div class="opts">${Object.entries(SPRITES).map(([k,s])=>`<button type="button" data-k="${k}"><img src="${esc(spriteUrl(k))}" alt="">${esc(s.t)}</button>`).join("")}</div>`;
+      box.appendChild(p);
+    }
+  });
+}
+function openPick(role){ picking=picking===role?null:role; drawCast(); }
+function addObj(role,o){ if(S.d.objs.filter(x=>x.role===role).length>=ROLES[role].max) return; S.d.objs.push({id:rid(),role,...o}); picking=null; drawCast(); changed(); }
+$("s2").addEventListener("click",e=>{
+  const box=e.target.closest(".role"); if(!box) return; const role=box.dataset.role;
+  if(e.target.closest("[data-add]")){ openPick(role); return; }
+  if(e.target.closest("[data-del]")){ const id=e.target.closest("[data-id]").dataset.id; S.d.objs=S.d.objs.filter(o=>o.id!==id); drawCast(); changed(); return; }
+  if(e.target.closest("[data-up]")){ $("upFile").dataset.role=role; $("upFile").click(); return; }
+  const k=e.target.closest("[data-k]"); if(k){ addObj(role,{key:k.dataset.k}); if(S.tpl!=="propio"){ S.tpl="propio"; drawTpls(); } }
+});
+$("upFile").addEventListener("change",async e=>{ const f=e.target.files[0], role=e.target.dataset.role; e.target.value=""; if(!f||!role) return;
+  try{ const r=await shrink(f,512), id=rid(); S.files.set(id,{blob:r.blob,url:URL.createObjectURL(r.blob),w:r.w,h:r.h}); addObj(role,{img:id}); S.tpl="propio"; drawTpls(); }
+  catch(err){ alert("No pude abrir esa imagen. Usa PNG, JPG o WebP."); } });
+
+// ---------- 3. rules ----------
+function drawRules(){
+  $("timeSeg").innerHTML=TIMES.map(t=>`<button type="button" data-v="${t}" aria-pressed="${S.d.time===t}">${t} segundos</button>`).join("");
+  $("speedSeg").innerHTML=Object.entries(SPEEDS).map(([k,s])=>`<button type="button" data-v="${k}" aria-pressed="${S.d.speed===k}">${s.t}</button>`).join("");
+}
+$("timeSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; const old=suggestMin(); S.d.time=+b.dataset.v; if(!S.d.prize.min||S.d.prize.min===old){ S.d.prize.min=suggestMin(); $("pzMin").value=S.d.prize.min; } drawRules(); drawPzHint(); changed(); });
+$("speedSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.d.speed=b.dataset.v; drawRules(); changed(); });
+
+// ---------- 4. prize ----------
+const DAYS=[[0,"Sin fecha límite"],[1,"Solo hoy"],[3,"3 días"],[7,"7 días"],[15,"15 días"],[30,"30 días"]];
+function drawDays(){ $("daysSeg").innerHTML=DAYS.map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="${S.d.prize.days===v}">${t}</button>`).join(""); }
+function drawLim(){ $("limSeg").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===S.d.prize.limit))); }
+function drawPzHint(){ const t=S.d.time; $("pzHint").textContent=`Como referencia, en ${t} segundos alguien que juega bien hace unos ${Math.round(t*4/10)*10}–${Math.round(t*6/10)*10} puntos. Te sugerimos ${suggestMin()}.`; }
+$("pzOn").addEventListener("change",()=>{ S.d.prize.on=$("pzOn").checked; $("pzBox").hidden=!S.d.prize.on; if(S.d.prize.on&&!S.d.prize.min){ S.d.prize.min=suggestMin(); $("pzMin").value=S.d.prize.min; } changed(); });
+$("pzT").addEventListener("input",()=>{ S.d.prize.t=$("pzT").value; changed(); });
+$("pzMin").addEventListener("input",()=>{ S.d.prize.min=Math.round(Number($("pzMin").value)||0); changed(); });
+$("pzCond").addEventListener("input",()=>{ S.d.prize.cond=$("pzCond").value; changed(); });
+$("daysSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.d.prize.days=+b.dataset.v; drawDays(); changed(); });
+$("limSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.d.prize.limit=b.dataset.v; drawLim(); changed(); });
+
+// ---------- 5. link ----------
+function linkHref(v){ v=String(v||"").trim(); if(!v) return "";
+  if(!/^https?:\/\//i.test(v)){ if(/^[a-z][a-z0-9+.-]*:/i.test(v)) return null; v="https://"+v; }
+  try{ const u=new URL(v); return /^https?:$/.test(u.protocol)&&u.hostname.includes(".")?u.href:null; }catch(e){ return null; } }
+$("lkOn").addEventListener("change",()=>{ S.d.link.on=$("lkOn").checked; $("lkBox").hidden=!S.d.link.on; changed(); });
+$("lkUrl").addEventListener("input",()=>{ S.d.link.url=$("lkUrl").value; $("lkUrl").classList.toggle("bad",linkHref(S.d.link.url)===null); changed(); });
+$("lkT").addEventListener("input",()=>{ S.d.link.t=$("lkT").value; changed(); });
+$("lkMsg").addEventListener("input",()=>{ S.d.link.msg=$("lkMsg").value; changed(); });
+
+// ---------- 6. color ----------
+const COLORS=["#8b3fd6","#ffbe55","#ff5c8a","#e0402f","#ff8a3d","#2fb67c","#1f8fd6","#2c3e8f","#ffffff"];
+function drawColors(){ const box=$("colors"); box.innerHTML=COLORS.map(c=>`<button type="button" style="background:${c}" data-c="${c}" aria-label="Color ${c}" aria-pressed="${c===S.d.color}"></button>`).join("")+`<input type="color" value="${S.d.color}" aria-label="Otro color">`;
+  box.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{ S.d.color=b.dataset.c; drawColors(); changed(); });
+  box.querySelector("input").addEventListener("input",e=>{ S.d.color=e.target.value; box.querySelectorAll("[data-c]").forEach(b=>b.setAttribute("aria-pressed","false")); changed(); }); }
+
+// ---------- live preview ----------
+let app=null, pvT=0;
+function dNow(){ const d=S.d, out={name:$("dname").value.trim(),sub:d.sub.trim(),objs:d.objs.map(o=>o.key?{id:o.id,role:o.role,key:o.key}:{id:o.id,role:o.role,img:o.img}),time:d.time,speed:d.speed,color:d.color};
+  if(d.prize.on&&d.prize.t.trim()&&d.prize.min>=10) out.prize={t:d.prize.t.trim(),min:d.prize.min,days:d.prize.days,cond:d.prize.cond.trim(),limit:d.prize.limit};
+  if(d.link.on&&linkHref(d.link.url)) out.link={url:linkHref(d.link.url),t:d.link.t.trim(),msg:d.link.msg.trim()};
+  return out; }
+function cfgNow(){ const d=dNow(); if(!d.objs.some(o=>o.role==="malo")) d.objs=[{id:"ejemplo",role:"malo",key:"monstruo"},...d.objs];
+  return {slug:"vista-previa",title:$("dname").value.trim()||"Tu juego",dispara:d}; }
+function brand(){ const mk=S.marca&&S.marca.get(); if(mk&&mk.brand==="none") return null;
+  if(mk&&mk.brand==="own"&&mk.preview) return {src:mk.preview,own:true};
+  return {src:"../../assets/logo-vorticevr-blanco.png"}; }
+function preview(){ if(app) app.destroy(); app=run({root:$("screen"),cfg:cfgNow(),src:fileUrl,brand:brand(),embedded:true}); }
+function changed(){ clearTimeout(pvT); pvT=setTimeout(()=>{ if(app) app.update(cfgNow(),brand()); else preview(); },220); check(); }
+
+// ---------- link ----------
+const slugIn=$("slug"); let slugOk=false, slugTimer=0;
+const toSlug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9-]+/g,"-").replace(/-+/g,"-").replace(/^-/,"").slice(0,30);
+$("title").addEventListener("input",()=>{ if(!slugIn.dataset.touched&&!S.mine){ slugIn.value=toSlug($("title").value).replace(/-$/,""); checkSlug(); } check(); });
+slugIn.addEventListener("input",()=>{ const c=slugIn.selectionStart; slugIn.value=toSlug(slugIn.value); slugIn.setSelectionRange(c,c); checkSlug(); });
+slugIn.addEventListener("keydown",()=>slugIn.dataset.touched="1");
+function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false; check(); const s=slugIn.value.replace(/-$/,"");
+  if(s.length<3){ m.className="msg"; m.textContent=""; return; }
+  if(S.mine&&S.mine.slug===s){ slugOk=true; m.className="msg ok"; m.textContent="Es tu link actual."; check(); return; }
+  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); if(!r.ok&&r.suggest&&!slugIn.dataset.touched&&!S.mine){ slugIn.value=r.suggest; checkSlug(); return; } slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
+const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
+
+// ---------- publish ----------
+function problems(){
+  if(!$("dname").value.trim()) return "Escribe el nombre de tu negocio o de tu juego.";
+  if(!S.d.objs.some(o=>o.role==="malo")) return "Agrega al menos un malo (paso 2).";
+  const P=S.d.prize; if(P.on){ if(!P.t.trim()) return "Escribe el premio o apaga esa opción."; if(!(P.min>=10&&P.min<=100000)) return "Pon los puntos para ganar el premio (de 10 a 100,000)."; }
+  const L=S.d.link; if(L.on){ if(!L.url.trim()) return "Pega el link del final o apaga esa opción."; if(!linkHref(L.url)) return "El link del final no es válido."; }
+  if(!$("title").value.trim()) return "Escribe el título de tu experiencia (paso 7).";
+  if(!slugOk) return "Elige un link disponible.";
+  if(!S.token) return "Inicia sesión de nuevo.";
+  const mk=S.marca&&S.marca.get(); if(mk&&!mk.ok) return "Sube el logo de tu marca o elige el de Vórtice VR.";
+  return "";
+}
+function check(){
+  const p=problems(), d=S.d;
+  $("n1").classList.toggle("done",!!$("dname").value.trim()); $("n2").classList.toggle("done",d.objs.some(o=>o.role==="malo"));
+  $("n4").classList.toggle("done",d.prize.on&&!!d.prize.t.trim()&&d.prize.min>=10); $("n5").classList.toggle("done",d.link.on&&!!linkHref(d.link.url));
+  $("n7").classList.toggle("done",slugOk&&!!$("title").value.trim());
+  $("mLk").className="msg bad"; $("mLk").textContent=d.link.on&&d.link.url.trim()&&!linkHref(d.link.url)?"Revisa el link.":"";
+  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
+}
+// a card for the dashboard: the characters flying around a crosshair
+async function thumb(){
+  const c=document.createElement("canvas"); c.width=800; c.height=600; const x=c.getContext("2d");
+  const g=x.createRadialGradient(400,120,40,400,300,700); g.addColorStop(0,"#3a1670"); g.addColorStop(1,"#05020b"); x.fillStyle=g; x.fillRect(0,0,800,600);
+  x.fillStyle="rgba(210,184,255,.6)"; for(let i=0;i<90;i++){ x.beginPath(); x.arc((i*137)%800,(i*251)%600,(i%3)+1,0,7); x.fill(); }
+  const objs=cfgNow().dispara.objs, spots=[[150,170,150],[640,150,140],[560,420,120],[200,430,130],[400,110,100],[690,330,100],[100,300,100]];
+  for(let i=0;i<Math.min(objs.length,spots.length);i++){ try{ const im=await loadImg(objUrl(objs[i])); const [cx,cy,s]=spots[i], k=Math.min(s/im.naturalWidth,s/im.naturalHeight); x.save(); x.translate(cx,cy); x.rotate((i%2?1:-1)*.15); x.drawImage(im,-im.naturalWidth*k/2,-im.naturalHeight*k/2,im.naturalWidth*k,im.naturalHeight*k); x.restore(); }catch(e){} }
+  x.strokeStyle="#fff"; x.lineWidth=6; x.beginPath(); x.arc(400,300,62,0,7); x.stroke(); x.lineCap="round";
+  for(const [a,b,c2,d] of [[400,210,400,250],[400,350,400,390],[310,300,350,300],[450,300,490,300]]){ x.beginPath(); x.moveTo(a,b); x.lineTo(c2,d); x.stroke(); }
+  x.fillStyle="#ffd27f"; x.beginPath(); x.arc(400,300,9,0,7); x.fill();
+  x.font="800 46px Sora, sans-serif"; x.textAlign="center"; x.fillStyle="#fff"; let t=$("dname").value.trim()||"Dispara y gana"; while(x.measureText(t).width>700&&t.length>4) t=t.slice(0,-2)+"…"; x.fillText(t,400,560);
+  return new Promise(res=>c.toBlob(res,"image/png"));
+}
+$("publish").addEventListener("click",async()=>{
+  const p=problems(); if(p){ check(); return; }
+  const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Preparando…"; bar.hidden=false; bar.firstElementChild.style.width="0%"; $("publish").disabled=true;
+  const dispara=dNow(), items=[], fd=new FormData();
+  for(const ob of dispara.objs){ if(!ob.img||items.some(i=>i.id===ob.img)) continue; const id=ob.img, f=S.files.get(id), o=S.old.get(id);
+    const it=f?{id,type:"foto",w:f.w,h:f.h}:o?{id,type:"foto",w:o.w,h:o.h}:null; if(!it){ m.className="msg bad"; m.textContent="Falta una de tus imágenes: vuelve a subirla."; bar.hidden=true; $("publish").disabled=false; return; }
+    items.push(it); if(f) fd.append("f_"+id,f.blob,id+".img"); }
+  const meta={kind:"dispara",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),dispara,items,buttons:{}};
+  const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
+  fd.append("meta",JSON.stringify(meta));
+  if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
+  fd.append("image",await thumb(),"dispara.png");
+  const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc,linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/","Escanea, juega y gana");
+  fd.append("qr",await new Promise(r=>qrc.toBlob(r,"image/png")),"qr.png");
+  m.textContent="Publicando…";
+  const xhr=new XMLHttpRequest(); xhr.open("POST",`${API}/api/publish`); xhr.setRequestHeader("Authorization","Bearer "+S.token);
+  xhr.upload.onprogress=e=>{ if(e.lengthComputable) bar.firstElementChild.style.width=(e.loaded/e.total*100)+"%"; };
+  xhr.onload=()=>{ bar.hidden=true; let j={}; try{ j=JSON.parse(xhr.responseText); }catch(e){}
+    if(xhr.status!==200){ m.className="msg bad"; m.textContent=j.error||"No se pudo publicar."; $("publish").disabled=false; if(xhr.status===401){ VVR.clearSession(); location.href="../../cuenta/?siguiente=crear"; } return; }
+    m.textContent="¡Publicada! Abriendo tu cuenta…"; location.href="../../cuenta/?publicada="+encodeURIComponent(j.experience.slug); };
+  xhr.onerror=()=>{ bar.hidden=true; m.className="msg bad"; m.textContent="Se cortó la conexión. Intenta de nuevo."; $("publish").disabled=false; };
+  xhr.send(fd);
+});
+
+// ---------- start: session, plan, editing ----------
+function drawAll(){ drawTpls(); drawCast(); drawRules(); drawDays(); drawLim(); drawPzHint(); drawColors(); }
+(async()=>{
+  const ed=new URLSearchParams(location.search).get("editar");
+  const toLogin=()=>location.replace("../../cuenta/?siguiente=crear");
+  const sess=VVR.session(); if(!sess){ toLogin(); return; }
+  S.token=sess.token; S.email=sess.user&&sess.user.email;
+  S.d.objs=fromTpl(S.tpl); S.d.prize.min=suggestMin(); $("pzMin").value=S.d.prize.min;
+  drawAll(); preview(); check();
+  try{
+    const r=await VVR.call("me"); S.email=r.user.email;
+    const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1}, LIM=r.limit??P.exp, member=r.team&&r.team.role==="member";
+    if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name}`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
+    const exp=ed?r.experiences.find(x=>x.slug===ed):null;
+    if(window.VVRMarca){ S.marca=VVRMarca.mount($("sMarca"),{plan:P,exp,api:API,base:"../../",onChange:()=>{ check(); clearTimeout(pvT); pvT=setTimeout(preview,200); }}); $("sMarca").hidden=false; }
+    if(exp&&exp.kind!=="dispara"){ location.replace((exp.kind==="ra"?"../":"../"+exp.kind+"/")+"?editar="+encodeURIComponent(ed)); return; }
+    if(exp){
+      S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza en el mismo link (tu QR sigue funcionando). Los premios que ya ganó la gente siguen guardados en su celular.`;
+      for(const it of exp.items||[]) S.old.set(it.id,it);
+      const D=exp.dispara||{};
+      S.d={objs:(D.objs||[]).map(o=>({...o})),time:D.time||30,speed:D.speed||"normal",color:D.color||"#8b3fd6",sub:D.sub||"",
+        prize:D.prize?{on:true,t:D.prize.t,min:D.prize.min,days:D.prize.days??7,cond:D.prize.cond||"",limit:D.prize.limit||"una"}:{on:false,t:"",min:Math.round((D.time||30)*3.4/10)*10,days:7,cond:"",limit:"una"},
+        link:D.link?{on:true,url:D.link.url.replace(/^https:\/\//,""),t:D.link.t!=="Visítanos"?D.link.t:"",msg:D.link.msg||""}:{on:false,url:"",t:"",msg:""}};
+      S.tpl=Object.entries(TEMPLATES).find(([k])=>{ const a=fromTpl(k).map(o=>o.role+o.key).sort().join(), b=S.d.objs.map(o=>o.role+(o.key||"#")).sort().join(); return a===b; })?.[0]||"propio";
+      $("dname").value=D.name||exp.title; $("title").value=exp.title; $("sub").value=S.d.sub;
+      $("pzOn").checked=S.d.prize.on; $("pzBox").hidden=!S.d.prize.on; $("pzT").value=S.d.prize.t; $("pzMin").value=S.d.prize.min; $("pzCond").value=S.d.prize.cond;
+      $("lkOn").checked=S.d.link.on; $("lkBox").hidden=!S.d.link.on; $("lkUrl").value=S.d.link.url; $("lkT").value=S.d.link.t; $("lkMsg").value=S.d.link.msg;
+      slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
+      $("publish").textContent="Guardar cambios";
+      try{ const k=await VVR.call("clicks/"+encodeURIComponent(exp.slug)); S.clicks=k.clicks||{}; const n=v=>(v||0).toLocaleString("es-MX");
+        $("stats").innerHTML=`<div><b>${n(exp.views)}</b><span>visitas</span></div><div><b>${n(S.clicks.play)}</b><span>partidas</span></div>${D.prize?`<div><b>${n(S.clicks.win)}</b><span>premios ganados</span></div>`:""}<div><b>${n(S.clicks.share)}</b><span>retaron a alguien</span></div>${D.link?`<div><b>${n(S.clicks.link)}</b><span>fueron a tu link</span></div>`:""}`;
+        $("statsBox").hidden=false; }catch(e){}
+      drawAll(); preview();
+    } else if(r.experiences.filter(x=>!x.paused).length>=LIM){
+      document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); document.querySelector(".side").hidden=true; $("full").hidden=false;
+      $("fullText").textContent=member?"Tu equipo te asignó todas las que puedes usar. Borra una o pide más a quien administra tu equipo.":`Tu plan ${P.name} incluye ${LIM.toLocaleString("es-MX")} ${LIM===1?"experiencia":"experiencias"}. Borra una desde tu cuenta o mejora tu plan para crear tu juego.`;
+    }
+  }catch(e){ if(e.status===401){ toLogin(); return; } }
+  check();
+})();
+</script>
+<script src="../../assets/magia.js" defer></script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 //  - sfx.tick() clic de la ruleta, sfx.tap() botón, sfx.pop() burbuja, sfx.whoosh() giro o barrido, sfx.sparkle() destellos,
 //    sfx.win() fanfarria, sfx.lose() "uy", sfx.correct() / sfx.wrong(), sfx.count() / sfx.go() cuenta regresiva,
 //    sfx.shutter() foto, sfx.recStart() / sfx.recStop(), sfx.splash() cubeta de pintura, sfx.appear() algo aparece,
-//    sfx.coin() moneda, sfx.swoosh() abrir un panel.
+//    sfx.coin() moneda, sfx.swoosh() abrir un panel, sfx.laser() disparo, sfx.boom() explosión.
 //  - El navegador solo deja sonar después de un toque: el contexto se crea y se reanuda en el primer toque o tecla.
 //  - setMuted(true) los apaga y se recuerda en el celular (localStorage vvr-sonido). En iPhone el interruptor de silencio
 //    también los calla.
@@ -85,4 +85,6 @@ export const sfx = {
   recStop: play("rec", 300, () => { tone(990, { dur: .1, type: "triangle", vol: .16 }); tone(660, { t: .1, dur: .18, type: "triangle", vol: .16 }); }),
   splash: play("splash", 50, () => { tone(260, { dur: .16, to: 820, vol: .2, q: 2000 }); noise({ t: .02, dur: .12, vol: .06, f: 900, to: 2400 }); }),
   coin: play("coin", 80, () => { tone(988, { dur: .08, type: "square", vol: .07 }); tone(1319, { t: .07, dur: .3, type: "square", vol: .07 }); }),
+  laser: play("laser", 45, () => { tone(1400, { dur: .13, to: 260, type: "square", vol: .06, q: 3000 }); tone(2100, { dur: .08, to: 500, vol: .05 }); }),
+  boom: play("boom", 40, () => { noise({ dur: .35, vol: .3, type: "lowpass", f: 1800, to: 120, Q: .7 }); tone(140, { dur: .25, to: 50, type: "sine", vol: .25 }); }),
 };
