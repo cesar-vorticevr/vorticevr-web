@@ -2,7 +2,8 @@
 // floor or on a table, with no image to look for. Used by /x/.
 // The elements are built with assets/escena.js (same placement as the editor; 1 unit = 1 meter), joined into one GLB
 // in the phone (GLTFExporter) and shown with <model-viewer>: Android opens it with WebXR (floor detection, walk around
-// it) and iPhone with Quick Look (model-viewer turns it into USDZ; the animations of the 3D are not kept there).
+// it) and iPhone with Quick Look, with our own USDZ (assets/usdz.js): the motions and sparkles as time samples and the
+// music inside the file, which model-viewer's USDZ leaves out (the 3D's own animations are still not kept there).
 import * as THREE from "three";
 import * as ESC from "./escena.js";
 
@@ -21,11 +22,11 @@ function glowing(m) {
   return new THREE.MeshStandardMaterial({ color: 0x000000, map: m.map, emissive: 0xffffff, emissiveMap: m.map, roughness: 1, metalness: 0, transparent: true, alphaTest: 0.02, side: THREE.DoubleSide });
 }
 
-// items → GLB (ArrayBuffer). url(it): its file. sparks: the experience's sparkles ({c, n}) or none.
+// items → { world, clips }: the scene and its animations. url(it): its file. sparks: the experience's sparkles ({c, n}) or none.
 // The motions in a loop and the sparkles go in one clip ("magia", 12 s, first, so model-viewer plays it); our Android
 // view plays every clip. Quick Look has no animations: things stay still and the sparkles (scale 0 at rest) do not show.
 const MAGIC_S = 12;
-export async function sceneGLB(items, url, sparks) {
+export async function sceneParts(items, url, sparks) {
   items = items.filter(i => i.type !== "audio");   // the page plays it
   if (items.some(i => i.type === "text") && !document.getElementById("fonts")) document.head.appendChild(Object.assign(document.createElement("link"), { id: "fonts", rel: "stylesheet", href: ESC.FONT_CSS }));
   const world = new THREE.Group(); world.name = "escena"; world.rotation.x = -Math.PI / 2;   // the editor's floor, lying down
@@ -60,9 +61,15 @@ export async function sceneGLB(items, url, sparks) {
     world.updateMatrixWorld(true);
   }
   if (magic.length) clips.unshift(new THREE.AnimationClip("magia", MAGIC_S, magic));
-  const { GLTFExporter } = await import("three/addons/exporters/GLTFExporter.js");
-  return new GLTFExporter().parseAsync(world, { binary: true, animations: clips, onlyVisible: true, maxTextureSize: 2048 });
+  return { world, clips, magic: magic.length ? clips[0] : null };
 }
+// items → GLB (ArrayBuffer)
+export async function sceneGLB(items, url, sparks) { return glbOf(await sceneParts(items, url, sparks)); }
+async function glbOf(p) {
+  const { GLTFExporter } = await import("three/addons/exporters/GLTFExporter.js");
+  return new GLTFExporter().parseAsync(p.world, { binary: true, animations: p.clips, onlyVisible: true, maxTextureSize: 2048 });
+}
+const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const AR_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5zm0 2.3 6.7 3.7L12 11.7 5.3 8 12 4.3zM5 9.7l6 3.4v6.6l-6-3.3V9.7zm8 10V13l6-3.4v6.7l-6 3.4z"/></svg>';
 const SND_ON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>';
@@ -114,9 +121,10 @@ export async function run(o) {
   const stage = el.querySelector(".sf-stage"), load = el.querySelector(".sf-load"), btn = el.querySelector(".sf-ar"), note = el.querySelector(".sf-note"), steps = el.querySelector(".sf-steps");
   const fail = t => { load.classList.add("err"); load.textContent = t; };
 
-  let glb;
-  try { [glb] = await Promise.all([sceneGLB(cfg.items || [], o.url, cfg.sparks), loadModelViewer()]); }
+  let glb, parts;
+  try { [parts] = await Promise.all([sceneParts(cfg.items || [], o.url, cfg.sparks), loadModelViewer()]); glb = await glbOf(parts); }
   catch (e) { console.error(e); fail("No se pudo cargar la experiencia. Revisa tu conexión y vuelve a abrir el link."); return; }
+
 
   const mv = document.createElement("model-viewer");
   mv.setAttribute("alt", cfg.title || "Experiencia en 3D");
@@ -124,6 +132,15 @@ export async function run(o) {
     ["environment-image", "neutral"], ["exposure", "1.05"], ["ar", ""], ["ar-modes", "webxr quick-look"], ["ar-scale", "auto"], ["ar-placement", "floor"],
     ["interaction-prompt", "none"], ["touch-action", "pan-y"], ["camera-orbit", "0deg 70deg auto"]]) mv.setAttribute(k, v);
   mv.setAttribute("src", URL.createObjectURL(new Blob([glb], { type: "model/gltf-binary" })));
+  // iPhone: our USDZ for Quick Look (motions, sparkles and music inside); if it fails, model-viewer makes its own
+  const au0 = (cfg.items || []).find(i => i.type === "audio");
+  let usdzOk = false, usdzWait = null;
+  if (IOS) {
+    btn.disabled = true; btn.querySelector("span").textContent = "Preparando…";
+    usdzWait = import("./usdz.js").then(U => U.sceneUSDZ(parts.world, parts.magic, au0 ? { url: o.url(au0), loop: au0.loop !== false } : null))
+      .then(b => { mv.setAttribute("ios-src", URL.createObjectURL(b)); usdzOk = true; }).catch(e => console.error(e))
+      .finally(() => { btn.disabled = false; btn.querySelector("span").textContent = "Verlo en tu espacio"; });
+  }
   // Android (WebXR): our own view, with photo and video with the logo (assets/superficie-xr.js). iPhone: Quick Look.
   let XR = null;
   try { if (navigator.xr && await navigator.xr.isSessionSupported("immersive-ar")) XR = await import("./superficie-xr.js"); } catch (e) { XR = null; }
@@ -164,6 +181,7 @@ export async function run(o) {
         .catch(e => { console.error(e); if (sndBtn) sndBtn.hidden = false; note.hidden = false; note.textContent = "No se pudo abrir la cámara. Prueba en Chrome, no dentro de Instagram o WhatsApp."; });
       return;
     }
+    if (usdzOk) { if (audio) audio.pause(); mv.activateAR(); return; }   // Quick Look plays the music from the file
     if (audio) { try { audio.currentTime = 0; } catch (e) {} audio.play().catch(() => {}); }
     mv.activateAR();
   };
