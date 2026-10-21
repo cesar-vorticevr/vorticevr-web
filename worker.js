@@ -33,7 +33,13 @@ const yearPrice = plan => PLANS[plan].year || PLANS[plan].price * YEAR_MONTHS;
 const FAR = 253402300799000; // expires of an experience on a paid plan: "while the plan is active" (year 9999)
 const ADMINS_DEFAULT = "lad.cesargarcia@gmail.com";
 // "Recomienda y gana": who can earn, how much, and when a commission can be paid out
-const REF = { plans: ["pro", "premium", "empresarial"], rate: 0.10, discount: 10, holdDays: 30, minPayout: 50000 /* centavos: $500 */, coupon: "VVR_REF10" };
+const REF = { plans: ["pro", "premium", "empresarial"], rate: 0.10, discount: 10, holdDays: 30, minPayout: 50000 /* centavos: $500 */, coupon: "VVR_PRIMERO10" };
+// Sellers (vendedores): an account with users.seller = {active, rates: {pro_mes, pro_anio, premium_mes, premium_anio} in pesos}.
+// Its code is its ref_code: whoever signs up with it gets the same 10% off the first payment, and the seller earns the fixed
+// amount of that plan and period, only for the customer's first payment (commissions.kind = "seller"). They are paid by
+// transfer (users.payout = {clabe, banco, titular}): admin marks them paid. Their panel is /vendedor/ (/api/seller).
+const SELLER_KEYS = ["pro_mes", "pro_anio", "premium_mes", "premium_anio"];
+const sellerOf = u => { if (!u || !u.seller) return null; try { const s = JSON.parse(u.seller); return s && typeof s === "object" ? s : null; } catch { return null; } };
 const ADMIN_SLUGS = new Set(["ejemplo"]); // only an admin can take these (the home page demo uses "ejemplo")
 const VIDEO = /\.(mp4|m4v|webm|mov)$/i;
 const MEDIA_KEYS = ["video", "target", "image", "model", "qr", "logo"]; // R2 files of an experience: exp/<slug>/<key> (+ i/<id> of its elements)
@@ -580,6 +586,39 @@ async function api(request, env, ctx, url) {
     return json({ error: "No encontrado" }, 404);
   }
 
+  // ---- seller panel (/vendedor/): code, link, how much and for what, and where the money goes ----
+  if (path === "/api/seller" && M === "GET") {
+    if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
+    const S = sellerOf(me); if (!S) return json({ error: "Tu cuenta no es de vendedor." }, 403);
+    const code = me.ref_code || await newRefCode(env, me);
+    const [{ results: refs }, { results: rows }] = await env.DB.batch([
+      env.DB.prepare("SELECT name, plan, plan_until, created, stripe_status FROM users WHERE ref_by = ? ORDER BY created DESC LIMIT 1000").bind(me.id),
+      env.DB.prepare("SELECT c.*, u.name FROM commissions c LEFT JOIN users u ON u.id = c.user_id WHERE c.referrer_id = ? AND c.kind = 'seller' ORDER BY c.created DESC LIMIT 1000").bind(me.id),
+    ]);
+    const sum = st => rows.filter(r => r.status === st).reduce((n, r) => n + r.commission, 0) / 100;
+    const short = n => { const p = String(n || "").trim().split(/\s+/); return p[0] + (p[1] ? " " + p[1][0] + "." : ""); };
+    const pay = (() => { try { return JSON.parse(me.payout || "null"); } catch { return null; } })();
+    return json({
+      active: !!S.active, name: me.name, code, link: `${new URL(request.url).origin}/cuenta/?ref=${code}#registro`, discount: REF.discount, holdDays: REF.holdDays,
+      rates: Object.fromEntries(SELLER_KEYS.map(k => [k, Number((S.rates || {})[k]) || 0])),
+      registered: refs.length, sales: rows.filter(r => r.status !== "cancelada").length,
+      totals: { pendiente: sum("pendiente"), porPagar: sum("disponible"), pagada: sum("pagada"), cancelada: sum("cancelada") },
+      clients: refs.slice(0, 300).map(r => ({ name: short(r.name), plan: planOf(r).name, since: r.created, paying: STRIPE_LIVE.includes(r.stripe_status) })),
+      rows: rows.map(r => ({ name: short(r.name), plan: PLANS[r.plan] ? PLANS[r.plan].name : r.plan, amount: r.amount / 100, commission: r.commission / 100, status: r.status, created: r.created, available_at: r.available_at, paid_at: r.paid_at, note: r.note })),
+      payout: pay ? { clabe: pay.clabe ? "•••• " + String(pay.clabe).slice(-4) : "", banco: pay.banco || "", titular: pay.titular || "", rfc: pay.rfc || "" } : null,
+    });
+  }
+  if (path === "/api/seller/payout" && M === "POST") {   // where the seller wants the transfers (the CLABE is shown back only by its last 4 digits)
+    if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
+    if (!sellerOf(me)) return json({ error: "Tu cuenta no es de vendedor." }, 403);
+    const b = await request.json().catch(() => ({})), clabe = String(b.clabe || "").replace(/\D/g, "");
+    if (!clabeOk(clabe)) return json({ error: "Revisa tu CLABE: son 18 números (la encuentras en tu app del banco)." }, 400);
+    const titular = String(b.titular || "").trim().slice(0, 100); if (!titular) return json({ error: "Escribe el nombre del titular de la cuenta." }, 400);
+    const p = { clabe, banco: String(b.banco || "").trim().slice(0, 60) || CLABE_BANKS[clabe.slice(0, 3)] || "", titular, rfc: String(b.rfc || "").trim().toUpperCase().slice(0, 13), at: Date.now() };
+    await env.DB.prepare("UPDATE users SET payout = ? WHERE id = ?").bind(JSON.stringify(p), me.id).run();
+    return json({ ok: true, banco: p.banco });
+  }
+
   // ---- Recomienda y gana: the account's code, link and report ----
   if (path === "/api/referral" && M === "GET") {
     if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
@@ -588,7 +627,7 @@ async function api(request, env, ctx, url) {
     if (eligible && !code) code = await newRefCode(env, me);
     const [{ results: refs }, { results: rows }] = await env.DB.batch([
       env.DB.prepare("SELECT name, plan, plan_until, created, stripe_status FROM users WHERE ref_by = ? ORDER BY created DESC LIMIT 500").bind(me.id),
-      env.DB.prepare("SELECT c.*, u.name FROM commissions c LEFT JOIN users u ON u.id = c.user_id WHERE c.referrer_id = ? ORDER BY c.created DESC LIMIT 300").bind(me.id),
+      env.DB.prepare("SELECT c.*, u.name FROM commissions c LEFT JOIN users u ON u.id = c.user_id WHERE c.referrer_id = ? AND COALESCE(c.kind, 'ref') = 'ref' ORDER BY c.created DESC LIMIT 300").bind(me.id),
     ]);
     const sum = st => rows.filter(r => r.status === st).reduce((n, r) => n + r.commission, 0);
     const short = n => { const p = String(n || "").trim().split(/\s+/); return p[0] + (p[1] ? " " + p[1][0] + "." : ""); };
@@ -715,8 +754,8 @@ async function api(request, env, ctx, url) {
         LEFT JOIN users r ON r.id = c.referrer_id LEFT JOIN users u ON u.id = c.user_id ORDER BY c.created DESC LIMIT 2000`).all();
       if (url.searchParams.get("csv")) {
         const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`, d = t => t ? new Date(t - 6 * 3600e3).toISOString().slice(0, 10) : "";
-        const csv = [["Fecha", "Recomendó", "Correo de quien recomendó", "Cliente", "Correo del cliente", "Plan", "Factura Stripe", "Pagó (MXN)", "Comisión (MXN)", "Estado", "Disponible desde", "Pagada el", "Nota"].map(q).join(",")]
-          .concat(rows.map(r => [d(r.created), r.r_name, r.r_email, r.u_name, r.u_email, r.plan, r.invoice, (r.amount / 100).toFixed(2), (r.commission / 100).toFixed(2), r.status, d(r.available_at), d(r.paid_at), r.note].map(q).join(","))).join("\r\n");
+        const csv = [["Fecha", "Tipo", "Recomendó", "Correo de quien recomendó", "Cliente", "Correo del cliente", "Plan", "Factura Stripe", "Pagó (MXN)", "Comisión (MXN)", "Estado", "Disponible desde", "Pagada el", "Nota"].map(q).join(",")]
+          .concat(rows.map(r => [d(r.created), r.kind === "seller" ? "Vendedor" : "Recomienda y gana", r.r_name, r.r_email, r.u_name, r.u_email, r.plan, r.invoice, (r.amount / 100).toFixed(2), (r.commission / 100).toFixed(2), r.status, d(r.available_at), d(r.paid_at), r.note].map(q).join(","))).join("\r\n");
         return new Response("\ufeff" + csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="comisiones-${d(now)}.csv"` } });
       }
       const by = {};
@@ -727,9 +766,37 @@ async function api(request, env, ctx, url) {
         referrers: Object.values(by).sort((a, b) => b.disponible - a.disponible), rows: rows.slice(0, 300).map(r => ({ ...r, amount: r.amount / 100, commission: r.commission / 100 })) });
     }
     if (path === "/api/admin/commissions/credit" && M === "POST") return json(await creditCommissions(env));   // "Abonar ahora"
+    if (path === "/api/admin/sellers" && M === "GET") {
+      const { results: us } = await env.DB.prepare("SELECT id, name, email, ref_code, seller, payout FROM users WHERE seller IS NOT NULL ORDER BY name").all();
+      const { results: cs } = await env.DB.prepare("SELECT referrer_id, status, COUNT(*) AS n, SUM(commission) AS c FROM commissions WHERE kind = 'seller' GROUP BY referrer_id, status").all();
+      const { results: rg } = await env.DB.prepare("SELECT ref_by, COUNT(*) AS n FROM users WHERE ref_by IN (SELECT id FROM users WHERE seller IS NOT NULL) GROUP BY ref_by").all();
+      return json({ sellers: us.map(u => { const S = sellerOf(u) || {}, mine = cs.filter(c => c.referrer_id === u.id), t = st => (mine.find(c => c.status === st) || {}).c / 100 || 0;
+        let pay = null; try { pay = JSON.parse(u.payout || "null"); } catch {}
+        return { id: u.id, name: u.name, email: u.email, code: u.ref_code, active: !!S.active, rates: Object.fromEntries(SELLER_KEYS.map(k => [k, Number((S.rates || {})[k]) || 0])),
+          registered: (rg.find(r => r.ref_by === u.id) || {}).n || 0, sales: mine.filter(c => c.status !== "cancelada").reduce((n, c) => n + c.n, 0),
+          totals: { pendiente: t("pendiente"), porPagar: t("disponible"), pagada: t("pagada") }, payout: pay }; }) });
+    }
+    if (path === "/api/admin/seller" && M === "POST") {
+      const b = await request.json().catch(() => ({}));
+      const user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(normEmail(b.email)).first();
+      if (!user) return json({ error: "No existe una cuenta con ese correo. Pídele que se registre primero en vorticevr.mx/cuenta/." }, 404);
+      if (user.owner_id) return json({ error: "Esa cuenta es parte de un equipo; usa otra." }, 409);
+      const old = sellerOf(user) || {}, rates = {};
+      for (const k of SELLER_KEYS) { const v = Math.round(Number((b.rates || {})[k] ?? (old.rates || {})[k] ?? 0)); if (!(v >= 0 && v <= 100000)) return json({ error: "Las comisiones deben ser de $0 a $100,000." }, 400); rates[k] = v; }
+      let code = String(b.code || "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20);
+      if (code && code !== user.ref_code) {
+        if (code.length < 3) return json({ error: "El código debe tener al menos 3 letras o números." }, 400);
+        const r = await env.DB.prepare("UPDATE users SET ref_code = ? WHERE id = ? AND NOT EXISTS (SELECT 1 FROM users WHERE ref_code = ? AND id != ?)").bind(code, user.id, code, user.id).run();
+        if (!r.meta.changes) return json({ error: "Ese código ya lo tiene otra cuenta." }, 409);
+      } else if (!user.ref_code) code = await newRefCode(env, user);
+      const S = { active: b.active !== false, rates, since: old.since || now };
+      await env.DB.prepare("UPDATE users SET seller = ? WHERE id = ?").bind(JSON.stringify(S), user.id).run();
+      return json({ ok: true, code: code || user.ref_code });
+    }
     if (path === "/api/admin/commissions/pay" && M === "POST") {   // you transferred the money: mark everything available for that person as paid
       const b = await request.json().catch(() => ({}));
-      const r = await env.DB.prepare("UPDATE commissions SET status = 'pagada', paid_at = ?, note = ? WHERE referrer_id = ? AND status = 'disponible'").bind(now, String(b.note || "").trim().slice(0, 200) || null, Number(b.referrer_id)).run();
+      const ref = String(b.note || "").trim().slice(0, 200);   // the transfer's reference goes after what the row already says (a seller's "Primer pago · Pro anual")
+      const r = await env.DB.prepare("UPDATE commissions SET status = 'pagada', paid_at = ?, note = CASE WHEN ? = '' THEN note WHEN note IS NULL OR note = '' THEN ? ELSE note || ' · Pago: ' || ? END WHERE referrer_id = ? AND status = 'disponible'").bind(now, ref, ref, ref, Number(b.referrer_id)).run();
       return json({ ok: true, rows: r.meta.changes });
     }
     if (path === "/api/admin/plan" && M === "POST") {
@@ -1311,7 +1378,7 @@ async function schema(env) {
     env.DB.prepare("CREATE TABLE IF NOT EXISTS redemptions (code TEXT NOT NULL, user_id INTEGER NOT NULL, at INTEGER, PRIMARY KEY (code, user_id))"),
     // one row per day (Mexico time) for the admin charts
     // one row per Stripe invoice paid by a referred customer: 10% for the referrer (pendiente → disponible → abonada (saldo a favor) | pagada (by hand) | cancelada)
-    env.DB.prepare("CREATE TABLE IF NOT EXISTS commissions (id TEXT PRIMARY KEY, referrer_id INTEGER NOT NULL, user_id INTEGER NOT NULL, invoice TEXT, plan TEXT, amount INTEGER, commission INTEGER, status TEXT, created INTEGER, available_at INTEGER, paid_at INTEGER, note TEXT)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS commissions (id TEXT PRIMARY KEY, referrer_id INTEGER NOT NULL, user_id INTEGER NOT NULL, invoice TEXT, plan TEXT, amount INTEGER, commission INTEGER, status TEXT, created INTEGER, available_at INTEGER, paid_at INTEGER, note TEXT, kind TEXT DEFAULT 'ref')"),
     // taps on each button of a link page (assets/links.js); id = the button's id or the social network
     env.DB.prepare("CREATE TABLE IF NOT EXISTS clicks (slug TEXT NOT NULL, id TEXT NOT NULL, n INTEGER DEFAULT 0, PRIMARY KEY (slug, id))"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS stats (day TEXT PRIMARY KEY, views INTEGER DEFAULT 0, signups INTEGER DEFAULT 0, publishes INTEGER DEFAULT 0, contacts INTEGER DEFAULT 0)"),
@@ -1323,7 +1390,7 @@ const EXP_COLS = "slug TEXT PRIMARY KEY, email TEXT NOT NULL, title TEXT, data T
 // Tables from before the plans: experiences had email UNIQUE (one per account) and users had no plan.
 // Production and the preview share this database: every change here has to keep the other version working.
 async function migrate(env) {
-  const { results } = await env.DB.prepare("SELECT name, sql FROM sqlite_master WHERE type = 'table' AND name IN ('experiences', 'users', 'coupons')").all();
+  const { results } = await env.DB.prepare("SELECT name, sql FROM sqlite_master WHERE type = 'table' AND name IN ('experiences', 'users', 'coupons', 'commissions')").all();
   const sql = Object.fromEntries(results.map(r => [r.name, r.sql || ""]));
   const steps = [];
   if (!/\bplan_until\b/.test(sql.users)) steps.push(
@@ -1344,6 +1411,14 @@ async function migrate(env) {
   if (!/\bowner_id\b/.test(sql.users)) {   // Empresarial teams: member → owner, experiences handed to it, extras, temporary password
     try { await env.DB.batch(["owner_id INTEGER", "quota INTEGER", "extra_exp INTEGER DEFAULT 0", "temp_pw INTEGER DEFAULT 0"].map(c => env.DB.prepare(`ALTER TABLE users ADD COLUMN ${c}`))); }
     catch (e) { console.error("migración equipos", e); }
+  }
+  if (!/\bseller\b/.test(sql.users)) {   // sellers: their role and commissions, and where to send their money
+    try { await env.DB.batch(["seller TEXT", "payout TEXT"].map(c => env.DB.prepare(`ALTER TABLE users ADD COLUMN ${c}`))); }
+    catch (e) { console.error("migración vendedores", e); }
+  }
+  if (sql.commissions && !/\bkind\b/.test(sql.commissions)) {   // "ref" = Recomienda y gana · "seller" = a seller's first payment
+    try { await env.DB.prepare("ALTER TABLE commissions ADD COLUMN kind TEXT DEFAULT 'ref'").run(); }
+    catch (e) { console.error("migración comisiones", e); }
   }
   if (sql.coupons && !/\bwho\b/.test(sql.coupons)) {   // coupons: for anyone ("todos") or only for accounts that already have its plan ("plan")
     try { await env.DB.prepare("ALTER TABLE coupons ADD COLUMN who TEXT DEFAULT 'todos'").run(); }
@@ -1411,7 +1486,7 @@ async function auth(request, env) {
   const t = bearer(request);
   if (!t) return null;
   const row = await env.DB.prepare(`SELECT u.id, u.email, u.name, u.verified, u.plan, u.plan_until, u.plan_note, u.stripe_customer, u.stripe_sub, u.stripe_status, u.stripe_mode,
-      u.owner_id, u.quota, u.extra_exp, u.temp_pw, u.ref_code, u.ref_by, o.plan AS o_plan, o.plan_until AS o_until, o.name AS o_name, o.email AS o_email, s.expires
+      u.owner_id, u.quota, u.extra_exp, u.temp_pw, u.ref_code, u.ref_by, u.seller, u.payout, o.plan AS o_plan, o.plan_until AS o_until, o.name AS o_name, o.email AS o_email, s.expires
     FROM sessions s JOIN users u ON u.id = s.user_id LEFT JOIN users o ON o.id = u.owner_id WHERE s.token = ?`).bind(await sha256hex(t)).first();
   return row && row.expires > Date.now() && row.verified ? row : null;
 }
@@ -1421,8 +1496,16 @@ async function account(env, request, user) {
   const team = plan.member ? { role: "member", owner: plan.owner } : plan.seats ? { role: "owner", seats: plan.seats, total: plan.exp, mine: lim } : undefined;
   return { user: { name: user.name, email: user.email }, experiences: results.map(r => ownerExp(r, request, env)), plan, limit: lim, team,
     referral: { eligible: REF.plans.includes(plan.id) && !plan.member, discount: !!user.ref_by && !user.stripe_sub ? REF.discount : 0 },
-    tempPassword: !!user.temp_pw || undefined, admin: isAdmin(env, user) || undefined, billing: billingInfo(env, user) };
+    tempPassword: !!user.temp_pw || undefined, admin: isAdmin(env, user) || undefined, seller: !!(sellerOf(user) && sellerOf(user).active) || undefined, billing: billingInfo(env, user) };
 }
+
+// ---------- sellers' bank account ----------
+function clabeOk(c) {
+  if (!/^\d{18}$/.test(c)) return false;
+  const w = [3, 7, 1]; let s = 0; for (let i = 0; i < 17; i++) s += (Number(c[i]) * w[i % 3]) % 10;
+  return (10 - (s % 10)) % 10 === Number(c[17]);
+}
+const CLABE_BANKS = { "002": "Banamex", "012": "BBVA", "014": "Santander", "021": "HSBC", "030": "Bajío", "036": "Inbursa", "044": "Scotiabank", "058": "Banregio", "072": "Banorte", "127": "Azteca", "137": "BanCoppel", "638": "Nu", "646": "STP", "722": "Mercado Pago", "728": "Spin by OXXO" };
 
 // ---------- Recomienda y gana ----------
 // A code from the name (CESAR-7K2) — readable, unique.
@@ -1437,12 +1520,12 @@ async function newRefCode(env, user) {
   }
   throw new Error("No se pudo crear el código");
 }
-// The referred customer's discount: a Stripe coupon, 10% for 12 months (covers a whole first year, monthly or yearly)
+// The invited customer's discount: a Stripe coupon, 10% on the first payment (monthly or yearly)
 let refCouponReady = {};
 async function stripeRefCoupon(env) {
   const mode = stripeMode(env); if (refCouponReady[mode]) return REF.coupon;
   try { await stripe(env, "GET", `coupons/${REF.coupon}`); }
-  catch (e) { if (e.code !== "resource_missing") throw e; await stripe(env, "POST", "coupons", { id: REF.coupon, percent_off: REF.discount, duration: "repeating", duration_in_months: 12, name: "Recomendado: 10% el primer año" }); }
+  catch (e) { if (e.code !== "resource_missing") throw e; await stripe(env, "POST", "coupons", { id: REF.coupon, percent_off: REF.discount, duration: "once", name: "Invitado: 10% en el primer pago" }); }
   refCouponReady[mode] = true; return REF.coupon;
 }
 // "Recomienda y gana" pays as credit: every available commission (30 days after the payment) goes to the referrer's Stripe
@@ -1452,7 +1535,7 @@ async function stripeRefCoupon(env) {
 async function creditCommissions(env) {
   if (!env.STRIPE_SECRET_KEY) return { credited: 0, amount: 0 };
   const { results } = await env.DB.prepare(`SELECT c.id, c.referrer_id, c.commission, u.stripe_customer FROM commissions c JOIN users u ON u.id = c.referrer_id
-    WHERE c.status = 'disponible' AND c.commission > 0 AND u.stripe_customer IS NOT NULL AND u.stripe_mode = ? ORDER BY c.created LIMIT 1000`).bind(stripeMode(env)).all();
+    WHERE c.status = 'disponible' AND c.commission > 0 AND COALESCE(c.kind, 'ref') = 'ref' AND u.stripe_customer IS NOT NULL AND u.stripe_mode = ? ORDER BY c.created LIMIT 1000`).bind(stripeMode(env)).all();
   const by = {};
   for (const r of results) { const x = by[r.referrer_id] ||= { cus: r.stripe_customer, ids: [], total: 0 }; if (x.ids.length < 80) { x.ids.push(r.id); x.total += r.commission; } }
   let credited = 0, amount = 0;
@@ -1475,7 +1558,18 @@ async function commissionFor(env, invoiceId) {
   const ref = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(user.ref_by).first();
   const P = ref && planOf(ref);
   const line = inv.lines && inv.lines.data && inv.lines.data[0], lk = line && line.price && line.price.lookup_key;
-  const plan = (stripeKeys().find(k => k.key === lk) || {}).plan || user.plan;
+  const K = stripeKeys().find(k => k.key === lk) || {}, plan = K.plan || user.plan;
+  const S = sellerOf(ref);
+  if (S) {   // a seller: only the customer's first payment, the amount set for that plan and period
+    if (!S.active || inv.billing_reason !== "subscription_create") return;
+    if (await env.DB.prepare("SELECT 1 FROM commissions WHERE user_id = ? AND kind = 'seller' LIMIT 1").bind(user.id).first()) return;
+    const pesos = Math.max(0, Math.round(Number((S.rates || {})[`${plan}_${K.period || "mes"}`]) || 0));
+    const now0 = Date.now(), paid0 = ((inv.status_transitions && inv.status_transitions.paid_at) || now0 / 1000) * 1000;
+    await env.DB.prepare("INSERT OR IGNORE INTO commissions (id, referrer_id, user_id, invoice, plan, amount, commission, status, created, available_at, note, kind) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'seller')")
+      .bind(inv.id, ref.id, user.id, inv.id, plan, inv.amount_paid, pesos * 100, pesos ? "pendiente" : "cancelada", now0, paid0 + REF.holdDays * 864e5,
+        `Primer pago · ${PLANS[plan] ? PLANS[plan].name : plan} ${K.period === "anio" ? "anual" : "mensual"}${pesos ? "" : " (sin comisión para ese plan)"}`).run();
+    return;
+  }
   const ok = P && REF.plans.includes(P.id) && !ref.owner_id;   // only while the referrer also pays Pro or Premium
   const now = Date.now(), paidAt = ((inv.status_transitions && inv.status_transitions.paid_at) || now / 1000) * 1000;
   await env.DB.prepare("INSERT OR IGNORE INTO commissions (id, referrer_id, user_id, invoice, plan, amount, commission, status, created, available_at, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")

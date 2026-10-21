@@ -94,6 +94,11 @@ table.top td.n{text-align:right;font-variant-numeric:tabular-nums}
 .coupon .meta{margin-top:0}
 .coupon .acts2{margin-left:auto}
 .coupon.off{opacity:.55}
+.sel{padding:16px 18px;margin-bottom:10px}
+.sel.off{opacity:.6}
+.sel code{font-family:var(--fm);color:var(--sun);letter-spacing:.06em}
+.rates{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.rates label{display:grid;gap:4px;font-size:.82rem;color:var(--mute)}
 </style>
 </head>
 <body>
@@ -109,6 +114,7 @@ table.top td.n{text-align:right;font-variant-numeric:tabular-nums}
       <button type="button" role="tab" data-tab="cuentas" aria-selected="false">Cuentas</button>
       <button type="button" role="tab" data-tab="cupones" aria-selected="false">Cupones</button>
       <button type="button" role="tab" data-tab="comisiones" aria-selected="false">Comisiones</button>
+      <button type="button" role="tab" data-tab="vendedores" aria-selected="false">Vendedores</button>
     </nav>
 
     <!-- analytics -->
@@ -150,6 +156,26 @@ table.top td.n{text-align:right;font-variant-numeric:tabular-nums}
         <div class="row" style="margin:8px 0 4px"><button class="btn sm" id="cmCredit" type="button">Abonar ahora las disponibles</button><span class="note" id="cmMsg"></span></div>
         <div class="tablewrap"><table class="top" id="cmRef"></table></div></div>
       <div class="card" style="margin-top:12px"><h2>Movimientos recientes</h2><div class="tablewrap"><table class="top" id="cmRows"></table></div></div>
+    </section>
+
+    <!-- sellers -->
+    <section id="t-vendedores" hidden>
+      <div class="card">
+        <h2>Agregar o editar un vendedor</h2>
+        <p class="note">La persona crea su cuenta en vorticevr.mx/cuenta y aquí la haces vendedor. Su código da <b>10% de descuento en el primer pago</b> a quien se registre con él, y el vendedor gana el monto que pongas aquí <b>solo por el primer pago</b> de cada cliente, según el plan y si es mensual o anual. Cada comisión queda pendiente 30 días (si se reembolsa, se cancela) y luego pasa a <b>por pagar</b>: le transfieres a la CLABE que él captura en su panel (vorticevr.mx/vendedor) y pulsas <b>Marcar como pagado</b>. El vendedor ve todo en su panel.</p>
+        <form class="form cform" id="fSeller">
+          <label>Correo de su cuenta<input name="email" type="email" required placeholder="vendedor@correo.com"></label>
+          <label>Código (opcional)<input name="code" maxlength="20" placeholder="Ej. ANA10 · se genera solo" autocapitalize="characters"></label>
+          <div class="wide rates">
+            <label>Pro mensual ($)<input name="pro_mes" type="number" min="0" max="100000" value="100" required></label>
+            <label>Pro anual ($)<input name="pro_anio" type="number" min="0" max="100000" value="800" required></label>
+            <label>Premium mensual ($)<input name="premium_mes" type="number" min="0" max="100000" value="300" required></label>
+            <label>Premium anual ($)<input name="premium_anio" type="number" min="0" max="100000" value="2500" required></label>
+          </div>
+          <div class="wide acts2"><button class="btn primary" type="submit">Guardar vendedor</button><span class="msg" id="mSeller"></span></div>
+        </form>
+      </div>
+      <div id="sellerList" style="margin-top:12px"></div>
     </section>
 
     <!-- accounts -->
@@ -239,7 +265,8 @@ async function toggleExps(el,u){
 // ---- tabs
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",String(x===b)));
-  ["resumen","cuentas","cupones","comisiones"].forEach(t=>$("t-"+t).hidden=t!==b.dataset.tab);
+  ["resumen","cuentas","cupones","comisiones","vendedores"].forEach(t=>$("t-"+t).hidden=t!==b.dataset.tab);
+  if(b.dataset.tab==="vendedores") loadSellers();
   if(b.dataset.tab==="cupones") loadCoupons(); if(b.dataset.tab==="comisiones") loadCommissions(); if(b.dataset.tab==="resumen") loadStats(); }));
 
 // ---- analytics
@@ -315,6 +342,29 @@ async function loadCoupons(){
 $("fCoupon").addEventListener("submit",async e=>{ e.preventDefault(); const m=$("mCoupon"), d=Object.fromEntries(new FormData(e.target));
   m.className="msg"; m.textContent="Creando…";
   try{ const r=await VVR.call("admin/coupons",{json:d}); m.className="msg ok"; m.textContent="Cupón creado: "+r.code; e.target.code.value=""; e.target.note.value=""; loadCoupons(); }
+  catch(err){ m.className="msg bad"; m.textContent=err.message; } });
+
+// ---- sellers: their code, how much they earn per first payment, what you owe them and where to send it
+const RATE_L=[["pro_mes","Pro mensual"],["pro_anio","Pro anual"],["premium_mes","Premium mensual"],["premium_anio","Premium anual"]];
+async function loadSellers(){
+  const r=await VVR.call("admin/sellers"), box=$("sellerList");
+  if(!r.sellers.length){ box.innerHTML='<div class="card center">Todavía no hay vendedores.</div>'; return; }
+  box.replaceChildren(...r.sellers.map(s=>{ const el=document.createElement("article"), p=s.payout; el.className="card sel"+(s.active?"":" off");
+    el.innerHTML=`<div class="uhead"><div><h2>${esc(s.name||"(sin nombre)")} <code>${esc(s.code||"")}</code>${s.active?"":' <span class="tag warn">Inactivo</span>'}</h2><div class="em">${esc(s.email)}</div></div>
+      <div class="acts2">${s.totals.porPagar>0?`<button class="btn sm primary" data-a="pay">Marcar como pagado ${mx(s.totals.porPagar)}</button>`:""}<button class="btn sm" data-a="edit">Editar</button><button class="btn sm" data-a="tog">${s.active?"Desactivar":"Activar"}</button></div></div>
+      <div class="meta"><span><b>${nf(s.registered)}</b> registrados con su código</span><span><b>${nf(s.sales)}</b> ventas</span><span>Pendiente <b>${mx(s.totals.pendiente)}</b></span><span>Por pagar <b>${mx(s.totals.porPagar)}</b></span><span>Pagado <b>${mx(s.totals.pagada)}</b></span></div>
+      <div class="meta"><span>Comisión por primer pago:</span>${RATE_L.map(([k,l])=>`<span>${l} <b>${mx(s.rates[k])}</b></span>`).join("")}</div>
+      <div class="meta">${p&&p.clabe?`<span>CLABE <b style="font-family:var(--fm)">${esc(p.clabe)}</b></span><span>${esc(p.banco||"")}</span><span>Titular <b>${esc(p.titular||"")}</b></span>${p.rfc?`<span>RFC ${esc(p.rfc)}</span>`:""}`:'<span>Todavía no captura su CLABE en su panel.</span>'}</div>`;
+    el.querySelector("[data-a=edit]").onclick=()=>{ const f=$("fSeller"); f.email.value=s.email; f.code.value=s.code||""; RATE_L.forEach(([k])=>f[k].value=s.rates[k]); f.scrollIntoView({behavior:"smooth"}); };
+    el.querySelector("[data-a=tog]").onclick=async()=>{ await VVR.call("admin/seller",{json:{email:s.email,active:!s.active}}); loadSellers(); };
+    const pay=el.querySelector("[data-a=pay]"); if(pay) pay.onclick=async()=>{ const note=prompt(`¿Ya le transferiste ${mx(s.totals.porPagar)} a ${s.name}${p&&p.clabe?" (CLABE "+p.clabe+")":""}? Escribe una referencia (por ejemplo, el folio de la transferencia):`,"");
+      if(note===null) return; await VVR.call("admin/commissions/pay",{json:{referrer_id:s.id,note}}); loadSellers(); };
+    return el; }));
+}
+$("fSeller").addEventListener("submit",async e=>{ e.preventDefault(); const f=e.target, m=$("mSeller");
+  m.className="msg"; m.textContent="Guardando…";
+  try{ const r=await VVR.call("admin/seller",{json:{email:f.email.value,code:f.code.value,rates:Object.fromEntries(RATE_L.map(([k])=>[k,+f[k].value])),active:true}});
+    m.className="msg ok"; m.textContent="Listo. Su código: "+r.code; loadSellers(); }
   catch(err){ m.className="msg bad"; m.textContent=err.message; } });
 
 let timer=0;

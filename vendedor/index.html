@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Panel de vendedor · Vórtice VR</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../assets/icono.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* A seller's panel (/api/seller): its code and link with QR, what it earns per first payment, its sales with their
+   status, its customers and the bank account where Vórtice VR transfers its commissions. Everything is read-only but the CLABE. */
+:root{--void:#05020b;--panel:rgba(20,9,40,.72);--line:rgba(190,150,255,.2);--line2:rgba(190,150,255,.45);--vortex:#8b3fd6;--vortex-d:#5a1f8f;--lav:#d2b8ff;--ink:#f2ecff;--mute:#a99bcb;--sun:#ffbe55;--ok:#74e8ba;--bad:#ff8a9e;
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;min-height:100vh;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55}
+a{color:var(--lav)}
+:focus-visible{outline:2px solid var(--lav);outline-offset:3px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1080px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 8px}
+header img{height:38px;width:auto;display:block}
+@media (max-width:480px){header img{height:28px}}
+header .acts{display:flex;gap:14px;font-family:var(--fd);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase}
+header .acts a{text-decoration:none;color:var(--mute)}
+main{max-width:1080px;margin:0 auto;padding:10px 20px 80px}
+@media (max-width:480px){main{padding:10px 16px 80px}}
+.kick{font-family:var(--fd);font-size:.78rem;letter-spacing:.26em;text-transform:uppercase;color:var(--sun);font-weight:600}
+h1{font-family:var(--fd);font-size:clamp(1.8rem,4.6vw,2.8rem);line-height:1.05;margin:6px 0 6px;text-wrap:balance}
+.lead{margin:0 0 20px;color:var(--mute);max-width:64ch}
+h2{font-family:var(--fd);font-size:1.15rem;margin:0 0 8px}
+.card{border:1px solid var(--line);background:var(--panel);border-radius:18px;padding:20px;margin-bottom:16px}
+.center{text-align:center}
+.codebox{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:20px;align-items:center}
+@media (max-width:720px){.codebox{grid-template-columns:1fr}}
+.code{font:700 clamp(2rem,7vw,3rem)/1 var(--fm);letter-spacing:.08em;color:var(--sun);text-shadow:0 0 30px rgba(255,190,85,.35);margin:6px 0 10px;word-break:break-all}
+.link{display:flex;gap:8px;align-items:center;border:1px solid var(--line2);border-radius:12px;padding:8px 8px 8px 12px;background:rgba(5,2,11,.6);margin-top:8px}
+.link span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--fm);font-size:.85rem;color:var(--lav)}
+.qr{background:#fff;border-radius:14px;padding:8px}
+.qr canvas{width:100%;height:auto;display:block}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--fd);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:.78rem;border:1px solid var(--line2);border-radius:999px;padding:10px 16px;color:var(--ink);background:rgba(20,9,40,.6);cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn.primary{background:linear-gradient(135deg,var(--vortex),var(--vortex-d));border-color:var(--lav)}
+.btn.sun{background:linear-gradient(135deg,#ffe29a,#ffbe55 50%,#ff9f3a);color:#2a1600;border-color:transparent}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.note{font-size:.86rem;color:var(--mute)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.kpi{border:1px solid var(--line);border-radius:16px;padding:14px 16px;background:rgba(5,2,11,.5)}
+.kpi b{display:block;font:700 1.6rem var(--fd)}
+.kpi span{font-size:.85rem;color:var(--ink)}
+.kpi small{display:block;font-size:.76rem;color:var(--mute);margin-top:2px}
+.kpi.gold{border-color:rgba(255,190,85,.55);background:rgba(255,190,85,.08)}.kpi.gold b{color:var(--sun)}
+.kpi.green b{color:var(--ok)}
+.rates{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.rates div{border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:rgba(139,63,214,.12)}
+.rates b{display:block;font:700 1.3rem var(--fd);color:var(--sun)}
+.rates span{font-size:.85rem;color:var(--mute)}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mute);font-weight:600;font-size:.8rem}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.st{display:inline-block;font:600 .74rem var(--fd);letter-spacing:.04em;padding:3px 9px;border-radius:999px;border:1px solid var(--line2)}
+.st.pendiente{color:var(--lav)}.st.disponible{color:var(--sun);border-color:rgba(255,190,85,.6)}.st.pagada{color:var(--ok);border-color:rgba(116,232,186,.6)}.st.cancelada{color:var(--bad);border-color:rgba(255,138,158,.5)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.form label{display:grid;gap:5px;font-size:.8rem;font-family:var(--fd);letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.form input{font:inherit;font-family:var(--fb);letter-spacing:0;text-transform:none;font-size:1rem;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:10px 12px}
+.form input:focus{border-color:var(--lav);outline:none}
+.form .wide{grid-column:1/-1}
+.msg{font-size:.88rem}.msg.ok{color:var(--ok)}.msg.bad{color:var(--bad)}
+.saved{display:flex;gap:10px 18px;flex-wrap:wrap;padding:12px 14px;border-radius:12px;background:rgba(116,232,186,.08);border:1px solid rgba(116,232,186,.4);margin-bottom:12px;font-size:.92rem}
+.empty{color:var(--mute);font-size:.92rem;margin:4px 0 0}
+</style>
+</head>
+<body>
+<header><a href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a href="../cuenta/">Mi cuenta</a><a href="../">← Sitio</a></div></header>
+<main>
+  <div class="card center" id="status">Cargando…</div>
+  <div id="panel" hidden>
+    <span class="kick">Panel de vendedor</span>
+    <h1 id="hi">Hola</h1>
+    <p class="lead">Aquí ves tu código, cuánto ganas por cada venta y el estado de cada comisión. Todo se actualiza solo cuando tus clientes pagan.</p>
+    <div class="card" id="off" hidden><b>Tu cuenta de vendedor está en pausa.</b> <span class="note">Tus comisiones ganadas se respetan. Escríbenos si tienes dudas: hola@vorticevr.mx</span></div>
+
+    <section class="card codebox">
+      <div>
+        <h2>Tu código</h2>
+        <div class="code" id="code"></div>
+        <p class="note" style="margin:0">Quien se registre con tu código o tu link tiene <b id="disc">10%</b> de descuento en su primer pago (mensual o anual), y tú ganas tu comisión por ese pago.</p>
+        <div class="link"><span id="link"></span><button class="btn" id="copy" type="button">Copiar</button></div>
+        <div class="row"><a class="btn sun" id="wa" target="_blank" rel="noopener">Compartir por WhatsApp</a><button class="btn" id="share" type="button">Compartir</button><button class="btn" id="dlQr" type="button">Descargar QR</button></div>
+      </div>
+      <div class="qr"><canvas id="qr" aria-label="Código QR de tu link"></canvas></div>
+    </section>
+
+    <div class="kpis" id="kpis"></div>
+
+    <section class="card">
+      <h2>Cuánto ganas por cada venta</h2>
+      <p class="note" style="margin:0 0 10px">Por el <b>primer pago</b> de cada cliente que se registre con tu código, según el plan que elija.</p>
+      <div class="rates" id="rates"></div>
+    </section>
+
+    <section class="card">
+      <h2>Tus ventas</h2>
+      <p class="note" style="margin:0 0 10px">Cada comisión queda <b>pendiente <span id="hold">30</span> días</b> (por si hay un reembolso) y luego pasa a <b>por pagarte</b>; te la transferimos a tu cuenta y la verás como <b>pagada</b>.</p>
+      <div class="tablewrap"><table id="sales"></table></div>
+      <p class="empty" id="noSales" hidden>Todavía no hay ventas. Comparte tu link: en cuanto alguien pague su primer plan, aparece aquí.</p>
+    </section>
+
+    <section class="card">
+      <h2>¿A dónde te pagamos?</h2>
+      <div class="saved" id="saved" hidden></div>
+      <form class="form" id="fPay">
+        <label class="wide">CLABE (18 números)<input name="clabe" inputmode="numeric" maxlength="22" autocomplete="off" placeholder="000 000 0000000000 0" required></label>
+        <label>Titular de la cuenta<input name="titular" maxlength="100" required placeholder="Como aparece en tu banco"></label>
+        <label>Banco<input name="banco" maxlength="60" placeholder="Se llena solo con tu CLABE"></label>
+        <label>RFC (opcional)<input name="rfc" maxlength="13" autocapitalize="characters" placeholder="Si nos vas a facturar"></label>
+        <div class="wide row" style="margin:0"><button class="btn primary" type="submit">Guardar mi cuenta</button><span class="msg" id="mPay"></span></div>
+      </form>
+      <p class="note">Tu CLABE solo la ve Vórtice VR para transferirte. Aquí se muestran sus últimos 4 números.</p>
+    </section>
+
+    <section class="card">
+      <h2>Tus clientes</h2>
+      <p class="note" style="margin:0 0 10px">Personas que se registraron con tu código. Cuando paguen su primer plan, la venta aparece arriba.</p>
+      <div class="tablewrap"><table id="clients"></table></div>
+      <p class="empty" id="noClients" hidden>Aún no se registra nadie con tu código.</p>
+    </section>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="../assets/plataforma.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const mx=n=>{ const v=Number(n||0); return "$"+v.toLocaleString("es-MX",{minimumFractionDigits:v%1?2:0,maximumFractionDigits:2}); };
+const fmt=t=>t?new Date(t).toLocaleDateString("es-MX",{day:"numeric",month:"short",year:"numeric"}):"";
+const ST={pendiente:"Pendiente",disponible:"Por pagarte",pagada:"Pagada",cancelada:"Cancelada"};
+const BANKS={"002":"Banamex","012":"BBVA","014":"Santander","021":"HSBC","030":"Bajío","036":"Inbursa","044":"Scotiabank","058":"Banregio","072":"Banorte","127":"Azteca","137":"BanCoppel","638":"Nu","646":"STP","722":"Mercado Pago","728":"Spin by OXXO"};
+let R=null;
+
+function paint(r){
+  R=r;
+  $("hi").textContent=`Hola, ${String(r.name||"").split(" ")[0]||"vendedor"}`; $("off").hidden=r.active;
+  $("code").textContent=r.code; $("link").textContent=r.link.replace(/^https?:\/\//,""); $("disc").textContent=r.discount+"%"; $("hold").textContent=r.holdDays;
+  const txt=`Crea experiencias de realidad aumentada, filtros, juegos y más con Vórtice VR. Con mi código ${r.code} tienes ${r.discount}% de descuento en tu primer pago: ${r.link}`;
+  $("wa").href="https://wa.me/?text="+encodeURIComponent(txt);
+  $("share").hidden=!navigator.share; $("share").onclick=()=>navigator.share({title:"Vórtice VR",text:txt}).catch(()=>{});
+  $("copy").onclick=async e=>{ try{ await navigator.clipboard.writeText(r.link); e.target.textContent="¡Copiado!"; setTimeout(()=>e.target.textContent="Copiar",1500); }catch(_){ prompt("Copia tu link:",r.link); } };
+  VVR.iconReady.then(()=>VVR.drawQR($("qr"),r.link,"Escanea y obtén "+r.discount+"% de descuento"));
+  $("dlQr").onclick=()=>{ const a=document.createElement("a"); a.href=$("qr").toDataURL("image/png"); a.download=`QR-${r.code}.png`; a.click(); };
+  const t=r.totals;
+  $("kpis").innerHTML=[[r.registered,"registrados con tu código","",""],[r.sales,"ventas","primeros pagos",""],[mx(t.pendiente),"pendiente","sus primeros "+r.holdDays+" días",""],[mx(t.porPagar),"por pagarte","te lo transferimos","gold"],[mx(t.pagada),"pagado","ya en tu cuenta","green"]]
+    .map(([v,l,s,c])=>`<div class="kpi ${c}"><b>${typeof v==="number"?v.toLocaleString("es-MX"):v}</b><span>${l}</span>${s?`<small>${s}</small>`:""}</div>`).join("");
+  $("rates").innerHTML=[["pro_mes","Pro mensual"],["pro_anio","Pro anual"],["premium_mes","Premium mensual"],["premium_anio","Premium anual"]].map(([k,l])=>`<div><b>${mx(r.rates[k])}</b><span>${l}</span></div>`).join("");
+  $("noSales").hidden=!!r.rows.length; $("sales").hidden=!r.rows.length;
+  $("sales").innerHTML="<tr><th>Fecha</th><th>Cliente</th><th>Plan</th><th class='n'>Pagó</th><th class='n'>Tu comisión</th><th>Estado</th></tr>"+r.rows.map(x=>{
+    const when=x.status==="pendiente"?`hasta el ${fmt(x.available_at)}`:x.status==="pagada"?`el ${fmt(x.paid_at)}`:x.status==="cancelada"?(x.commission?"pago reembolsado":"sin comisión"):"";
+    return `<tr><td>${fmt(x.created)}</td><td>${esc(x.name)}</td><td>${esc(((x.note||"").split(" · ")[1]||x.plan).replace(/ \(.*\)$/,""))}</td><td class="n">${mx(x.amount)}</td><td class="n"><b>${mx(x.commission)}</b></td><td><span class="st ${x.status}">${ST[x.status]||x.status}</span> <small class="note">${when}</small></td></tr>`; }).join("");
+  $("noClients").hidden=!!r.clients.length; $("clients").hidden=!r.clients.length;
+  $("clients").innerHTML="<tr><th>Cliente</th><th>Plan</th><th>Desde</th><th>Paga</th></tr>"+r.clients.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.plan)}</td><td>${fmt(c.since)}</td><td>${c.paying?"Sí":"—"}</td></tr>`).join("");
+  const p=r.payout; $("saved").hidden=!p;
+  if(p){ $("saved").innerHTML=`<span>✓ Te pagamos a la CLABE <b style="font-family:var(--fm)">${esc(p.clabe)}</b></span>${p.banco?`<span>${esc(p.banco)}</span>`:""}<span>Titular <b>${esc(p.titular)}</b></span>${p.rfc?`<span>RFC ${esc(p.rfc)}</span>`:""}`;
+    $("fPay").titular.value=p.titular; $("fPay").banco.value=p.banco; $("fPay").rfc.value=p.rfc; }
+}
+$("fPay").clabe.addEventListener("input",e=>{ const d=e.target.value.replace(/\D/g,""); if(d.length>=3&&BANKS[d.slice(0,3)]&&!$("fPay").banco.dataset.touched) $("fPay").banco.value=BANKS[d.slice(0,3)]; });
+$("fPay").banco.addEventListener("input",e=>e.target.dataset.touched="1");
+$("fPay").addEventListener("submit",async e=>{ e.preventDefault(); const f=e.target, m=$("mPay"); m.className="msg"; m.textContent="Guardando…";
+  try{ await VVR.call("seller/payout",{json:{clabe:f.clabe.value,titular:f.titular.value,banco:f.banco.value,rfc:f.rfc.value}}); f.clabe.value="";
+    m.className="msg ok"; m.textContent="Listo, guardamos tu cuenta."; paint(await VVR.call("seller")); }
+  catch(err){ m.className="msg bad"; m.textContent=err.message; } });
+
+(async()=>{
+  if(!VVR.session()){ location.replace("../cuenta/?siguiente=vendedor#entrar"); return; }
+  try{ paint(await VVR.call("seller")); $("status").hidden=true; $("panel").hidden=false; }
+  catch(e){ if(e.status===401){ location.replace("../cuenta/?siguiente=vendedor#entrar"); return; }
+    $("status").innerHTML=e.status===403?'Esta cuenta no es de vendedor. Si quieres vender Vórtice VR, escríbenos a <a href="mailto:hola@vorticevr.mx">hola@vorticevr.mx</a>. <br><a href="../cuenta/">Ir a Mi cuenta</a>':esc(e.message); }
+})();
+</script>
+<script src="../assets/magia.js" defer></script>
+</body>
+</html>

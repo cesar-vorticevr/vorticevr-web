@@ -219,6 +219,7 @@ dialog .row{justify-content:space-between}
         <button type="button" id="pUpgrade">Cambiar de plan</button>
         <button type="button" id="pManage" hidden>Administrar suscripción</button>
         <a id="pAdmin" href="../admin/" hidden>Administración</a>
+        <a id="pSeller" href="../vendedor/" hidden class="refbtn">💼 Mi panel de vendedor</a>
         <button type="button" id="pRefBtn" class="refbtn">✦ Recomienda y gana</button>
         <button type="button" id="pTeamBtn" hidden>Mi equipo</button>
         <button type="button" id="pCodeBtn">Tengo un código</button>
@@ -375,8 +376,8 @@ const REFKEY="vvr-ref";
 function refCode(){ try{ const r=JSON.parse(localStorage.getItem(REFKEY)||"null"); return r&&Date.now()-r.t<60*864e5?r.code:""; }catch(e){ return ""; } }
 { const c=(Q.get("ref")||"").toUpperCase().replace(/[^A-Z0-9-]/g,""); if(c){ try{ localStorage.setItem(REFKEY,JSON.stringify({code:c,t:Date.now()})); }catch(e){} } }
 (async()=>{ const c=refCode(); if(!c) return; try{ const r=await (await fetch(`${VVR.api}/api/ref/${encodeURIComponent(c)}`)).json();
-  if(r.ok){ const b=$("rInvite"); b.hidden=false; b.innerHTML=`✦ <b>${esc(r.name)}</b> te invitó: tendrás <b>${r.discount}% de descuento</b> todo tu primer año en cualquier plan.`; } }catch(e){} })();
-const NEXT=Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":null;
+  if(r.ok){ const b=$("rInvite"); b.hidden=false; b.innerHTML=`✦ <b>${esc(r.name)}</b> te invitó: tendrás <b>${r.discount}% de descuento</b> en tu primer pago de cualquier plan.`; } }catch(e){} })();
+const NEXT=Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":Q.get("siguiente")==="vendedor"?"../vendedor/":null;
 // public plans: [id, name, monthly price, yearly price, what it includes] (a year is ~10 months; IVA included)
 const PLANS=[["gratis","Gratis",0,0,"Para probar la magia",["Hasta <b>5</b> experiencias de cualquier tipo","Hasta <b>3</b> elementos: video, foto, texto o 3D","Activa <b>15 días</b>","Hasta <b>1,000</b> vistas","Videos de hasta 25 MB"]],
   ["pro","Pro",499,4990,"Para crear y vender experiencias",["<b>100</b> experiencias de cualquier tipo","Hasta <b>15</b> elementos por imagen","Cámbialas cuando quieras","Sin vencimiento mientras pagues","Vistas ilimitadas","Videos de hasta <b>50 MB</b>"]],
@@ -457,7 +458,7 @@ function showPanel(data){
   $("meAv").textContent=String(user.name||user.email||"?").trim().charAt(0).toUpperCase();
   const T=data.team||{}, member=T.role==="member", owner=T.role==="owner", lim=data.limit??P.exp;
   const active=experiences.filter(x=>!x.paused).length, full=active>=lim;
-  $("pPlanName").textContent=member?`${P.name} · equipo`:P.name; $("pAdmin").hidden=!data.admin; $("pManage").hidden=!B.subscribed;
+  $("pPlanName").textContent=member?`${P.name} · equipo`:P.name; $("pAdmin").hidden=!data.admin; $("pSeller").hidden=!data.seller; $("pManage").hidden=!B.subscribed;
   $("pUse").textContent=lim>=1e6?`${nf(active)} experiencias en uso · ilimitadas`:`${nf(active)}/${nf(lim)} experiencias en uso`+(owner?` (de ${nf(T.total)} del plan)`:"");
   $("pMeter").classList.toggle("full",full); $("pMeter").firstElementChild.style.width=Math.min(100,Math.max(2,lim?active/lim*100:100))+"%";
   $("pPlan").textContent=member?`Tu cuenta es parte del equipo de ${T.owner}; ellos manejan el plan.`:`Videos de hasta ${P.videoMB} MB · `
@@ -471,7 +472,7 @@ function showPanel(data){
   $("pCreateS").textContent=full?(member?"Borra una experiencia o pide más a quien administra tu equipo.":owner?"Borra una, quita experiencias a tu equipo o mejora tu plan.":P.id==="escuela"?"Borra una experiencia para crear otra.":"Borra una experiencia o mejora tu plan para crear más."):"Elige qué crear, llena unos campos y obtén tu link y tu QR";
   // plans: pay online with Stripe when it is on (billing.enabled); otherwise "Lo quiero" opens the contact form
   renderPlans();
-  $("pNote").innerHTML=(data.referral&&data.referral.discount?`<b style="color:var(--sun)">✦ Tienes ${data.referral.discount}% de descuento todo tu primer año por invitación; se aplica al pagar.</b> `:"")+(B.enabled?(B.test?"Modo de prueba (solo lo ves tú como administrador): se paga con la tarjeta de prueba de Stripe 4242 4242 4242 4242. ":"Pago seguro con tarjeta a través de Stripe. Se cobra automáticamente cada mes o cada año, según elijas, y cancelas cuando quieras. ")
+  $("pNote").innerHTML=(data.referral&&data.referral.discount?`<b style="color:var(--sun)">✦ Tienes ${data.referral.discount}% de descuento en tu primer pago por invitación; se aplica al pagar.</b> `:"")+(B.enabled?(B.test?"Modo de prueba (solo lo ves tú como administrador): se paga con la tarjeta de prueba de Stripe 4242 4242 4242 4242. ":"Pago seguro con tarjeta a través de Stripe. Se cobra automáticamente cada mes o cada año, según elijas, y cancelas cuando quieras. ")
     :"El pago con tarjeta en línea llega pronto; por ahora escríbenos y activamos tu plan. ")+'¿Necesitas más? <a href="../?tema=empresa#contacto">Pregúntanos por un plan a tu medida</a>.';
   if(location.hash==="#planes"&&P.id!=="escuela"&&!member) openPlans(true);
   if(B.pastDue) banner("No pudimos cobrar tu última mensualidad. Actualiza tu tarjeta en “Administrar suscripción” para que tu plan siga activo.","warn");
@@ -516,13 +517,13 @@ $("refClose").addEventListener("click",()=>{ $("refBox").hidden=true; });
 async function openRef(){ $("refBox").hidden=false; $("refBody").innerHTML='<p class="note">Cargando…</p>'; $("refBox").scrollIntoView({behavior:"smooth",block:"start"});
   let r; try{ r=await VVR.call("referral"); }catch(e){ $("refBody").textContent=e.message; return; }
   const B=$("refBody");
-  if(!r.eligible){ B.innerHTML=`<p class="rlead">Gana <b>${r.rate}% de cada pago</b> de las personas y empresas que invites, todo el tiempo que ellas paguen su plan. Ellas reciben <b>${r.discount}% de descuento</b> todo su primer año.</p>
+  if(!r.eligible){ B.innerHTML=`<p class="rlead">Gana <b>${r.rate}% de cada pago</b> de las personas y empresas que invites, todo el tiempo que ellas paguen su plan. Ellas reciben <b>${r.discount}% de descuento</b> en su primer pago.</p>
       <p class="note">Recomienda y gana está disponible con los planes <b>Pro</b> y <b>Premium</b>: mientras tu plan esté activo, ganas por cada pago de tus recomendados.</p>
       <button class="btn sun" type="button" id="refUp">Ver planes</button>`;
     $("refUp").onclick=()=>{ $("refBox").hidden=true; openPlans(true); }; return; }
   const ST={pendiente:"Pendiente",disponible:"Disponible",abonada:"Abonada a tu plan",pagada:"Pagada",cancelada:"Cancelada"};
   B.innerHTML=`<div class="rgrid"><div>
-      <p class="rlead">Comparte tu link: quien se registre con él tiene <b>${r.discount}% de descuento</b> su primer año, y tú ganas <b>${r.rate}% de cada pago</b> que haga, todo el tiempo que ambos tengan su plan.</p>
+      <p class="rlead">Comparte tu link: quien se registre con él tiene <b>${r.discount}% de descuento</b> en su primer pago, y tú ganas <b>${r.rate}% de cada pago</b> que haga, todo el tiempo que ambos tengan su plan.</p>
       <div class="rlink"><code id="refLink">${esc(r.link)}</code><button class="btn" type="button" id="refCopy">Copiar link</button><button class="btn sun" type="button" id="refShare">Compartir</button></div>
       <p class="note">O dales tu código: <span class="rcode">${esc(r.code)}</span></p>
       <div class="tsum">${[[r.registered,"cuentas con tu código"],[r.paying,"pagando ahora"],[money(r.totals.pendiente),"pendiente"],[money((r.totals.abonada||0)+r.totals.pagada+r.totals.disponible),"ya ganado"]].map(([v,l])=>`<div><b>${typeof v==="number"?nf(v):v}</b><span>${l}</span></div>`).join("")}</div>
@@ -534,7 +535,7 @@ async function openRef(){ $("refBox").hidden=false; $("refBody").innerHTML='<p c
       :'<p class="note">Todavía no hay comisiones. En cuanto alguien que invitaste pague su plan, aparecerá aquí.</p>'}
     ${r.referred.length?`<h3 class="tsub">Cuentas que llegaron con tu código</h3><p class="note">${r.referred.map(x=>`${esc(x.name)} · ${esc(x.plan)}${x.paying?" ✓":""}`).join(" &nbsp;·&nbsp; ")}</p>`:""}`;
   $("refCopy").onclick=async e=>{ try{ await navigator.clipboard.writeText(r.link); e.target.textContent="¡Copiado!"; }catch(_){ prompt("Copia tu link:",r.link); } };
-  const txt=`Crea tu realidad aumentada en Vórtice VR con ${r.discount}% de descuento tu primer año: ${r.link}`;
+  const txt=`Crea tu realidad aumentada en Vórtice VR con ${r.discount}% de descuento en tu primer pago: ${r.link}`;
   $("refShare").onclick=async()=>{ if(navigator.share){ try{ await navigator.share({title:"Vórtice VR",text:txt,url:r.link}); }catch(e){} } else location.href="https://wa.me/?text="+encodeURIComponent(txt); };
   const cv=$("refQR"); VVR.iconReady.then(()=>VVR.drawQR(cv,r.link,`Crea tu cuenta con ${r.discount}% de descuento`));
   $("refQRd").onclick=()=>VVR.downloadCanvas(cv,`invitacion-${r.code}.png`);
