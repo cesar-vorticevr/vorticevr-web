@@ -1,6 +1,8 @@
 // Our own surface AR for Android (Chrome, WebXR), used by assets/superficie.js instead of model-viewer so it can have
 // the photo / video button with the logo, like the image AR. iPhone has no WebXR: there it stays Quick Look.
 //   · hit-test: a ring shows where it will go; a tap places it facing you (another tap moves it)
+//   · two fingers pinch the whole scene bigger or smaller (10 %–1000 %); the size stays when it is moved and is
+//     remembered on the phone (localStorage vvr-escala-<slug>); "Tamaño real" puts it back at 100 %
 //   · dom-overlay: our buttons over the camera (close, shutter, photo / video)
 //   · camera-access: the camera picture of each frame (XRWebGLBinding.getCameraImage). A capture draws it and the 3D
 //     into a render target, reads it and adds the logo on a 2D canvas (the photo, or each frame of the video).
@@ -36,14 +38,20 @@ const CSS = `
 .sx-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 .sx-act{font-weight:800;font-size:.95rem;border:0;border-radius:999px;padding:13px 22px;text-decoration:none;background:rgba(255,255,255,.12)}
 .sx-act.primary{background:#8b3fd6}
+.sx-pinch{position:absolute;inset:0;pointer-events:auto;touch-action:none}
+.sx-size{position:absolute;left:50%;top:calc(116px + env(safe-area-inset-top,0px));transform:translateX(-50%);display:flex;align-items:center;gap:8px}
+.sx-pct{background:rgba(10,4,22,.72);padding:7px 14px;border-radius:999px;font-weight:800;font-size:1rem;font-variant-numeric:tabular-nums;transition:transform .15s}
+.sx-pct.big{transform:scale(1.25);background:#8b3fd6}
+.sx-real{border:0;border-radius:999px;padding:7px 14px;background:rgba(255,255,255,.9);color:#16101f!important;font-weight:700;font-size:.85rem}
 `;
 
 // o: { glb (ArrayBuffer), brand: {src, own} | null, slug, title, audio: <audio> | null, onEnd() }
 export function startXR(o) {
   if (!document.getElementById("sx-css")) document.head.appendChild(Object.assign(document.createElement("style"), { id: "sx-css", textContent: CSS }));
   const ui = document.createElement("div"); ui.className = "sx";
-  ui.innerHTML = `<div class="sx-top${o.brand && o.brand.own ? " own" : ""}">${o.brand ? `<img alt="" src="${o.brand.src}">` : ""}<button class="sx-x" type="button" aria-label="Cerrar">✕</button></div>
+  ui.innerHTML = `<div class="sx-pinch"></div><div class="sx-top${o.brand && o.brand.own ? " own" : ""}">${o.brand ? `<img alt="" src="${o.brand.src}">` : ""}<button class="sx-x" type="button" aria-label="Cerrar">✕</button></div>
     <p class="sx-hint">Apunta al piso o a una mesa y mueve el celular despacio</p>
+    <div class="sx-size" hidden><span class="sx-pct">100 %</span><button class="sx-real" type="button" hidden>Tamaño real</button></div>
     <div class="sx-bot" hidden><span class="sx-timer" hidden>0:00</span><button class="sx-shut" type="button" aria-label="Tomar foto"><span></span></button>
       <div class="sx-modes" role="group" aria-label="Modo de captura"><button type="button" data-m="photo" aria-pressed="true">Foto</button><button type="button" data-m="video" aria-pressed="false">Video</button></div></div>
     <div class="sx-flash"></div>
@@ -51,7 +59,7 @@ export function startXR(o) {
   document.body.appendChild(ui);
   const q = s => ui.querySelector(s);
   // taps on our buttons do not place the object
-  for (const s of [".sx-top", ".sx-bot", ".sx-sheet"]) q(s).addEventListener("beforexrselect", e => e.preventDefault());
+  for (const s of [".sx-top", ".sx-bot", ".sx-sheet", ".sx-size"]) q(s).addEventListener("beforexrselect", e => e.preventDefault());
   if (o.audio) { try { o.audio.currentTime = 0; } catch (e) {} o.audio.play().catch(() => {}); }   // inside the tap
 
   // the session first (it needs the tap); the rest after
@@ -91,13 +99,44 @@ async function run(session, ui, q, o) {
   const hitSource = await session.requestHitTestSource({ space: viewer });
   const hint = q(".sx-hint"), hit = new THREE.Matrix4(); let hasHit = false, placed = false;
 
+  // ---- size: pinch with two fingers (all the elements together, as they were placed in the editor) ----
+  const KEY = "vvr-escala-" + (o.slug || "x"), MIN = 0.1, MAX = 10;
+  let scale = 1; try { const v = parseFloat(localStorage.getItem(KEY)); if (v >= MIN && v <= MAX) scale = v; } catch (e) {}
+  const pct = q(".sx-pct"), real = q(".sx-real");
+  function setScale(s, save) {
+    scale = Math.min(MAX, Math.max(MIN, s)); content.scale.setScalar(scale);
+    pct.textContent = Math.round(scale * 100) + " %"; real.hidden = Math.abs(scale - 1) < 0.02;
+    if (save) try { if (Math.abs(scale - 1) < 0.02) localStorage.removeItem(KEY); else localStorage.setItem(KEY, String(scale)); } catch (e) {}
+  }
+  setScale(scale, false);
+  let pinch = null, pinchedAt = 0, ticks = 0, gesture = false, fingers = 0;   // gesture = this touch already pinched
+  const touchDist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  const pad = q(".sx-pinch");
+  pad.addEventListener("touchstart", e => {
+    fingers = e.touches.length; if (fingers === 1) gesture = false;
+    if (e.touches.length === 2 && placed) { gesture = true; pinch = { d: touchDist(e.touches), s: scale }; pct.classList.add("big"); pinchedAt = performance.now(); }
+  }, { passive: true });
+  pad.addEventListener("touchmove", e => {
+    if (!pinch || e.touches.length < 2) return;
+    setScale(pinch.s * touchDist(e.touches) / Math.max(1, pinch.d), false); pinchedAt = performance.now();
+    const step = Math.round(Math.log(scale) / Math.log(1.15)); if (step !== ticks) { ticks = step; sfx.tick(.7); }   // a little click as it grows or shrinks
+  }, { passive: true });
+  const pinchEnd = e => {
+    fingers = e.touches.length;
+    if (pinch && e.touches.length < 2) { pinch = null; pct.classList.remove("big"); setScale(scale, true); }
+    if (gesture) pinchedAt = performance.now();   // until the last finger is up
+  };
+  pad.addEventListener("touchend", pinchEnd); pad.addEventListener("touchcancel", pinchEnd);
+  real.addEventListener("click", () => { setScale(1, true); sfx.pop(); });
+
   session.addEventListener("select", () => {
     if (!hasHit) return;
+    if (pinch || (gesture && fingers > 0) || performance.now() - pinchedAt < 450) return;   // the fingers of a pinch do not move it
     const p = new THREE.Vector3().setFromMatrixPosition(hit), cam = new THREE.Vector3().setFromMatrixPosition(renderer.xr.getCamera().matrixWorld);
     content.position.copy(p); content.rotation.set(0, Math.atan2(cam.x - p.x, cam.z - p.z), 0);   // facing you
     content.visible = true; placed = true; reticle.visible = false; sfx.appear();
-    hint.textContent = "Camina a su alrededor · toca otro lugar para moverlo";
-    q(".sx-bot").hidden = !camOk;
+    hint.textContent = "Pellizca con dos dedos para cambiar su tamaño · toca otro lugar para moverlo";
+    q(".sx-size").hidden = false; q(".sx-bot").hidden = !camOk;
   });
 
   // ---- capture: camera picture + 3D → render target → 2D canvas with the logo ----
@@ -210,7 +249,7 @@ async function run(session, ui, q, o) {
     ended = true; stopRec(); renderer.setAnimationLoop(null); hitSource.cancel && hitSource.cancel();
     rt.dispose(); renderer.dispose(); renderer.domElement.remove();
     if (o.audio) o.audio.pause();
-    if (q(".sx-sheet").hidden) ui.remove(); else { q(".sx-top").hidden = true; q(".sx-hint").hidden = true; q(".sx-bot").hidden = true; }   // a capture still on view stays
+    if (q(".sx-sheet").hidden) ui.remove(); else { q(".sx-top").hidden = true; q(".sx-hint").hidden = true; q(".sx-bot").hidden = true; q(".sx-size").hidden = true; q(".sx-pinch").hidden = true; }   // a capture still on view stays
     o.onEnd && o.onEnd();
   });
 }

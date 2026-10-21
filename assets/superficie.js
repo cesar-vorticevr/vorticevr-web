@@ -111,13 +111,13 @@ export async function run(o) {
   const mv = document.createElement("model-viewer");
   mv.setAttribute("alt", cfg.title || "Experiencia en 3D");
   for (const [k, v] of [["camera-controls", ""], ["auto-rotate", ""], ["auto-rotate-delay", "1500"], ["rotation-per-second", "20deg"], ["autoplay", ""], ["shadow-intensity", "1"],
-    ["environment-image", "neutral"], ["exposure", "1.05"], ["ar", ""], ["ar-modes", "webxr quick-look"], ["ar-scale", "fixed"], ["ar-placement", "floor"],
+    ["environment-image", "neutral"], ["exposure", "1.05"], ["ar", ""], ["ar-modes", "webxr quick-look"], ["ar-scale", "auto"], ["ar-placement", "floor"],
     ["interaction-prompt", "none"], ["touch-action", "pan-y"], ["camera-orbit", "0deg 70deg auto"]]) mv.setAttribute(k, v);
   mv.setAttribute("src", URL.createObjectURL(new Blob([glb], { type: "model/gltf-binary" })));
   // Android (WebXR): our own view, with photo and video with the logo (assets/superficie-xr.js). iPhone: Quick Look.
   let XR = null;
   try { if (navigator.xr && await navigator.xr.isSessionSupported("immersive-ar")) XR = await import("./superficie-xr.js"); } catch (e) { XR = null; }
-  steps.lastElementChild.innerHTML = XR ? "3. Toca la pantalla para ponerlo, camina a su alrededor y toma tu <b>foto o video</b>." : "3. Camina a su alrededor. Para tu <b>foto</b>, toca el botón blanco de abajo; para <b>video</b>, mantenlo presionado.";
+  steps.lastElementChild.innerHTML = XR ? "3. Toca la pantalla para ponerlo, <b>pellizca con dos dedos</b> para hacerlo más grande o más chico y toma tu <b>foto o video</b>." : "3. <b>Pellizca con dos dedos</b> para hacerlo más grande o más chico y camina a su alrededor. Para tu <b>foto</b>, toca el botón blanco de abajo; para <b>video</b>, mantenlo presionado.";
   mv.addEventListener("load", () => {
     load.remove();
     stage.appendChild(Object.assign(document.createElement("span"), { className: "sf-hint", textContent: "Gíralo con el dedo" }));

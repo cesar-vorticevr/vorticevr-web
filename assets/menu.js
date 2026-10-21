@@ -372,7 +372,7 @@ export function run(o) {
   }
   function specHtml(d, cur) {
     const stage = d.model ? `<div class="stage" data-mv="${esc(src(d.model))}" data-cm="${d.cm || 28}"><div class="mvload">Cargando 3D…</div></div>` : d.photo ? `<img class="ph" src="${esc(src(d.photo))}" alt="">` : "";
-    return `<section class="mn-spec" data-spec="${d.id}"><div class="k">✦ Platillo especial</div>${stage}<div class="bd"><h3>${esc(d.name)}</h3>${d.desc ? `<p>${esc(d.desc)}</p>` : ""}<div class="row">${d.price ? `<b class="mn-pr" style="margin:0;font-size:1.1rem">${esc(priceText(d.price, cur))}</b>` : ""}${d.model ? `<button class="mn-ar" type="button" data-ar hidden>${AR_ICON}Verlo en tu mesa</button><span class="mn-arno" data-arno hidden>Abre este menú en tu celular para verlo en tu mesa.</span>` : ""}</div></div></section>`;
+    return `<section class="mn-spec" data-spec="${d.id}"><div class="k">✦ Platillo especial</div>${stage}<div class="bd"><h3>${esc(d.name)}</h3>${d.desc ? `<p>${esc(d.desc)}</p>` : ""}<div class="row">${d.price ? `<b class="mn-pr" style="margin:0;font-size:1.1rem">${esc(priceText(d.price, cur))}</b>` : ""}${d.model ? `<button class="mn-ar" type="button" data-ar hidden>${AR_ICON}Verlo en tu mesa</button><span class="mn-arno" data-arsz hidden>Ya sobre tu mesa, pellízcalo con dos dedos para ajustar su tamaño.</span><span class="mn-arno" data-arno hidden>Abre este menú en tu celular para verlo en tu mesa.</span>` : ""}</div></div></section>`;
   }
   function render() {
     const m = cfg.menu || {}, cur = m.currency || "$", top = scroller.scrollTop;
@@ -403,7 +403,8 @@ export function run(o) {
       const sec = st.closest(".mn-spec"), btn = sec.querySelector("[data-ar]"), no = sec.querySelector("[data-arno]");
       if (!st.querySelector(".hint3d")) st.appendChild(Object.assign(document.createElement("span"), { className: "hint3d", textContent: "Gíralo con el dedo" }));
       if (btn) {
-        const show = () => { btn.hidden = !mv.canActivateAR; no.hidden = !!mv.canActivateAR || !!o.embedded; };
+        const sz = sec.querySelector("[data-arsz]");
+        const show = () => { btn.hidden = !mv.canActivateAR; no.hidden = !!mv.canActivateAR || !!o.embedded; if (sz) sz.hidden = !mv.canActivateAR; };
         show(); setTimeout(show, 600); setTimeout(show, 2500);   // canActivateAR is known a moment after the model loads
         btn.onclick = () => mv.activateAR();
       }
@@ -419,7 +420,7 @@ export function run(o) {
         mv = document.createElement("model-viewer");
         Object.assign(mv, {});
         mv.setAttribute("src", url); mv.setAttribute("alt", "Platillo en 3D");
-        for (const [k, v] of [["camera-controls", ""], ["auto-rotate", ""], ["auto-rotate-delay", "800"], ["rotation-per-second", "24deg"], ["shadow-intensity", "1"], ["environment-image", "neutral"], ["exposure", "1.05"], ["ar", ""], ["ar-modes", "webxr scene-viewer quick-look"], ["ar-scale", "fixed"], ["ar-placement", "floor"], ["interaction-prompt", "none"], ["touch-action", "pan-y"], ["loading", "eager"]]) mv.setAttribute(k, v);
+        for (const [k, v] of [["camera-controls", ""], ["auto-rotate", ""], ["auto-rotate-delay", "800"], ["rotation-per-second", "24deg"], ["shadow-intensity", "1"], ["environment-image", "neutral"], ["exposure", "1.05"], ["ar", ""], ["ar-modes", "webxr scene-viewer quick-look"], ["ar-scale", "auto"], ["ar-placement", "floor"], ["interaction-prompt", "none"], ["touch-action", "pan-y"], ["loading", "eager"]]) mv.setAttribute(k, v);
         mv.addEventListener("load", () => { fit(); mv.vvrReady = true; const s = mv.parentElement; if (s) ready(); });
         mv.addEventListener("error", () => { const s = mv.parentElement; if (s) { const l = s.querySelector(".mvload"); if (l) l.textContent = "No se pudo cargar el 3D."; } });
         models.set(url, mv);
