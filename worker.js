@@ -484,7 +484,10 @@ async function api(request, env, ctx, url) {
     return json({ ok: true, experience: out });
   }
 
-  // ---- courtesy code: gives its plan for N months (ends on its own; the cron moves the account back to Gratis) ----
+  // ---- courtesy code ----
+  //   who = "todos": gives its plan for N months (ends on its own; the cron moves the account back to Gratis); not for Stripe subscribers
+  //   who = "plan": only for accounts that already have that plan active, as N free months: a Stripe subscriber gets
+  //     the price of those months as balance in Stripe (its next charges are free); a plan with an end date gets the months added
   if (path === "/api/coupon" && M === "POST") {
     if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
     if (!(await limit(env, "coupon:" + me.id, 10, 3600e3))) return json({ error: "Demasiados intentos. Espera un rato." }, 429);
@@ -494,19 +497,38 @@ async function api(request, env, ctx, url) {
     const now = Date.now();
     if (!c || !c.active || (c.expires && c.expires < now)) return json({ error: "Ese código no es válido o ya venció." }, 404);
     if (c.uses >= c.max_uses) return json({ error: "Ese código ya se usó todas las veces posibles." }, 410);
-    const cur = planOf(me);
-    if (billingInfo(env, me).subscribed) return json({ error: "Ya tienes una suscripción activa; este código es para cuentas sin suscripción." }, 409);
-    if (PLAN_RANK[cur.id] > PLAN_RANK[c.plan]) return json({ error: `Tu plan actual (${cur.name}) ya incluye más que este código.` }, 409);
+    const cur = planOf(me), subscribed = billingInfo(env, me).subscribed, onlyPlan = c.who === "plan";
+    const active = cur.id === c.plan && (!cur.until || cur.until > now);
+    if (onlyPlan) {
+      if (!active) return json({ error: `Este código es solo para cuentas con el plan ${PLANS[c.plan].name} activo.` }, 409);
+      if (!subscribed && !cur.until) return json({ error: `Tu plan ${PLANS[c.plan].name} no tiene fecha de vencimiento: no necesitas este código.` }, 409);
+    } else {
+      if (subscribed) return json({ error: "Ya tienes una suscripción activa; este código es para cuentas sin suscripción." }, 409);
+      if (PLAN_RANK[cur.id] > PLAN_RANK[c.plan]) return json({ error: `Tu plan actual (${cur.name}) ya incluye más que este código.` }, 409);
+    }
     const got = await env.DB.prepare("INSERT OR IGNORE INTO redemptions (code, user_id, at) VALUES (?, ?, ?)").bind(code, me.id, now).run();
     if (!got.meta.changes) return json({ error: "Ya usaste este código en tu cuenta." }, 409);
+    const undo = () => env.DB.prepare("DELETE FROM redemptions WHERE code = ? AND user_id = ?").bind(code, me.id).run();
     const took = await env.DB.prepare("UPDATE coupons SET uses = uses + 1 WHERE code = ? AND uses < max_uses").bind(code).run();
-    if (!took.meta.changes) { await env.DB.prepare("DELETE FROM redemptions WHERE code = ? AND user_id = ?").bind(code, me.id).run(); return json({ error: "Ese código ya se usó todas las veces posibles." }, 410); }
+    if (!took.meta.changes) { await undo(); return json({ error: "Ese código ya se usó todas las veces posibles." }, 410); }
+    const months = `${c.months} ${c.months === 1 ? "mes" : "meses"}`;
+    if (onlyPlan && subscribed) {   // paying with Stripe: the months as balance, taken off its next charges
+      const amount = PLANS[c.plan].price * c.months * 100;   // centavos, IVA included like the price
+      try {
+        await stripe(env, "POST", `customers/${me.stripe_customer}/balance_transactions`, { amount: -amount, currency: "mxn", description: `Cupón ${code}: ${months} gratis del plan ${PLANS[c.plan].name}`, metadata: { app: "vvr", coupon: code, user: String(me.id) } }, "vvr-cup-" + code + "-" + me.id);
+      } catch (e) {
+        console.error("coupon credit", e.message); await undo(); await env.DB.prepare("UPDATE coupons SET uses = uses - 1 WHERE code = ? AND uses > 0").bind(code).run();
+        return json({ error: "No se pudo aplicar el código. Intenta de nuevo en un momento." }, 502);
+      }
+      ctx.waitUntil(sendMail(env, me.email, `Tienes ${months} gratis de tu plan ${PLANS[c.plan].name}`, `<p>¡Hola${me.name ? " " + esc(me.name) : ""}!</p><p>Activaste el código <b>${esc(code)}</b>: te regalamos <b>${months}</b> de tu plan ${PLANS[c.plan].name}. Quedó como saldo a favor de <b>$${(amount / 100).toLocaleString("es-MX")}</b> en tu suscripción, así que tus próximos cobros se descuentan de ahí.</p><p>Gracias por ser parte de Vórtice VR.</p>`));
+      return json({ ok: true, plan: PLANS[c.plan].name, credit: amount / 100, message: `¡Listo! Te regalamos ${months} de tu plan ${PLANS[c.plan].name}: $${(amount / 100).toLocaleString("es-MX")} de saldo a favor que se descuentan de tus próximos cobros.` });
+    }
     // same plan with an end date: add the months to it; otherwise the plan starts now
     const from = cur.id === c.plan && cur.until && cur.until > now ? cur.until : now;
     const until = addMonths(from, c.months);
-    await applyPlan(env, me, c.plan, until, `Cupón ${code}`);
+    await applyPlan(env, me, c.plan, until, onlyPlan ? (me.plan_note ||`Cupón ${code}`) : `Cupón ${code}`);
     ctx.waitUntil(sendMail(env, me.email, `Tu cortesía del plan ${PLANS[c.plan].name} está activa`, planMail(me, c.plan, until)));
-    return json({ ok: true, plan: PLANS[c.plan].name, until });
+    return json({ ok: true, plan: PLANS[c.plan].name, until, message: onlyPlan ? `¡Listo! Te regalamos ${months} más de tu plan ${PLANS[c.plan].name}: ahora vence el ${new Date(until).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" })}.` : undefined });
   }
 
   // ---- Empresarial team: the owner creates accounts for its people and hands each part of the plan's experiences ----
@@ -670,13 +692,14 @@ async function api(request, env, ctx, url) {
       const months = Math.round(Number(b.months)), uses = Math.round(Number(b.max_uses));
       if (!(months >= 1 && months <= 24)) return json({ error: "Los meses deben ser de 1 a 24." }, 400);
       if (!(uses >= 1 && uses <= 10000)) return json({ error: "Las veces de uso deben ser de 1 a 10,000." }, 400);
+      const who = b.who === "plan" ? "plan" : "todos";
       let code = String(b.code || "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 30);
       if (code && code.length < 4) return json({ error: "El código debe tener al menos 4 letras o números." }, 400);
       if (!code) { const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", r = crypto.getRandomValues(new Uint8Array(8)); code = "VVR-" + [...r].map((x, i) => A[x % A.length] + (i === 3 ? "-" : "")).join(""); }
       let expires = null;
       if (b.expires) { const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(b.expires)); if (!d) return json({ error: "Fecha inválida." }, 400); expires = Date.UTC(+d[1], +d[2] - 1, +d[3], 23, 59, 59) + 6 * 3600e3; }
-      const r = await env.DB.prepare("INSERT OR IGNORE INTO coupons (code, plan, months, max_uses, uses, expires, note, active, created) VALUES (?, ?, ?, ?, 0, ?, ?, 1, ?)")
-        .bind(code, b.plan, months, uses, expires, String(b.note || "").trim().slice(0, 200), now).run();
+      const r = await env.DB.prepare("INSERT OR IGNORE INTO coupons (code, plan, months, max_uses, uses, expires, note, active, created, who) VALUES (?, ?, ?, ?, 0, ?, ?, 1, ?, ?)")
+        .bind(code, b.plan, months, uses, expires, String(b.note || "").trim().slice(0, 200), now, who).run();
       if (!r.meta.changes) return json({ error: "Ya existe un cupón con ese código." }, 409);
       return json({ ok: true, code });
     }
@@ -1284,7 +1307,7 @@ async function schema(env) {
     env.DB.prepare("CREATE INDEX IF NOT EXISTS sessions_user ON sessions (user_id)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS otp (email TEXT NOT NULL, purpose TEXT NOT NULL, hash TEXT, expires INTEGER, tries INTEGER DEFAULT 0, PRIMARY KEY (email, purpose))"),
     // courtesy codes made in /admin/: a plan for N months, usable max_uses times (once per account)
-    env.DB.prepare("CREATE TABLE IF NOT EXISTS coupons (code TEXT PRIMARY KEY, plan TEXT NOT NULL, months INTEGER NOT NULL, max_uses INTEGER NOT NULL, uses INTEGER DEFAULT 0, expires INTEGER, note TEXT, active INTEGER DEFAULT 1, created INTEGER)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS coupons (code TEXT PRIMARY KEY, plan TEXT NOT NULL, months INTEGER NOT NULL, max_uses INTEGER NOT NULL, uses INTEGER DEFAULT 0, expires INTEGER, note TEXT, active INTEGER DEFAULT 1, created INTEGER, who TEXT DEFAULT 'todos')"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS redemptions (code TEXT NOT NULL, user_id INTEGER NOT NULL, at INTEGER, PRIMARY KEY (code, user_id))"),
     // one row per day (Mexico time) for the admin charts
     // one row per Stripe invoice paid by a referred customer: 10% for the referrer (pendiente → disponible → abonada (saldo a favor) | pagada (by hand) | cancelada)
@@ -1300,7 +1323,7 @@ const EXP_COLS = "slug TEXT PRIMARY KEY, email TEXT NOT NULL, title TEXT, data T
 // Tables from before the plans: experiences had email UNIQUE (one per account) and users had no plan.
 // Production and the preview share this database: every change here has to keep the other version working.
 async function migrate(env) {
-  const { results } = await env.DB.prepare("SELECT name, sql FROM sqlite_master WHERE type = 'table' AND name IN ('experiences', 'users')").all();
+  const { results } = await env.DB.prepare("SELECT name, sql FROM sqlite_master WHERE type = 'table' AND name IN ('experiences', 'users', 'coupons')").all();
   const sql = Object.fromEntries(results.map(r => [r.name, r.sql || ""]));
   const steps = [];
   if (!/\bplan_until\b/.test(sql.users)) steps.push(
@@ -1321,6 +1344,10 @@ async function migrate(env) {
   if (!/\bowner_id\b/.test(sql.users)) {   // Empresarial teams: member → owner, experiences handed to it, extras, temporary password
     try { await env.DB.batch(["owner_id INTEGER", "quota INTEGER", "extra_exp INTEGER DEFAULT 0", "temp_pw INTEGER DEFAULT 0"].map(c => env.DB.prepare(`ALTER TABLE users ADD COLUMN ${c}`))); }
     catch (e) { console.error("migración equipos", e); }
+  }
+  if (sql.coupons && !/\bwho\b/.test(sql.coupons)) {   // coupons: for anyone ("todos") or only for accounts that already have its plan ("plan")
+    try { await env.DB.prepare("ALTER TABLE coupons ADD COLUMN who TEXT DEFAULT 'todos'").run(); }
+    catch (e) { console.error("migración cupones", e); }
   }
   if (!/\bstripe_mode\b/.test(sql.users)) {   // Stripe subscription of the account (test or live keys: never mix their ids)
     try { await env.DB.batch(["stripe_customer", "stripe_sub", "stripe_status", "stripe_mode"].map(c => env.DB.prepare(`ALTER TABLE users ADD COLUMN ${c} TEXT`))); }

@@ -127,10 +127,11 @@ table.top td.n{text-align:right;font-variant-numeric:tabular-nums}
     <section id="t-cupones" hidden>
       <div class="card">
         <h2>Crear cupón de cortesía</h2>
-        <p class="note">Da el plan que elijas por los meses que elijas. Cada cuenta lo puede usar una vez; tú decides cuántas cuentas en total. Se canjea en Mi cuenta → "Tengo un código". Al terminar la cortesía, la cuenta regresa sola a Gratis.</p>
+        <p class="note">Da el plan que elijas por los meses que elijas. Cada cuenta lo puede usar una vez; tú decides cuántas cuentas en total. Se canjea en Mi cuenta → "Tengo un código". Al terminar la cortesía, la cuenta regresa sola a Gratis.<br><b>Solo con el plan activo</b>: es un regalo para tus clientes. A quien paga con Stripe se le abona el precio de esos meses como saldo a favor (sus siguientes cobros salen gratis); a quien tiene el plan con fecha (a mano o por otro cupón) se le suman los meses.</p>
         <form class="form cform" id="fCoupon">
           <label>Plan<select name="plan"><option value="pro" selected>Pro</option><option value="premium">Premium</option></select></label>
           <label>Meses gratis<input name="months" type="number" min="1" max="24" value="1" required></label>
+          <label class="wide">Quién lo puede usar<select name="who"><option value="todos" selected>Cualquier cuenta: le da el plan por esos meses (no a quien ya paga con suscripción)</option><option value="plan">Solo quien ya tiene ese plan activo: le regala esos meses (también a quien paga con suscripción)</option></select></label>
           <label>Veces que se puede usar<input name="max_uses" type="number" min="1" max="10000" value="10" required></label>
           <label>Código (opcional)<input name="code" maxlength="30" placeholder="Se genera solo" autocapitalize="characters"></label>
           <label>Vence el (opcional)<input name="expires" type="date"></label>
@@ -304,7 +305,7 @@ async function loadCoupons(){
   if(!r.coupons.length){ box.innerHTML='<div class="card center">Todavía no hay cupones.</div>'; return; }
   box.replaceChildren(...r.coupons.map(c=>{ const el=document.createElement("article"); el.className="card coupon"+(c.active?"":" off");
     const venc=c.expires?`vence ${fmt(c.expires)}`:"sin fecha límite", left=c.max_uses-c.uses;
-    el.innerHTML=`<code>${esc(c.code)}</code><span class="tag ${c.plan}">${esc((PLANS[c.plan]||{}).name||c.plan)} · ${c.months} ${c.months===1?"mes":"meses"}</span>
+    el.innerHTML=`<code>${esc(c.code)}</code><span class="tag ${c.plan}">${esc((PLANS[c.plan]||{}).name||c.plan)} · ${c.months} ${c.months===1?"mes":"meses"}</span><span class="tag">${c.who==="plan"?"Solo con "+esc((PLANS[c.plan]||{}).name||c.plan)+" activo":"Cualquier cuenta"}</span>
       <div class="meta"><span><b>${nf(c.uses)}</b> de ${nf(c.max_uses)} usos</span><span>${venc}</span>${c.note?`<span>${esc(c.note)}</span>`:""}${!c.active?"<span><b>Desactivado</b></span>":left<=0?"<span><b>Agotado</b></span>":""}</div>
       <div class="acts2"><button class="btn sm" data-a="copy" type="button">Copiar</button><button class="btn sm" data-a="tog" type="button">${c.active?"Desactivar":"Activar"}</button></div>`;
     el.querySelector("[data-a=copy]").onclick=async e=>{ try{ await navigator.clipboard.writeText(c.code); e.target.textContent="¡Copiado!"; }catch(_){ prompt("Copia el código:",c.code); } };

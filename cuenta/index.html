@@ -578,7 +578,7 @@ $("pCodeBtn").addEventListener("click",()=>{ menu(false); $("codeBox").hidden=fa
 $("codeClose").addEventListener("click",()=>{ $("codeBox").hidden=true; });
 $("fCode").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,async()=>{ msg("mCode","Activando…");
   try{ const r=await VVR.call("coupon",{json:{code:$("cCodeIn").value}}); $("codeBox").hidden=true; $("cCodeIn").value=""; msg("mCode","");
-    showPanel(await VVR.call("me")); banner(`¡Listo! Tu plan ${r.plan} está activo hasta el ${fmtD(r.until)}. Disfrútalo.`);
+    showPanel(await VVR.call("me")); banner(r.message||`¡Listo! Tu plan ${r.plan} está activo hasta el ${fmtD(r.until)}. Disfrútalo.`);
     if(window.vvrSparkle) window.vvrSparkle(innerWidth/2,140); scrollTo({top:0,behavior:"smooth"}); }
   catch(err){ msg("mCode",err.message,"bad"); } }); });
 $("fHelp").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,async()=>{ msg("mHelp","Enviando…");
