@@ -6,6 +6,8 @@
 // zone the tap falls in up to the walls (plus 2 px under them so no white halo is left), and the brush, with
 // "No salirse" on, only paints inside the zone where the stroke started.
 
+import { sfx } from "./sonidos.js";
+
 export const PALETTES = {
   vivos: ["#e53935", "#ff7043", "#fb8c00", "#fdd835", "#c0ca33", "#43a047", "#00897b", "#00acc1", "#1e88e5", "#3949ab", "#8e24aa", "#d81b60", "#f48fb1", "#8d6e63", "#5d4037", "#212121", "#9e9e9e", "#ffffff"],
   pastel: ["#ffb3ba", "#ffcba4", "#ffdfba", "#ffffba", "#dcedc1", "#baffc9", "#a8e6cf", "#bae1ff", "#a0c4ff", "#c5b3ff", "#e0bbe4", "#fec8d8", "#f6eac2", "#d5c6b0", "#b5a7a0", "#6d6875", "#d9d9d9", "#ffffff"],
@@ -281,7 +283,7 @@ export async function run(opts) {
     pushUndo();
     const bw = r.x1 - r.x0 + 1, bh = r.y1 - r.y0 + 1, id = px.getImageData(r.x0, r.y0, bw, bh), a = id.data, [R, G, B] = hex2rgb(S.color);
     for (const p of r.list) { const X = p % W - r.x0, Y = (p - p % W) / W - r.y0, i = (Y * bw + X) * 4; a[i] = R; a[i + 1] = G; a[i + 2] = B; a[i + 3] = 255; }
-    px.putImageData(id, r.x0, r.y0);
+    px.putImageData(id, r.x0, r.y0); sfx.splash();
     if (navigator.vibrate) try { navigator.vibrate(8); } catch (e) {}
     if (r.open > N * 0.6) toast("Esa zona no está cerrada: se pintó casi todo. Toca ↶ para deshacer.");
     autosave();
@@ -393,8 +395,8 @@ export async function run(opts) {
   // ---- toolbar ----
   const tools = root.querySelectorAll("[data-t]");
   const setTool = t => { S.tool = t; tools.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.t === t))); colors(); };
-  tools.forEach(b => b.addEventListener("click", () => { setTool(b.dataset.t); if (b.dataset.t !== "fill" && !emb) toast(S.clip ? "Pinta con el dedo; no se sale de la línea" : "Pinta libre con el dedo"); }));
-  $('[data-a="undo"]').addEventListener("click", () => { const u = undo.pop(); if (u) { px.putImageData(u, 0, 0); autosave(); } $('[data-a="undo"]').disabled = !undo.length; });
+  tools.forEach(b => b.addEventListener("click", () => { sfx.tap(); setTool(b.dataset.t); if (b.dataset.t !== "fill" && !emb) toast(S.clip ? "Pinta con el dedo; no se sale de la línea" : "Pinta libre con el dedo"); }));
+  $('[data-a="undo"]').addEventListener("click", () => { const u = undo.pop(); if (u) { px.putImageData(u, 0, 0); autosave(); sfx.swoosh(); } $('[data-a="undo"]').disabled = !undo.length; });
   // colors: the current one (tap = the big color box) and a strip with every color always in view — the hue from left to
   // right, lighter toward the top and darker toward the bottom — plus a gray column; dragging a finger over it paints live
   const specColor = (fx, fy) => fy < .5 ? hsv2hex(fx * 360, fy * 2, 1) : hsv2hex(fx * 360, 1, Math.max(0, 1 - (fy - .5) * 2));
@@ -434,7 +436,7 @@ export async function run(opts) {
     if (b.dataset.s) { S.size = +b.dataset.s; colors(); return; }
     if (b.dataset.a === "more") { if (pop) closePop(); else openMore(); return; }
   });
-  const pickColor = c => { S.color = c; if (S.tool === "eraser") S.tool = "fill"; setTool(S.tool); };
+  const pickColor = c => { sfx.pop(); S.color = c; if (S.tool === "eraser") S.tool = "fill"; setTool(S.tool); };
 
   let pop = null;
   function closePop() { if (pop) { pop.remove(); pop = null; } }
@@ -478,7 +480,7 @@ export async function run(opts) {
       const b = ev.target.closest("[data-m]"); if (!b) return;
       if (b.dataset.m === "clip") { S.clip = !S.clip; b.querySelector(".sw").classList.toggle("on", S.clip); return; }
       if (b.dataset.m === "fit") { V.s = 1; apply(); }
-      if (b.dataset.m === "reset") { pushUndo(); px.fillStyle = "#fff"; px.fillRect(0, 0, W, H); autosave(); toast("Dibujo en blanco. Toca ↶ si te arrepientes."); }
+      if (b.dataset.m === "reset") { sfx.whoosh(); pushUndo(); px.fillStyle = "#fff"; px.fillRect(0, 0, W, H); autosave(); toast("Dibujo en blanco. Toca ↶ si te arrepientes."); }
       closePop();
     });
   });
@@ -507,7 +509,7 @@ export async function run(opts) {
         <button data-x="close" type="button">Seguir pintando</button></div>
       ${canShare ? "<small>En iPhone toca “Guardar o compartir” y elige “Guardar imagen” para que quede en tu galería.</small>" : ""}
       ${(opts.buttons || []).length ? `<div class="clr-soc">${opts.buttons.map(b => `<a href="${b.href}" target="_blank" rel="noopener" aria-label="${b.label}">${b.svg || b.label}</a>`).join("")}</div>` : ""}`;
-    root.appendChild(sh); confetti();
+    root.appendChild(sh); confetti(); sfx.win();
     sh.addEventListener("click", async e => {
       const b = e.target.closest("[data-x]"); if (!b) return;
       if (b.dataset.x === "share") { try { await navigator.share({ files: [file], title: opts.title || "Mi dibujo" }); } catch (err) {} }

@@ -209,6 +209,18 @@ a.xc.tap{transform:scale(.98);transition-duration:.1s;transition-delay:0s!import
 .xc.soon .ic{filter:grayscale(.6);opacity:.7}
 .xc.soon h3,.xc.soon p{opacity:.65}
 .xc.soon .go{color:var(--mute)}
+/* mystery cards ("Experiencia secreta"): a light sweeps the card and the "?" floats; still with reduced motion */
+.xc.mys{overflow:hidden;border-color:rgba(210,184,255,.35)}
+.xc.mys::after{content:"";position:absolute;inset:-40% -60%;background:linear-gradient(105deg,transparent 42%,rgba(210,184,255,.13) 49%,rgba(255,190,85,.12) 52%,transparent 58%);transform:translateX(-60%);animation:mysSweep 5.5s ease-in-out infinite;pointer-events:none}
+.xc.mys:nth-child(4n+2)::after{animation-delay:1.3s}.xc.mys:nth-child(4n+3)::after{animation-delay:2.6s}.xc.mys:nth-child(4n)::after{animation-delay:3.9s}
+.xc.mys .ic{filter:none;opacity:1;background:radial-gradient(circle at 50% 40%,rgba(139,63,214,.45),rgba(5,2,11,.6) 70%);border-color:rgba(210,184,255,.4);box-shadow:0 0 22px rgba(139,63,214,.35)}
+.xc.mys .ic b{font:800 1.7rem var(--fd);background:linear-gradient(160deg,#fff,#d2b8ff 45%,#ffbe55);-webkit-background-clip:text;background-clip:text;color:transparent;animation:mysFloat 3.2s ease-in-out infinite;display:inline-block}
+.xc.mys h3{opacity:.85;letter-spacing:.01em}
+.xc.mys .go{color:var(--lav);letter-spacing:.4em;animation:mysTwinkle 2.4s ease-in-out infinite}
+@keyframes mysSweep{0%,35%{transform:translateX(-60%)}75%,100%{transform:translateX(60%)}}
+@keyframes mysFloat{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-4px) rotate(6deg)}}
+@keyframes mysTwinkle{0%,100%{opacity:.45}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.xc.mys::after,.xc.mys .ic b,.xc.mys .go{animation:none}}
 .cnote{margin:18px 0 0;color:var(--mute);font-size:.9rem}
 </style>
 <script type="importmap">
@@ -242,15 +254,12 @@ a.xc.tap{transform:scale(.98);transition-duration:.1s;transition-delay:0s!import
       <a class="xc" data-x="menu" href="menu/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🍽️</span><h3>Menú interactivo</h3><p>Tu menú con link y QR: ayuda a elegir con preguntas y muestra tu platillo especial en 3D sobre la mesa.</p><span class="go">Crear →</span></a>
       <a class="xc" data-x="links" href="links/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🔗</span><h3>Todos tus links</h3><p>Tus redes, tu WhatsApp y tus links en una sola página, como Linktree. Perfecta para tu tarjeta NFC: cambias tus links sin volver a grabarla.</p><span class="go">Crear →</span></a>
       <a class="xc" data-x="ruleta" href="ruleta/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🎡</span><h3>Ruleta de premios</h3><p>Tus clientes escanean el QR, giran y ganan un cupón con código. Tú pones de 3 a 10 premios; al final pueden dejarte una reseña.</p><span class="go">Crear →</span></a>
-      <div class="xc soon" data-x="rasca" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span><span class="tag pro">✦ Premium</span></span><span class="ic" aria-hidden="true">🎟️</span><h3>Rasca y gana</h3><p>Raspa con el dedo y descubre si ganaste. Ideal para promociones y eventos.</p><span class="go">Muy pronto</span></div>
-      <div class="xc soon" data-x="atrapa" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span></span><span class="ic" aria-hidden="true">🧺</span><h3>Atrapa y gana</h3><p>Minijuego: atrapa lo que cae (tus productos o tu logo) y suma puntos.</p><span class="go">Muy pronto</span></div>
-      <div class="xc soon" data-x="quiz" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span></span><span class="ic" aria-hidden="true">🏆</span><h3>Quiz con puntaje</h3><p>Preguntas de opción múltiple con tiempo, puntos y tabla de ganadores.</p><span class="go">Muy pronto</span></div>
-      <div class="xc soon" data-x="memorama" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span></span><span class="ic" aria-hidden="true">🃏</span><h3>Memorama</h3><p>Encuentra los pares con tus propias imágenes. Para aprender jugando.</p><span class="go">Muy pronto</span></div>
-      <div class="xc soon" data-x="mesa3d" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span><span class="tag pro">✦ Premium</span></span><span class="ic" aria-hidden="true">🍔</span><h3>Tu producto en 3D</h3><p>Escanea un platillo u objeto y que aparezca en la mesa de quien lo vea.</p><span class="go">Muy pronto</span></div>
-      <div class="xc soon" data-x="fotos" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span></span><span class="ic" aria-hidden="true">📸</span><h3>Cabina de fotos</h3><p>Fotos con el marco de tu evento o marca, listas para compartir.</p><span class="go">Muy pronto</span></div>
-      <div class="xc soon" data-x="tesoro" aria-disabled="true"><span class="tags"><span class="tag">Próximamente</span></span><span class="ic" aria-hidden="true">🗺️</span><h3>Búsqueda del tesoro</h3><p>Pistas con QR por todo tu espacio; quien las junte todas, gana.</p><span class="go">Muy pronto</span></div>
+      <div class="xc soon mys" aria-disabled="true"><span class="tags"><span class="tag">Muy pronto</span></span><span class="ic" aria-hidden="true"><b>?</b></span><h3>Experiencia secreta</h3><p>Algo nuevo se está cocinando en nuestro laboratorio.</p><span class="go">✦ ✦ ✦</span></div>
+      <div class="xc soon mys" aria-disabled="true"><span class="tags"><span class="tag">Muy pronto</span></span><span class="ic" aria-hidden="true"><b>?</b></span><h3>Experiencia secreta</h3><p>Una forma nueva de jugar con tu marca. Todavía no podemos decir más.</p><span class="go">✦ ✦ ✦</span></div>
+      <div class="xc soon mys" aria-disabled="true"><span class="tags"><span class="tag">Muy pronto</span></span><span class="ic" aria-hidden="true"><b>?</b></span><h3>Experiencia secreta</h3><p>Estamos puliendo los últimos detalles. Te va a sorprender.</p><span class="go">✦ ✦ ✦</span></div>
+      <div class="xc soon mys" aria-disabled="true"><span class="tags"><span class="tag">Muy pronto</span></span><span class="ic" aria-hidden="true"><b>?</b></span><h3>Experiencia secreta</h3><p>Pronto aparecerá aquí. Vuelve a asomarte.</p><span class="go">✦ ✦ ✦</span></div>
     </div>
-    <p class="cnote">✦ Las marcadas como Premium vienen incluidas en ese plan. ¿Quieres que hagamos una antes? <a href="../?tema=plataforma#contacto">Cuéntanos cuál</a>.</p>
+    <p class="cnote">¿Tienes una idea de experiencia para tu negocio o tu escuela? <a href="../?tema=plataforma#contacto">Cuéntanos</a>.</p>
   </section>
 
       <section class="step narrow" id="full" hidden>
@@ -323,7 +332,7 @@ a.xc.tap{transform:scale(.98);transition-duration:.1s;transition-delay:0s!import
 
       <section class="step narrow" id="s4">
         <h2><span class="n" id="n4">3</span>Datos y botones</h2>
-        <label class="f" for="title">Título</label>
+        <label class="f" for="title">Título de la experiencia</label>
         <input type="text" id="title" maxlength="80" placeholder="Ej. Conoce nuestra nueva colección">
         <label class="f" for="slug">Tu link</label>
         <div class="slugrow"><input type="text" id="slug" maxlength="30" placeholder="tu-nombre" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="root">.vorticevr.mx</span></div>
@@ -714,7 +723,7 @@ slugIn.addEventListener("keydown",()=>slugIn.dataset.touched="1");
 function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false; check(); const s=slugIn.value.replace(/-$/,"");
   if(s.length<3){ m.className="msg"; m.textContent=""; return; }
   if(S.mine&&S.mine.slug===s){ slugOk=true; m.className="msg ok"; m.textContent="Es tu link actual."; check(); return; }
-  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
+  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); if(!r.ok&&r.suggest&&!slugIn.dataset.touched&&!S.mine){ slugIn.value=r.suggest; checkSlug(); return; } slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
 const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
 
 // ---------- account: this page needs a signed-in session (see /cuenta/) ----------

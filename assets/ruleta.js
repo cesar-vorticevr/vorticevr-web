@@ -9,6 +9,8 @@
 //  - slotsOf(ruleta) = los 10 espacios (null = "Suerte para la próxima"); wheelSvg(cfg) = la ruleta en SVG (miniatura).
 // cfg = { slug, title, ruleta: {prizes: [{id, t}], fill, limit, days, cond, sub, review: {url, t}, color, color2, theme, logo} }.
 
+import { sfx } from "./sonidos.js";
+
 export const SLOTS = 10;
 export const LOSE = "Suerte para la próxima";
 export const THEMES = {
@@ -190,7 +192,9 @@ export function run(o) {
   el.innerHTML = '<div class="rl-scroll"><div class="rl-in"></div></div><div class="rl-toast" role="status" aria-live="polite"></div>';
   root.appendChild(el);
   const inner = el.querySelector(".rl-in"), toastEl = el.querySelector(".rl-toast");
-  let cfg = o.cfg, rot = 0, busy = false, raf = 0, clockT = 0, tT = 0, saved = null, alive = true;
+  // the business (ruleta.name) is apart from the experience title; old wheels only have the title
+  const named = c => ({ ...c, title: (c.ruleta && c.ruleta.name) || c.title });
+  let cfg = named(o.cfg), rot = 0, busy = false, raf = 0, clockT = 0, tT = 0, saved = null, alive = true;
   const KEY = "vvr-ruleta-" + (cfg.slug || "x");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const R = () => cfg.ruleta || {};
@@ -246,7 +250,7 @@ export function run(o) {
   function spin() {
     if (busy || !canSpin()) return;
     const S = slotsOf(R()); if (!S.some(Boolean) && !(R().prizes || []).length) { toast("Primero escribe tus premios"); return; }
-    busy = true; count("spin");
+    busy = true; count("spin"); sfx.whoosh(.6);
     const k = randInt(SLOTS), A = 360 / SLOTS, jitter = (Math.random() - .5) * A * .7;
     const base = rot - (rot % 360) + 360 * (reduced ? 2 : 6);
     const target = base + ((360 - k * A) % 360) + jitter;
@@ -261,7 +265,7 @@ export function run(o) {
       const t = Math.min(1, (now - t0) / dur);
       rot = from + (target - from) * ease(t); setRot(rot);
       const peg = Math.floor((rot + A / 2) / A);
-      if (peg !== lastPeg) { lastPeg = peg; kick = 1; }
+      if (peg !== lastPeg) { lastPeg = peg; kick = 1; sfx.tick(); }
       kick *= .82; const p = ptr(); if (p) p.style.transform = `rotate(${(-22 * kick).toFixed(1)}deg)`;
       if (t < 1) raf = requestAnimationFrame(step);
       else { if (p) p.style.transform = ""; setTimeout(() => land(S[k]), 450); }
@@ -274,6 +278,7 @@ export function run(o) {
     const res = p ? { id: p.id, p: p.t, code: code(), at, until: validUntil(at, Rr.days || 0), day: mxDay(at) } : { id: null, p: null, at, day: mxDay(at) };
     if (!o.embedded) { saved.last = res; if (p) { saved.won.unshift(res); saved.won = saved.won.slice(0, 20); } store(); }
     count(p ? p.id : "lose");
+    if (p) sfx.win(); else sfx.lose();
     if (p && navigator.vibrate) try { navigator.vibrate([40, 60, 40]); } catch {}
     render();
     show(res, true);
@@ -317,11 +322,11 @@ export function run(o) {
     shot = null; if (w.p) prepareShot(w);
     if (fresh && w.p && !reduced) confetti();
     ov.addEventListener("click", async e => {
-      if (e.target.closest("[data-x]")) { closeOv(); return; }
+      if (e.target.closest("[data-x]")) { sfx.swoosh(); closeOv(); return; }
       if (e.target.closest("[data-again]")) { closeOv(); spin(); return; }
       if (e.target.closest("[data-rev]")) { count("review"); if (o.embedded) { e.preventDefault(); toast("Aquí se abrirá tu link de reseñas"); } return; }
-      if (e.target.closest("[data-save]")) { count("save"); saveShot(w); return; }
-      if (e.target.closest("[data-share]")) { count("share"); share(w); return; }
+      if (e.target.closest("[data-save]")) { count("save"); sfx.coin(); saveShot(w); return; }
+      if (e.target.closest("[data-share]")) { count("share"); sfx.tap(); share(w); return; }
     });
   }
   function showMine() {
@@ -416,19 +421,20 @@ export function run(o) {
     if (!drag) return; const a = angleAt(e, drag.w); let d = a - drag.last; if (d > 180) d -= 360; if (d < -180) d += 360;
     const now = performance.now(), dt = Math.max(1, now - drag.t); drag.v = drag.v * .5 + (d / dt) * .5; drag.t = now; drag.last = a; drag.moved += Math.abs(d);
     rot += d; setRot(rot);
+    const pg = Math.floor((rot + 18) / 36); if (pg !== drag.peg) { if (drag.peg !== undefined) sfx.tick(.6); drag.peg = pg; }
   });
   const up = () => { if (!drag) return; const v = drag.v, moved = drag.moved; drag = null; if (Math.abs(v) > .25 && moved > 12) spin(); };
   inner.addEventListener("pointerup", up); inner.addEventListener("pointercancel", up);
   inner.addEventListener("click", e => {
     if (e.target.closest("[data-go]")) spin();
-    else if (e.target.closest("[data-mine]")) showMine();
+    else if (e.target.closest("[data-mine]")) { sfx.tap(); showMine(); }
   });
 
   render();
   // coming back to the link: the last result is still there (only right after it, not every visit, for "libre")
   if (!o.embedded && saved.last && !canSpin()) setTimeout(() => { if (saved.last.p) show(saved.won.find(w => w.code === saved.last.code) || saved.last, false); }, 350);
   return {
-    update(c, brand) { cfg = c; if (brand !== undefined) o.brand = brand; if (!busy) render(); },
+    update(c, brand) { cfg = named(c); if (brand !== undefined) o.brand = brand; if (!busy) render(); },
     spin,
     destroy() { alive = false; cancelAnimationFrame(raf); clearInterval(clockT); el.remove(); },
   };

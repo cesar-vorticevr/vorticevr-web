@@ -136,7 +136,7 @@ input[type=range]{width:100%;accent-color:#8b3fd6}
       </section>
       <section class="step" id="s4">
         <h2><span class="n" id="n4">2</span>Título y link</h2>
-        <label class="f" for="title">Título</label>
+        <label class="f" for="title">Título de la experiencia</label>
         <input type="text" id="title" maxlength="80" placeholder="Ej. Colorea a mi personaje">
         <label class="f" for="slug">Tu link</label>
         <div class="slugrow"><input type="text" id="slug" maxlength="30" placeholder="tu-dibujo" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="root">.vorticevr.mx</span></div>
@@ -234,7 +234,7 @@ slugIn.addEventListener("keydown",()=>slugIn.dataset.touched="1");
 function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false; check(); const s=slugIn.value.replace(/-$/,"");
   if(s.length<3){ m.className="msg"; m.textContent=""; return; }
   if(S.mine&&S.mine.slug===s){ slugOk=true; m.className="msg ok"; m.textContent="Es tu link actual."; check(); return; }
-  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
+  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); if(!r.ok&&r.suggest&&!slugIn.dataset.touched&&!S.mine){ slugIn.value=r.suggest; checkSlug(); return; } slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
 const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
 
 // ---------- account and publishing ----------

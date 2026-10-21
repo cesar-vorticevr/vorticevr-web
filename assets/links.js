@@ -6,6 +6,8 @@
 //  - detect(url) adivina la red de un link (para ponerle su ícono).
 // cfg = { title, links: {bio, list, social, contact, theme, font, btn, shape, color, avatar, bg, share} }. src(id) = URL de una imagen.
 
+import { sfx } from "./sonidos.js";
+
 export const ICONS = {
   whatsapp: '<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 2.9 2.9 0 0 0-.9 2.2 5 5 0 0 0 1 2.6 11.4 11.4 0 0 0 4.4 3.9c1.6.7 2.3.8 3.1.6a2.6 2.6 0 0 0 1.7-1.2 2.1 2.1 0 0 0 .2-1.2c-.1-.1-.3-.2-.5-.3z"/>',
   instagram: '<path d="M7.8 2h8.4A5.8 5.8 0 0 1 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8A5.8 5.8 0 0 1 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2zm-.2 2A3.6 3.6 0 0 0 4 7.6v8.8A3.6 3.6 0 0 0 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6A3.6 3.6 0 0 0 16.4 4H7.6zm9.7 1.5a1.3 1.3 0 1 1 0 2.5 1.3 1.3 0 0 1 0-2.5zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>',
@@ -148,7 +150,9 @@ export function run(o) {
   el.innerHTML = '<div class="lk-bg"></div><div class="lk-scroll"><div class="lk-in"></div></div><div class="lk-toast" role="status" aria-live="polite"></div>';
   root.appendChild(el);
   const bgEl = el.querySelector(".lk-bg"), scroller = el.querySelector(".lk-scroll"), inner = el.querySelector(".lk-in"), toastEl = el.querySelector(".lk-toast");
-  let cfg = o.cfg, first = true, tT = 0;
+  // the name on the page (links.name) is apart from the experience title; old pages only have the title
+  const named = c => ({ ...c, title: (c.links && c.links.name) || c.title });
+  let cfg = named(o.cfg), first = true, tT = 0;
   const src = id => (id ? o.src(id) : "");
   const toast = t => { toastEl.textContent = t; toastEl.classList.add("on"); clearTimeout(tT); tT = setTimeout(() => toastEl.classList.remove("on"), 2200); };
 
@@ -209,24 +213,25 @@ export function run(o) {
   inner.addEventListener("click", async e => {
     const sh = e.target.closest("[data-share]");
     if (sh) {
-      const url = o.url || location.href;
+      const url = o.url || location.href; sfx.tap();
       if (o.embedded) { toast("Así compartirán tu página"); return; }
       try { if (navigator.share) { await navigator.share({ title: cfg.title || "", url }); return; } } catch (err) { if (err && err.name === "AbortError") return; }
       try { await navigator.clipboard.writeText(url); toast("Link copiado"); } catch { toast(url); }
       return;
     }
     if (e.target.closest("[data-vcard]")) {
-      if (!o.vcard) { toast("Se activa al publicar tu página"); return; }
+      sfx.coin(); if (!o.vcard) { toast("Se activa al publicar tu página"); return; }
       if (o.onClick) o.onClick("vcard");
       location.href = o.vcard;
       return;
     }
     const a = e.target.closest("[data-c]");
+    if (a) sfx.pop();
     if (a && o.onClick) o.onClick(a.dataset.c);
   });
   render();
   return {
-    update(c, brand) { cfg = c; if (brand !== undefined) o.brand = brand; render(); },
+    update(c, brand) { cfg = named(c); if (brand !== undefined) o.brand = brand; render(); },
     destroy() { el.remove(); },
   };
 }

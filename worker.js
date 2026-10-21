@@ -763,7 +763,12 @@ async function slugStatus(env, slug, owner, own, admin) {
   if (RESERVED.has(slug) || (ADMIN_SLUGS.has(slug) && !admin)) return { ok: false, reason: "Ese nombre está reservado." };
   if (slug === own) return { ok: true };
   const row = await env.DB.prepare("SELECT email, expires FROM experiences WHERE slug = ?").bind(slug).first();
-  if (row && row.expires > Date.now()) return { ok: false, reason: owner && row.email === owner ? "Ya tienes otra experiencia con ese link." : "Ese nombre ya está ocupado." };
+  if (row && row.expires > Date.now()) {
+    // a free one close to it (tu-nombre-2…9): the creators take it while the link still follows the title
+    const alts = [2, 3, 4, 5, 6, 7, 8, 9].map(n => slug.slice(0, 28) + "-" + n).filter(s => !RESERVED.has(s) && !ADMIN_SLUGS.has(s));
+    const taken = new Set((await env.DB.prepare(`SELECT slug FROM experiences WHERE expires > ? AND slug IN (${alts.map(() => "?").join(",")})`).bind(Date.now(), ...alts).all()).results.map(r => r.slug));
+    return { ok: false, reason: owner && row.email === owner ? "Ya tienes otra experiencia con ese link." : "Ese nombre ya está ocupado.", suggest: alts.find(s => !taken.has(s)) };
+  }
   return { ok: true };
 }
 // Experiences made before elements had one video (fit) and/or one 3D object: the same thing as elements.
@@ -989,6 +994,7 @@ function cleanMenu(mn, list, P) {
   const menu = { cats: out, pages, color: HEX.test(String(mn.color || "")) ? String(mn.color).toLowerCase() : "#b8322a",
     theme: MENU.themes.includes(mn.theme) ? mn.theme : "clasico", currency: str(mn.currency, 4) || "$", note: str(mn.note, 200), helper: mn.helper !== false };
   const sub = str(mn.sub, 80); if (sub) menu.sub = sub;
+  const nm = str(mn.name, 80); if (nm) menu.name = nm;   // the restaurant's name on the menu (the experience title is apart; old menus use it)
   const logo = ref(mn.logo, "foto"); if (logo) menu.logo = logo;
   const items = [...byId.values()].filter(i => used.has(i.id));
   if (items.filter(i => i.type === "foto").length > MENU.photos) return { error: `Puedes poner hasta ${MENU.photos} fotos.` };
@@ -1083,6 +1089,7 @@ function cleanLinks(lk, list) {
     color: HEX.test(String(lk.color || "")) ? String(lk.color).toLowerCase() : "#8b3fd6", share: lk.share !== false };
   const avatar = ref(lk.avatar); if (avatar) links.avatar = avatar;
   const bg = ref(lk.bg); if (bg) links.bg = bg;
+  const nm = str(lk.name, 80); if (nm) links.name = nm;   // the name on the page (the experience title is apart; old pages use it)
   return { links, items: [...byId.values()].filter(i => used.has(i.id)) };
 }
 // Prize wheel (assets/ruleta.js): 10 spaces, all equally likely. 3 to 10 prizes {id, t}; with fewer than 10, fill = "repetir"
@@ -1114,6 +1121,7 @@ function cleanRuleta(r, list) {
     if (!url || !/^https?:/.test(url)) return { error: "El link para dejar tu reseña no es válido." };
     ruleta.review = { url, t: str(r.review.t, 40) || "Déjanos tu reseña" };
   }
+  const nm = str(r.name, 80); if (nm) ruleta.name = nm;   // the business on the wheel and the coupon (the experience title is apart; old wheels use it)
   let items = [];
   if (r.logo) {
     const m = (Array.isArray(list) ? list : []).find(i => i && i.id === r.logo);
@@ -1128,7 +1136,7 @@ function cleanRuleta(r, list) {
 async function vcard(env, row, request) {
   const d = JSON.parse(row.data || "{}"), lk = d.links || {}, c = lk.contact || {};
   const v = s => String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/([,;])/g, "\\$1");
-  const lines = ["BEGIN:VCARD", "VERSION:3.0", `FN:${v(row.title)}`, `N:;${v(row.title)};;;`];
+  const lines = ["BEGIN:VCARD", "VERSION:3.0", `FN:${v(lk.name || row.title)}`, `N:;${v(lk.name || row.title)};;;`];
   if (c.org) lines.push(`ORG:${v(c.org)}`);
   if (c.role) lines.push(`TITLE:${v(c.role)}`);
   if (c.phone) { const p = c.phone.replace(/[^\d+]/g, ""); lines.push(`TEL;TYPE=CELL:${/^\d{10}$/.test(p) ? "+52" + p : p}`); }   // a Mexican number without its country code

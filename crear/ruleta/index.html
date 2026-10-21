@@ -147,8 +147,8 @@ details.more ol{margin:6px 0 0;padding-left:20px;color:var(--mute);font-size:.9r
 
       <section class="step" id="s1">
         <h2><span class="n" id="n1">1</span>Tu ruleta</h2>
-        <label class="f" for="title" style="margin-top:0">Nombre de tu negocio o tu promoción</label>
-        <input type="text" id="title" maxlength="80" placeholder="Ej. Café La Esquina">
+        <label class="f" for="dname" style="margin-top:0">Nombre de tu negocio o tu promoción</label>
+        <input type="text" id="dname" maxlength="80" placeholder="Ej. Café La Esquina">
         <label class="f" for="sub">Texto corto (opcional)</label>
         <textarea id="sub" maxlength="160" rows="2" placeholder="Ej. Gira y gana un premio para tu próxima visita ☕"></textarea>
         <label class="f">Tu logo (opcional)</label>
@@ -221,8 +221,11 @@ details.more ol{margin:6px 0 0;padding-left:20px;color:var(--mute);font-size:.9r
       </section>
 
       <section class="step" id="s6">
-        <h2><span class="n" id="n6">6</span>Tu link</h2>
-        <label class="f" for="slug" style="margin-top:0">Tu link</label>
+        <h2><span class="n" id="n6">6</span>Título y link</h2>
+        <label class="f" for="title" style="margin-top:0">Título de la experiencia</label>
+        <input type="text" id="title" maxlength="80" placeholder="Ej. Ruleta de aniversario">
+        <div class="note">Es solo para ti: así la ves en Mi cuenta. Puedes hacer otra ruleta del mismo negocio sin cambiar su nombre.</div>
+        <label class="f" for="slug">Tu link</label>
         <div class="slugrow"><input type="text" id="slug" maxlength="30" placeholder="tu-negocio" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="root">.vorticevr.mx</span></div>
         <div class="msg" id="mSlug"></div>
       </section>
@@ -277,7 +280,8 @@ function drawLogo(){ const u=fileUrl(S.r.logo); $("lgPv").innerHTML=u?`<img src=
 $("lgFile").addEventListener("change",async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return;
   try{ const r=await shrink(f,400), id=rid(); S.files.set(id,{blob:r.blob,url:URL.createObjectURL(r.blob),w:r.w,h:r.h}); S.r.logo=id; drawLogo(); changed(); }catch(err){ alert("No pude abrir esa imagen."); } });
 $("lgDel").onclick=()=>{ S.r.logo=null; drawLogo(); changed(); };
-$("title").addEventListener("input",()=>{ if(!slugIn.dataset.touched&&!S.mine){ slugIn.value=toSlug($("title").value).replace(/-$/,""); checkSlug(); } changed(); });
+$("dname").addEventListener("input",changed);
+$("title").addEventListener("input",()=>{ if(!slugIn.dataset.touched&&!S.mine){ slugIn.value=toSlug($("title").value).replace(/-$/,""); checkSlug(); } check(); });
 $("sub").addEventListener("input",()=>{ S.r.sub=$("sub").value; changed(); });
 
 // ---------- 2. prizes ----------
@@ -334,11 +338,11 @@ function drawDesign(){ drawTheme(); drawColors("color",$("colors1")); drawColors
 
 // ---------- live preview ----------
 let app=null, pvT=0;
-function rNow(){ const r=S.r; return {prizes:r.prizes.filter(p=>p.t.trim()).map(p=>({id:p.id,t:p.t.trim()})),fill:r.fill,limit:r.limit,days:r.days,cond:r.cond.trim(),sub:r.sub.trim(),
+function rNow(){ const r=S.r; return {name:$("dname").value.trim(),prizes:r.prizes.filter(p=>p.t.trim()).map(p=>({id:p.id,t:p.t.trim()})),fill:r.fill,limit:r.limit,days:r.days,cond:r.cond.trim(),sub:r.sub.trim(),
   review:r.review.on&&linkHref(r.review.url)?{url:linkHref(r.review.url),t:r.review.t.trim()}:undefined,color:r.color,color2:r.color2,theme:r.theme,logo:r.logo||undefined}; }
 // with no prizes yet the preview shows examples, so the wheel does not look empty
 function cfgNow(){ const r=rNow(); if(!r.prizes.length) r.prizes=["Tu premio 1","Tu premio 2","Tu premio 3"].map((t,i)=>({id:"ejemplo"+i,t}));
-  return {slug:"vista-previa",title:$("title").value.trim()||"Tu negocio",ruleta:r}; }
+  return {slug:"vista-previa",title:$("dname").value.trim()||"Tu negocio",ruleta:r}; }
 function brand(){ const mk=S.marca&&S.marca.get(); if(mk&&mk.brand==="none") return null;
   if(mk&&mk.brand==="own"&&mk.preview) return {src:mk.preview,own:true};
   return {src:S.r.theme==="claro"?"../../assets/logo-vorticevr.png":"../../assets/logo-vorticevr-blanco.png"}; }
@@ -353,14 +357,15 @@ slugIn.addEventListener("keydown",()=>slugIn.dataset.touched="1");
 function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false; check(); const s=slugIn.value.replace(/-$/,"");
   if(s.length<3){ m.className="msg"; m.textContent=""; return; }
   if(S.mine&&S.mine.slug===s){ slugOk=true; m.className="msg ok"; m.textContent="Es tu link actual."; check(); return; }
-  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
+  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); if(!r.ok&&r.suggest&&!slugIn.dataset.touched&&!S.mine){ slugIn.value=r.suggest; checkSlug(); return; } slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
 const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
 
 // ---------- publish ----------
 function problems(){
-  if(!$("title").value.trim()) return "Escribe el nombre de tu negocio o tu promoción.";
+  if(!$("dname").value.trim()) return "Escribe el nombre de tu negocio o tu promoción.";
   const n=filled().length; if(n<MIN) return `Escribe al menos ${MIN} premios (llevas ${n}).`;
   if(S.r.review.on){ if(!S.r.review.url.trim()) return "Pega el link para dejar tu reseña o apaga esa opción."; if(!linkHref(S.r.review.url)) return "El link de tu reseña no es válido."; }
+  if(!$("title").value.trim()) return "Escribe el título de tu experiencia (paso 6).";
   if(!slugOk) return "Elige un link disponible.";
   if(!S.token) return "Inicia sesión de nuevo.";
   const mk=S.marca&&S.marca.get(); if(mk&&!mk.ok) return "Sube el logo de tu marca o elige el de Vórtice VR.";
@@ -368,8 +373,8 @@ function problems(){
 }
 function check(){
   const p=problems();
-  $("n1").classList.toggle("done",!!$("title").value.trim()); $("n2").classList.toggle("done",filled().length>=MIN);
-  $("n4").classList.toggle("done",S.r.review.on&&!!linkHref(S.r.review.url)); $("n6").classList.toggle("done",slugOk);
+  $("n1").classList.toggle("done",!!$("dname").value.trim()); $("n2").classList.toggle("done",filled().length>=MIN);
+  $("n4").classList.toggle("done",S.r.review.on&&!!linkHref(S.r.review.url)); $("n6").classList.toggle("done",slugOk&&!!$("title").value.trim());
   $("mRv").className="msg bad"; $("mRv").textContent=S.r.review.on&&S.r.review.url.trim()&&!linkHref(S.r.review.url)?"Revisa el link.":"";
   $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
 }
@@ -430,7 +435,7 @@ function drawAll(){ drawLogo(); drawPrizes(); drawDays(); drawLim(); drawDesign(
       S.r={prizes:(R.prizes||[]).map(p=>({id:p.id,t:p.t})),fill:R.fill||"repetir",limit:R.limit||"una",days:R.days??0,cond:R.cond||"",sub:R.sub||"",
         review:{on:!!(R.review&&R.review.url),url:R.review?R.review.url.replace(/^https:\/\//,""):"",t:R.review&&R.review.t!=="Déjanos tu reseña"?R.review.t:""},color:R.color||"#8b3fd6",color2:R.color2||"#ffbe55",theme:R.theme||"vortice",logo:R.logo||null};
       while(S.r.prizes.length<MIN) S.r.prizes.push({id:rid(),t:""});
-      $("title").value=exp.title; $("sub").value=S.r.sub; $("cond").value=S.r.cond;
+      $("dname").value=(exp.ruleta&&exp.ruleta.name)||exp.title; $("title").value=exp.title; $("sub").value=S.r.sub; $("cond").value=S.r.cond;
       $("rvOn").checked=S.r.review.on; $("rvBox").hidden=!S.r.review.on; $("rvUrl").value=S.r.review.url; $("rvT").value=S.r.review.t;
       slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
       $("publish").textContent="Guardar cambios";

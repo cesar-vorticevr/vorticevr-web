@@ -8,6 +8,7 @@
 // startXR() must be called right inside the tap: the AR session is asked for before anything else.
 import * as THREE from "three";
 import * as ESC from "./escena.js";
+import { sfx } from "./sonidos.js";
 
 const CSS = `
 .sx{position:fixed;inset:0;z-index:100;color:#fff;font-family:"IBM Plex Sans",system-ui,sans-serif;pointer-events:none}
@@ -94,7 +95,7 @@ async function run(session, ui, q, o) {
     if (!hasHit) return;
     const p = new THREE.Vector3().setFromMatrixPosition(hit), cam = new THREE.Vector3().setFromMatrixPosition(renderer.xr.getCamera().matrixWorld);
     content.position.copy(p); content.rotation.set(0, Math.atan2(cam.x - p.x, cam.z - p.z), 0);   // facing you
-    content.visible = true; placed = true; reticle.visible = false;
+    content.visible = true; placed = true; reticle.visible = false; sfx.appear();
     hint.textContent = "Camina a su alrededor · toca otro lugar para moverlo";
     q(".sx-bot").hidden = !camOk;
   });
@@ -168,8 +169,8 @@ async function run(session, ui, q, o) {
   }
   function stopRec() { clearInterval(tick); timer.hidden = true; timer.textContent = "0:00"; shut.classList.remove("rec"); shut.setAttribute("aria-label", "Grabar video"); if (recorder && recorder.state !== "inactive") recorder.stop(); }
   shut.addEventListener("click", () => {
-    if (mode === "photo") { q(".sx-flash").classList.add("on"); setTimeout(() => q(".sx-flash").classList.remove("on"), 80); wantPhoto = true; }
-    else if (recorder) stopRec(); else startRec();
+    if (mode === "photo") { sfx.shutter(); q(".sx-flash").classList.add("on"); setTimeout(() => q(".sx-flash").classList.remove("on"), 80); wantPhoto = true; }
+    else if (recorder) { sfx.recStop(); stopRec(); } else { sfx.recStart(); startRec(); }
   });
   const stamp = () => { const d = new Date(), p = n => String(n).padStart(2, "0"); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };
   function show(blob, kind) {

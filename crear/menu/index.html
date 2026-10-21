@@ -174,7 +174,7 @@ details.paste summary{cursor:pointer;color:var(--lav);font-size:.92rem}
       <section class="step" id="s1">
         <h2><span class="n" id="n1">1</span>Tu restaurante</h2>
         <div class="two">
-          <div><label class="f" for="title">Nombre</label><input type="text" id="title" maxlength="80" placeholder="Ej. La Choza de Tabasco"></div>
+          <div><label class="f" for="dname">Nombre</label><input type="text" id="dname" maxlength="80" placeholder="Ej. La Choza de Tabasco"></div>
           <div><label class="f" for="sub">Frase (opcional)</label><input type="text" id="sub" maxlength="80" placeholder="Ej. Cocina tabasqueña desde 1998"></div>
         </div>
         <label class="f">Logo (opcional)</label>
@@ -231,7 +231,10 @@ details.paste summary{cursor:pointer;color:var(--lav);font-size:.92rem}
       </section>
 
       <section class="step" id="s5">
-        <h2><span class="n" id="n5">5</span>Link, redes y detalles</h2>
+        <h2><span class="n" id="n5">5</span>Título, link, redes y detalles</h2>
+        <label class="f" for="title" style="margin-top:0">Título de la experiencia</label>
+        <input type="text" id="title" maxlength="80" placeholder="Ej. Menú de temporada">
+        <div class="note">Es solo para ti: así la ves en Mi cuenta. Puedes hacer otro menú del mismo restaurante sin cambiar su nombre.</div>
         <label class="f" for="slug">Tu link</label>
         <div class="slugrow"><input type="text" id="slug" maxlength="30" placeholder="tu-restaurante" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="root">.vorticevr.mx</span></div>
         <div class="msg" id="mSlug"></div>
@@ -300,7 +303,8 @@ function drawColors(){ const box=$("colors"); box.innerHTML=COLORS.map(c=>`<butt
   $("colorIn").addEventListener("input",e=>{ S.menu.color=e.target.value; box.querySelectorAll("[data-c]").forEach(b=>b.setAttribute("aria-pressed","false")); changed(); }); }
 drawColors();
 $("theme").querySelectorAll("button").forEach(b=>b.onclick=()=>{ S.menu.theme=b.dataset.v; $("theme").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b))); changed(); });
-$("title").addEventListener("input",()=>{ if(!slugIn.dataset.touched&&!S.mine){ slugIn.value=toSlug($("title").value).replace(/-$/,""); checkSlug(); } changed(); });
+$("dname").addEventListener("input",changed);
+$("title").addEventListener("input",()=>{ if(!slugIn.dataset.touched&&!S.mine){ slugIn.value=toSlug($("title").value).replace(/-$/,""); checkSlug(); } check(); });
 $("sub").addEventListener("input",()=>{ S.menu.sub=$("sub").value; changed(); });
 $("logoFile").addEventListener("change",async e=>{ const f=e.target.files[0]; if(!f) return; try{ const r=await shrink(URL.createObjectURL(f),600,.9,"image/png"); S.menu.logo=addFile("foto",r); drawLogo(); changed(); }catch(err){ alert("No pude abrir esa imagen."); } e.target.value=""; });
 $("logoDel").onclick=()=>{ S.menu.logo=null; drawLogo(); changed(); };
@@ -502,7 +506,7 @@ $("note").addEventListener("input",()=>{ S.menu.note=$("note").value; changed();
 
 // ---------- live preview ----------
 let app=null, pvT=0;
-function cfgNow(){ const m={...S.menu,pages:$("origOn").checked?S.menu.pages:[]}; return {title:$("title").value.trim(),menu:m}; }
+function cfgNow(){ const m={...S.menu,pages:$("origOn").checked?S.menu.pages:[]}; return {title:$("title").value.trim(),menu:{...m,name:$("dname").value.trim()}}; }
 function brand(){ const mk=S.marca&&S.marca.get(); if(mk&&mk.brand==="none") return null;
   if(mk&&mk.brand==="own"&&mk.preview) return {src:mk.preview,own:true};
   return {src:THEMES[S.menu.theme].dark?"../../assets/logo-vorticevr-blanco.png":"../../assets/logo-vorticevr.png"}; }
@@ -519,16 +523,17 @@ slugIn.addEventListener("keydown",()=>slugIn.dataset.touched="1");
 function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false; check(); const s=slugIn.value.replace(/-$/,"");
   if(s.length<3){ m.className="msg"; m.textContent=""; return; }
   if(S.mine&&S.mine.slug===s){ slugOk=true; m.className="msg ok"; m.textContent="Es tu link actual."; check(); return; }
-  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
+  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); if(!r.ok&&r.suggest&&!slugIn.dataset.touched&&!S.mine){ slugIn.value=r.suggest; checkSlug(); return; } slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
 const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
 
 // ---------- publish ----------
 function problems(){
   const all=flatten(S.menu);
-  if(!$("title").value.trim()) return "Escribe el nombre de tu restaurante.";
+  if(!$("dname").value.trim()) return "Escribe el nombre de tu restaurante.";
   if(!all.length) return "Agrega al menos un platillo.";
   const noName=S.menu.cats.find(c=>!c.name.trim()); if(noName) return "Una de tus secciones no tiene nombre.";
   for(const c of S.menu.cats) if(c.dishes.some(d=>!d.name.trim())) return `Un platillo de “${c.name}” no tiene nombre.`;
+  if(!$("title").value.trim()) return "Escribe el título de tu experiencia (paso 5).";
   if(!slugOk) return "Elige un link disponible.";
   if(!S.token) return "Inicia sesión de nuevo.";
   const mk=S.marca&&S.marca.get(); if(mk&&!mk.ok) return "Sube el logo de tu marca o elige el de Vórtice VR.";
@@ -536,8 +541,8 @@ function problems(){
 }
 function check(){
   const p=problems();
-  $("n1").classList.toggle("done",!!$("title").value.trim()); $("n2").classList.toggle("done",flatten(S.menu).length>0);
-  $("n3").classList.toggle("done",flatten(S.menu).some(d=>d.special)); $("n4").classList.toggle("done",S.menu.helper&&flatten(S.menu).length>1); $("n5").classList.toggle("done",slugOk);
+  $("n1").classList.toggle("done",!!$("dname").value.trim()); $("n2").classList.toggle("done",flatten(S.menu).length>0);
+  $("n3").classList.toggle("done",flatten(S.menu).some(d=>d.special)); $("n4").classList.toggle("done",S.menu.helper&&flatten(S.menu).length>1); $("n5").classList.toggle("done",slugOk&&!!$("title").value.trim());
   $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
 }
 // a card for the dashboard: the restaurant's color, its logo and its name
@@ -548,14 +553,14 @@ async function thumb(){
   if(S.menu.logo){ try{ const im=await loadImg(fileUrl(S.menu.logo)); x.fillStyle="#fff"; x.beginPath(); x.arc(400,190,110,0,Math.PI*2); x.fill(); const k=Math.min(170/im.naturalWidth,170/im.naturalHeight); x.drawImage(im,400-im.naturalWidth*k/2,190-im.naturalHeight*k/2,im.naturalWidth*k,im.naturalHeight*k); y=360; }catch(e){} }
   else { x.font="140px serif"; x.textAlign="center"; x.fillText("🍽️",400,250); y=360; }
   x.fillStyle=ink==="#ffffff"?"#fff":"#1b1208"; x.textAlign="center"; x.font="700 56px Sora, sans-serif";
-  let t=$("title").value.trim()||"Menú"; while(x.measureText(t).width>720&&t.length>4) t=t.slice(0,-2)+"…"; x.fillText(t,400,y+40);
+  let t=$("dname").value.trim()||"Menú"; while(x.measureText(t).width>720&&t.length>4) t=t.slice(0,-2)+"…"; x.fillText(t,400,y+40);
   x.font="600 30px 'IBM Plex Sans', sans-serif"; x.globalAlpha=.85; x.fillText("MENÚ INTERACTIVO",400,y+100); x.globalAlpha=1;
   return new Promise(r=>c.toBlob(r,"image/png"));
 }
 $("publish").addEventListener("click",async()=>{
   const p=problems(); if(p){ check(); return; }
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Preparando…"; bar.hidden=false; bar.firstElementChild.style.width="0%"; $("publish").disabled=true;
-  const menu={cats:S.menu.cats.map(c=>({id:c.id,name:c.name.trim(),kind:c.kind,dishes:c.dishes.map(d=>({id:d.id,name:d.name.trim(),price:(d.price||"").trim(),desc:(d.desc||"").trim(),tags:d.tags||[],photo:d.photo||undefined,special:!!d.special||undefined,model:d.special&&d.model||undefined,cm:d.special&&d.model?d.cm||28:undefined}))})),
+  const menu={name:$("dname").value.trim(),cats:S.menu.cats.map(c=>({id:c.id,name:c.name.trim(),kind:c.kind,dishes:c.dishes.map(d=>({id:d.id,name:d.name.trim(),price:(d.price||"").trim(),desc:(d.desc||"").trim(),tags:d.tags||[],photo:d.photo||undefined,special:!!d.special||undefined,model:d.special&&d.model||undefined,cm:d.special&&d.model?d.cm||28:undefined}))})),
     pages:$("origOn").checked?S.menu.pages:[],color:S.menu.color,theme:S.menu.theme,currency:S.menu.currency,note:S.menu.note.trim(),sub:S.menu.sub.trim(),helper:S.menu.helper,logo:S.menu.logo||undefined};
   const used=new Set([menu.logo,...menu.pages,...menu.cats.flatMap(c=>c.dishes.flatMap(d=>[d.photo,d.model]))].filter(Boolean));
   const items=[], fd=new FormData();
@@ -598,7 +603,7 @@ $("publish").addEventListener("click",async()=>{
       for(const it of exp.items||[]) S.old.set(it.id,it);
       const mn=exp.menu||{};
       S.menu={cats:(mn.cats||[]).map(c=>({...c,dishes:(c.dishes||[]).map(d=>({price:"",desc:"",tags:[],...d,tagsTouched:true}))})),pages:mn.pages||[],color:mn.color||"#b8322a",theme:mn.theme||"clasico",currency:mn.currency||"$",note:mn.note||"",sub:mn.sub||"",helper:mn.helper!==false,logo:mn.logo||null};
-      $("title").value=exp.title; $("sub").value=S.menu.sub; $("note").value=S.menu.note; $("cur").value=S.menu.currency; $("helperOn").checked=S.menu.helper;
+      $("dname").value=(exp.menu&&exp.menu.name)||exp.title; $("title").value=exp.title; $("sub").value=S.menu.sub; $("note").value=S.menu.note; $("cur").value=S.menu.currency; $("helperOn").checked=S.menu.helper;
       $("theme").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===S.menu.theme)));
       for(const k of BTN){ let v=(exp.buttons||{})[k]||""; if(k==="whatsapp") v=v.replace(/^52(?=\d{10}$)/,""); else if(SOC[k]&&v.startsWith(SOC[k])) v=v.slice(SOC[k].length); $("b_"+k).value=v; }
       drawColors(); drawLogo(); drawPages(); drawCats();

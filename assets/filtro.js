@@ -9,6 +9,8 @@
 //  · effect: what comes out of the mouth while it is open · frame: drawn over the whole picture with the color and text.
 // Units inside an anchor are the canonical face's cm (MindAR's landmark matrix), in the preview too.
 
+import { sfx } from "./sonidos.js";
+
 export const ANCHORS = { cabeza: 10, frente: 151, ojos: 168, nariz: 4, boca: 0, barbilla: 152, mejillas: [205, 425] };
 export const ANCHOR_NAMES = { cabeza: "Arriba de la cabeza", frente: "Frente", ojos: "Ojos", nariz: "Nariz", boca: "Boca", barbilla: "Barbilla", mejillas: "Mejillas (las dos)" };
 export const PAINTS = { ninguna: "Sin pintura", catrina: "Catrina", corazones: "Corazones", mexico: "México", brillos: "Brillos", gatito: "Gatito", propia: "Mi propia pintura" };
@@ -443,7 +445,7 @@ const TINTS = { corazones: ["#ff2d55", "#ff7aa8", "#e4007c", "#ff4f8b"], estrell
  * faceMesh: a mesh with the canonical face geometry (uv), whose material becomes the paint; uvAt(i) gives point i's UV.
  * Each frame: update(dt, {face, mouth}) then, after rendering the scene, overlay(renderer) for the frame.
  */
-export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvAt, cfg, mediaUrl = id => id, onHint = () => {}, source = null, mirror = false }) {
+export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvAt, cfg, mediaUrl = id => id, onHint = () => {}, source = null, mirror = false, sound = false }) {
   const F = cfg.filtro || {}, color = okColor(F.color), made = [], textures = [];
   const keep = t => { textures.push(t); return t; };
   const loadImg = url => { if (!url) return Promise.resolve(null); if (!IMG_CACHE.has(url)) IMG_CACHE.set(url, new Promise(ok => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => ok(i); i.onerror = () => { IMG_CACHE.delete(url); ok(null); }; i.src = url; })); return IMG_CACHE.get(url); };
@@ -543,7 +545,7 @@ export async function createFilter({ THREE, scene, camera, anchor, faceMesh, uvA
       if (face) {
         mouthA[0].updateWorldMatrix(true, false);
         const scale = new THREE.Vector3().setFromMatrixScale(mouthA[0].matrixWorld).x || 1;
-        if (isOpen && !open) { spawn(12, scale); everOpened = true; }
+        if (isOpen && !open) { spawn(12, scale); everOpened = true; if (sound) sfx.sparkle(6); }   // the preview opens the mouth by itself: silent there
         if (isOpen) { emit += dt * 14; const n = Math.floor(emit); if (n) { emit -= n; spawn(n, scale); } }
       }
       open = isOpen;
@@ -633,7 +635,7 @@ export async function run({ THREE, MindARThree, container, cfg, setupCapture, st
   const capture = setupCapture(mind);
   await mind.start();
   // after start: the camera video exists (a color look or vignette draws it in WebGL; the front camera is mirrored)
-  const filter = await createFilter({ THREE, scene, camera, anchor, faceMesh, uvAt, cfg, mediaUrl, onHint: hint, source: mind.video, mirror: true });
+  const filter = await createFilter({ THREE, scene, camera, anchor, faceMesh, uvAt, cfg, mediaUrl, onHint: hint, source: mind.video, mirror: true, sound: true });
   started();
   const measure = () => { const c = renderer.domElement.getBoundingClientRect(), b = container.getBoundingClientRect(); filter.setView({ fx: Math.min(1, b.width / c.width), fy: Math.min(1, b.height / c.height), w: b.width, h: b.height }); };
   measure(); addEventListener("resize", () => setTimeout(measure, 300));

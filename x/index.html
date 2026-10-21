@@ -187,6 +187,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 </div>
 
 <script type="module">
+import { sfx } from "/assets/sonidos.js";
 // The 3D/AR libraries load when the camera starts (and are warmed up in the background), so the page shows
 // its title and image right away even if a browser is slow or strict with third-party scripts.
 let THREE=null, MindARThree=null, ESC=null, TRIVIA=null, FILTRO=null;
@@ -327,7 +328,7 @@ function setupCapture(mind,opts={}){
   const out=document.createElement("canvas"), ctx=out.getContext("2d");
   let mode="photo", wantPhoto=false, recorder=null, chunks=[], recStart=0, tick=null, lastUrl=null;
   const MAX_SEC=opts.maxSec||30;
-  document.querySelectorAll("#modes button").forEach(b=>b.addEventListener("click",()=>{ if(recorder) return; mode=b.dataset.mode;
+  document.querySelectorAll("#modes button").forEach(b=>b.addEventListener("click",()=>{ if(recorder) return; sfx.tap(); mode=b.dataset.mode;
     document.querySelectorAll("#modes button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
     shutter.classList.toggle("video",mode==="video"); shutter.setAttribute("aria-label",mode==="video"?"Grabar video":"Tomar foto"); }));
   function size(){ const r=container.getBoundingClientRect(), dpr=Math.min(devicePixelRatio||1,2);
@@ -349,7 +350,7 @@ function setupCapture(mind,opts={}){
   function pickType(){ for(const t of ["video/mp4;codecs=avc1,mp4a","video/mp4;codecs=avc1","video/mp4","video/webm;codecs=vp9,opus","video/webm"]) if(window.MediaRecorder&&MediaRecorder.isTypeSupported(t)) return t; return ""; }
   function startRec(){   // it really starts on the next frame drawn (afterRender)
     if(!window.MediaRecorder||!out.captureStream){ alertSheet("Tu navegador no permite grabar video aquí. Usa la opción de foto."); return; }
-    wantRec=true; }
+    wantRec=true; sfx.recStart(); }
   function beginRec(){
     const stream=out.captureStream(30);
     if(AUDIO.dest) AUDIO.dest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));   // muted elements add silence
@@ -358,8 +359,8 @@ function setupCapture(mind,opts={}){
     recorder.onstop=()=>{ const t=recorder.mimeType||type||"video/webm"; recorder=null; show(new Blob(chunks,{type:t}),"video"); };
     recorder.start(250); recStart=performance.now(); shutter.classList.add("rec"); shutter.setAttribute("aria-label","Detener grabación"); timer.hidden=false;
     tick=setInterval(()=>{ const s=Math.floor((performance.now()-recStart)/1000); timer.textContent=`0:${String(s).padStart(2,"0")}`; if(s>=MAX_SEC) stopRec(); },250); }
-  function stopRec(){ wantRec=false; clearInterval(tick); timer.hidden=true; timer.textContent="0:00"; shutter.classList.remove("rec"); shutter.setAttribute("aria-label","Grabar video"); if(recorder&&recorder.state!=="inactive") recorder.stop(); }
-  shutter.addEventListener("click",()=>{ if(mode==="photo"){ flash.classList.add("on"); requestAnimationFrame(()=>requestAnimationFrame(()=>flash.classList.remove("on"))); wantPhoto=true; } else if(recorder) stopRec(); else if(!wantRec) startRec(); });
+  function stopRec(){ if(recorder||wantRec) sfx.recStop(); wantRec=false; clearInterval(tick); timer.hidden=true; timer.textContent="0:00"; shutter.classList.remove("rec"); shutter.setAttribute("aria-label","Grabar video"); if(recorder&&recorder.state!=="inactive") recorder.stop(); }
+  shutter.addEventListener("click",()=>{ if(mode==="photo"){ sfx.shutter(); flash.classList.add("on"); requestAnimationFrame(()=>requestAnimationFrame(()=>flash.classList.remove("on"))); wantPhoto=true; } else if(recorder) stopRec(); else if(!wantRec) startRec(); });
   const stamp=()=>{ const d=new Date(),p=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };
   function show(blob,kind){
     if(!blob||!blob.size){ alertSheet("No se pudo guardar la captura. Intenta de nuevo."); return; }
@@ -405,7 +406,7 @@ async function startColorear(){
   }catch(e){ console.error(e); startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false; $("err").textContent="No se pudo abrir el dibujo. Revisa tu conexión e intenta de nuevo."; }
 }
 async function startMenu(){
-  document.title=(CFG.title||"Menú")+" · Vórtice VR"; $("intro").hidden=true; $("brand").hidden=true;
+  document.title=((CFG.menu&&CFG.menu.name)||CFG.title||"Menú")+" · Vórtice VR"; $("intro").hidden=true; $("brand").hidden=true;
   const theme=CFG.menu&&CFG.menu.theme, dark=theme==="oscuro";
   document.querySelector('meta[name="theme-color"]').content=dark?"#0f0c10":theme==="claro"?"#ffffff":"#f6efe3";
   try{
@@ -427,7 +428,7 @@ async function startSuperficie(){
   }catch(e){ console.error(e); message("No se pudo abrir la experiencia","Revisa tu conexión y vuelve a abrir el link."); }
 }
 async function startLinks(){
-  document.title=CFG.title||"Mis links"; $("intro").hidden=true; $("brand").hidden=true;
+  document.title=(CFG.links&&CFG.links.name)||CFG.title||"Mis links"; $("intro").hidden=true; $("brand").hidden=true;
   const meta=document.querySelector('meta[name="theme-color"]');
   try{
     const L=await import("/assets/links.js"), T=L.THEMES[CFG.links&&CFG.links.theme]||L.THEMES.vortice, light=!(CFG.links&&CFG.links.bg)&&!T.dark;
@@ -440,7 +441,7 @@ async function startLinks(){
   }catch(e){ console.error(e); message("No se pudo abrir la página","Revisa tu conexión y vuelve a abrir el link."); }
 }
 async function startRuleta(){
-  document.title=CFG.title||"Ruleta de premios"; $("intro").hidden=true; $("brand").hidden=true;
+  document.title=(CFG.ruleta&&CFG.ruleta.name)||CFG.title||"Ruleta de premios"; $("intro").hidden=true; $("brand").hidden=true;
   const meta=document.querySelector('meta[name="theme-color"]');
   try{
     const RL=await import("/assets/ruleta.js"), light=CFG.ruleta&&CFG.ruleta.theme==="claro";
@@ -524,7 +525,7 @@ async function start(){
       vbox.classList.toggle("on",onScreen); vbox.setAttribute("aria-hidden",String(!onScreen)); $("vctl").hidden=!((here||audioHere())&&started);
       $("play").hidden=$("fs").hidden=!here; showCtl();   // with only an audio: just the sound button
       guide.classList.toggle("off",found&&!full); guide.classList.toggle("mini",started&&!found); };
-    anchor.onTargetFound=()=>{ found=true; if(!started){ started=true; if(PRIMARY) vid.currentTime=0; } sceneT=0; playScene(); setMode(); };
+    anchor.onTargetFound=()=>{ found=true; if(!started){ started=true; sfx.appear(); if(PRIMARY) vid.currentTime=0; } sceneT=0; playScene(); setMode(); };
     anchor.onTargetLost=()=>{ found=false; playScene(); setMode(); };
     // scenes: arrows at the bottom
     const go=k=>{ cur=(k+scenes)%scenes; sceneNow=cur; sceneT=0;

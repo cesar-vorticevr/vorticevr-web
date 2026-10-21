@@ -5,6 +5,8 @@
 // countdown and stops a moment after the result, then the share sheet opens on its own.
 // Look: the creator's color (cfg.trivia.color) and, if there is one, its logo/picture (cfg.logo) on the question bubble.
 // Flow: waiting for a face → 3, 2, 1 → questions (with timer if set) → result with stars and confetti → play again.
+import { sfx } from "./sonidos.js";
+
 export async function run({ THREE, MindARThree, container, cfg, setupCapture, started, rec = {} }) {
   const QS = cfg.trivia.questions, N = QS.length, TIME = cfg.trivia.time || 0;
   const TILT = 11, NEUTRAL = 9, HOLD = 0.12;   // degrees to answer (held HOLD s), and back near the middle for the next one
@@ -211,10 +213,11 @@ export async function run({ THREE, MindARThree, container, cfg, setupCapture, st
     if (rec.on && capture.startRec) capture.startRec();
     go("count");
   }
-  function ask() { drawQuestion(qi); drawAnswer(0, null); drawAnswer(1, null); lastHot = [0, 0]; qCard.show(); aCard[0].show(); aCard[1].show(); timer = TIME; armed = false; picked = -1; held = 0; go("q"); }
+  function ask() { sfx.swoosh(); drawQuestion(qi); drawAnswer(0, null); drawAnswer(1, null); lastHot = [0, 0]; qCard.show(); aCard[0].show(); aCard[1].show(); timer = TIME; armed = false; picked = -1; held = 0; go("q"); }
   function answer(side) {
     if (state !== "q") return;
     picked = side; const ok = side === QS[qi].ok; if (ok) score++;
+    if (ok) sfx.correct(); else sfx.wrong();
     if (side >= 0) drawAnswer(side, ok ? "ok" : "bad");
     if (!ok) { drawAnswer(QS[qi].ok, "ok"); if (side >= 0) aCard[side].shake = 1; }
     if (ok) { burst(aCard[side].mesh.position, 40, visW() * 0.28, true); plus.s = 0.05; plus.show(); }
@@ -242,7 +245,7 @@ export async function run({ THREE, MindARThree, container, cfg, setupCapture, st
       if (face && phaseT > 0.6) start();
     } else if (state === "count") {
       const n = 3 - Math.floor(phaseT / 0.8);
-      if (n !== shown) { shown = n; if (n >= 0) { drawCount(n); count.s = 0.35; count.show(); } say(n > 0 ? "Inclina la cabeza hacia la respuesta" : ""); }
+      if (n !== shown) { shown = n; if (n > 0) sfx.count(); else if (n === 0) sfx.go(); if (n >= 0) { drawCount(n); count.s = 0.35; count.show(); } say(n > 0 ? "Inclina la cabeza hacia la respuesta" : ""); }
       if (phaseT > 3.0) { count.show(false); say(""); ask(); }
     } else if (state === "q") {
       if (!face) say("Vuelve a poner tu cara frente a la cámara"); else say(qi === 0 && phaseT < 3.5 ? "Inclina la cabeza hacia tu respuesta" : "");
@@ -250,10 +253,10 @@ export async function run({ THREE, MindARThree, container, cfg, setupCapture, st
       for (const side of [0, 1]) {   // the side you lean to lights up and grows
         const lean = side === 0 ? -tilt : tilt, h = armed && face ? Math.min(1, Math.max(0, lean / TILT)) : 0;
         hot[side] += (h - hot[side]) * Math.min(1, dt * 16);
-        const lvl = h > 0.6 ? 1 : 0; if (lvl !== lastHot[side]) { lastHot[side] = lvl; drawAnswer(side, null, lvl); }
+        const lvl = h > 0.6 ? 1 : 0; if (lvl !== lastHot[side]) { if (lvl) sfx.tap(); lastHot[side] = lvl; drawAnswer(side, null, lvl); }
       }
       if (armed && face && Math.abs(tilt) >= TILT) { held += dt; if (held >= HOLD) answer(tilt < 0 ? 0 : 1); } else held = 0;
-      if (state === "q" && TIME && face) { timer -= dt; drawBar(Math.max(0, timer / TIME)); bar.show(); if (timer <= 0) answer(-1); }
+      if (state === "q" && TIME && face) { const s0 = Math.ceil(timer); timer -= dt; if (Math.ceil(timer) !== s0 && s0 <= 3 && s0 > 0) sfx.tick(1.4); drawBar(Math.max(0, timer / TIME)); bar.show(); if (timer <= 0) answer(-1); }
     } else if (state === "reveal") {
       if (phaseT > 1.4) {
         say(""); plus.show(false); bar.show(false);
@@ -264,15 +267,16 @@ export async function run({ THREE, MindARThree, container, cfg, setupCapture, st
       const shownNow = Math.min(score, Math.floor(phaseT / 0.18));   // the score counts up
       if (shownNow !== shown) {
         shown = shownNow; const r = score / N, msg = MSG.find(([p]) => r >= p)[1];
+        if (shownNow) sfx.coin();
         drawBig(`${shownNow}/${N}`, shownNow === score ? msg : "Respuestas correctas…", score === N); big.show();
         if (shownNow === score) {
           if (score) burst(big.mesh.position, score === N ? 140 : 70, visW() * 0.6, true);
-          if (score === N) crown.show();
+          if (score === N) { crown.show(); sfx.win(); } else if (score) sfx.sparkle(8); else sfx.lose();
           stopAt = phaseT + 3.2;   // keep recording the celebration a little
           if (!rec.on) again.hidden = false;
         }
       }
-      stars.forEach((c, k) => { if (phaseT > 0.5 + k * 0.22 && c.to === 0) { drawStar(c, k < score); c.show(); if (k < score) burst(c.mesh.position, 10, visW() * 0.12, true); } });
+      stars.forEach((c, k) => { if (phaseT > 0.5 + k * 0.22 && c.to === 0) { drawStar(c, k < score); c.show(); if (k < score) { burst(c.mesh.position, 10, visW() * 0.12, true); sfx.pop(); } } });
       if (score && phaseT > 1 && phaseT < 4.5 && Math.random() < dt * 16) burst(at((Math.random() - 0.5) * 1.8, 1.05), 3, visW() * 0.22, false);   // confetti rain
       if (rec.on && stopAt && phaseT > stopAt) { stopAt = 0; if (capture.stopRec) capture.stopRec(); again.hidden = false; }
     }

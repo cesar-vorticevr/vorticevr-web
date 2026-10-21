@@ -8,6 +8,8 @@
 //  - parseMenuText(lines) convierte el texto de un PDF o de una imagen (OCR) en secciones y platillos con precio.
 // cfg = { title, menu: {cats, pages, color, theme, currency, note, sub, helper, logo}, items }. src(id) = URL de un archivo.
 
+import { sfx } from "./sonidos.js";
+
 export const TAGS = {
   picante: { e: "🌶️", t: "Picante" }, vegetariano: { e: "🌱", t: "Vegetariano" }, carne: { e: "🥩", t: "Carne" }, pollo: { e: "🍗", t: "Pollo" },
   mariscos: { e: "🦐", t: "Mariscos" }, ligero: { e: "🥗", t: "Ligero" }, abundante: { e: "🍽️", t: "Abundante" }, compartir: { e: "👥", t: "Para compartir" },
@@ -349,7 +351,9 @@ export function run(o) {
   root.appendChild(el);
   const scroller = el.querySelector(".mn-scroll"), inner = el.querySelector(".mn-in"), sheet = el.querySelector(".mn-sheet"), card = el.querySelector(".mn-card");
   const models = new Map();   // src → <model-viewer> kept between renders (the preview re-renders while typing)
-  let cfg = o.cfg, all = [], byId = new Map();
+  // the restaurant's name (menu.name) is apart from the experience title; old menus only have the title
+  const named = c => ({ ...c, title: (c.menu && c.menu.name) || c.title });
+  let cfg = named(o.cfg), all = [], byId = new Map();
 
   const src = id => (id ? o.src(id) : "");
   function theme() {
@@ -437,8 +441,8 @@ export function run(o) {
   scroller.addEventListener("scroll", () => { cancelAnimationFrame(spyT); spyT = requestAnimationFrame(spy); }, { passive: true });
 
   // ---- sheets: dish detail, helper, original menu
-  const open = html => { card.innerHTML = `<button class="mn-x" type="button" data-close aria-label="Cerrar">✕</button>` + html; card.scrollTop = 0; sheet.classList.add("on"); };
-  const close = () => sheet.classList.remove("on");
+  const open = html => { sfx.swoosh(); card.innerHTML = `<button class="mn-x" type="button" data-close aria-label="Cerrar">✕</button>` + html; card.scrollTop = 0; sheet.classList.add("on"); };
+  const close = () => { if (sheet.classList.contains("on")) sfx.tap(); sheet.classList.remove("on"); };
   sheet.addEventListener("click", e => { if (e.target === sheet || e.target.closest("[data-close]")) close(); });
   function detail(d) {
     const cur = (cfg.menu || {}).currency || "$";
@@ -449,7 +453,7 @@ export function run(o) {
     close();
     const r = inner.querySelector("#mnd-" + id); if (!r) return;
     scroller.scrollTo({ top: r.offsetTop - 70 });
-    r.classList.remove("flash"); void r.offsetWidth; r.classList.add("flash");
+    r.classList.remove("flash"); void r.offsetWidth; r.classList.add("flash"); sfx.sparkle(3);
   }
   // the helper: one question at a time, then 3 dishes
   let answers = [];
@@ -464,9 +468,9 @@ export function run(o) {
     const dots = Array.from({ length: Math.max(total, answers.length + 1) }, (_, i) => `<i class="${i <= answers.length ? "on" : ""}"></i>`).join("");
     const real = q.opts.filter(x => x.mode !== "any");
     open(`<div class="mn-dots">${dots}</div><h3 class="mn-q">${esc(q.dim.q)}</h3><div class="mn-opts n${real.length}">${q.opts.map((x, i) => `<button type="button" class="${x.mode === "any" ? "any" : ""}" data-o="${i}"><span class="e" aria-hidden="true">${x.e}</span>${esc(x.t)}</button>`).join("")}</div>${answers.length ? '<button class="mn-back" type="button" data-back>← Atrás</button>' : '<button class="mn-surp" type="button" data-surp>Mejor sorpréndeme 🎲</button>'}`);
-    card.querySelectorAll("[data-o]").forEach(b => b.onclick = () => { answers.push({ dim: q.dim, opt: q.opts[+b.dataset.o] }); if (window.vvrSparkle) try { const r = b.getBoundingClientRect(); window.vvrSparkle(r.left + r.width / 2, r.top + r.height / 2); } catch (e) {} step(); });
+    card.querySelectorAll("[data-o]").forEach(b => b.onclick = () => { sfx.pop(); answers.push({ dim: q.dim, opt: q.opts[+b.dataset.o] }); if (window.vvrSparkle) try { const r = b.getBoundingClientRect(); window.vvrSparkle(r.left + r.width / 2, r.top + r.height / 2); } catch (e) {} step(); });
     const bk = card.querySelector("[data-back]"); if (bk) bk.onclick = () => { answers.pop(); step(); };
-    const sp = card.querySelector("[data-surp]"); if (sp) sp.onclick = () => results(all, true);
+    const sp = card.querySelector("[data-surp]"); if (sp) sp.onclick = () => { sfx.whoosh(); results(all, true); };
   }
   function results(cands, surprise) {
     const cur = (cfg.menu || {}).currency || "$";
@@ -482,6 +486,7 @@ export function run(o) {
     const kinds = new Set(all.map(d => d.kind)), chosen = answers.find(a => a.dim.k === "tipo");
     const more = !surprise && chosen && chosen.opt.t === "Algo de comer" && kinds.has("bebida") ? '<button class="mn-btn gh" type="button" data-drink>¿Y de tomar? 🥤</button>' : "";
     open(`<div class="mn-res"><div class="k">${surprise ? "¿Qué tal esto?" : "Te recomiendo"}</div><div class="mn-top" data-pick="${top.id}">${top.photo ? `<img src="${esc(src(top.photo))}" alt="">` : ""}<div class="bd"><h3>${esc(top.name)}</h3>${top.price ? `<b class="mn-pr">${esc(priceText(top.price, cur))}</b>` : ""}${top.desc ? `<p>${esc(top.desc)}</p>` : ""}${why.length ? `<div class="mn-why">${why.map(w => `<span>${esc(w)}</span>`).join("")}</div>` : ""}</div></div>${rest.length ? `<div class="k" style="margin-top:16px">También te puede gustar</div>${rest.map(d => `<div class="mn-alt" data-pick="${d.id}">${d.photo ? `<img src="${esc(src(d.photo))}" alt="">` : ""}<div><b>${esc(d.name)}</b>${d.price ? `<small>${esc(priceText(d.price, cur))}</small>` : ""}</div></div>`).join("")}` : ""}<div class="mn-acts"><button class="mn-btn" type="button" data-see="${top.id}">Ver en el menú</button>${more}<button class="mn-btn gh" type="button" data-again>Otra vez</button></div></div>`);
+    sfx.appear();
     card.querySelectorAll("[data-pick]").forEach(x => x.onclick = () => goDish(x.dataset.pick));
     card.querySelector("[data-see]").onclick = () => goDish(top.id);
     card.querySelector("[data-again]").onclick = () => helper();
@@ -499,13 +504,13 @@ export function run(o) {
     const t = e.target;
     if (t.closest("[data-help]")) return helper();
     if (t.closest("[data-orig]")) return pages();
-    const go = t.closest("[data-go]"); if (go) { const s = inner.querySelector("#mns-" + go.dataset.go); if (s) scroller.scrollTo({ top: s.offsetTop - 52 }); return; }
+    const go = t.closest("[data-go]"); if (go) { sfx.tap(); const s = inner.querySelector("#mns-" + go.dataset.go); if (s) scroller.scrollTo({ top: s.offsetTop - 52 }); return; }
     if (t.closest("model-viewer,[data-ar],a")) return;
     const d = t.closest("[data-d]"); if (d && byId.get(d.dataset.d)) detail(byId.get(d.dataset.d));
   });
   render();
   return {
-    update(c) { cfg = c; render(); if (sheet.classList.contains("on")) close(); },
+    update(c) { cfg = named(c); render(); if (sheet.classList.contains("on")) close(); },
     openHelper() { scroller.scrollTop = 0; helper(); },
     destroy() { el.remove(); },
   };
