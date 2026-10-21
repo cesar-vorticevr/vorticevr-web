@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /api/
+Disallow: /admin/
+Disallow: /vendedor/
+
+Sitemap: https://vorticevr.mx/sitemap.xml

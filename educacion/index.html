@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Educación · Vórtice VR</title>
 <meta name="description" content="Vórtice VR y la educación: experiencias inmersivas de realidad aumentada, realidad virtual e inteligencia artificial para escuelas, docentes y museos. Porque lo que se vive, no se olvida.">
+<link rel="canonical" href="https://vorticevr.mx/educacion/">
 <meta property="og:title" content="Vórtice VR · Educación">
 <meta property="og:description" content="Lo que se vive, no se olvida: tecnología inmersiva para aprender.">
-<meta property="og:image" content="assets/proyectos/observatorio.webp">
+<meta property="og:image" content="https://vorticevr.mx/assets/proyectos/observatorio.webp">
 <meta name="theme-color" content="#05020b">
 <link rel="icon" href="../assets/icono.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -502,7 +503,9 @@ header.top .brand{flex:none}
       n.replaceWith(f);} else [...n.childNodes].forEach(split); };
   let saved=null; try{saved=localStorage.getItem("vvr-lang")}catch(e){}
   const q=new URLSearchParams(location.search).get("lang");
-  const nav=(navigator.languages&&navigator.languages[0])||navigator.language||"es";
+  // search engines render in English (en-US): they always get the Spanish original, which is what we index
+  const bot=/bot|crawl|spider|slurp|lighthouse|inspection/i.test(navigator.userAgent);
+  const nav=bot?"es":(navigator.languages&&navigator.languages[0])||navigator.language||"es";
   setLang(q==="en"||q==="es"?q:saved||(/^es/i.test(nav)?"es":"en"),true);
   document.getElementById("lang").addEventListener("click",()=>setLang(lang==="en"?"es":"en"));
   requestAnimationFrame(()=>requestAnimationFrame(()=>document.body.classList.add('ready')));

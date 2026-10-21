@@ -3,11 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Vórtice VR · Crea experiencias inmersivas</title>
-<meta name="description" content="Plataforma para crear experiencias inmersivas sin programar: realidad aumentada, trivias con tu cara, dibujos para colorear y juegos. Llenas unos campos y compartes un link o un QR. Gratis para empezar.">
-<meta property="og:title" content="Vórtice VR">
-<meta property="og:description" content="Crea experiencias inmersivas sin programar y compártelas con un link o un QR.">
-<meta property="og:image" content="assets/proyectos/observatorio.webp">
+<title>Realidad aumentada y experiencias inmersivas en México | Vórtice VR</title>
+<meta name="description" content="Crea realidad aumentada, filtros para la cara y experiencias inmersivas sin programar. Hecho en México: llenas unos campos y compartes un link o un QR, sin instalar apps. Empieza gratis.">
+<link rel="canonical" href="https://vorticevr.mx/">
+<link rel="alternate" hreflang="es" href="https://vorticevr.mx/">
+<link rel="alternate" hreflang="en" href="https://vorticevr.mx/?lang=en">
+<link rel="alternate" hreflang="x-default" href="https://vorticevr.mx/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Vórtice VR">
+<meta property="og:locale" content="es_MX">
+<meta property="og:url" content="https://vorticevr.mx/">
+<meta property="og:title" content="Vórtice VR · Realidad aumentada y experiencias inmersivas">
+<meta property="og:description" content="Crea realidad aumentada, filtros para la cara y juegos sin programar, y compártelos con un link o un QR.">
+<meta property="og:image" content="https://vorticevr.mx/assets/proyectos/observatorio.webp">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+ {"@type":"Organization","@id":"https://vorticevr.mx/#org","name":"Vórtice VR","url":"https://vorticevr.mx/","logo":"https://vorticevr.mx/assets/icono.png","email":"hola@vorticevr.mx","foundingDate":"2016","areaServed":"MX","description":"Estudio de tecnología inmersiva: realidad aumentada, realidad virtual, realidad mixta e inteligencia artificial.","knowsAbout":["Realidad aumentada","Realidad virtual","Realidad mixta","Filtros de cara","Experiencias inmersivas","Inteligencia artificial"]},
+ {"@type":"WebSite","@id":"https://vorticevr.mx/#web","name":"Vórtice VR","url":"https://vorticevr.mx/","inLanguage":"es-MX","publisher":{"@id":"https://vorticevr.mx/#org"}},
+ {"@type":"SoftwareApplication","name":"Vórtice VR · Plataforma de experiencias inmersivas","applicationCategory":"DesignApplication","operatingSystem":"Web, iPhone, Android","url":"https://vorticevr.mx/crear/","publisher":{"@id":"https://vorticevr.mx/#org"},"description":"Crea sin programar realidad aumentada con imagen o en superficie, filtros para la cara, trivias, ruletas de premios, juegos, menús interactivos y páginas de links, y compártelos con un link o un QR.","offers":[{"@type":"Offer","name":"Gratis","price":"0","priceCurrency":"MXN"},{"@type":"Offer","name":"Pro","price":"499","priceCurrency":"MXN"},{"@type":"Offer","name":"Premium","price":"1499","priceCurrency":"MXN"}]}
+]}
+</script>
 <meta name="theme-color" content="#05020b">
 <link rel="icon" href="assets/icono.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -311,6 +327,8 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;
 footer img{height:22px;width:auto}
 footer .legal a{color:var(--mute);text-decoration:none}
 footer .legal a:hover{color:var(--ink)}
+footer .explore a{color:var(--mute);text-decoration:none}footer .explore a:hover{color:var(--ink)}
+.mkmore{margin:-8px 0 30px}.mkmore a{color:var(--lav);font-weight:600;text-decoration:none;border-bottom:1px solid var(--line2)}.mkmore a:hover{color:var(--sun);border-color:var(--sun)}
 
 /* custom cursor (mouse only) */
 #cur,#cur2{position:fixed;left:0;top:0;pointer-events:none;z-index:40;border-radius:50%;opacity:0;transition:opacity .3s}
@@ -412,7 +430,7 @@ header.top .brand{flex:none}
     <div class="content"><div class="wrap">
       <span class="kick fade" style="transition-delay:.1s" data-en="Immersive experiences platform">Plataforma de experiencias inmersivas</span>
       <h1 id="h1" data-en="Create &lt;em&gt;experiences&lt;/em&gt; without coding.">Crea <em>experiencias</em> sin programar.</h1>
-      <p class="fade" style="transition-delay:.7s" data-en="Augmented reality, face trivia, coloring pages and, very soon, games with prizes. Fill in a few fields and share a link or a QR code: nobody has to install an app. Free to start.">Realidad aumentada, trivias con tu cara, dibujos para colorear y muy pronto juegos con premios. Llenas unos campos y compartes un link o un código QR: nadie tiene que instalar apps. Empieza gratis.</p>
+      <p class="fade" style="transition-delay:.7s" data-en="Augmented reality, face filters, trivia, prize wheels and games. Fill in a few fields and share a link or a QR code: nobody has to install an app. Free to start.">Realidad aumentada, filtros para tu cara, trivias, ruletas de premios y juegos. Llenas unos campos y compartes un link o un código QR: nadie tiene que instalar apps. Empieza gratis.</p>
       <div class="actions fade" style="transition-delay:.9s">
         <a class="btn sun mag" href="cuenta/?siguiente=crear#registro" data-en="Create an experience free">Crear experiencia gratis</a>
         <a class="btn primary mag" href="#tipos" data-en="See experiences ↓">Ver experiencias ↓</a>
@@ -480,6 +498,7 @@ header.top .brand{flex:none}
       </div>
     </div>
 
+    <p class="mkmore reveal"><a href="realidad-aumentada/" data-en="Everything about augmented reality →">Todo sobre la realidad aumentada →</a></p>
     <div class="mkvideo reveal" id="mkvideo" hidden><video controls playsinline preload="metadata" src="assets/video-ra.mp4"></video></div>
 
     <div class="mkgrid">
@@ -573,7 +592,7 @@ header.top .brand{flex:none}
   </section>
 </main>
 
-<footer><div class="wrap"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span>© Vórtice VR</span><span class="legal"><a href="privacidad/" data-en="Privacy">Privacidad</a> · <a href="privacidad/#cookies">Cookies</a> · <a href="terminos/" data-en="Terms">Términos</a></span></div></footer>
+<footer><div class="wrap"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span>© Vórtice VR</span><nav class="explore" aria-label="Explora" data-en-aria="Explore"><a href="realidad-aumentada/" data-en="Augmented reality">Realidad aumentada</a> · <a href="filtros-para-la-cara/" data-en="Face filters">Filtros para la cara</a> · <a href="experiencias-inmersivas/" data-en="Immersive experiences">Experiencias inmersivas</a> · <a href="educacion/" data-en="Education">Educación</a></nav><span class="legal"><a href="privacidad/" data-en="Privacy">Privacidad</a> · <a href="privacidad/#cookies">Cookies</a> · <a href="terminos/" data-en="Terms">Términos</a></span></div></footer>
 
 <script>
 // ---- UI effects (no dependencies) ----
@@ -587,7 +606,7 @@ header.top .brand{flex:none}
   const A=[...document.querySelectorAll("[data-en-aria]")]; A.forEach(e=>e.dataset.esAria=e.getAttribute("aria-label")||"");
   const I=[...document.querySelectorAll("[data-en-alt]")]; I.forEach(e=>e.dataset.esAlt=e.alt);
   const META={es:{t:document.title,d:document.querySelector("meta[name=description]").content},
-    en:{t:"Vórtice VR · Create immersive experiences",d:"A platform to create immersive experiences without coding: augmented reality, face trivia, coloring pages and games. Fill in a few fields and share a link or a QR code. Free to start."}};
+    en:{t:"Vórtice VR · Create immersive experiences",d:"A platform to create immersive experiences without coding: augmented reality, face filters, trivia, prize wheels and games. Fill in a few fields and share a link or a QR code. Free to start."}};
   let lang="es";
   function setLang(l,first){ lang=l; const en=l==="en"; document.documentElement.lang=l;
     T.forEach(e=>e.innerHTML=en?e.dataset.en:e.dataset.es);
@@ -607,7 +626,9 @@ header.top .brand{flex:none}
       n.replaceWith(f);} else [...n.childNodes].forEach(split); };
   let saved=null; try{saved=localStorage.getItem("vvr-lang")}catch(e){}
   const q=new URLSearchParams(location.search).get("lang");
-  const nav=(navigator.languages&&navigator.languages[0])||navigator.language||"es";
+  // search engines render in English (en-US): they always get the Spanish original, which is what we index
+  const bot=/bot|crawl|spider|slurp|lighthouse|inspection/i.test(navigator.userAgent);
+  const nav=bot?"es":(navigator.languages&&navigator.languages[0])||navigator.language||"es";
   setLang(q==="en"||q==="es"?q:saved||(/^es/i.test(nav)?"es":"en"),true);
   document.getElementById("lang").addEventListener("click",()=>setLang(lang==="en"?"es":"en"));
   requestAnimationFrame(()=>requestAnimationFrame(()=>document.body.classList.add('ready')));
