@@ -507,6 +507,15 @@ async function start(){
       catch(e){ console.error(e); return null; }   // one element that fails does not stop the rest
     }))).filter(Boolean);
     if(!nodes.length) throw new Error("items");
+    // sparkles: around the image and its elements (all scenes), in the same steady group
+    let sparks=null;
+    if(CFG.sparks){
+      sparks=new ESC.Sparkles(); steady.add(sparks.group);
+      const IHr=CFG.img&&CFG.img.w?CFG.img.h/CFG.img.w:1, box=new THREE.Box3(new THREE.Vector3(-.55,-IHr/2-.03,.02),new THREE.Vector3(.55,IHr/2+.03,.3)), b=new THREE.Box3();
+      steady.updateMatrixWorld(true);
+      for(const n of nodes){ if(n.audio) continue; ESC.place(n,n.it,1,n.order); n.root.updateMatrixWorld(true); b.setFromObject(n.root); if(!b.isEmpty()) box.union(b); }
+      sparks.set(CFG.sparks,box,0.05);
+    }
     const scenes=Math.max(1,CFG.scenes||1,...nodes.map(n=>(n.it.scene||0)+1));
     for(let k=0;k<scenes;k++) nodes.filter(n=>(n.it.scene||0)===k).forEach((n,i)=>n.si=i);   // entrance order within its scene
     let cur=0, sceneT=0;
@@ -562,9 +571,11 @@ async function start(){
       for(const n of nodes){
         if(!inScene(n)||!found){ n.root.visible=false; continue; }
         ESC.place(n,n.it,(sceneT-n.si*ESC.STAGGER)/ESC.DURATION,n.order);
+        ESC.animate(n,n.it,time);   // its motion in a loop (girar, palpitar, vaivén, balancear)
         if(n.it.link) n.root.scale.multiplyScalar(1+0.03*Math.sin(time*4));   // elements you can tap breathe a little
         n.update(dt);
       }
+      if(sparks){ sparks.group.visible=found; if(found) sparks.update(dt); }
       renderer.render(scene,camera); capture.afterRender(); });
   }catch(e){
     console.error(e); startBtn.disabled=false; startBtn.textContent="Intentar de nuevo"; $("err").hidden=false;

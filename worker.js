@@ -746,8 +746,8 @@ function publicKind(row, d) {
   if (d.kind === "links") return { slug: row.slug, kind: "links", title: row.title, links: d.links, items: d.items || [], updated: row.updated, expires: row.expires };
   if (d.kind === "dispara") return { slug: row.slug, kind: "dispara", title: row.title, dispara: d.dispara, items: d.items || [], updated: row.updated, expires: row.expires };
   if (d.kind === "ruleta") return { slug: row.slug, kind: "ruleta", title: row.title, ruleta: d.ruleta, items: d.items || [], updated: row.updated, expires: row.expires };
-  if (d.kind === "superficie") return { slug: row.slug, kind: "superficie", title: row.title, img: d.img, items: d.items || [], buttons: d.buttons, updated: row.updated, expires: row.expires };
-  return { slug: row.slug, kind: "ra", title: row.title, img: d.img, place: d.place || "mesa", scenes: d.scenes || 1, items: itemsOf(d), buttons: d.buttons, expires: row.expires };
+  if (d.kind === "superficie") return { slug: row.slug, kind: "superficie", title: row.title, img: d.img, items: d.items || [], sparks: d.sparks, buttons: d.buttons, updated: row.updated, expires: row.expires };
+  return { slug: row.slug, kind: "ra", title: row.title, img: d.img, place: d.place || "mesa", sparks: d.sparks, scenes: d.scenes || 1, items: itemsOf(d), buttons: d.buttons, expires: row.expires };
 }
 function ownerExp(row, request, env) {
   return { ...publicExp(row), url: expUrl(row.slug, request, env), created: row.created, updated: row.updated, views: row.views, paused: !!row.paused, forever: row.expires >= FAR };
@@ -795,6 +795,9 @@ function cleanLink(v) {
   try { const u = new URL(v); if (!/^https?:$/.test(u.protocol) || !u.hostname.includes(".")) return undefined; return u.href; } catch { return undefined; }
 }
 // Elements on the image (see assets/escena.js for what each field means). Files are filled in by /api/publish.
+const MOTIONS = ["girar", "palpitar", "vaiven", "balancear"];
+// sparkles around the experience (both augmented realities): {c: color, n: how many 1-100}
+function cleanSparks(f) { if (!f || typeof f !== "object") return null; const n = Math.round(Number(f.n)); return { c: HEX.test(String(f.c || "")) ? String(f.c).toLowerCase() : "#ffd27f", n: n >= 1 && n <= 100 ? n : 40 }; }
 function cleanItems(list, P) {
   const f = (v, a, b, d) => { v = Number(v); return Number.isFinite(v) ? Math.round(Math.min(b, Math.max(a, v)) * 1e4) / 1e4 : d; };
   const int = (v, a, b) => { v = Math.round(Number(v)); return Number.isFinite(v) && v >= a && v <= b ? v : null; };
@@ -811,6 +814,8 @@ function cleanItems(list, P) {
     if (m.rx != null || m.ry != null || m.rz != null) { it.rx = f(m.rx, -360, 360, 0); it.ry = f(m.ry, -360, 360, 0); it.rz = f(m.rz, -360, 360, 0); }
     else { it.o = m.o === "pie" ? "pie" : "frente"; it.r = f(m.r, -360, 360, 0); }
     it.in = ENTRANCES.includes(m.in) ? m.in : "aparecer"; it.scene = int(m.scene, 0, ITEM_LIMITS.scenes - 1) || 0;
+    // motion in a loop (assets/escena.js): girar | palpitar | vaiven | balancear around x | y | z, how much and how fast (1-100)
+    if (m.mv && MOTIONS.includes(m.mv.k) && m.type !== "audio") it.mv = { k: m.mv.k, ax: ["x", "y", "z"].includes(m.mv.ax) ? m.mv.ax : "y", a: int(m.mv.a, 1, 100) ?? 50, v: int(m.mv.v, 1, 100) ?? 50 };
     const name = String(m.name || "").trim().slice(0, 60); if (name) it.name = name;
     const link = cleanLink(m.link);
     if (link === undefined) return { error: `El enlace de "${name || "un elemento"}" no es válido. Escribe una dirección web o un número de WhatsApp.` };
@@ -1239,11 +1244,15 @@ function cleanMeta(m, P) {
   if (m.kind === "superficie") {
     if (ci.items.some(i => i.type === "video")) return { error: "La realidad aumentada en superficie no lleva videos: usa objetos 3D, imágenes y textos." };
     if (!ci.items.some(i => i.type === "model")) return { error: "Agrega al menos un objeto 3D." };
-    return { kind: "superficie", title, img, items: ci.items.map(i => { delete i.link; i.scene = 0; return i; }), buttons };
+    const sf = { kind: "superficie", title, img, items: ci.items.map(i => { delete i.link; i.scene = 0; return i; }), buttons };
+    const sp = cleanSparks(m.sparks); if (sp) sf.sparks = sp;
+    return sf;
   }
   const items = ci.items, scenes = Math.min(ITEM_LIMITS.scenes, Math.max(1, num(m.scenes, 1, ITEM_LIMITS.scenes) || 1, ...items.map(i => i.scene + 1)));
   const place = m.place === "pared" ? "pared" : "mesa";   // how the editor shows the image (on a table or on a wall)
-  return { title, img, place, scenes, items, buttons };
+  const out = { title, img, place, scenes, items, buttons };
+  const sp = cleanSparks(m.sparks); if (sp) out.sparks = sp;
+  return out;
 }
 function cleanButtons(b) {
   const buttons = {};

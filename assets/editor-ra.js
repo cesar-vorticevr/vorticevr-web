@@ -34,6 +34,8 @@ export async function createEditor(box, cb) {
   let startS = 1;   // size when a handle drag started: the scale handles move one axis, the size follows that one
   tc.addEventListener("dragging-changed", e => { orbit.enabled = !e.value; if (e.value) startS = itemOf(selected)?.s ?? 1; else done(); });
 
+  // the experience's sparkles (setSparks): around the image (or the elements) in the image's space
+  const sparks = new ESC.Sparkles(); world.add(sparks.group); let sparkCfg = null, boxT = 0;
   const nodes = new Map(), videos = new Map();
   let IH = 2 / 3, surface = false, lim = 0.75, place = "mesa", mode = "mover", selected = null, scene_ = 0, playT = -1, imgUrl = null;
   const items = () => cb.items();
@@ -73,6 +75,18 @@ export async function createEditor(box, cb) {
     IH = h / w; img.scale.set(1, IH, 1); edge.scale.set(1, IH, 1);
     if (url && url !== imgUrl) { imgUrl = url; new THREE.TextureLoader().load(url, t => { t.colorSpace = THREE.SRGBColorSpace; imgMat.map = t; imgMat.color.set(0xffffff); imgMat.needsUpdate = true; }); }
   }
+  // where the sparkles go: the image (a little above it) plus the elements on view, in the image's space
+  const wInv = new THREE.Matrix4(), bb = new THREE.Box3();
+  function sparkBox() {
+    const b = surface ? new THREE.Box3(new THREE.Vector3(-.4, -.4, 0), new THREE.Vector3(.4, .4, .5)) : new THREE.Box3(new THREE.Vector3(-.55, -IH / 2 - .03, .02), new THREE.Vector3(.55, IH / 2 + .03, .3));
+    world.updateMatrixWorld(true); wInv.copy(world.matrixWorld).invert();
+    let any = false;
+    for (const it of items()) { const n = nodes.get(it.id); if (!n || n.audio || !visible(it) || !n.root.visible) continue; bb.setFromObject(n.root).applyMatrix4(wInv); if (!bb.isEmpty()) { if (surface && !any) b.copy(bb); else b.union(bb); any = true; } }
+    if (surface && any) b.expandByScalar(0.12);
+    return b;
+  }
+  function setSparks(cfg) { sparkCfg = cfg || null; sparks.set(sparkCfg, sparkBox(), surface ? 0.06 : 0.05); }
+
   function setSurface(on) {
     surface = !!on; lim = surface ? 1.5 : 0.75; img.visible = edge.visible = !surface; grid.visible = surface;
     if (surface) IH = 1.4;   // only for the distance of the view
@@ -187,9 +201,9 @@ export async function createEditor(box, cb) {
   // ---- size and drawing ----
   function resize() { const w = box.clientWidth, h = box.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
   new ResizeObserver(resize).observe(box); resize();
-  const clock = new THREE.Clock();
+  const clock = new THREE.Clock(); let time = 0;
   renderer.setAnimationLoop(() => {
-    const dt = clock.getDelta();
+    const dt = clock.getDelta(); time += dt;
     if (box.offsetParent === null || document.hidden) return;
     if (playT >= 0) playT += dt;
     const shown = items().filter(visible);
@@ -197,14 +211,16 @@ export async function createEditor(box, cb) {
       const n = nodes.get(it.id); if (!n) continue;
       if (!visible(it)) { n.root.visible = false; continue; }
       ESC.place(n, it, playT >= 0 ? (playT - shown.indexOf(it) * ESC.STAGGER) / ESC.DURATION : 1, layer(it));
+      ESC.animate(n, it, time);   // its motion in a loop, if it has one
       n.update(dt);
     }
     if (playT > 3) playT = -1;
     const n = selected && nodes.get(selected);
     sel.visible = !!n && !n.audio && n.root.visible;
     if (sel.visible) sel.setFromObject(n.root);
+    if (sparkCfg) { boxT -= dt; if (boxT <= 0) { boxT = 1; sparks.box.copy(sparkBox()); } sparks.update(dt); }
     orbit.update(); renderer.render(scene, camera);
   });
   setPlace("mesa");
-  return { add, remove, update, updateAll, nodeOf, stand, setImage, setSurface, shot, setPlace, view, setScene, play, select, setMode, resize, videos };
+  return { add, remove, update, updateAll, nodeOf, stand, setImage, setSurface, shot, setPlace, view, setScene, play, select, setMode, resize, videos, setSparks };
 }

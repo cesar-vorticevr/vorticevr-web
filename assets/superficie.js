@@ -21,19 +21,23 @@ function glowing(m) {
   return new THREE.MeshStandardMaterial({ color: 0x000000, map: m.map, emissive: 0xffffff, emissiveMap: m.map, roughness: 1, metalness: 0, transparent: true, alphaTest: 0.02, side: THREE.DoubleSide });
 }
 
-// items → GLB (ArrayBuffer). url(it): its file.
-export async function sceneGLB(items, url) {
+// items → GLB (ArrayBuffer). url(it): its file. sparks: the experience's sparkles ({c, n}) or none.
+// The motions in a loop and the sparkles go in one clip ("magia", 12 s, first, so model-viewer plays it); our Android
+// view plays every clip. Quick Look has no animations: things stay still and the sparkles (scale 0 at rest) do not show.
+const MAGIC_S = 12;
+export async function sceneGLB(items, url, sparks) {
   items = items.filter(i => i.type !== "audio");   // the page plays it
   if (items.some(i => i.type === "text") && !document.getElementById("fonts")) document.head.appendChild(Object.assign(document.createElement("link"), { id: "fonts", rel: "stylesheet", href: ESC.FONT_CSS }));
   const world = new THREE.Group(); world.name = "escena"; world.rotation.x = -Math.PI / 2;   // the editor's floor, lying down
-  const clips = [];
+  const clips = [], magic = [];
   const nodes = await Promise.all(items.map(async (it, i) => {
     try { return await ESC.build(it, { url: url(it) }); } catch (e) { console.error(e); return null; }   // one that fails does not stop the rest
   }));
   nodes.forEach((n, i) => {
     if (!n) return;
     const it = items[i];
-    ESC.place(n, it, 1, i); n.root.name = "e" + i; world.add(n.root);
+    ESC.place(n, it, 1, i); ESC.animate(n, it, 0); n.root.name = "e" + i; world.add(n.root);
+    magic.push(...ESC.bakeMotion(n, it, MAGIC_S, "m" + i));
     n.root.traverse(o => {
       if (!o.isMesh) return;
       if (n.plane) o.material = glowing(o.material);
@@ -50,6 +54,12 @@ export async function sceneGLB(items, url) {
   });
   if (!world.children.length) throw new Error("items");
   world.updateMatrixWorld(true);
+  if (sparks) {   // around the elements, in the floor's space (z up)
+    const box = new THREE.Box3().setFromObject(world).applyMatrix4(world.matrixWorld.clone().invert()).expandByScalar(0.12); box.min.z = Math.max(0, box.min.z);
+    const S = ESC.bakeSparkles(sparks, box, 0.06, MAGIC_S); world.add(S.group); magic.push(...S.tracks);
+    world.updateMatrixWorld(true);
+  }
+  if (magic.length) clips.unshift(new THREE.AnimationClip("magia", MAGIC_S, magic));
   const { GLTFExporter } = await import("three/addons/exporters/GLTFExporter.js");
   return new GLTFExporter().parseAsync(world, { binary: true, animations: clips, onlyVisible: true, maxTextureSize: 2048 });
 }
@@ -105,7 +115,7 @@ export async function run(o) {
   const fail = t => { load.classList.add("err"); load.textContent = t; };
 
   let glb;
-  try { [glb] = await Promise.all([sceneGLB(cfg.items || [], o.url), loadModelViewer()]); }
+  try { [glb] = await Promise.all([sceneGLB(cfg.items || [], o.url, cfg.sparks), loadModelViewer()]); }
   catch (e) { console.error(e); fail("No se pudo cargar la experiencia. Revisa tu conexión y vuelve a abrir el link."); return; }
 
   const mv = document.createElement("model-viewer");
