@@ -67,7 +67,7 @@ const CSS = `
 .mm.low .mm-clock .fg{stroke:#ff5c74}.mm.low .mm-clock span{color:#ff8a9e;animation:mmBeat 1s ease-in-out infinite}
 .mm.low::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 60px rgba(255,60,90,.55);animation:mmEdge 1s ease-in-out infinite}
 @keyframes mmBeat{50%{transform:scale(1.18)}}@keyframes mmEdge{50%{opacity:.35}}
-.mm-board{flex:1;width:100%;display:grid;place-items:center;padding:6px 10px calc(14px + env(safe-area-inset-bottom,0px))}
+.mm-board{flex:1 1 0;min-height:0;width:100%;display:grid;place-items:center;padding:6px 10px calc(14px + env(safe-area-inset-bottom,0px))}
 .mm-grid{display:grid;gap:var(--mm-gap)}
 .mm-c{position:relative;width:var(--mm-w);height:var(--mm-h);perspective:700px;cursor:pointer;border:0;padding:0;background:none}
 .mm-in{position:absolute;inset:0;transition:transform .38s cubic-bezier(.3,1.25,.5,1);transform-style:preserve-3d}
