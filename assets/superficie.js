@@ -133,11 +133,13 @@ export async function run(o) {
     ["interaction-prompt", "none"], ["touch-action", "pan-y"], ["camera-orbit", "0deg 70deg auto"]]) mv.setAttribute(k, v);
   mv.setAttribute("src", URL.createObjectURL(new Blob([glb], { type: "model/gltf-binary" })));
   // iPhone: our USDZ for Quick Look (motions, sparkles and music inside); if it fails, model-viewer makes its own
-  const au0 = (cfg.items || []).find(i => i.type === "audio");
+  // the music on iPhone (test, 21 de octubre de 2026: with Apple's behaviors Quick Look hides its camera button):
+  // ?musica=no → not in the file, the page plays it · ?musica=ambiente → in the file as a plain audio (SpatialAudio)
+  const au0 = (cfg.items || []).find(i => i.type === "audio"), MUSIC = new URLSearchParams(location.search).get("musica");
   let usdzOk = false, usdzWait = null;
   if (IOS) {
     btn.disabled = true; btn.querySelector("span").textContent = "Preparando…";
-    usdzWait = import("./usdz.js").then(U => U.sceneUSDZ(parts.world, parts.magic, au0 ? { url: o.url(au0), loop: au0.loop !== false } : null))
+    usdzWait = import("./usdz.js").then(U => U.sceneUSDZ(parts.world, parts.magic, au0 && MUSIC !== "no" ? { url: o.url(au0), loop: au0.loop !== false, mode: MUSIC === "ambiente" ? "ambiente" : "comportamiento" } : null))
       .then(b => { mv.setAttribute("ios-src", URL.createObjectURL(b)); usdzOk = true; }).catch(e => console.error(e))
       .finally(() => { btn.disabled = false; btn.querySelector("span").textContent = "Verlo en tu espacio"; });
   }
@@ -181,7 +183,7 @@ export async function run(o) {
         .catch(e => { console.error(e); if (sndBtn) sndBtn.hidden = false; note.hidden = false; note.textContent = "No se pudo abrir la cámara. Prueba en Chrome, no dentro de Instagram o WhatsApp."; });
       return;
     }
-    if (usdzOk) { if (audio) audio.pause(); mv.activateAR(); return; }   // Quick Look plays the music from the file
+    if (usdzOk && MUSIC !== "no") { if (audio) audio.pause(); mv.activateAR(); return; }   // Quick Look plays the music from the file
     if (audio) { try { audio.currentTime = 0; } catch (e) {} audio.play().catch(() => {}); }
     mv.activateAR();
   };

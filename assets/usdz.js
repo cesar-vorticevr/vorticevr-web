@@ -48,18 +48,26 @@ export async function sceneUSDZ(world, clip, audio) {
     const r = await fetch(audio.url); if (!r.ok) throw new Error("audio");
     const type = r.headers.get("content-type") || "", ext = /mpeg|mp3/.test(type) ? "mp3" : "m4a";
     files["audio." + ext] = new Uint8Array(await r.arrayBuffer());
+    const anchor = 'token preliminary:planeAnchoring:alignment = "horizontal"\n';
+    if (audio.mode === "ambiente") {   // test: a plain audio of the file (UsdMedia SpatialAudio), without behaviors
+      const prim = `\n\t\tdef SpatialAudio "Musica"\n\t\t{\n\t\t\tuniform asset filePath = @audio.${ext}@\n\t\t\tuniform token auralMode = "nonSpatial"\n\t\t\tuniform token playbackMode = "${audio.loop ? "loopFromStart" : "onceFromStart"}"\n\t\t\tuniform timecode startTime = 0\n\t\t\tdouble gain = 1\n\t\t}\n`;
+      const at = usda.indexOf(anchor); if (at >= 0) usda = usda.slice(0, at + anchor.length) + prim + usda.slice(at + anchor.length);
+      files["model.usda"] = ff.strToU8(usda);
+      return zip(files);
+    }
     const S = "/Root/Scenes/Scene/Musica";
     const play = (name, ind) => `${ind}def Preliminary_Action "${name}"\n${ind}{\n${ind}\trel affectedObjects = </Root/Scenes/Scene>\n${ind}\ttoken info:id = "Audio"\n${ind}\ttoken type = "play"\n${ind}\tasset audio = @audio.${ext}@\n${ind}\tdouble gain = 1\n${ind}\ttoken auralMode = "nonSpatial"\n${ind}\ttoken multiplePerformOperation = "allow"\n${ind}}\n`;
     const action = audio.loop
       ? `\t\t\tdef Preliminary_Action "Repetir"\n\t\t\t{\n\t\t\t\trel actions = [ <${S}/Repetir/Sonar> ]\n\t\t\t\ttoken info:id = "Group"\n\t\t\t\tbool loops = 1\n\t\t\t\tint performCount = 0\n\t\t\t\ttoken type = "serial"\n\n${play("Sonar", "\t\t\t\t")}\t\t\t}\n`
       : play("Sonar", "\t\t\t");
     const behavior = `\n\t\tdef Preliminary_Behavior "Musica"\n\t\t{\n\t\t\trel triggers = [ <${S}/Inicio> ]\n\t\t\trel actions = [ <${S}/${audio.loop ? "Repetir" : "Sonar"}> ]\n\t\t\tuniform bool exclusive = 0\n\n\t\t\tdef Preliminary_Trigger "Inicio"\n\t\t\t{\n\t\t\t\ttoken info:id = "SceneTransition"\n\t\t\t\ttoken type = "enter"\n\t\t\t}\n\n${action}\t\t}\n`;
-    const anchor = 'token preliminary:planeAnchoring:alignment = "horizontal"\n';
     const at = usda.indexOf(anchor); if (at >= 0) usda = usda.slice(0, at + anchor.length) + behavior + usda.slice(at + anchor.length);
   }
   files["model.usda"] = ff.strToU8(usda);
+  return zip(files);
 
   // zip again, model.usda first, each file's data aligned to 64 bytes (an "extra" field pads the local header)
+  function zip(files) {
   const out = {}, order = ["model.usda", ...Object.keys(files).filter(k => k !== "model.usda")];
   let offset = 0;
   for (const name of order) {
@@ -68,4 +76,5 @@ export async function sceneUSDZ(world, clip, audio) {
     offset += head + pad + data.length;
   }
   return new Blob([ff.zipSync(out, { level: 0 })], { type: "model/vnd.usdz+zip" });
+  }
 }
