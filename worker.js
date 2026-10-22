@@ -230,7 +230,7 @@ async function api(request, env, ctx, url) {
   // link page: one tap on a button; prize wheel: spins, each prize that came out, "lose", review… (navigator.sendBeacon); only counted while it is live
   m = path.match(/^\/api\/click\/([a-z0-9-]+)\/([a-z0-9]{1,16})$/);
   if (m && M === "POST") {
-    ctx.waitUntil(env.DB.prepare("INSERT INTO clicks (slug, id, n) SELECT slug, ?, 1 FROM experiences WHERE slug = ? AND paused = 0 AND expires > ? AND (data LIKE '%\"kind\":\"links\"%' OR data LIKE '%\"kind\":\"ruleta\"%' OR data LIKE '%\"kind\":\"dispara\"%' OR data LIKE '%\"kind\":\"memorama\"%' OR data LIKE '%\"kind\":\"sopa\"%') ON CONFLICT(slug, id) DO UPDATE SET n = n + 1")
+    ctx.waitUntil(env.DB.prepare("INSERT INTO clicks (slug, id, n) SELECT slug, ?, 1 FROM experiences WHERE slug = ? AND paused = 0 AND expires > ? AND (data LIKE '%\"kind\":\"links\"%' OR data LIKE '%\"kind\":\"ruleta\"%' OR data LIKE '%\"kind\":\"dispara\"%' OR data LIKE '%\"kind\":\"memorama\"%' OR data LIKE '%\"kind\":\"sopa\"%' OR data LIKE '%\"kind\":\"rompecabezas\"%') ON CONFLICT(slug, id) DO UPDATE SET n = n + 1")
       .bind(m[2], m[1], Date.now()).run().catch(e => console.error("click", e.message)));
     return new Response(null, { status: 204 });
   }
@@ -426,7 +426,7 @@ async function api(request, env, ctx, url) {
     const isNew = !mine;
     if (data.kind === "trivia" && data.trivia.logo && !image && !(mine && (JSON.parse(mine.data || "{}").trivia || {}).logo)) data.trivia.logo = false;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
-    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu" && data.kind !== "links" && data.kind !== "ruleta" && data.kind !== "dispara" && data.kind !== "memorama" && data.kind !== "sopa" && data.kind !== "superficie"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
+    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu" && data.kind !== "links" && data.kind !== "ruleta" && data.kind !== "dispara" && data.kind !== "memorama" && data.kind !== "sopa" && data.kind !== "rompecabezas" && data.kind !== "superficie"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
     if (target && target.size > LIMITS.targetBytes) return json({ error: "La imagen no se pudo preparar. Intenta con otra." }, 400);
     // each element's file: uploaded now (field f_<id>) or kept from the version being edited (same id and type)
@@ -486,7 +486,7 @@ async function api(request, env, ctx, url) {
       .bind(slug, who, data.title, JSON.stringify(data), created, now, expires, mine ? mine.views || 0 : 0).run();
     const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(slug).first();
     const out = ownerExp(row, request, env);
-    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "links" ? "Tu página de links está lista" : data.kind === "ruleta" ? "Tu ruleta de premios está lista" : data.kind === "dispara" ? "Tu juego Dispara y gana está listo" : data.kind === "memorama" ? "Tu memorama está listo" : data.kind === "sopa" ? "Tu sopa de letras está lista" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
+    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "links" ? "Tu página de links está lista" : data.kind === "ruleta" ? "Tu ruleta de premios está lista" : data.kind === "dispara" ? "Tu juego Dispara y gana está listo" : data.kind === "memorama" ? "Tu memorama está listo" : data.kind === "sopa" ? "Tu sopa de letras está lista" : data.kind === "rompecabezas" ? "Tu rompecabezas está listo" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
     return json({ ok: true, experience: out });
   }
 
@@ -834,6 +834,7 @@ function publicKind(row, d) {
   if (d.kind === "colorear") return { slug: row.slug, kind: "colorear", title: row.title, img: d.img, color: d.color, buttons: d.buttons, expires: row.expires };
   if (d.kind === "menu") return { slug: row.slug, kind: "menu", title: row.title, menu: d.menu, items: d.items || [], buttons: d.buttons, updated: row.updated, expires: row.expires };
   if (d.kind === "links") return { slug: row.slug, kind: "links", title: row.title, links: d.links, items: d.items || [], updated: row.updated, expires: row.expires };
+  if (d.kind === "rompecabezas") return { slug: row.slug, kind: "rompecabezas", title: row.title, img: d.img, rompecabezas: d.rompecabezas, updated: row.updated, expires: row.expires };
   if (d.kind === "sopa") return { slug: row.slug, kind: "sopa", title: row.title, sopa: d.sopa, updated: row.updated, expires: row.expires };
   if (d.kind === "memorama") return { slug: row.slug, kind: "memorama", title: row.title, memorama: d.memorama, items: d.items || [], updated: row.updated, expires: row.expires };
   if (d.kind === "dispara") return { slug: row.slug, kind: "dispara", title: row.title, dispara: d.dispara, items: d.items || [], updated: row.updated, expires: row.expires };
@@ -1344,6 +1345,18 @@ function cleanSopa(d) {
   const sub = String(d.sub || "").replace(/\r/g, "").trim().slice(0, 160); if (sub) sopa.sub = sub;
   return { sopa };
 }
+// Rompecabezas (assets/rompecabezas.js): a jigsaw of the experience's image (exp/<slug>/image, its size in img), cut on
+// the phone each game. level = facil (6 pieces) | normal (12) | dificil (20) | experto (35); time in seconds (0 = no limit);
+// info = an optional "¿Sabías que…?" shown with the whole picture at the end. Plays, wins and shares are counted in clicks.
+const PUZZLE = { times: [0, 60, 120, 180, 300], levels: ["facil", "normal", "dificil", "experto"] };
+function cleanPuzzle(d) {
+  d = d || {};
+  const p = { level: PUZZLE.levels.includes(d.level) ? d.level : "normal", time: PUZZLE.times.includes(Number(d.time)) ? Number(d.time) : 0, color: HEX.test(String(d.color || "")) ? String(d.color).toLowerCase() : "#8b3fd6" };
+  const nm = String(d.name || "").replace(/\s+/g, " ").trim().slice(0, 80); if (nm) p.name = nm;   // on its screens (the experience title is apart)
+  const sub = String(d.sub || "").replace(/\r/g, "").trim().slice(0, 160); if (sub) p.sub = sub;
+  const info = String(d.info || "").replace(/\r/g, "").trim().slice(0, 300); if (info) p.info = info;
+  return { rompecabezas: p };
+}
 // the contact card ("Guardar contacto"), with the profile picture when it is a JPEG
 async function vcard(env, row, request) {
   const d = JSON.parse(row.data || "{}"), lk = d.links || {}, c = lk.contact || {};
@@ -1408,6 +1421,7 @@ function cleanMeta(m, P) {
   const img = { w: num(m.img && m.img.w, 50, 8000), h: num(m.img && m.img.h, 50, 8000) };
   if (!img.w || !img.h) return { error: "Faltan las medidas de la imagen." };
   if (m.kind === "colorear") return { kind: "colorear", title, img, color: cleanColor(m.color), items: [], buttons };
+  if (m.kind === "rompecabezas") return { kind: "rompecabezas", title, img, rompecabezas: cleanPuzzle(m.rompecabezas).rompecabezas, items: [], buttons: {} };
   const ci = cleanItems(m.items, P);
   if (ci.error) return ci;
   // on the floor or a table (img = the picture of the scene for Mi cuenta): 3D, images and texts, one scene, no links

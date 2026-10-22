@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Crea tu rompecabezas · Vórtice VR</title>
+<meta name="description" content="Un rompecabezas para armar en el celular con tu imagen, con link y QR propios: piezas de verdad, contra el reloj o sin prisa, para clases, eventos y tu marca.">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../../assets/icono.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Jigsaw puzzle maker: the picture (their own or one drawn here), the pieces, the time, an optional fact for the end and
+   the color; a phone with the live game on the right (above on a phone). The game itself is assets/rompecabezas.js. */
+:root{--void:#05020b;--panel:rgba(20,9,40,.7);--line:rgba(190,150,255,.2);--line2:rgba(190,150,255,.45);--vortex:#8b3fd6;--vortex-d:#5a1f8f;--lav:#d2b8ff;--ink:#f2ecff;--mute:#a99bcb;--sun:#ffbe55;--ok:#74e8ba;--bad:#ff8a9e;
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55;min-height:100vh}
+a{color:var(--lav)}
+:focus-visible{outline:2px solid var(--lav);outline-offset:3px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1180px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 8px}
+header img{height:38px;width:auto;display:block}
+@media (max-width:480px){header img{height:28px}}
+header a.back{font-family:var(--fd);font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--mute)}
+header .acts{display:flex;align-items:center;gap:14px}
+.mybtn{font-family:var(--fd);font-weight:600;letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;border:1px solid var(--line2);border-radius:999px;padding:9px 14px;background:rgba(139,63,214,.2);color:var(--ink);cursor:pointer;text-decoration:none}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+@media (max-width:480px){.wrap{padding:0 16px 80px}}
+.hero{padding:28px 0 26px}
+.kick{font-family:var(--fd);font-size:.78rem;letter-spacing:.26em;text-transform:uppercase;color:var(--sun);font-weight:600}
+h1{font-family:var(--fd);font-size:clamp(2rem,5vw,3.2rem);line-height:1.02;margin:8px 0 10px;text-wrap:balance}
+.hero p{margin:0;color:var(--mute);max-width:62ch}
+.allx{display:inline-flex;align-items:center;gap:6px;margin:12px 16px 0 0;font:600 .85rem var(--fd);color:var(--lav);text-decoration:none}
+.step{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:20px;margin-bottom:16px}
+@media (max-width:480px){.step{padding:16px}}
+.step h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font-family:var(--fd);font-size:1.2rem}
+.step h2 .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--fm);font-size:.85rem;background:rgba(139,63,214,.3);border:1px solid var(--line2);flex:none}
+.step h2 .n.done{background:var(--ok);color:#0b2a1e;border-color:var(--ok)}
+.step>p.hint{margin:0 0 14px;color:var(--mute);font-size:.92rem}
+.bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--vortex),var(--sun));transition:width .2s}
+.msg{font-size:.88rem;margin-top:8px}
+.msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+label.f{display:block;font-size:.8rem;font-family:var(--fd);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:12px 0 6px}
+input[type=text],textarea{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:10px 12px}
+textarea{resize:vertical;min-height:60px}
+input:focus,textarea:focus{border-color:var(--lav);outline:none}
+.slugrow{display:flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:rgba(5,2,11,.7);overflow:hidden}
+.slugrow input{border:0;background:transparent;border-radius:0;text-align:right;padding-right:2px;min-width:0}
+.slugrow span{padding:11px 12px 11px 0;color:var(--mute);white-space:nowrap;font-family:var(--fm);font-size:.9rem}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{font:600 .85rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--fd);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:.85rem;border:1px solid var(--line2);border-radius:999px;padding:13px 22px;color:var(--ink);background:rgba(20,9,40,.6);cursor:pointer;text-decoration:none}
+.btn.sm{padding:8px 13px;font-size:.72rem}
+.btn.primary{background:linear-gradient(135deg,var(--vortex),var(--vortex-d));border-color:var(--lav);box-shadow:0 0 26px rgba(139,63,214,.45)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.note{font-size:.85rem;color:var(--mute)}
+.legal{font-size:.8rem;color:var(--mute);margin-top:10px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:28px;align-items:start}
+.side{position:sticky;top:16px}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.side{position:static;order:-1}}
+.colors{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.colors button{width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.25);cursor:pointer;padding:0}
+.colors button[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 3px var(--vortex)}
+.colors input[type=color]{width:40px;height:34px;border:1px solid var(--line2);border-radius:8px;background:none;padding:2px;cursor:pointer}
+/* the picture */
+.drop{position:relative;border:1.5px dashed var(--line2);border-radius:14px;background:rgba(5,2,11,.45);min-height:150px;display:grid;place-items:center;overflow:hidden}
+.drop.over{border-color:var(--lav);background:rgba(139,63,214,.18)}
+.drop img{display:block;width:100%;max-height:340px;object-fit:contain;cursor:pointer;background:#000}
+.drop .dz{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:18px}
+.drop .dz b{font-family:var(--fd)}.drop .dz span{font-size:.88rem;color:var(--mute)}
+.drop.has .dz{position:absolute;right:10px;bottom:10px;padding:0}.drop.has .dz b,.drop.has .dz span{display:none}
+/* templates */
+.tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.tpls button{border:2px solid var(--line);border-radius:14px;background:rgba(5,2,11,.5);color:var(--ink);cursor:pointer;padding:8px 8px 10px;font:600 .88rem var(--fd);display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.tpls button[aria-pressed="true"]{border-color:var(--sun);box-shadow:0 0 0 3px rgba(255,190,85,.2)}
+.tpls .tp{display:block;width:100%;aspect-ratio:4/3;border-radius:8px;background:rgba(139,63,214,.18);overflow:hidden}
+.tpls .tp img{width:100%;height:100%;object-fit:cover;display:block}
+/* stats */
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.stats div{flex:1;min-width:120px;padding:10px 14px;border-radius:12px;background:rgba(255,190,85,.07);border:1px solid rgba(255,190,85,.35)}
+.stats b{display:block;font:700 1.3rem var(--fd);color:var(--sun)}
+.stats span{font-size:.82rem;color:var(--mute)}
+/* phone */
+.pv{border:1px solid var(--line2);border-radius:18px;background:#120826;padding:14px}
+.pv h3{margin:0 0 10px;font-family:var(--fd);font-size:1rem;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pv h3 small{font:500 .78rem var(--fb);color:var(--mute)}
+.phone{position:relative;margin:0 auto;width:100%;max-width:360px;height:min(72vh,700px);border-radius:34px;border:9px solid #1d1430;background:#000;overflow:hidden;box-shadow:0 30px 60px -30px rgba(139,63,214,.7)}
+@media (max-width:900px){.phone{height:min(70vh,620px)}}
+.phone .screen{position:absolute;inset:0}
+</style>
+</head>
+<body>
+<header><a href="../../" aria-label="Vórtice VR, inicio"><img src="../../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a class="mybtn" href="../../cuenta/">Mi cuenta</a><a class="back" href="../../">← Sitio</a></div></header>
+<main class="wrap">
+  <div class="hero">
+    <span class="kick" id="kick">Gratis · prueba de 15 días</span>
+    <h1>Crea tu rompecabezas</h1>
+    <p>Un rompecabezas para armar en el celular con tu imagen: piezas de verdad que se arrastran a su lugar, contra el reloj o sin prisa. Al terminar puedes mostrar un dato para aprender. Para clases, eventos y tu marca.</p>
+    <a class="allx" href="../">← Todas las experiencias</a>
+  </div>
+  <div class="grid">
+    <div>
+      <section class="step" id="full" hidden>
+        <h2>Ya usaste todas tus experiencias</h2>
+        <p class="hint" id="fullText"></p>
+        <div class="row"><a class="btn" href="../../cuenta/#planes">Ver planes</a><a class="btn" href="../../cuenta/">Ir a mi cuenta</a></div>
+      </section>
+
+      <section class="step" id="statsBox" hidden>
+        <h2>✦ Cómo va tu rompecabezas</h2>
+        <div class="stats" id="stats"></div>
+      </section>
+
+      <section class="step" id="s1">
+        <h2><span class="n" id="n1">1</span>Tu imagen</h2>
+        <div class="drop" id="drop">
+          <img id="picPrev" alt="" hidden>
+          <div class="dz"><b>Sube tu imagen</b><span>Una foto, un mapa, una obra de arte, tu producto… JPG, PNG o WebP.</span><button class="btn sm primary" type="button" id="upBtn">Elegir imagen</button></div>
+        </div>
+        <input type="file" id="upFile" accept="image/png,image/webp,image/jpeg" hidden>
+        <p class="note" style="margin:8px 0 0">Las imágenes con muchos colores y detalles son más fáciles de armar; las de un solo color, muy difíciles.</p>
+        <label class="f">O usa una de las nuestras</label>
+        <div class="tpls" id="tpls"></div>
+        <label class="f" for="dname">Nombre del juego</label>
+        <input type="text" id="dname" maxlength="80" placeholder="Ej. Arma el sistema solar">
+        <label class="f" for="sub">Instrucción corta (opcional)</label>
+        <textarea id="sub" maxlength="160" rows="2" placeholder="Ej. Arma la imagen y descubre un dato curioso."></textarea>
+      </section>
+
+      <section class="step" id="s2">
+        <h2><span class="n done">2</span>Piezas y tiempo</h2>
+        <div class="seg" id="levelSeg"></div>
+        <p class="note" id="levelHint" style="margin:8px 0 14px"></p>
+        <label class="f">Tiempo con reloj</label>
+        <div class="seg" id="timeSeg"></div>
+        <p class="note" style="margin:10px 0 0">Quien juega elige al empezar si juega con reloj o sin tiempo. Cada vez que alguien juega, las piezas se cortan distinto. Cada pieza vale 50 puntos, poner otra en menos de 4 segundos suma 25 y terminar antes suma 5 por cada segundo que sobre.</p>
+      </section>
+
+      <section class="step" id="s3">
+        <h2><span class="n done">3</span>Al terminar (opcional)</h2>
+        <label class="f" for="info" style="margin-top:0">¿Sabías que…?</label>
+        <textarea id="info" maxlength="300" rows="3" placeholder="Ej. Júpiter es tan grande que le cabrían más de 1,300 Tierras."></textarea>
+        <div class="note">Sale junto a la imagen completa cuando terminan de armarla: un dato, una pregunta para la clase o tu promoción.</div>
+      </section>
+
+      <section class="step" id="s4">
+        <h2><span class="n done">4</span>Color</h2>
+        <div class="colors" id="colors"></div>
+        <p class="note" style="margin:8px 0 0">El fondo del juego.</p>
+      </section>
+
+      <section class="step" id="s5">
+        <h2><span class="n" id="n5">5</span>Título y link</h2>
+        <label class="f" for="title" style="margin-top:0">Título de la experiencia</label>
+        <input type="text" id="title" maxlength="80" placeholder="Ej. Rompecabezas del sistema solar">
+        <div class="note">Es solo para ti: así la ves en Mi cuenta.</div>
+        <label class="f" for="slug">Tu link</label>
+        <div class="slugrow"><input type="text" id="slug" maxlength="30" placeholder="tu-rompecabezas" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="root">.vorticevr.mx</span></div>
+        <div class="msg" id="mSlug"></div>
+      </section>
+      <section class="step" id="sMarca" hidden></section>
+      <section class="step" id="s6">
+        <h2><span class="n" id="n6">6</span>Publicar</h2>
+        <div id="mine" hidden style="margin:0 0 12px"></div>
+        <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
+        <button class="btn primary" id="publish" type="button" disabled>Publicar mi rompecabezas</button>
+        <div class="bar" id="bPub" hidden><i></i></div><div class="msg" id="mPub"></div>
+        <p class="legal">Al publicar confirmas que tienes derecho a usar la imagen que subas. Vórtice VR puede retirar contenido inapropiado (<a href="../../terminos/">términos</a>). <span id="legalDays">La experiencia se borra a los 15 días; puedes editarla o borrarla desde tu cuenta.</span></p>
+      </section>
+    </div>
+    <aside class="side">
+      <div class="pv">
+        <h3>Vista previa <small>toca ¡Jugar! y pruébalo</small></h3>
+        <div class="phone"><div class="screen" id="screen"></div></div>
+        <p class="note" style="margin:10px 0 0">Así se ve en el celular de quien abre tu link.</p>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="../../assets/marca.js"></script>
+<script src="../../assets/plataforma.js" data-api="../.."></script>
+<script type="module">
+import { run, TIMES, LEVELS, gridFor } from "../../assets/rompecabezas.js";
+const $=id=>document.getElementById(id);
+const API=VVR.api;
+const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
+$("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
+const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const loadImg=src=>new Promise((ok,bad)=>{ const i=new Image(); i.crossOrigin="anonymous"; i.onload=()=>ok(i); i.onerror=bad; i.src=src; });
+const art=k=>`../../assets/filtros/${k}.webp`;
+// S.pic = the picture to publish: {blob, url, w, h} (new) or {url, w, h, old: true} (the published one)
+const S={token:null,email:null,mine:null,tpl:"solar",pic:null,
+  d:{level:"normal",time:120,color:"#2c3e8f",sub:"",info:""}};
+
+// ---------- ready-made pictures, drawn here (1200 × 900) ----------
+const seeded=s=>()=>((s=Math.imul(s^s>>>15,1|s)+0x6D2B79F5|0,(s^s>>>7)>>>0)/4294967296);
+async function drawArt(x,key,cx,cy,w,rot=0,flip=false){ const im=await loadImg(art(key)), h=w*im.naturalHeight/im.naturalWidth; x.save(); x.translate(cx,cy); x.rotate(rot); if(flip) x.scale(-1,1); x.drawImage(im,-w/2,-h/2,w,h); x.restore(); return h; }
+const TPL={
+  solar:{t:"Sistema solar",name:"Arma el sistema solar",color:"#2c3e8f",info:"El Sol es una estrella y tiene el 99.8 % de toda la masa del sistema solar. Júpiter es el planeta más grande: le cabrían más de 1,300 Tierras.",
+    async draw(x){ const r=seeded(7), g=x.createRadialGradient(600,450,80,600,450,900); g.addColorStop(0,"#1b2457"); g.addColorStop(1,"#03040f"); x.fillStyle=g; x.fillRect(0,0,1200,900);
+      for(let i=0;i<420;i++){ x.globalAlpha=.3+r()*.7; x.fillStyle="#fff"; x.beginPath(); x.arc(r()*1200,r()*900,r()*1.8+.3,0,7); x.fill(); } x.globalAlpha=1;
+      const s=x.createRadialGradient(-60,450,40,-60,450,330); s.addColorStop(0,"#fff6c4"); s.addColorStop(.35,"#ffd23f"); s.addColorStop(.8,"#ff8a1f"); s.addColorStop(1,"rgba(255,90,0,0)"); x.fillStyle=s; x.beginPath(); x.arc(-60,450,330,0,7); x.fill();
+      const P=[["Mercurio",318,17,"#b9b1a6"],["Venus",405,28,"#e8c27a"],["Tierra",505,30,"#3d8bff"],["Marte",595,22,"#e0583a"],["Júpiter",730,76,"#d9a066"],["Saturno",905,60,"#e8d08f"],["Urano",1035,40,"#8fe3e8"],["Neptuno",1140,38,"#4a6cff"]];
+      x.strokeStyle="rgba(255,255,255,.12)"; x.lineWidth=2; for(const p of P){ x.beginPath(); x.arc(-60,450,p[1]+60,-.5,.5); x.stroke(); }
+      x.textAlign="center"; x.textBaseline="top";
+      P.forEach(([n,px,rad,col],i)=>{ const gg=x.createRadialGradient(px-rad*.4,450-rad*.4,rad*.1,px,450,rad); gg.addColorStop(0,"#fff"); gg.addColorStop(.25,col); gg.addColorStop(1,"#111");
+        if(n==="Saturno"){ x.save(); x.strokeStyle="#cdb57a"; x.lineWidth=7; x.beginPath(); x.ellipse(px,450,rad*1.9,rad*.5,-.3,0,7); x.stroke(); x.restore(); }
+        x.fillStyle=gg; x.beginPath(); x.arc(px,450,rad,0,7); x.fill();
+        if(n==="Júpiter"){ x.save(); x.clip(); x.globalAlpha=.35; x.fillStyle="#8a5a2b"; for(let k=-2;k<=2;k++) x.fillRect(px-rad,450+k*20-4,rad*2,8); x.restore(); }
+        if(n==="Saturno"){ x.save(); x.strokeStyle="#cdb57a"; x.lineWidth=7; x.beginPath(); x.ellipse(px,450,rad*1.9,rad*.5,-.3,Math.PI*1.05,Math.PI*1.95); x.stroke(); x.restore(); }
+        // names one below, one above, so they do not run into each other
+        x.fillStyle="#fff"; x.font="700 26px Sora, sans-serif"; const off=Math.max(rad,30)+(n==="Saturno"?22:0)+22; x.textBaseline=i%2?"bottom":"top"; x.fillText(n,px,i%2?450-off:450+off); x.textBaseline="top"; });
+      x.font="800 64px Sora, sans-serif"; x.fillStyle="#ffd27f"; x.fillText("SISTEMA SOLAR",640,70);
+      x.font="600 30px Sora, sans-serif"; x.fillStyle="#fff"; x.textAlign="left"; x.fillText("Sol",30,640); }},
+  muertos:{t:"Día de Muertos",name:"Arma la ofrenda",color:"#e4007c",info:"El Día de Muertos es Patrimonio Cultural Inmaterial de la Humanidad (UNESCO, 2008). Con su color y su aroma, la flor de cempasúchil guía a las almas.",
+    async draw(x){ const r=seeded(3), g=x.createLinearGradient(0,0,0,900); g.addColorStop(0,"#e4007c"); g.addColorStop(1,"#3b0a6b"); x.fillStyle=g; x.fillRect(0,0,1200,900);
+      for(let i=0;i<26;i++) await drawArt(x,"particula-petalo",r()*1200,200+r()*700,40+r()*40,r()*6);
+      await drawArt(x,"papel-picado",600,110,1240);
+      for(const [cx,cy,w] of [[150,700,230],[1050,700,230],[300,820,170],[900,820,170],[90,420,150],[1110,420,150]]) await drawArt(x,"particula-cempasuchil",cx,cy,w,r()*2);
+      await drawArt(x,"particula-calaverita",600,540,470);
+      await drawArt(x,"sombrero-copa",600,300,300,-.08); }},
+  navidad:{t:"Navidad",name:"Arma la Navidad",color:"#c8102e",info:"La flor de Nochebuena es originaria de México; los mexicas la llamaban cuetlaxóchitl.",
+    async draw(x){ const r=seeded(11), g=x.createRadialGradient(600,500,60,600,500,900); g.addColorStop(0,"#1f7a4d"); g.addColorStop(1,"#08281a"); x.fillStyle=g; x.fillRect(0,0,1200,900);
+      for(let i=0;i<34;i++) await drawArt(x,"particula-copo",r()*1200,r()*900,26+r()*40,r()*6);
+      await drawArt(x,"luces-navidad",600,90,1200);
+      await drawArt(x,"esquina-pino",170,740,380); await drawArt(x,"esquina-pino",1030,740,380,0,true);
+      for(const [cx,cy,w] of [[330,420,120],[870,420,120],[460,760,110],[740,760,110]]) await drawArt(x,"particula-esfera",cx,cy,w,r()-.5);
+      await drawArt(x,"gorro-santa",600,470,520,-.1);
+      await drawArt(x,"particula-estrella",600,230,120); }},
+  fiesta:{t:"Fiesta",name:"Arma la fiesta",color:"#8b3fd6",info:"",
+    async draw(x){ const r=seeded(5), g=x.createLinearGradient(0,0,1200,900); g.addColorStop(0,"#8b3fd6"); g.addColorStop(1,"#ff8a3d"); x.fillStyle=g; x.fillRect(0,0,1200,900);
+      for(let i=0;i<30;i++) await drawArt(x,i%2?"particula-serpentina":"particula-estrella",r()*1200,200+r()*700,40+r()*50,r()*6);
+      await drawArt(x,"guirnalda-banderines",600,110,1240);
+      await drawArt(x,"esquina-globos",190,700,380); await drawArt(x,"esquina-globos",1010,700,380,0,true);
+      await drawArt(x,"gorro-fiesta",600,330,250,.12);
+      await drawArt(x,"lentes-vortice",600,560,560); }},
+};
+async function tplBlob(k){ const c=document.createElement("canvas"); c.width=1200; c.height=900; const x=c.getContext("2d"); await document.fonts.load("800 64px Sora"); await TPL[k].draw(x);
+  const b=await new Promise(r=>c.toBlob(r,"image/webp",.9)); return {blob:b&&b.type==="image/webp"?b:await new Promise(r=>c.toBlob(r,"image/jpeg",.9)),w:1200,h:900}; }
+const thumbs={};
+async function drawTpls(){
+  $("tpls").innerHTML=Object.entries(TPL).map(([k,T])=>`<button type="button" data-t="${k}" aria-pressed="${S.tpl===k}"><span class="tp">${thumbs[k]?`<img src="${thumbs[k]}" alt="">`:""}</span>${esc(T.t)}</button>`).join("");
+}
+async function makeThumbs(){ for(const k of Object.keys(TPL)){ if(thumbs[k]) continue; try{ const r=await tplBlob(k); thumbs[k]=URL.createObjectURL(r.blob); if(S.tpl===k&&!S.pic) setPic({...r,url:thumbs[k]}); drawTpls(); }catch(e){ console.error(e); } } }
+$("tpls").addEventListener("click",async e=>{ const b=e.target.closest("[data-t]"); if(!b) return; const k=b.dataset.t, T=TPL[k];
+  S.tpl=k; drawTpls(); const r=await tplBlob(k); setPic({...r,url:thumbs[k]||URL.createObjectURL(r.blob)});
+  if(!$("dname").dataset.touched) $("dname").value=T.name; if(!$("info").dataset.touched){ $("info").value=T.info; S.d.info=T.info; } S.d.color=T.color; drawColors(); changed(); });
+
+// ---------- 1. the picture ----------
+function setPic(p){ S.pic=p; const im=$("picPrev"); im.src=p.url; im.hidden=false; $("drop").classList.add("has"); changed(); }
+async function shrink(file,max){
+  const url=URL.createObjectURL(file); const im=await loadImg(url); URL.revokeObjectURL(url);
+  const k=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)), c=document.createElement("canvas"); c.width=Math.round(im.naturalWidth*k); c.height=Math.round(im.naturalHeight*k);
+  c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+  let b=await new Promise(r=>c.toBlob(r,"image/webp",.88)); if(!b||b.type!=="image/webp") b=await new Promise(r=>c.toBlob(r,"image/jpeg",.88));
+  return {blob:b,w:c.width,h:c.height};
+}
+async function takeFile(f){ if(!f) return; if(!/^image\//.test(f.type)){ alert("Usa una imagen JPG, PNG o WebP."); return; }
+  try{ const r=await shrink(f,1600); if(Math.min(r.w,r.h)<300){ alert("La imagen es muy chica: usa una de al menos 300 píxeles por lado."); return; }
+    S.tpl=null; drawTpls(); setPic({...r,url:URL.createObjectURL(r.blob)}); }catch(e){ alert("No pude abrir esa imagen. Usa PNG, JPG o WebP."); } }
+$("upBtn").onclick=()=>$("upFile").click(); $("picPrev").onclick=()=>$("upFile").click();
+$("upFile").addEventListener("change",e=>{ const f=e.target.files[0]; e.target.value=""; takeFile(f); });
+$("drop").addEventListener("dragover",e=>{ e.preventDefault(); $("drop").classList.add("over"); });
+$("drop").addEventListener("dragleave",()=>$("drop").classList.remove("over"));
+$("drop").addEventListener("drop",e=>{ e.preventDefault(); $("drop").classList.remove("over"); takeFile(e.dataTransfer.files[0]); });
+$("dname").addEventListener("input",()=>{ $("dname").dataset.touched="1"; changed(); });
+$("sub").addEventListener("input",()=>{ S.d.sub=$("sub").value; changed(); });
+$("info").addEventListener("input",()=>{ $("info").dataset.touched="1"; S.d.info=$("info").value; changed(); });
+
+// ---------- 2. pieces and time · 4. color ----------
+function drawLevel(){ $("levelSeg").innerHTML=Object.entries(LEVELS).map(([k,L])=>`<button type="button" data-v="${k}" aria-pressed="${S.d.level===k}">${L.t} · ${L.n} piezas</button>`).join("");
+  const L=LEVELS[S.d.level], g=S.pic?gridFor(S.pic.w/S.pic.h,L.n):null;
+  $("levelHint").textContent=(g?`Con tu imagen salen ${g.cols*g.rows} piezas (${g.cols} × ${g.rows}). `:"")+(L.ghost?"La imagen se ve tenue en el tablero como guía.":"Sin guía en el tablero: solo con el botón «Ver la imagen»."); }
+$("levelSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.d.level=b.dataset.v; drawLevel(); changed(); });
+const tLabel=t=>t>=120?`${t/60} minutos`:`${t} segundos`;
+function drawTime(){ $("timeSeg").innerHTML=TIMES.map(t=>`<button type="button" data-v="${t}" aria-pressed="${S.d.time===t}">${tLabel(t)}</button>`).join(""); }
+$("timeSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.d.time=+b.dataset.v; drawTime(); changed(); });
+const COLORS=["#2c3e8f","#8b3fd6","#1f8fd6","#2fb67c","#ff8a3d","#c8102e","#e4007c","#ffbe55","#16151a"];
+function drawColors(){ const box=$("colors"); box.innerHTML=COLORS.map(c=>`<button type="button" style="background:${c}" data-c="${c}" aria-label="Color ${c}" aria-pressed="${c===S.d.color}"></button>`).join("")+`<input type="color" value="${S.d.color}" aria-label="Otro color">`;
+  box.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{ S.d.color=b.dataset.c; drawColors(); changed(); });
+  box.querySelector("input").addEventListener("input",e=>{ S.d.color=e.target.value; box.querySelectorAll("[data-c]").forEach(b=>b.setAttribute("aria-pressed","false")); changed(); }); }
+
+// ---------- live preview ----------
+let app=null, pvT=0, pvPic="";
+function dNow(){ const d=S.d; return {name:$("dname").value.trim(),sub:d.sub.trim(),level:d.level,time:d.time,color:d.color,info:d.info.trim()}; }
+function cfgNow(){ return {slug:"vista-previa",title:$("dname").value.trim()||"Tu rompecabezas",img:S.pic?{w:S.pic.w,h:S.pic.h}:{w:4,h:3},rompecabezas:dNow()}; }
+function brand(){ const mk=S.marca&&S.marca.get(); if(mk&&mk.brand==="none") return null;
+  if(mk&&mk.brand==="own"&&mk.preview) return {src:mk.preview,own:true};
+  return {src:"../../assets/logo-vorticevr-blanco.png"}; }
+function preview(){ if(!S.pic) return; if(app) app.destroy(); pvPic=S.pic.url; app=run({root:$("screen"),cfg:cfgNow(),image:S.pic.url,brand:brand(),embedded:true}); }
+function changed(){ drawLevel(); clearTimeout(pvT); pvT=setTimeout(()=>{ if(!S.pic) return; if(app) app.update(cfgNow(),brand(),S.pic.url); else preview(); },260); check(); }
+
+// ---------- link ----------
+const slugIn=$("slug"); let slugOk=false, slugTimer=0;
+const toSlug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9-]+/g,"-").replace(/-+/g,"-").replace(/^-/,"").slice(0,30);
+$("title").addEventListener("input",()=>{ if(!slugIn.dataset.touched&&!S.mine){ slugIn.value=toSlug($("title").value).replace(/-$/,""); checkSlug(); } check(); });
+slugIn.addEventListener("input",()=>{ const c=slugIn.selectionStart; slugIn.value=toSlug(slugIn.value); slugIn.setSelectionRange(c,c); checkSlug(); });
+slugIn.addEventListener("keydown",()=>slugIn.dataset.touched="1");
+function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false; check(); const s=slugIn.value.replace(/-$/,"");
+  if(s.length<3){ m.className="msg"; m.textContent=""; return; }
+  if(S.mine&&S.mine.slug===s){ slugOk=true; m.className="msg ok"; m.textContent="Es tu link actual."; check(); return; }
+  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); if(!r.ok&&r.suggest&&!slugIn.dataset.touched&&!S.mine){ slugIn.value=r.suggest; checkSlug(); return; } slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
+const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
+
+// ---------- publish ----------
+function problems(){
+  if(!S.pic) return "Sube tu imagen o elige una de las nuestras.";
+  if(!$("dname").value.trim()) return "Escribe el nombre del juego.";
+  if(!$("title").value.trim()) return "Escribe el título de tu experiencia (paso 5).";
+  if(!slugOk) return "Elige un link disponible.";
+  if(!S.token) return "Inicia sesión de nuevo.";
+  const mk=S.marca&&S.marca.get(); if(mk&&!mk.ok) return "Sube el logo de tu marca o elige el de Vórtice VR.";
+  return "";
+}
+function check(){
+  const p=problems();
+  $("n1").classList.toggle("done",!!S.pic&&!!$("dname").value.trim());
+  $("n5").classList.toggle("done",slugOk&&!!$("title").value.trim());
+  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
+}
+$("publish").addEventListener("click",async()=>{
+  const p=problems(); if(p){ check(); return; }
+  const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Preparando…"; bar.hidden=false; bar.firstElementChild.style.width="0%"; $("publish").disabled=true;
+  const fd=new FormData(), meta={kind:"rompecabezas",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),img:{w:S.pic.w,h:S.pic.h},rompecabezas:dNow(),items:[],buttons:{}};
+  const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
+  fd.append("meta",JSON.stringify(meta));
+  if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
+  if(S.pic.blob) fd.append("image",S.pic.blob,"rompecabezas."+(S.pic.blob.type==="image/webp"?"webp":"jpg"));
+  const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc,linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/","Escanea y juega");
+  fd.append("qr",await new Promise(r=>qrc.toBlob(r,"image/png")),"qr.png");
+  m.textContent="Publicando…";
+  const xhr=new XMLHttpRequest(); xhr.open("POST",`${API}/api/publish`); xhr.setRequestHeader("Authorization","Bearer "+S.token);
+  xhr.upload.onprogress=e=>{ if(e.lengthComputable) bar.firstElementChild.style.width=(e.loaded/e.total*100)+"%"; };
+  xhr.onload=()=>{ bar.hidden=true; let j={}; try{ j=JSON.parse(xhr.responseText); }catch(e){}
+    if(xhr.status!==200){ m.className="msg bad"; m.textContent=j.error||"No se pudo publicar."; $("publish").disabled=false; if(xhr.status===401){ VVR.clearSession(); location.href="../../cuenta/?siguiente=crear"; } return; }
+    m.textContent="¡Publicada! Abriendo tu cuenta…"; location.href="../../cuenta/?publicada="+encodeURIComponent(j.experience.slug); };
+  xhr.onerror=()=>{ bar.hidden=true; m.className="msg bad"; m.textContent="Se cortó la conexión. Intenta de nuevo."; $("publish").disabled=false; };
+  xhr.send(fd);
+});
+
+// ---------- start: session, plan, editing ----------
+function drawAll(){ drawTpls(); drawLevel(); drawTime(); drawColors(); }
+(async()=>{
+  const ed=new URLSearchParams(location.search).get("editar");
+  const toLogin=()=>location.replace("../../cuenta/?siguiente=crear");
+  const sess=VVR.session(); if(!sess){ toLogin(); return; }
+  S.token=sess.token; S.email=sess.user&&sess.user.email;
+  if(!ed){ const T=TPL[S.tpl]; $("dname").value=T.name; $("info").value=T.info; S.d.info=T.info; S.d.color=T.color; }
+  drawAll(); check();
+  try{
+    const r=await VVR.call("me"); S.email=r.user.email;
+    const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1}, LIM=r.limit??P.exp, member=r.team&&r.team.role==="member";
+    if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name}`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
+    const exp=ed?r.experiences.find(x=>x.slug===ed):null;
+    if(window.VVRMarca){ S.marca=VVRMarca.mount($("sMarca"),{plan:P,exp,api:API,base:"../../",onChange:()=>{ check(); clearTimeout(pvT); pvT=setTimeout(preview,200); }}); $("sMarca").hidden=false; }
+    if(exp&&exp.kind!=="rompecabezas"){ location.replace((exp.kind==="ra"?"../":"../"+exp.kind+"/")+"?editar="+encodeURIComponent(ed)); return; }
+    if(exp){
+      S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza en el mismo link (tu QR sigue funcionando).`;
+      const M=exp.rompecabezas||{};
+      S.d={level:LEVELS[M.level]?M.level:"normal",time:TIMES.includes(M.time)?M.time:120,color:M.color||"#8b3fd6",sub:M.sub||"",info:M.info||""};
+      S.tpl=null; $("dname").value=M.name||exp.title; $("dname").dataset.touched="1"; $("info").value=S.d.info; $("info").dataset.touched="1"; $("title").value=exp.title; $("sub").value=S.d.sub;
+      slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
+      $("publish").textContent="Guardar cambios";
+      setPic({url:`${API}/m/${exp.slug}/image?v=${exp.updated||""}`,w:(exp.img||{}).w||4,h:(exp.img||{}).h||3,old:true});
+      try{ const k=await VVR.call("clicks/"+encodeURIComponent(exp.slug)), c=k.clicks||{}, n=v=>(v||0).toLocaleString("es-MX");
+        $("stats").innerHTML=`<div><b>${n(exp.views)}</b><span>visitas</span></div><div><b>${n(c.play)}</b><span>partidas</span></div><div><b>${n(c.win)}</b><span>terminados</span></div><div><b>${n(c.share)}</b><span>retaron a alguien</span></div>`;
+        $("statsBox").hidden=false; }catch(e){}
+      drawAll(); preview();
+    } else if(r.experiences.filter(x=>!x.paused).length>=LIM){
+      document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); document.querySelector(".side").hidden=true; $("full").hidden=false;
+      $("fullText").textContent=member?"Tu equipo te asignó todas las que puedes usar. Borra una o pide más a quien administra tu equipo.":`Tu plan ${P.name} incluye ${LIM.toLocaleString("es-MX")} ${LIM===1?"experiencia":"experiencias"}. Borra una desde tu cuenta o mejora tu plan para crear tu rompecabezas.`;
+    }
+  }catch(e){ if(e.status===401){ toLogin(); return; } }
+  check(); makeThumbs();
+})();
+</script>
+<script src="../../assets/magia.js" defer></script>
+</body>
+</html>

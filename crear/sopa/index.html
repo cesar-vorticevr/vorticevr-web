@@ -148,8 +148,9 @@ input:focus,textarea:focus{border-color:var(--lav);outline:none}
         <h2><span class="n done">3</span>Dificultad y tiempo</h2>
         <div class="seg" id="levelSeg"></div>
         <p class="note" id="levelHint" style="margin:8px 0 14px"></p>
+        <label class="f">Tiempo con reloj</label>
         <div class="seg" id="timeSeg"></div>
-        <p class="note" style="margin:10px 0 0">Cada vez que alguien juega se arma una sopa nueva. Cada palabra vale 100 puntos más 10 por letra, encontrar otra rápido suma 50 y terminar antes suma 5 por cada segundo que sobre. Hay 3 pistas por juego.</p>
+        <p class="note" style="margin:10px 0 0">Quien juega elige al empezar si juega con reloj o sin tiempo. Cada vez que alguien juega se arma una sopa nueva. Cada palabra vale 100 puntos más 10 por letra, encontrar otra rápido suma 50 y terminar antes suma 5 por cada segundo que sobre. Hay 3 pistas por juego.</p>
       </section>
 
       <section class="step" id="s4">
@@ -254,7 +255,7 @@ $("addw").addEventListener("click",()=>{ if(S.d.words.length>=MAX) return; S.d.w
 // ---------- 3. level and time · 4. color ----------
 function drawLevel(){ $("levelSeg").innerHTML=Object.entries(LEVELS).map(([k,t])=>`<button type="button" data-v="${k}" aria-pressed="${S.d.level===k}">${t}</button>`).join(""); $("levelHint").textContent=LEVEL_HINT[S.d.level]; }
 $("levelSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.d.level=b.dataset.v; drawLevel(); changed(); });
-function drawTime(){ $("timeSeg").innerHTML=TIMES.map(t=>`<button type="button" data-v="${t}" aria-pressed="${S.d.time===t}">${t?t+" segundos":"Sin tiempo"}</button>`).join(""); }
+function drawTime(){ $("timeSeg").innerHTML=TIMES.map(t=>`<button type="button" data-v="${t}" aria-pressed="${S.d.time===t}">${t} segundos</button>`).join(""); }
 $("timeSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.d.time=+b.dataset.v; drawTime(); changed(); });
 const COLORS=["#2c3e8f","#8b3fd6","#1f8fd6","#2fb67c","#ff8a3d","#c8102e","#e4007c","#ffbe55","#16151a"];
 function drawColors(){ const box=$("colors"); box.innerHTML=COLORS.map(c=>`<button type="button" style="background:${c}" data-c="${c}" aria-label="Color ${c}" aria-pressed="${c===S.d.color}"></button>`).join("")+`<input type="color" value="${S.d.color}" aria-label="Otro color">`;

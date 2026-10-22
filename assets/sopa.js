@@ -2,12 +2,14 @@
 // A word search for the phone: the grid is made again on the phone each game (so playing again is a new puzzle); a word
 // is marked by dragging over it (or tapping its first and last letter). mode = lista (the words are shown) | pistas (only
 // a clue is shown and the word comes out when found: "El planeta rojo" → MARTE). level = facil (→ ↓), normal (+ diagonals),
-// dificil (+ backwards). time = seconds (0 = no limit). The last 5 s go red with a tick; up to 3 hints per game.
+// dificil (+ backwards). time = the seconds of the clock; whoever plays chooses on the first screen to play with it or
+// without it (time 0, from before, starts without it). The last 5 s go red with a tick; up to 3 hints per game. When the
+// time runs out, the words not found are marked in red on the grid and "Ver resultados" opens the end.
 // cfg.sopa = { name, sub, mode, level, time, color, words: [{ w, h? }] } (w as typed: "Papel picado"; the grid uses norm(w)).
 // Saved on the phone: the best score (vvr-sopa-<slug>). Counted: play, win, share (o.onClick).
 import { sfx } from "./sonidos.js";
 
-export const TIMES = [0, 60, 90, 120, 180];
+export const TIMES = [60, 90, 120, 180];
 export const LEVELS = { facil: "Fácil", normal: "Normal", dificil: "Difícil" };
 export const LEVEL_HINT = { facil: "Palabras de izquierda a derecha y de arriba abajo.", normal: "También en diagonal.", dificil: "En todas direcciones, también al revés." };
 export const MODES = { lista: "Ver las palabras", pistas: "Adivinar con pistas" };
@@ -109,6 +111,9 @@ const CSS = `
 .sp-demo span{height:30px;display:grid;place-items:center;position:relative;z-index:1}
 .sp-demo i{position:absolute;left:8px;top:calc(8px + 33px);height:30px;border-radius:15px;background:#ffd27f;width:30px;animation:spDemo 2.6s ease-in-out infinite}
 @keyframes spDemo{0%,15%{width:30px;opacity:.95}55%,85%{width:162px;opacity:.95}100%{width:162px;opacity:0}}
+.sp-tog{display:flex;background:rgba(10,4,22,.55);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:4px;gap:4px}
+.sp-tog button{border:0;border-radius:999px;padding:8px 14px;font:700 .85rem Sora,sans-serif;color:#fff;background:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.sp-tog button[aria-pressed="true"]{background:#fff;color:#1d1430}
 .sp-rules{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 .sp-rules span{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:6px 12px;font-size:.82rem;font-weight:600}
 .sp-btn{font:700 1.05rem Sora,sans-serif;letter-spacing:.06em;border:0;border-radius:999px;padding:15px 34px;color:#2b1300;background:linear-gradient(135deg,#ffd27f,#ff9f3a);box-shadow:0 0 30px rgba(255,190,85,.55);cursor:pointer;display:inline-flex;align-items:center;gap:8px}
@@ -146,10 +151,15 @@ const CSS = `
 .sp-lh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 2px 6px}
 .sp-lh span{font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.65);font-weight:700}
 .sp-hb{display:inline-flex;align-items:center;gap:6px;font:700 .78rem Sora,sans-serif;color:#2b1300;background:#ffd27f;border:0;border-radius:999px;padding:6px 12px;cursor:pointer}
+.sp-hb.g{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3)}
 .sp-hb:disabled{opacity:.4;cursor:default}
 .sp-hb svg{width:14px;height:14px}
 .sp-words{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
 .sp-w{background:rgba(10,4,22,.55);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px 11px;font-weight:700;font-size:.82rem;letter-spacing:.04em;transition:all .3s}
+.sp-grid span.m{color:#c0123a;font-weight:800}
+.sp-miss-l{stroke:#ff5c74;stroke-opacity:.45;stroke-linecap:round;fill:none;animation:spMark .5s cubic-bezier(.3,1.4,.5,1) backwards}
+.sp-w.miss{background:rgba(255,92,116,.25);border-color:#ff5c74}.sp-w.miss b{color:#ff8a9e}
+.sp-res{display:flex;justify-content:center;padding:4px 0 2px}
 .sp-w.done{background:var(--mk);border-color:var(--mk);color:#140a26;text-decoration:line-through;text-decoration-thickness:2px}
 .sp.pistas .sp-words{flex-direction:column;align-items:stretch}
 .sp.pistas .sp-w{border-radius:12px;padding:7px 12px;font-family:"IBM Plex Sans",system-ui,sans-serif;font-weight:600;letter-spacing:0;display:flex;justify-content:space-between;gap:10px;align-items:center}
@@ -206,6 +216,8 @@ export function run(o) {
   const name = () => D().name || cfg.title || "Sopa de letras";
   const words = () => (D().words || []).filter(x => norm(x.w).length >= 2).slice(0, LIMITS.max);
   const timeOf = () => TIMES.includes(Number(D().time)) ? Number(D().time) : 90;
+  // with the clock or without it: whoever plays chooses (it starts as the maker left it)
+  let withTime = Number(D().time) !== 0;
 
   // ---------- intro ----------
   function intro() {
@@ -215,10 +227,12 @@ export function run(o) {
     el.innerHTML = `<div class="sp-scr">${logoHtml()}<div class="sp-card0">
       <div class="sp-demo" aria-hidden="true"><i></i>${demo}</div>
       <h1>${esc(name())}</h1>${d.sub ? `<p>${esc(d.sub)}</p>` : ""}
-      <div class="sp-rules"><span>${n} palabras</span><span>${t ? t + " segundos" : "Sin límite de tiempo"}</span><span>${LEVELS[d.level] || LEVELS.normal}</span>${d.mode === "pistas" ? "<span>Adivina con pistas</span>" : ""}</div>
+      <div class="sp-tog" role="group" aria-label="Tiempo"><button type="button" data-tm="1" aria-pressed="${withTime}">Con tiempo · ${t} s</button><button type="button" data-tm="0" aria-pressed="${!withTime}">Sin tiempo</button></div>
+      <div class="sp-rules"><span>${n} palabras</span><span>${LEVELS[d.level] || LEVELS.normal}</span>${d.mode === "pistas" ? "<span>Adivina con pistas</span>" : ""}</div>
       <p style="font-size:.88rem">Desliza el dedo sobre las letras para marcar cada palabra.</p>
       <button class="sp-btn" type="button" data-go>¡Jugar!</button>${best ? `<span class="sp-best">Tu récord: ${best.toLocaleString("es-MX")} puntos</span>` : ""}</div></div>`;
     el.querySelector("[data-go]").onclick = () => { sfx.tap(); count("play"); play(); };
+    el.querySelectorAll("[data-tm]").forEach(b => b.onclick = () => { withTime = b.dataset.tm === "1"; sfx.tap(); el.querySelectorAll("[data-tm]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); });
   }
 
   // ---------- the game ----------
@@ -231,7 +245,7 @@ export function run(o) {
   }
   function play() {
     clearTimers(); paint(); state = "peek";
-    const d = D(), list = words(), time = timeOf();
+    const d = D(), list = words(), time = withTime ? timeOf() : 0;
     const grid = makeGrid(list.map(x => x.w), LEVELS[d.level] ? d.level : "normal");
     if (!grid) { el.innerHTML = `<div class="sp-scr"><div class="sp-card0"><h1>Son demasiadas letras</h1><p>Quita una palabra o usa palabras más cortas.</p></div></div>`; return; }
     const W8 = list.map((x, i) => ({ i, w: x.w, h: x.h || "", n: norm(x.w), found: false }));
@@ -244,13 +258,14 @@ export function run(o) {
         <svg viewBox="0 0 ${G.n} ${G.n}" aria-hidden="true"><g data-marks></g><g data-temp></g></svg>
         <div class="sp-grid hide">${G.cells.map((c, k) => `<span data-k="${k}" style="transition-delay:${reduced ? 0 : ((k % G.n) + Math.floor(k / G.n)) * 14}ms">${c}</span>`).join("")}</div>
       </div></div></div>
-      <div class="sp-list"><div class="sp-lh"><span>${pistas ? "Adivina y encuentra" : "Encuentra"}</span><button class="sp-hb" type="button" data-hint>${BULB}Pista <b data-hl>3</b></button></div>
+      <div class="sp-list"><div class="sp-lh"><span>${pistas ? "Adivina y encuentra" : "Encuentra"}</span><span style="display:flex;gap:6px">${time ? "" : `<button class="sp-hb g" type="button" data-quit>Me rindo</button>`}<button class="sp-hb" type="button" data-hint>${BULB}Pista <b data-hl>3</b></button></span></div>
         <div class="sp-words">${W8.map(x => `<span class="sp-w" data-w="${x.i}">${pistas ? `${esc(x.h)}<b>${"_ ".repeat(x.n.length).trim()}</b>` : esc(x.w.toUpperCase())}</span>`).join("")}</div></div></div>`;
     layout(); later(layout, 60);
     const area = el.querySelector(".sp-area");
     area.addEventListener("pointerdown", down); area.addEventListener("pointermove", move); area.addEventListener("pointerup", up); area.addEventListener("pointercancel", () => { G.sel = null; drawTemp(); });
     el.querySelector("[data-hint]").onclick = hint;
-    const big = (t, cls = "") => { const s = Object.assign(document.createElement("div"), { className: "sp-big " + cls, innerHTML: t }); el.appendChild(s); later(() => s.remove(), cls ? 1700 : 760); };
+    const quit = el.querySelector("[data-quit]"); if (quit) quit.onclick = () => { if (state === "play" && confirm("¿Ver dónde estaban las palabras que faltan? Se termina el juego.")) { cancelAnimationFrame(raf); reveal(true); } };
+    const big = (t, cls = "") => { if (cls) el.querySelectorAll(".sp-big.s").forEach(x => x.remove()); const s = Object.assign(document.createElement("div"), { className: "sp-big " + cls, innerHTML: t }); el.appendChild(s); later(() => s.remove(), cls ? 1700 : 760); };
     G.big = big;
     const me = G;
     [3, 2, 1].forEach((n, k) => later(() => { if (G !== me) return; sfx.count(); big(String(n)); }, 200 + k * 700));
@@ -265,8 +280,26 @@ export function run(o) {
     const s = Math.ceil(left);
     if (fg) fg.style.strokeDashoffset = String(163.4 * (1 - left / G.time));
     if (s !== G.lastSec) { G.lastSec = s; if (tx) tx.textContent = s; if (s <= 5 && s > 0) { el.classList.add("low"); sfx.tick(1.4); if (navigator.vibrate && !o.embedded) try { navigator.vibrate(25); } catch {} } }
-    if (left <= 0) { end(false); return; }
+    if (left <= 0) { reveal(); return; }
     raf = requestAnimationFrame(tick);
+  }
+  // time is up: the words not found are marked in red where they were; "Ver resultados" opens the end
+  function reveal(quit) {
+    state = "reveal"; G.sel = null; G.anchor = null; drawTemp(); el.classList.remove("low"); sfx.lose();
+    const g = el.querySelector("[data-marks]"), miss = G.list.filter(x => !x.found);
+    miss.forEach((w, i) => {
+      const p = G.places.find(q => q.w === w.n); if (!p) return;
+      const ex = p.x + p.dx * (w.n.length - 1), ey = p.y + p.dy * (w.n.length - 1);
+      g.insertAdjacentHTML("beforeend", `<line class="sp-miss-l" x1="${p.x + .5}" y1="${p.y + .5}" x2="${ex + .5}" y2="${ey + .5}" stroke-width=".78" style="animation-delay:${reduced ? 0 : i * 120}ms"/>`);
+      for (let k = 0; k < w.n.length; k++) { const c = el.querySelector(`[data-k="${(p.y + p.dy * k) * G.n + p.x + p.dx * k}"]`); if (c && !c.classList.contains("f")) c.classList.add("m"); }
+      const chip = el.querySelector(`[data-w="${w.i}"]`); if (chip) { chip.classList.add("miss"); const b = chip.querySelector("b"); if (b) b.textContent = w.w.toUpperCase(); }
+    });
+    G.big(quit ? "Aquí estaban" : "¡Se acabó el tiempo!", "s");
+    const lh = el.querySelector(".sp-lh"); if (lh) lh.querySelector("span").textContent = miss.length ? "En rojo, las que faltaron" : "";
+    el.querySelectorAll("[data-hint],[data-quit]").forEach(b => b.remove());
+    el.querySelector(".sp-list").insertAdjacentHTML("afterbegin", `<div class="sp-res"><button class="sp-btn" type="button" data-res>Ver resultados</button></div>`);
+    el.querySelector("[data-res]").onclick = () => { sfx.tap(); end(false); };
+    el.querySelector(".sp-list").scrollTop = 0;
   }
 
   // ---------- marking a word ----------
@@ -361,7 +394,7 @@ export function run(o) {
     if (won) count("win");
     const usedT = Math.round(G.used || 0), miss = G.list.filter(x => !x.found);
     el.innerHTML = `<div class="sp-scr">${logoHtml()}<div class="sp-card0">
-      <span class="sp-k">${esc(name())}</span><h1>${won ? (st === 3 ? "¡Ojo de águila!" : "¡Las encontraste todas!") : "¡Se acabó el tiempo!"}</h1>
+      <span class="sp-k">${esc(name())}</span><h1>${won ? (st === 3 ? "¡Ojo de águila!" : "¡Las encontraste todas!") : G.time ? "¡Se acabó el tiempo!" : "¡Buen intento!"}</h1>
       <div class="sp-stars">${[0, 1, 2].map(i => STAR(i < st)).join("")}</div>
       <div class="sp-score" data-sc>0</div><span style="margin-top:-6px;color:rgba(255,255,255,.7);font-size:.85rem">puntos</span>
       ${rec ? `<span class="sp-new">¡Nuevo récord!</span>` : best ? `<span class="sp-best">Tu récord: ${best.toLocaleString("es-MX")}</span>` : ""}
@@ -398,7 +431,7 @@ export function run(o) {
   const ro = new ResizeObserver(() => { if (G && state !== "intro" && state !== "over") layout(); }); ro.observe(el);
   intro();
   return {
-    update(c, b) { cfg = c; brand = b === undefined ? brand : b; G = null; intro(); },
+    update(c, b) { cfg = c; withTime = Number(D().time) !== 0; brand = b === undefined ? brand : b; G = null; intro(); },
     destroy() { clearTimers(); ro.disconnect(); el.remove(); },
   };
 }

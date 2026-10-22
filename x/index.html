@@ -269,6 +269,7 @@ async function load(){
   if(CFG.kind==="menu"){ startMenu(); return; }
   if(CFG.kind==="links"){ startLinks(); return; }   // a link page (like Linktree): no camera, it opens right away (assets/links.js)
   if(CFG.kind==="ruleta"){ startRuleta(); return; }   // a prize wheel: no camera, it opens right away (assets/ruleta.js)
+  if(CFG.kind==="rompecabezas"){ startRompecabezas(); return; }   // a jigsaw puzzle of the image, no camera (assets/rompecabezas.js)
   if(CFG.kind==="sopa"){ startSopa(); return; }   // a word search, no camera (assets/sopa.js)
   if(CFG.kind==="memorama"){ startMemorama(); return; }   // a memory game, no camera (assets/memorama.js)
   if(CFG.kind==="dispara"){ startDispara(); return; }   // "Dispara y gana": its own start screen asks for the camera (assets/dispara.js)
@@ -452,6 +453,18 @@ async function startMemorama(){
     const files=new Map((CFG.items||[]).map(i=>[i.id,i.file])), base=CFG.base||location.origin;
     MM.run({root:$("ar"),cfg:CFG,brand,url:location.href.split(/[?#]/)[0],
       src:id=>files.get(id)?`${base}/m/${CFG.slug}/${files.get(id)}?v=${CFG.updated||""}`:"",
+      onClick:id=>{ try{ navigator.sendBeacon(`${base}/api/click/${encodeURIComponent(CFG.slug)}/${encodeURIComponent(id)}`); }catch(e){} }});
+  }catch(e){ console.error(e); message("No se pudo abrir el juego","Revisa tu conexión y vuelve a abrir el link."); }
+}
+async function startRompecabezas(){
+  document.title=(CFG.rompecabezas&&CFG.rompecabezas.name)||CFG.title||"Rompecabezas"; $("intro").hidden=true; $("brand").hidden=true;
+  document.querySelector('meta[name="theme-color"]').content="#0b0418";
+  try{
+    const PZ=await import("/assets/rompecabezas.js");
+    // the logo goes on its screens: Vórtice VR, the brand's own or none (Premium)
+    const brand=CFG.brand==="none"?null:CFG.brand==="own"?{src:`${CFG.base}/m/${CFG.slug}/logo`,own:true}:{src:"/assets/logo-vorticevr-blanco.png",href:"https://vorticevr.mx/"};
+    const base=CFG.base||location.origin;
+    PZ.run({root:$("ar"),cfg:CFG,brand,url:location.href.split(/[?#]/)[0],image:`${base}/m/${CFG.slug}/image?v=${CFG.updated||""}`,
       onClick:id=>{ try{ navigator.sendBeacon(`${base}/api/click/${encodeURIComponent(CFG.slug)}/${encodeURIComponent(id)}`); }catch(e){} }});
   }catch(e){ console.error(e); message("No se pudo abrir el juego","Revisa tu conexión y vuelve a abrir el link."); }
 }

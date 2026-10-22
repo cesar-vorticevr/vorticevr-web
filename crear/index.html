@@ -267,7 +267,7 @@ a.xc.tap{transform:scale(.98);transition-duration:.1s;transition-delay:0s!import
       <a class="xc" data-x="dispara" href="dispara/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🎯</span><h3>Dispara y gana</h3><p>Un juego 360 con la cámara: las cosas vuelan a tu alrededor y les disparas a los malos en 30 segundos. Con tus imágenes y, si quieres, un premio.</p><span class="go">Crear →</span></a>
       <a class="xc" data-x="memorama" href="memorama/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🃏</span><h3>Memorama</h3><p>Encuentra los pares contra el reloj, en el celular: con tus imágenes o tus palabras. Para repasar en clase, eventos y tu marca.</p><span class="go">Crear →</span></a>
       <a class="xc" data-x="sopa" href="sopa/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🔤</span><h3>Sopa de letras</h3><p>Encuentra las palabras deslizando el dedo, o adivínalas con pistas. Una sopa nueva cada vez que se juega.</p><span class="go">Crear →</span></a>
-      <div class="xc soon mys" aria-disabled="true"><span class="tags"><span class="tag">Muy pronto</span></span><span class="ic" aria-hidden="true"><b>?</b></span><h3>Experiencia secreta</h3><p>Pronto aparecerá aquí. Vuelve a asomarte.</p><span class="go">✦ ✦ ✦</span></div>
+      <a class="xc" data-x="rompecabezas" href="rompecabezas/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🧩</span><h3>Rompecabezas</h3><p>Tu imagen en piezas de verdad para armar en el celular, con un dato para aprender al terminar.</p><span class="go">Crear →</span></a>
     </div>
     <p class="cnote">¿Tienes una idea de experiencia para tu negocio o tu escuela? <a href="../?tema=plataforma#contacto">Cuéntanos</a>.</p>
   </section>
@@ -845,7 +845,7 @@ $("publish").addEventListener("click",async()=>{
     const exp=ed?r.experiences.find(x=>x.slug===ed):null;
     if(window.VVRMarca){ S.marca=VVRMarca.mount($("sMarca"),{plan:P,exp,api:API,base:"../",onChange:()=>check()}); $("sMarca").hidden=false; }
     if(exp&&exp.kind==="superficie"&&!S.sf) surfaceMode();
-    if(exp&&(exp.kind==="trivia"||exp.kind==="colorear"||exp.kind==="filtro"||exp.kind==="menu"||exp.kind==="links"||exp.kind==="ruleta"||exp.kind==="dispara"||exp.kind==="memorama"||exp.kind==="sopa")){ location.replace(exp.kind+"/?editar="+encodeURIComponent(ed)); return; }
+    if(exp&&(exp.kind==="trivia"||exp.kind==="colorear"||exp.kind==="filtro"||exp.kind==="menu"||exp.kind==="links"||exp.kind==="ruleta"||exp.kind==="dispara"||exp.kind==="memorama"||exp.kind==="sopa"||exp.kind==="rompecabezas")){ location.replace(exp.kind+"/?editar="+encodeURIComponent(ed)); return; }
     const block=(title,text,editSlug)=>{ document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); $("full").hidden=false;
       $("fullTitle").textContent=title; $("fullText").textContent=text; $("fullEdit").hidden=!editSlug; if(editSlug) $("fullEdit").href="?editar="+encodeURIComponent(editSlug); };
     const inc=LIM===1?"una experiencia a la vez":`${LIM.toLocaleString("es-MX")} experiencias activas`, tiene=member?`Tu equipo te asignó ${inc}`:`Tu plan ${P.name} incluye ${inc}`;
