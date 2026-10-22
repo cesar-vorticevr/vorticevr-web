@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Crea tu sopa de letras · Vórtice VR</title>
+<meta name="description" content="Una sopa de letras para jugar en el celular, con link y QR propios: con tus palabras o con pistas para adivinar, para clases, eventos y tu marca.">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../../assets/icono.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Word search maker: the game, its words (shown, or guessed from a clue), the level, the time and the color; a phone
+   with the live game on the right (above on a phone). The game itself is assets/sopa.js (also at the link). */
+:root{--void:#05020b;--panel:rgba(20,9,40,.7);--line:rgba(190,150,255,.2);--line2:rgba(190,150,255,.45);--vortex:#8b3fd6;--vortex-d:#5a1f8f;--lav:#d2b8ff;--ink:#f2ecff;--mute:#a99bcb;--sun:#ffbe55;--ok:#74e8ba;--bad:#ff8a9e;
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55;min-height:100vh}
+a{color:var(--lav)}
+:focus-visible{outline:2px solid var(--lav);outline-offset:3px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1180px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 8px}
+header img{height:38px;width:auto;display:block}
+@media (max-width:480px){header img{height:28px}}
+header a.back{font-family:var(--fd);font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--mute)}
+header .acts{display:flex;align-items:center;gap:14px}
+.mybtn{font-family:var(--fd);font-weight:600;letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;border:1px solid var(--line2);border-radius:999px;padding:9px 14px;background:rgba(139,63,214,.2);color:var(--ink);cursor:pointer;text-decoration:none}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+@media (max-width:480px){.wrap{padding:0 16px 80px}}
+.hero{padding:28px 0 26px}
+.kick{font-family:var(--fd);font-size:.78rem;letter-spacing:.26em;text-transform:uppercase;color:var(--sun);font-weight:600}
+h1{font-family:var(--fd);font-size:clamp(2rem,5vw,3.2rem);line-height:1.02;margin:8px 0 10px;text-wrap:balance}
+.hero p{margin:0;color:var(--mute);max-width:62ch}
+.allx{display:inline-flex;align-items:center;gap:6px;margin:12px 16px 0 0;font:600 .85rem var(--fd);color:var(--lav);text-decoration:none}
+.step{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:20px;margin-bottom:16px}
+@media (max-width:480px){.step{padding:16px}}
+.step h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font-family:var(--fd);font-size:1.2rem}
+.step h2 .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--fm);font-size:.85rem;background:rgba(139,63,214,.3);border:1px solid var(--line2);flex:none}
+.step h2 .n.done{background:var(--ok);color:#0b2a1e;border-color:var(--ok)}
+.step>p.hint{margin:0 0 14px;color:var(--mute);font-size:.92rem}
+.bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--vortex),var(--sun));transition:width .2s}
+.msg{font-size:.88rem;margin-top:8px}
+.msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+label.f{display:block;font-size:.8rem;font-family:var(--fd);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:12px 0 6px}
+input[type=text],textarea{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:10px 12px}
+textarea{resize:vertical;min-height:60px}
+input:focus,textarea:focus{border-color:var(--lav);outline:none}
+.slugrow{display:flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:rgba(5,2,11,.7);overflow:hidden}
+.slugrow input{border:0;background:transparent;border-radius:0;text-align:right;padding-right:2px;min-width:0}
+.slugrow span{padding:11px 12px 11px 0;color:var(--mute);white-space:nowrap;font-family:var(--fm);font-size:.9rem}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{font:600 .85rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--fd);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:.85rem;border:1px solid var(--line2);border-radius:999px;padding:13px 22px;color:var(--ink);background:rgba(20,9,40,.6);cursor:pointer;text-decoration:none}
+.btn.sm{padding:8px 13px;font-size:.72rem}
+.btn.primary{background:linear-gradient(135deg,var(--vortex),var(--vortex-d));border-color:var(--lav);box-shadow:0 0 26px rgba(139,63,214,.45)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.note{font-size:.85rem;color:var(--mute)}
+.legal{font-size:.8rem;color:var(--mute);margin-top:10px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:28px;align-items:start}
+.side{position:sticky;top:16px}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.side{position:static;order:-1}}
+.colors{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.colors button{width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.25);cursor:pointer;padding:0}
+.colors button[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 3px var(--vortex)}
+.colors input[type=color]{width:40px;height:34px;border:1px solid var(--line2);border-radius:8px;background:none;padding:2px;cursor:pointer}
+/* templates */
+.tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.tpls button{border:2px solid var(--line);border-radius:14px;background:rgba(5,2,11,.5);color:var(--ink);cursor:pointer;padding:10px 8px 12px;font:600 .88rem var(--fd);display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.tpls button[aria-pressed="true"]{border-color:var(--sun);box-shadow:0 0 0 3px rgba(255,190,85,.2)}
+.tpls .mg{position:relative;display:grid;grid-template-columns:repeat(5,14px);grid-auto-rows:14px;padding:4px;border-radius:8px;background:#fffdf8;color:#2a1d44;font:800 .62rem var(--fd)}
+.tpls .mg span{display:grid;place-items:center;position:relative;z-index:1}
+.tpls .mg i{position:absolute;left:4px;top:18px;height:14px;border-radius:7px;width:56px;background:var(--mk,#ffd27f)}
+.tpls .mg.plus{place-items:center;grid-template-columns:70px;grid-auto-rows:42px;font-size:1.4rem;color:var(--vortex)}
+/* words */
+.words{display:grid;gap:8px}
+.wr{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border-radius:14px;background:rgba(5,2,11,.45);border:1px solid var(--line)}
+.wr.two{grid-template-columns:auto minmax(0,1.4fr) minmax(0,1fr) auto}
+@media (max-width:640px){.wr.two{grid-template-columns:auto minmax(0,1fr) auto}.wr.two .hn{grid-column:2;grid-row:1}.wr.two .wd{grid-column:2;grid-row:2}.wr.two .del{grid-column:3;grid-row:1/3}}
+.wr .num{font:700 .8rem var(--fm);color:var(--sun);width:22px;text-align:center}
+.wr .wd{font-family:var(--fd);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.wr .del{width:30px;height:30px;border-radius:8px;border:1px solid transparent;background:none;color:var(--mute);cursor:pointer}
+.wr .del:hover{border-color:var(--bad);color:var(--bad)}
+.wr.bad input.wd{border-color:var(--bad)}
+.wr .why{grid-column:2/-1;font-size:.78rem;color:var(--bad);margin-top:-4px}
+.addp{margin-top:10px;width:100%;border:1.5px dashed var(--line2);border-radius:12px;padding:12px;background:none;color:var(--lav);font:600 .9rem var(--fd);cursor:pointer}
+.addp:hover{border-color:var(--lav);background:rgba(139,63,214,.12)}
+.cnt{font-size:.82rem;color:var(--mute);margin-top:8px}
+/* stats */
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.stats div{flex:1;min-width:120px;padding:10px 14px;border-radius:12px;background:rgba(255,190,85,.07);border:1px solid rgba(255,190,85,.35)}
+.stats b{display:block;font:700 1.3rem var(--fd);color:var(--sun)}
+.stats span{font-size:.82rem;color:var(--mute)}
+/* phone */
+.pv{border:1px solid var(--line2);border-radius:18px;background:#120826;padding:14px}
+.pv h3{margin:0 0 10px;font-family:var(--fd);font-size:1rem;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pv h3 small{font:500 .78rem var(--fb);color:var(--mute)}
+.phone{position:relative;margin:0 auto;width:100%;max-width:360px;height:min(72vh,700px);border-radius:34px;border:9px solid #1d1430;background:#000;overflow:hidden;box-shadow:0 30px 60px -30px rgba(139,63,214,.7)}
+@media (max-width:900px){.phone{height:min(70vh,620px)}}
+.phone .screen{position:absolute;inset:0}
+</style>
+</head>
+<body>
+<header><a href="../../" aria-label="Vórtice VR, inicio"><img src="../../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a class="mybtn" href="../../cuenta/">Mi cuenta</a><a class="back" href="../../">← Sitio</a></div></header>
+<main class="wrap">
+  <div class="hero">
+    <span class="kick" id="kick">Gratis · prueba de 15 días</span>
+    <h1>Crea tu sopa de letras</h1>
+    <p>Una sopa de letras para jugar en el celular: al abrir tu link se arma una nueva cada vez y hay que encontrar todas las palabras deslizando el dedo. Con tus palabras o con pistas para adivinar: para repasar en clase, para un evento o para tu marca.</p>
+    <a class="allx" href="../">← Todas las experiencias</a>
+  </div>
+  <div class="grid">
+    <div>
+      <section class="step" id="full" hidden>
+        <h2>Ya usaste todas tus experiencias</h2>
+        <p class="hint" id="fullText"></p>
+        <div class="row"><a class="btn" href="../../cuenta/#planes">Ver planes</a><a class="btn" href="../../cuenta/">Ir a mi cuenta</a></div>
+      </section>
+
+      <section class="step" id="statsBox" hidden>
+        <h2>✦ Cómo va tu sopa de letras</h2>
+        <div class="stats" id="stats"></div>
+      </section>
+
+      <section class="step" id="s1">
+        <h2><span class="n" id="n1">1</span>Tu juego</h2>
+        <label class="f">Empieza con una plantilla</label>
+        <div class="tpls" id="tpls"></div>
+        <label class="f" for="dname">Nombre del juego</label>
+        <input type="text" id="dname" maxlength="80" placeholder="Ej. Repaso de ciencias · 4° A">
+        <label class="f" for="sub">Instrucción corta (opcional)</label>
+        <textarea id="sub" maxlength="160" rows="2" placeholder="Ej. Encuentra los planetas del sistema solar."></textarea>
+      </section>
+
+      <section class="step" id="s2">
+        <h2><span class="n" id="n2">2</span>Tus palabras</h2>
+        <p class="hint">De 3 a 12 palabras, de hasta 12 letras cada una. Los acentos y espacios no cuentan: «Papel picado» se busca como PAPELPICADO.</p>
+        <label class="f" style="margin-top:0">¿Cómo se juega?</label>
+        <div class="seg" id="modeSeg"></div>
+        <p class="note" id="modeHint" style="margin:8px 0 12px"></p>
+        <div class="words" id="words"></div>
+        <button class="addp" id="addw" type="button">+ Agregar una palabra</button>
+        <div class="cnt" id="cnt"></div>
+      </section>
+
+      <section class="step" id="s3">
+        <h2><span class="n done">3</span>Dificultad y tiempo</h2>
+        <div class="seg" id="levelSeg"></div>
+        <p class="note" id="levelHint" style="margin:8px 0 14px"></p>
+        <div class="seg" id="timeSeg"></div>
+        <p class="note" style="margin:10px 0 0">Cada vez que alguien juega se arma una sopa nueva. Cada palabra vale 100 puntos más 10 por letra, encontrar otra rápido suma 50 y terminar antes suma 5 por cada segundo que sobre. Hay 3 pistas por juego.</p>
+      </section>
+
+      <section class="step" id="s4">
+        <h2><span class="n done">4</span>Color</h2>
+        <div class="colors" id="colors"></div>
+        <p class="note" style="margin:8px 0 0">El fondo del juego y la línea al marcar.</p>
+      </section>
+
+      <section class="step" id="s5">
+        <h2><span class="n" id="n5">5</span>Título y link</h2>
+        <label class="f" for="title" style="margin-top:0">Título de la experiencia</label>
+        <input type="text" id="title" maxlength="80" placeholder="Ej. Sopa de letras de ciencias">
+        <div class="note">Es solo para ti: así la ves en Mi cuenta.</div>
+        <label class="f" for="slug">Tu link</label>
+        <div class="slugrow"><input type="text" id="slug" maxlength="30" placeholder="tu-sopa" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="root">.vorticevr.mx</span></div>
+        <div class="msg" id="mSlug"></div>
+      </section>
+      <section class="step" id="sMarca" hidden></section>
+      <section class="step" id="s6">
+        <h2><span class="n" id="n6">6</span>Publicar</h2>
+        <div id="mine" hidden style="margin:0 0 12px"></div>
+        <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
+        <button class="btn primary" id="publish" type="button" disabled>Publicar mi sopa de letras</button>
+        <div class="bar" id="bPub" hidden><i></i></div><div class="msg" id="mPub"></div>
+        <p class="legal">Vórtice VR puede retirar contenido inapropiado (<a href="../../terminos/">términos</a>). <span id="legalDays">La experiencia se borra a los 15 días; puedes editarla o borrarla desde tu cuenta.</span></p>
+      </section>
+    </div>
+    <aside class="side">
+      <div class="pv">
+        <h3>Vista previa <small>toca ¡Jugar! y pruébalo</small></h3>
+        <div class="phone"><div class="screen" id="screen"></div></div>
+        <p class="note" style="margin:10px 0 0">Así se ve en el celular de quien abre tu link.</p>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="../../assets/marca.js"></script>
+<script src="../../assets/plataforma.js" data-api="../.."></script>
+<script type="module">
+import { run, TEMPLATES, TIMES, LEVELS, LEVEL_HINT, MODES, LIMITS, norm, makeGrid } from "../../assets/sopa.js";
+const $=id=>document.getElementById(id);
+const API=VVR.api;
+const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
+$("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
+const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const rid=()=>Array.from(crypto.getRandomValues(new Uint8Array(10)),b=>"abcdefghijklmnopqrstuvwxyz0123456789"[b%36]).join("");
+const {min:MIN,max:MAX}=LIMITS;
+// S.d is what gets published
+const S={token:null,email:null,mine:null,tpl:"planetas",
+  d:{mode:"lista",level:"normal",time:90,color:"#2c3e8f",sub:"",words:[]}};
+const fromTpl=k=>TEMPLATES[k].words.map(x=>({id:rid(),w:x.w,h:x.h||""}));
+
+// ---------- 1. the game: templates ----------
+const MK=["#ffd27f","#7ff0bf","#8fd3ff","#ffa8c8","#cdb0ff","#ffb877"];
+function miniGrid(T,i){ const w=norm(T.words[0].w).slice(0,5).padEnd(5,"A"), rnd="ESRANOLTIMUCD"; let h="";
+  for(let k=0;k<15;k++) h+=`<span>${k>=5&&k<10?w[k-5]:rnd[(k*7+i*3)%rnd.length]}</span>`;
+  return `<span class="mg" style="--mk:${MK[i%MK.length]}"><i></i>${h}</span>`; }
+function drawTpls(){
+  $("tpls").innerHTML=Object.entries(TEMPLATES).map(([k,T],i)=>`<button type="button" data-t="${k}" aria-pressed="${S.tpl===k}">${miniGrid(T,i)}${esc(T.t)}</button>`).join("")
+    +`<button type="button" data-t="propio" aria-pressed="${S.tpl==="propio"}"><span class="mg plus">+</span>Mis palabras</button>`;
+}
+$("tpls").addEventListener("click",e=>{ const b=e.target.closest("[data-t]"); if(!b) return; const k=b.dataset.t;
+  const custom=S.tpl==="propio"&&S.d.words.some(x=>x.w.trim()); if(custom&&!confirm("Se cambiarán tus palabras por las de la plantilla. ¿Seguimos?")) return;
+  S.tpl=k;
+  if(k==="propio"){ S.d.words=Array.from({length:MIN},()=>({id:rid(),w:"",h:""})); }
+  else { const T=TEMPLATES[k]; S.d.mode=T.mode; S.d.level=T.level; S.d.color=T.color; S.d.words=fromTpl(k); if(!$("dname").dataset.touched) $("dname").value=T.t; }
+  drawAll(); changed(); });
+$("dname").addEventListener("input",()=>{ $("dname").dataset.touched="1"; changed(); });
+$("sub").addEventListener("input",()=>{ S.d.sub=$("sub").value; changed(); });
+
+// ---------- 2. words ----------
+function drawMode(){
+  $("modeSeg").innerHTML=Object.entries(MODES).map(([k,t])=>`<button type="button" data-v="${k}" aria-pressed="${S.d.mode===k}">${t}</button>`).join("");
+  $("modeHint").textContent=S.d.mode==="lista"?"Abajo de la sopa se ven las palabras que hay que encontrar.":"Abajo de la sopa solo se ve una pista de cada palabra («El planeta rojo»): hay que adivinarla y luego encontrarla. Al encontrarla aparece.";
+}
+$("modeSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.d.mode=b.dataset.v; S.tpl="propio"; drawTpls(); drawMode(); drawWords(); changed(); });
+// why a word does not work (empty is just "to fill")
+function whyBad(x){ const n=norm(x.w); if(!x.w.trim()) return ""; if(n.length<2) return "Usa al menos 2 letras."; if(n.length>LIMITS.letters) return `Máximo ${LIMITS.letters} letras (tiene ${n.length}).`;
+  if(S.d.words.some(y=>y!==x&&norm(y.w)===n)) return "Está repetida."; if(S.d.mode==="pistas"&&!x.h.trim()) return "Escribe su pista."; return ""; }
+const wordOk=x=>norm(x.w).length>=2&&!whyBad(x);
+const letters=()=>S.d.words.reduce((s,x)=>s+norm(x.w).length,0);
+function drawWords(){
+  const two=S.d.mode==="pistas";
+  $("words").innerHTML=S.d.words.map((x,i)=>{ const why=whyBad(x);
+    return `<div class="wr${two?" two":""}${why?" bad":""}" data-id="${x.id}"><span class="num">${i+1}</span>${two?`<input class="hn" type="text" maxlength="70" data-f="h" value="${esc(x.h)}" placeholder="Pista: ej. El planeta rojo" aria-label="Pista ${i+1}">`:""}<input class="wd" type="text" maxlength="20" data-f="w" value="${esc(x.w)}" placeholder="${two?"Palabra: MARTE":"Palabra"}" aria-label="Palabra ${i+1}" autocapitalize="characters" spellcheck="false">
+    <button class="del" type="button" data-del title="Quitar" aria-label="Quitar la palabra ${i+1}" ${S.d.words.length<=MIN?"disabled":""}>✕</button>${why?`<span class="why">${esc(why)}</span>`:""}</div>`; }).join("");
+  $("addw").hidden=S.d.words.length>=MAX; drawCount();
+}
+function drawCount(){ const okN=S.d.words.filter(wordOk).length, L=letters();
+  $("cnt").innerHTML=`${S.d.words.length} de ${MAX} palabras · ${L} letras`+(okN<S.d.words.length?` · faltan ${S.d.words.length-okN} por llenar o corregir`:"")+(L>LIMITS.total?` · <span style="color:var(--bad)">son demasiadas letras para el celular (máx. ${LIMITS.total}): quita una o usa palabras más cortas</span>`:""); }
+const rowOf=el=>S.d.words.find(x=>x.id===el.closest(".wr").dataset.id);
+$("words").addEventListener("input",e=>{ const f=e.target.dataset.f; if(!f) return; const x=rowOf(e.target); x[f]=e.target.value; S.tpl="propio"; drawTpls(); changed();
+  const row=e.target.closest(".wr"), why=whyBad(x); row.classList.toggle("bad",!!why); let s=row.querySelector(".why"); if(why){ if(!s){ s=document.createElement("span"); s.className="why"; row.appendChild(s); } s.textContent=why; } else if(s) s.remove(); drawCount(); });
+$("words").addEventListener("change",()=>drawWords());
+$("words").addEventListener("click",e=>{ if(!e.target.closest("[data-del]")) return; const x=rowOf(e.target); if(S.d.words.length<=MIN) return;
+  S.d.words=S.d.words.filter(y=>y!==x); S.tpl="propio"; drawTpls(); drawWords(); changed(); });
+$("addw").addEventListener("click",()=>{ if(S.d.words.length>=MAX) return; S.d.words.push({id:rid(),w:"",h:""}); S.tpl="propio"; drawTpls(); drawWords(); changed();
+  const ins=$("words").querySelectorAll(".wr:last-child input"); if(ins[0]) ins[0].focus(); });
+
+// ---------- 3. level and time · 4. color ----------
+function drawLevel(){ $("levelSeg").innerHTML=Object.entries(LEVELS).map(([k,t])=>`<button type="button" data-v="${k}" aria-pressed="${S.d.level===k}">${t}</button>`).join(""); $("levelHint").textContent=LEVEL_HINT[S.d.level]; }
+$("levelSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.d.level=b.dataset.v; drawLevel(); changed(); });
+function drawTime(){ $("timeSeg").innerHTML=TIMES.map(t=>`<button type="button" data-v="${t}" aria-pressed="${S.d.time===t}">${t?t+" segundos":"Sin tiempo"}</button>`).join(""); }
+$("timeSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.d.time=+b.dataset.v; drawTime(); changed(); });
+const COLORS=["#2c3e8f","#8b3fd6","#1f8fd6","#2fb67c","#ff8a3d","#c8102e","#e4007c","#ffbe55","#16151a"];
+function drawColors(){ const box=$("colors"); box.innerHTML=COLORS.map(c=>`<button type="button" style="background:${c}" data-c="${c}" aria-label="Color ${c}" aria-pressed="${c===S.d.color}"></button>`).join("")+`<input type="color" value="${S.d.color}" aria-label="Otro color">`;
+  box.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{ S.d.color=b.dataset.c; drawColors(); changed(); });
+  box.querySelector("input").addEventListener("input",e=>{ S.d.color=e.target.value; box.querySelectorAll("[data-c]").forEach(b=>b.setAttribute("aria-pressed","false")); changed(); }); }
+
+// ---------- live preview ----------
+let app=null, pvT=0;
+function dNow(){ const d=S.d, two=d.mode==="pistas";
+  return {name:$("dname").value.trim(),sub:d.sub.trim(),mode:d.mode,level:d.level,time:d.time,color:d.color,
+    words:d.words.filter(wordOk).map(x=>two?{w:x.w.trim(),h:x.h.trim()}:{w:x.w.trim()})}; }
+function cfgNow(){ const d=dNow(); if(d.words.length<2){ d.words=TEMPLATES.planetas.words.slice(0,4); d.mode="lista"; } if(letters()>LIMITS.total) d.words=d.words.slice(0,6);
+  return {slug:"vista-previa",title:$("dname").value.trim()||"Tu sopa de letras",sopa:d}; }
+function brand(){ const mk=S.marca&&S.marca.get(); if(mk&&mk.brand==="none") return null;
+  if(mk&&mk.brand==="own"&&mk.preview) return {src:mk.preview,own:true};
+  return {src:"../../assets/logo-vorticevr-blanco.png"}; }
+function preview(){ if(app) app.destroy(); app=run({root:$("screen"),cfg:cfgNow(),brand:brand(),embedded:true}); }
+function changed(){ clearTimeout(pvT); pvT=setTimeout(()=>{ if(app) app.update(cfgNow(),brand()); else preview(); },300); check(); }
+
+// ---------- link ----------
+const slugIn=$("slug"); let slugOk=false, slugTimer=0;
+const toSlug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9-]+/g,"-").replace(/-+/g,"-").replace(/^-/,"").slice(0,30);
+$("title").addEventListener("input",()=>{ if(!slugIn.dataset.touched&&!S.mine){ slugIn.value=toSlug($("title").value).replace(/-$/,""); checkSlug(); } check(); });
+slugIn.addEventListener("input",()=>{ const c=slugIn.selectionStart; slugIn.value=toSlug(slugIn.value); slugIn.setSelectionRange(c,c); checkSlug(); });
+slugIn.addEventListener("keydown",()=>slugIn.dataset.touched="1");
+function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false; check(); const s=slugIn.value.replace(/-$/,"");
+  if(s.length<3){ m.className="msg"; m.textContent=""; return; }
+  if(S.mine&&S.mine.slug===s){ slugOk=true; m.className="msg ok"; m.textContent="Es tu link actual."; check(); return; }
+  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); if(!r.ok&&r.suggest&&!slugIn.dataset.touched&&!S.mine){ slugIn.value=r.suggest; checkSlug(); return; } slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
+const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
+
+// ---------- publish ----------
+function problems(){
+  if(!$("dname").value.trim()) return "Escribe el nombre del juego.";
+  const ok=S.d.words.filter(wordOk).length;
+  if(ok<S.d.words.length) return "Llena o corrige las palabras marcadas, o quítalas (paso 2).";
+  if(ok<MIN) return `Pon al menos ${MIN} palabras.`;
+  if(letters()>LIMITS.total) return `Son demasiadas letras (máx. ${LIMITS.total}): quita una palabra o usa palabras más cortas.`;
+  if(!$("title").value.trim()) return "Escribe el título de tu experiencia (paso 5).";
+  if(!slugOk) return "Elige un link disponible.";
+  if(!S.token) return "Inicia sesión de nuevo.";
+  const mk=S.marca&&S.marca.get(); if(mk&&!mk.ok) return "Sube el logo de tu marca o elige el de Vórtice VR.";
+  return "";
+}
+function check(){
+  const p=problems();
+  $("n1").classList.toggle("done",!!$("dname").value.trim()); $("n2").classList.toggle("done",S.d.words.length>=MIN&&S.d.words.every(wordOk)&&letters()<=LIMITS.total);
+  $("n5").classList.toggle("done",slugOk&&!!$("title").value.trim());
+  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
+}
+// a card for the dashboard: a piece of the puzzle with some words marked
+async function thumb(){
+  const c=document.createElement("canvas"); c.width=800; c.height=600; const x=c.getContext("2d"), col=S.d.color;
+  const g=x.createRadialGradient(400,80,40,400,300,700); g.addColorStop(0,col); g.addColorStop(1,"#0b0418"); x.fillStyle=g; x.fillRect(0,0,800,600);
+  const d=dNow(), G=makeGrid((d.words.length?d.words:TEMPLATES.planetas.words).map(w=>w.w),"facil"); if(!G) return new Promise(r=>c.toBlob(r,"image/png"));
+  const n=Math.min(G.n,10), cs=Math.floor(Math.min(520/n,46)), X0=400-cs*n/2, Y0=40;
+  x.save(); x.shadowColor="rgba(0,0,0,.5)"; x.shadowBlur=30; x.shadowOffsetY=12; x.fillStyle="#fffdf8"; x.beginPath(); x.roundRect?x.roundRect(X0-14,Y0-14,cs*n+28,cs*n+28,22):x.rect(X0-14,Y0-14,cs*n+28,cs*n+28); x.fill(); x.restore();
+  x.lineCap="round"; let k=0;
+  for(const p of G.places){ const ex=p.x+p.dx*(p.w.length-1), ey=p.y+p.dy*(p.w.length-1); if(Math.max(p.x,ex,p.y,ey)>=n||k>=3) continue;
+    x.strokeStyle=MK[k++]; x.lineWidth=cs*.78; x.beginPath(); x.moveTo(X0+(p.x+.5)*cs,Y0+(p.y+.5)*cs); x.lineTo(X0+(ex+.5)*cs,Y0+(ey+.5)*cs); x.stroke(); }
+  x.fillStyle="#2a1d44"; x.font=`700 ${Math.round(cs*.56)}px Sora, sans-serif`; x.textAlign="center"; x.textBaseline="middle";
+  for(let r=0;r<n;r++) for(let q=0;q<n;q++) x.fillText(G.cells[r*G.n+q],X0+(q+.5)*cs,Y0+(r+.5)*cs+1);
+  x.font="800 40px Sora, sans-serif"; x.textBaseline="alphabetic"; x.fillStyle="#fff"; let t=$("dname").value.trim()||"Sopa de letras"; while(x.measureText(t).width>720&&t.length>4) t=t.slice(0,-2)+"…"; x.fillText(t,400,575);
+  return new Promise(res=>c.toBlob(res,"image/png"));
+}
+$("publish").addEventListener("click",async()=>{
+  const p=problems(); if(p){ check(); return; }
+  const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Preparando…"; bar.hidden=false; bar.firstElementChild.style.width="0%"; $("publish").disabled=true;
+  const fd=new FormData(), meta={kind:"sopa",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),sopa:dNow(),items:[],buttons:{}};
+  const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
+  fd.append("meta",JSON.stringify(meta));
+  if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
+  fd.append("image",await thumb(),"sopa.png");
+  const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc,linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/","Escanea y juega");
+  fd.append("qr",await new Promise(r=>qrc.toBlob(r,"image/png")),"qr.png");
+  m.textContent="Publicando…";
+  const xhr=new XMLHttpRequest(); xhr.open("POST",`${API}/api/publish`); xhr.setRequestHeader("Authorization","Bearer "+S.token);
+  xhr.upload.onprogress=e=>{ if(e.lengthComputable) bar.firstElementChild.style.width=(e.loaded/e.total*100)+"%"; };
+  xhr.onload=()=>{ bar.hidden=true; let j={}; try{ j=JSON.parse(xhr.responseText); }catch(e){}
+    if(xhr.status!==200){ m.className="msg bad"; m.textContent=j.error||"No se pudo publicar."; $("publish").disabled=false; if(xhr.status===401){ VVR.clearSession(); location.href="../../cuenta/?siguiente=crear"; } return; }
+    m.textContent="¡Publicada! Abriendo tu cuenta…"; location.href="../../cuenta/?publicada="+encodeURIComponent(j.experience.slug); };
+  xhr.onerror=()=>{ bar.hidden=true; m.className="msg bad"; m.textContent="Se cortó la conexión. Intenta de nuevo."; $("publish").disabled=false; };
+  xhr.send(fd);
+});
+
+// ---------- start: session, plan, editing ----------
+function drawAll(){ drawTpls(); drawMode(); drawWords(); drawLevel(); drawTime(); drawColors(); }
+(async()=>{
+  const ed=new URLSearchParams(location.search).get("editar");
+  const toLogin=()=>location.replace("../../cuenta/?siguiente=crear");
+  const sess=VVR.session(); if(!sess){ toLogin(); return; }
+  S.token=sess.token; S.email=sess.user&&sess.user.email;
+  const T=TEMPLATES[S.tpl]; S.d.mode=T.mode; S.d.level=T.level; S.d.color=T.color; S.d.words=fromTpl(S.tpl); $("dname").value=T.t;
+  drawAll(); preview(); check();
+  try{
+    const r=await VVR.call("me"); S.email=r.user.email;
+    const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1}, LIM=r.limit??P.exp, member=r.team&&r.team.role==="member";
+    if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name}`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
+    const exp=ed?r.experiences.find(x=>x.slug===ed):null;
+    if(window.VVRMarca){ S.marca=VVRMarca.mount($("sMarca"),{plan:P,exp,api:API,base:"../../",onChange:()=>{ check(); clearTimeout(pvT); pvT=setTimeout(preview,200); }}); $("sMarca").hidden=false; }
+    if(exp&&exp.kind!=="sopa"){ location.replace((exp.kind==="ra"?"../":"../"+exp.kind+"/")+"?editar="+encodeURIComponent(ed)); return; }
+    if(exp){
+      S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza en el mismo link (tu QR sigue funcionando).`;
+      const M=exp.sopa||{};
+      S.d={mode:M.mode==="pistas"?"pistas":"lista",level:LEVELS[M.level]?M.level:"normal",time:TIMES.includes(M.time)?M.time:90,color:M.color||"#8b3fd6",sub:M.sub||"",words:(M.words||[]).map(x=>({id:rid(),w:x.w,h:x.h||""}))};
+      S.tpl="propio"; $("dname").value=M.name||exp.title; $("dname").dataset.touched="1"; $("title").value=exp.title; $("sub").value=S.d.sub;
+      slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
+      $("publish").textContent="Guardar cambios";
+      try{ const k=await VVR.call("clicks/"+encodeURIComponent(exp.slug)), c=k.clicks||{}, n=v=>(v||0).toLocaleString("es-MX");
+        $("stats").innerHTML=`<div><b>${n(exp.views)}</b><span>visitas</span></div><div><b>${n(c.play)}</b><span>partidas</span></div><div><b>${n(c.win)}</b><span>terminadas</span></div><div><b>${n(c.share)}</b><span>retaron a alguien</span></div>`;
+        $("statsBox").hidden=false; }catch(e){}
+      drawAll(); preview();
+    } else if(r.experiences.filter(x=>!x.paused).length>=LIM){
+      document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); document.querySelector(".side").hidden=true; $("full").hidden=false;
+      $("fullText").textContent=member?"Tu equipo te asignó todas las que puedes usar. Borra una o pide más a quien administra tu equipo.":`Tu plan ${P.name} incluye ${LIM.toLocaleString("es-MX")} ${LIM===1?"experiencia":"experiencias"}. Borra una desde tu cuenta o mejora tu plan para crear tu sopa de letras.`;
+    }
+  }catch(e){ if(e.status===401){ toLogin(); return; } }
+  check();
+})();
+</script>
+<script src="../../assets/magia.js" defer></script>
+</body>
+</html>
