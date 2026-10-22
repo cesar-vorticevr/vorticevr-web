@@ -129,7 +129,7 @@ const CSS = `
 .lk-foot{margin-top:auto;padding-top:38px;display:flex;justify-content:center}
 .lk-foot a,.lk-foot span{display:inline-flex;align-items:center;padding:9px 16px;border-radius:999px;background:var(--lk-chip)}
 .lk-foot img{height:20px;width:auto;display:block}
-.lk-foot.own a,.lk-foot.own span{background:#fff}
+.lk-foot.own a,.lk-foot.own span{background:none;padding:0}.lk-foot.own img{height:28px;max-width:60vw;filter:drop-shadow(0 0 1.5px rgba(255,255,255,.75)) drop-shadow(0 2px 8px rgba(0,0,0,.45))}
 .lk-foot.own img{height:26px;max-width:60vw}
 .lk-toast{position:absolute;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#16151a;color:#fff;padding:11px 18px;border-radius:999px;font-size:.9rem;font-weight:600;transition:.25s;box-shadow:0 10px 30px rgba(0,0,0,.35);white-space:nowrap;max-width:90%;overflow:hidden;text-overflow:ellipsis}
 .lk-toast.on{opacity:1;transform:translate(-50%,0)}

@@ -112,7 +112,7 @@ const CSS = `
 .rl-foot{margin-top:auto;padding-top:30px;display:flex;justify-content:center}
 .rl-foot a,.rl-foot span{display:inline-flex;align-items:center;padding:9px 16px;border-radius:999px;background:var(--rl-chip)}
 .rl-foot img{height:20px;width:auto;display:block}
-.rl-foot.own a,.rl-foot.own span{background:#fff}.rl-foot.own img{height:26px;max-width:60vw}
+.rl-foot.own a,.rl-foot.own span{background:none;padding:0}.rl-foot.own img{height:30px;max-width:60vw;filter:drop-shadow(0 0 1.5px rgba(255,255,255,.75)) drop-shadow(0 2px 8px rgba(0,0,0,.45))}
 /* the prize */
 .rl-ov{position:absolute;inset:0;z-index:5;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(22px + env(safe-area-inset-top,0px)) 16px calc(22px + env(safe-area-inset-bottom,0px));
   background:var(--rl-veil);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:rl-fade .35s ease both}
@@ -370,8 +370,8 @@ export function run(o) {
       x.fillStyle = "rgba(255,255,255,.85)"; x.font = "500 34px 'IBM Plex Sans', sans-serif"; x.fillText("Muéstralo en el negocio para canjearlo", W / 2, cy + ch + 90);
       const b = o.brand, bi = b && await loadImg(b.src);
       if (bi) { const bh = b.own ? 70 : 52, bw = bi.naturalWidth * bh / bi.naturalHeight, bx = W / 2 - bw / 2, by = H - 120;
-        if (b.own) { x.fillStyle = "#fff"; x.beginPath(); x.roundRect ? x.roundRect(bx - 26, by - 14, bw + 52, bh + 28, 50) : x.rect(bx - 26, by - 14, bw + 52, bh + 28); x.fill(); }
-        x.drawImage(bi, bx, by, bw, bh); }
+        if (b.own) { x.save(); x.shadowColor = "rgba(0,0,0,.45)"; x.shadowBlur = bh * .22; x.shadowOffsetY = bh * .04; x.drawImage(bi, bx, by, bw, bh); x.shadowColor = "rgba(255,255,255,.7)"; x.shadowBlur = bh * .05; x.shadowOffsetY = 0; x.drawImage(bi, bx, by, bw, bh); x.restore(); }
+        else x.drawImage(bi, bx, by, bw, bh); }
       shot = await new Promise(r => c.toBlob(r, "image/png"));
     } catch (e) { console.error(e); shot = null; }
   }

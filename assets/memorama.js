@@ -40,7 +40,7 @@ const CSS = `
 /* intro and end */
 .mm-card0{margin:auto;width:min(92%,420px);text-align:center;padding:18px 18px 22px;display:flex;flex-direction:column;align-items:center;gap:12px}
 .mm-logo{height:24px;width:auto;margin-top:calc(16px + env(safe-area-inset-top,0px))}
-.mm-logo.own{height:auto;max-height:42px;max-width:60%;background:#fff;border-radius:999px;padding:6px 14px}
+.mm-logo.own{height:auto;max-height:42px;max-width:60%;filter:drop-shadow(0 0 1.5px rgba(255,255,255,.75)) drop-shadow(0 2px 8px rgba(0,0,0,.45))}
 .mm-k{font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:#ffd27f;font-weight:700}
 .mm h1{font-size:clamp(1.6rem,7vw,2.3rem);line-height:1.05;margin:0;text-wrap:balance}
 .mm p{margin:0;color:rgba(255,255,255,.78);line-height:1.45;font-family:"IBM Plex Sans",system-ui,sans-serif}

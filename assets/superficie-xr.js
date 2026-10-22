@@ -18,7 +18,7 @@ const CSS = `
 .sx [hidden]{display:none!important}
 .sx-top{position:absolute;left:0;right:0;top:0;display:flex;justify-content:center;align-items:center;padding:calc(12px + env(safe-area-inset-top,0px)) 60px 18px;background:linear-gradient(180deg,rgba(5,2,11,.6),rgba(5,2,11,0))}
 .sx-top img{height:24px;width:auto;display:block}
-.sx-top.own img{height:auto;max-height:28px;max-width:46vw;background:#fff;border-radius:999px;padding:5px 12px;box-sizing:content-box}
+.sx-top.own img{height:auto;max-height:34px;max-width:50vw;filter:drop-shadow(0 0 1.5px rgba(255,255,255,.75)) drop-shadow(0 2px 8px rgba(0,0,0,.45))}
 .sx-x{position:absolute;right:12px;top:calc(8px + env(safe-area-inset-top,0px));width:44px;height:44px;border-radius:50%;border:0;background:rgba(10,4,22,.62);font-size:1.2rem}
 .sx-hint{position:absolute;left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);margin:0;background:rgba(10,4,22,.62);padding:9px 16px;border-radius:999px;font-weight:600;font-size:.9rem;white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis}
 .sx-bot{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 16px calc(18px + env(safe-area-inset-bottom,0px));background:linear-gradient(0deg,rgba(5,2,11,.5),rgba(5,2,11,0))}
@@ -179,8 +179,8 @@ async function run(session, ui, q, o) {
     if (logo && logo.complete && logo.naturalWidth) {   // same place and size as the image AR's captures
       let lw = W * 0.32, lh = lw * logo.naturalHeight / logo.naturalWidth; const mh = H * 0.07; if (lh > mh) { lh = mh; lw = lh * logo.naturalWidth / logo.naturalHeight; }
       const lx = (W - lw) / 2, ly = H * 0.03;
-      if (o.brand.own) { const p = lh * 0.3; ctx.fillStyle = "#fff"; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(lx - p * 2, ly - p, lw + p * 4, lh + p * 2, lh / 2 + p); else ctx.rect(lx - p * 2, ly - p, lw + p * 4, lh + p * 2); ctx.fill(); }
-      ctx.drawImage(logo, lx, ly, lw, lh);
+      if (o.brand.own) { ctx.save(); ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = lh * .22; ctx.shadowOffsetY = lh * .04; ctx.drawImage(logo, lx, ly, lw, lh); ctx.shadowColor = "rgba(255,255,255,.7)"; ctx.shadowBlur = lh * .05; ctx.shadowOffsetY = 0; ctx.drawImage(logo, lx, ly, lw, lh); ctx.restore(); }
+      else ctx.drawImage(logo, lx, ly, lw, lh);
     }
     return true;
   }

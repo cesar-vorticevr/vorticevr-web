@@ -103,7 +103,7 @@
     const g = m && m.get ? m.get() : { brand: "vortice" };
     const box = img.parentElement;
     box.hidden = g.brand === "none";
-    if (g.brand === "own" && g.preview) { img.src = g.preview; Object.assign(img.style, { height: "24px", maxWidth: "70%", objectFit: "contain", background: "#fff", borderRadius: "999px", padding: "3px 10px" }); }
+    if (g.brand === "own" && g.preview) { img.src = g.preview; Object.assign(img.style, { height: "26px", maxWidth: "70%", objectFit: "contain", filter: "drop-shadow(0 0 1.5px rgba(255,255,255,.75)) drop-shadow(0 2px 8px rgba(0,0,0,.45))" }); }
     else { img.src = vortice; img.removeAttribute("style"); }
   }
   window.VVRMarca = { mount, paintPreview };

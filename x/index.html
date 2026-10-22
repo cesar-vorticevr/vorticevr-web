@@ -26,9 +26,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 #brand{position:fixed;left:0;right:0;top:0;z-index:60;display:flex;justify-content:center;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 22px;background:linear-gradient(180deg,rgba(5,2,11,.7),rgba(5,2,11,0));pointer-events:none}
 #brand a{pointer-events:auto;display:block}
 #brand img{height:24px;width:auto;display:block;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6))}
-/* the customer's own logo (Empresarial): on a white pill so any color reads on the camera */
-#brand.own a{background:#fff;border-radius:999px;padding:6px 14px;box-shadow:0 4px 14px rgba(0,0,0,.35)}
-#brand.own img{height:auto;max-height:30px;max-width:46vw;filter:none}
+/* the customer's own logo (Premium): as it is, with a thin light edge and a soft shadow so any color reads on the camera */
+#brand.own img{height:auto;max-height:34px;max-width:50vw;filter:drop-shadow(0 0 1.5px rgba(255,255,255,.75)) drop-shadow(0 2px 8px rgba(0,0,0,.45))}
 
 /* intro */
 #intro{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;-webkit-overflow-scrolling:touch;gap:18px;padding:74px 22px calc(28px + env(safe-area-inset-bottom,0px));text-align:center;
@@ -343,8 +342,8 @@ function setupCapture(mind,opts={}){
     // logo on the capture too
     const lg=$("brand").querySelector("img"); if(!$("brand").hidden&&lg.complete&&lg.naturalWidth){ let lw=out.width*.32, lh=lw*lg.naturalHeight/lg.naturalWidth; const mh=out.height*.07; if(lh>mh){ lh=mh; lw=lh*lg.naturalWidth/lg.naturalHeight; }
       const lx=(out.width-lw)/2, ly=out.height*.03;
-      if($("brand").classList.contains("own")){ const q=lh*.3; ctx.fillStyle="#fff"; ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(lx-q*2,ly-q,lw+q*4,lh+q*2,lh/2+q); else ctx.rect(lx-q*2,ly-q,lw+q*4,lh+q*2); ctx.fill(); }
-      ctx.globalAlpha=.95; ctx.drawImage(lg,lx,ly,lw,lh); ctx.globalAlpha=1; } }
+      if($("brand").classList.contains("own")) { ctx.save(); ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = lh * .22; ctx.shadowOffsetY = lh * .04; ctx.drawImage(lg, lx, ly, lw, lh); ctx.shadowColor = "rgba(255,255,255,.7)"; ctx.shadowBlur = lh * .05; ctx.shadowOffsetY = 0; ctx.drawImage(lg, lx, ly, lw, lh); ctx.restore(); }
+      else { ctx.globalAlpha=.95; ctx.drawImage(lg,lx,ly,lw,lh); ctx.globalAlpha=1; } } }
   // Photos and the first frame of a video are composed right after a render: outside of it the 3D canvas is already
   // cleared (it is shown and wiped every frame), so a video started from the tap began with the camera alone.
   let wantRec=false;

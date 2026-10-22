@@ -234,7 +234,7 @@ const CSS = `
 .mn-brand{display:flex;justify-content:center;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 0}
 .mn-brand a,.mn-brand span{display:block}
 .mn-brand img{height:20px;width:auto;display:block;opacity:.9}
-.mn-brand.own a,.mn-brand.own span{background:#fff;border-radius:999px;padding:5px 12px;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.mn-brand.own img{height:28px;max-width:60vw;opacity:1;filter:drop-shadow(0 0 1.5px rgba(255,255,255,.75)) drop-shadow(0 2px 8px rgba(0,0,0,.45))}
 .mn-brand.own img{height:auto;max-height:26px;max-width:46vw;opacity:1}
 .mn-hero{text-align:center;padding:22px 20px 18px;position:relative}
 .mn-hero::before{content:"";position:absolute;left:50%;top:0;width:min(520px,120%);height:100%;transform:translateX(-50%);background:radial-gradient(60% 70% at 50% 30%,var(--mac-soft),transparent 70%);pointer-events:none}

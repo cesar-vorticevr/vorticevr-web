@@ -215,7 +215,7 @@ const CSS = `
 .dp-foot{margin-top:auto;padding-top:26px;display:flex;justify-content:center}
 .dp-foot a,.dp-foot span{display:inline-flex;align-items:center;padding:9px 16px;border-radius:999px;background:rgba(255,255,255,.14)}
 .dp-foot img{height:20px;width:auto;display:block}
-.dp-foot.own a,.dp-foot.own span{background:#fff}.dp-foot.own img{height:26px;max-width:60vw}
+.dp-foot.own a,.dp-foot.own span{background:none;padding:0}.dp-foot.own img{height:30px;max-width:60vw;filter:drop-shadow(0 0 1.5px rgba(255,255,255,.75)) drop-shadow(0 2px 8px rgba(0,0,0,.45))}
 .dp-score{font:800 clamp(3.6rem,20vw,5.2rem)/1 "Sora",sans-serif;color:#ffd27f;text-shadow:0 0 40px rgba(255,190,85,.6);margin-top:6px}
 .dp-pts{font:700 .8rem "Sora",sans-serif;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.75)}
 .dp-stars{display:flex;gap:8px;justify-content:center;margin:12px 0 4px}
@@ -696,8 +696,8 @@ export function run(o) {
       x.fillStyle = "rgba(255,255,255,.85)"; x.font = "500 34px 'IBM Plex Sans', sans-serif"; x.fillText("Muéstralo en el negocio para canjearlo", Wd / 2, cy + ch + 90);
       const b = o.brand, bi = b && await loadImg(b.src);
       if (bi) { const bh = b.own ? 70 : 52, bw = bi.naturalWidth * bh / bi.naturalHeight, bx = Wd / 2 - bw / 2, by = Ht - 120;
-        if (b.own) { x.fillStyle = "#fff"; x.beginPath(); x.roundRect ? x.roundRect(bx - 26, by - 14, bw + 52, bh + 28, 50) : x.rect(bx - 26, by - 14, bw + 52, bh + 28); x.fill(); }
-        x.drawImage(bi, bx, by, bw, bh); }
+        if (b.own) { x.save(); x.shadowColor = "rgba(0,0,0,.45)"; x.shadowBlur = bh * .22; x.shadowOffsetY = bh * .04; x.drawImage(bi, bx, by, bw, bh); x.shadowColor = "rgba(255,255,255,.7)"; x.shadowBlur = bh * .05; x.shadowOffsetY = 0; x.drawImage(bi, bx, by, bw, bh); x.restore(); }
+        else x.drawImage(bi, bx, by, bw, bh); }
       shot = await new Promise(r => c.toBlob(r, "image/png"));
     } catch (e) { console.error(e); shot = null; }
   }
