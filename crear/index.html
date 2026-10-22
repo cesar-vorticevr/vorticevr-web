@@ -458,7 +458,7 @@ const TYPE={video:"Video",image:"Imagen",text:"Texto",model:"Objeto 3D",audio:"A
 const ACCEPT={video:"video/mp4,video/webm,video/quicktime",image:"image/png,image/jpeg,image/webp",model:".glb,model/gltf-binary",audio:"audio/mpeg,audio/mp4,audio/x-m4a,.mp3,.m4a"};
 const AUDIO_MB=10;   // one audio per scene (MP3 or M4A), it plays while that scene is on view
 const MODEL_IN_MB=150;   // a GLB this big can still be opened; it is compressed in the browser and must end ≤ plan.modelMB
-const TIPS={none:"Toca un elemento para editarlo · arrastra el fondo para girar la vista",mover:"Arrastra el elemento o sus flechas · rueda o pellizco: tamaño",girar:"Arrastra un anillo para girarlo en ese eje",escalar:"Arrastra un cuadro para cambiar su tamaño"};
+const TIPS={none:"Toca un elemento para editarlo · arrastra el fondo para girar la vista · clic derecho para desplazarla",mover:"Arrastra el elemento o sus flechas · rueda o pellizco: tamaño",girar:"Arrastra un anillo para girarlo en ese eje",escalar:"Arrastra un cuadro para cambiar su tamaño"};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const uid=()=>Array.from(crypto.getRandomValues(new Uint8Array(10)),b=>"abcdefghijklmnopqrstuvwxyz0123456789"[b%36]).join("");
 const IH=()=>S.imgW?S.imgH/S.imgW:2/3;
@@ -500,7 +500,7 @@ function canAdd(t){
   msgAdd(); return true;
 }
 document.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()=>{ const t=b.dataset.add; if(!canAdd(t)) return;
-  if(t==="text") return addItem(S.sf?{type:"text",text:"Tu texto",font:"Bebas Neue",color:"#ffffff",stroke:"#5a1f8f",s:.4,y:-.35,_stand:true}:{type:"text",text:"Tu texto",font:"Bebas Neue",color:"#ffffff",stroke:"#5a1f8f",s:.6,y:Math.round((IH()/2-.12)*1000)/1000});
+  if(t==="text") return addItem(S.sf?{type:"text",text:"Tu texto",font:"Bebas Neue",color:"#ffffff",stroke:"#5a1f8f",s:.4,y:0,_stand:true,_lift:.25}:{type:"text",text:"Tu texto",font:"Bebas Neue",color:"#ffffff",stroke:"#5a1f8f",s:.6,y:Math.round((IH()/2-.12)*1000)/1000});
   const inp=$("fAdd"); inp.value=""; inp.accept=ACCEPT[t]; inp.onchange=()=>fromFile(t,inp.files[0]); inp.click(); }));
 // files dropped on the editor
 { const d=$("ed"); d.addEventListener("dragover",e=>{ if(![...e.dataTransfer.types].includes("Files")) return; e.preventDefault(); $("adds").classList.add("over"); });
@@ -555,7 +555,8 @@ async function addItem(p){
   const it={id:uid(),x:0,y:0,z:0,s:.6,rx:0,ry:0,rz:0,in:"aparecer",scene:S.scene,...p};
   S.items.push(it); it._loading=it.type!=="text"; S.sel=it.id;
   renderLayers(); renderProps(); check();
-  try{ const ed=await ensureEditor(); await ed.add(it); if(it._stand){ delete it._stand; ed.stand(it.id); } ed.select(it.id); msgAdd(); commit(); }
+  try{ const ed=await ensureEditor(); await ed.add(it); if(it._stand){ delete it._stand; ed.stand(it.id); }
+    if(it._lift){ it.z=Math.round((it.z+it._lift)*1000)/1000; delete it._lift; ed.update(it); }   // floating a little above the floor ed.select(it.id); msgAdd(); commit(); }
   catch(e){ console.error(e); removeItem(it.id,true); msgAdd("bad",it.type==="model"?"No pude abrir ese objeto 3D. Revisa que sea un GLB válido.":"No pude abrir ese archivo."); }
 }
 const GONE=new Map();   // removed elements, so "undo" can bring them back with their files

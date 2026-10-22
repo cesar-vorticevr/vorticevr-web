@@ -29,7 +29,10 @@ export async function createEditor(box, cb) {
   const grid = new THREE.GridHelper(2, 8, 0xd2b8ff, 0x6a4f9a); grid.rotation.x = Math.PI / 2; grid.material.transparent = true; grid.material.opacity = 0.55; grid.visible = false; world.add(grid);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshBasicMaterial({ visible: false })); world.add(floor);   // for dragging
   const sel = new THREE.BoxHelper(undefined, 0xffbe55); sel.material.depthTest = false; sel.material.transparent = true; sel.material.opacity = 0.7; sel.renderOrder = 10; sel.visible = false; scene.add(sel);
-  const orbit = new OrbitControls(camera, renderer.domElement); orbit.enableDamping = true; orbit.enablePan = false; orbit.minDistance = 0.4; orbit.maxDistance = 6;
+  const orbit = new OrbitControls(camera, renderer.domElement); orbit.enableDamping = true; orbit.minDistance = 0.4; orbit.maxDistance = 6;
+  // right button (or two fingers on the background) slides the view; never so far that the scene gets lost
+  orbit.screenSpacePanning = true;
+  orbit.addEventListener("change", () => { const t = orbit.target, c = t.clone().clampScalar(-2.5, 2.5); if (!c.equals(t)) { camera.position.add(c.clone().sub(t)); t.copy(c); } });
   const tc = new TransformControls(camera, renderer.domElement); tc.size = 1.1; scene.add(tc);
   let startS = 1;   // size when a handle drag started: the scale handles move one axis, the size follows that one
   tc.addEventListener("dragging-changed", e => { orbit.enabled = !e.value; if (e.value) startS = itemOf(selected)?.s ?? 1; else done(); });
@@ -146,6 +149,7 @@ export async function createEditor(box, cb) {
   const el = renderer.domElement;
   const capture = e => { try { el.setPointerCapture(e.pointerId); } catch (x) {} };
   el.addEventListener("pointerdown", e => {
+    if (e.pointerType === "mouse" && e.button !== 0) { down = null; return; }   // right or middle button: the view (slide, zoom)
     down = { x: e.clientX, y: e.clientY, moved: false };
     if (tc.object && tc._getPointer && tc.pointerHover) { tc.pointerHover(tc._getPointer(e)); if (tc.axis) return; }   // on a handle: the handles work
     pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
