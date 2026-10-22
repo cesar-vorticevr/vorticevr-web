@@ -230,7 +230,7 @@ async function api(request, env, ctx, url) {
   // link page: one tap on a button; prize wheel: spins, each prize that came out, "lose", review… (navigator.sendBeacon); only counted while it is live
   m = path.match(/^\/api\/click\/([a-z0-9-]+)\/([a-z0-9]{1,16})$/);
   if (m && M === "POST") {
-    ctx.waitUntil(env.DB.prepare("INSERT INTO clicks (slug, id, n) SELECT slug, ?, 1 FROM experiences WHERE slug = ? AND paused = 0 AND expires > ? AND (data LIKE '%\"kind\":\"links\"%' OR data LIKE '%\"kind\":\"ruleta\"%' OR data LIKE '%\"kind\":\"dispara\"%') ON CONFLICT(slug, id) DO UPDATE SET n = n + 1")
+    ctx.waitUntil(env.DB.prepare("INSERT INTO clicks (slug, id, n) SELECT slug, ?, 1 FROM experiences WHERE slug = ? AND paused = 0 AND expires > ? AND (data LIKE '%\"kind\":\"links\"%' OR data LIKE '%\"kind\":\"ruleta\"%' OR data LIKE '%\"kind\":\"dispara\"%' OR data LIKE '%\"kind\":\"memorama\"%') ON CONFLICT(slug, id) DO UPDATE SET n = n + 1")
       .bind(m[2], m[1], Date.now()).run().catch(e => console.error("click", e.message)));
     return new Response(null, { status: 204 });
   }
@@ -426,7 +426,7 @@ async function api(request, env, ctx, url) {
     const isNew = !mine;
     if (data.kind === "trivia" && data.trivia.logo && !image && !(mine && (JSON.parse(mine.data || "{}").trivia || {}).logo)) data.trivia.logo = false;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
-    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu" && data.kind !== "links" && data.kind !== "ruleta" && data.kind !== "dispara" && data.kind !== "superficie"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
+    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu" && data.kind !== "links" && data.kind !== "ruleta" && data.kind !== "dispara" && data.kind !== "memorama" && data.kind !== "superficie"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
     if (target && target.size > LIMITS.targetBytes) return json({ error: "La imagen no se pudo preparar. Intenta con otra." }, 400);
     // each element's file: uploaded now (field f_<id>) or kept from the version being edited (same id and type)
@@ -486,7 +486,7 @@ async function api(request, env, ctx, url) {
       .bind(slug, who, data.title, JSON.stringify(data), created, now, expires, mine ? mine.views || 0 : 0).run();
     const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(slug).first();
     const out = ownerExp(row, request, env);
-    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "links" ? "Tu página de links está lista" : data.kind === "ruleta" ? "Tu ruleta de premios está lista" : data.kind === "dispara" ? "Tu juego Dispara y gana está listo" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
+    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "links" ? "Tu página de links está lista" : data.kind === "ruleta" ? "Tu ruleta de premios está lista" : data.kind === "dispara" ? "Tu juego Dispara y gana está listo" : data.kind === "memorama" ? "Tu memorama está listo" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
     return json({ ok: true, experience: out });
   }
 
@@ -834,6 +834,7 @@ function publicKind(row, d) {
   if (d.kind === "colorear") return { slug: row.slug, kind: "colorear", title: row.title, img: d.img, color: d.color, buttons: d.buttons, expires: row.expires };
   if (d.kind === "menu") return { slug: row.slug, kind: "menu", title: row.title, menu: d.menu, items: d.items || [], buttons: d.buttons, updated: row.updated, expires: row.expires };
   if (d.kind === "links") return { slug: row.slug, kind: "links", title: row.title, links: d.links, items: d.items || [], updated: row.updated, expires: row.expires };
+  if (d.kind === "memorama") return { slug: row.slug, kind: "memorama", title: row.title, memorama: d.memorama, items: d.items || [], updated: row.updated, expires: row.expires };
   if (d.kind === "dispara") return { slug: row.slug, kind: "dispara", title: row.title, dispara: d.dispara, items: d.items || [], updated: row.updated, expires: row.expires };
   if (d.kind === "ruleta") return { slug: row.slug, kind: "ruleta", title: row.title, ruleta: d.ruleta, items: d.items || [], updated: row.updated, expires: row.expires };
   if (d.kind === "superficie") return { slug: row.slug, kind: "superficie", title: row.title, img: d.img, items: d.items || [], sparks: d.sparks, buttons: d.buttons, updated: row.updated, expires: row.expires };
@@ -1272,6 +1273,48 @@ function cleanDispara(d, list) {
   }
   return { dispara, items };
 }
+// Memorama (assets/memorama.js): find the pairs before the time runs out. mode = iguales (the same card twice) | parejas (two
+// cards that go together); pairs = 3 to 10 {id, a: side, b?: side} (b only with parejas), side = {t} (text, up to 40) |
+// {key} (a picture of assets/filtros/) | {img} (an item "foto"). Plays, wins and shares are counted in clicks.
+const MEMORAMA = { min: 3, max: 10, times: [30, 45, 60, 90], modes: ["iguales", "parejas"],
+  keys: ["particula-calaverita", "particula-cempasuchil", "particula-petalo", "corona-flores", "sombrero-copa", "lentes-catrina", "lentes-catrin", "bigote-catrin", "mono-catrin", "papel-picado",
+    "gorro-santa", "diadema-reno", "nariz-reno", "lentes-navidad", "particula-copo", "particula-esfera", "luces-navidad", "esquina-pino",
+    "gorro-fiesta", "lentes-fiesta", "particula-serpentina", "particula-estrella", "guirnalda-banderines", "esquina-globos",
+    "orejas-gato", "nariz-gato", "lentes-gato", "particula-huella", "lentes-corazon", "diadema-corazones", "corazon-mejilla", "particula-corazon", "lentes-vortice"] };
+function cleanMemorama(d, list) {
+  d = d || {};
+  const idOk = v => /^[a-z0-9]{6,16}$/.test(String(v || ""));
+  const files = new Map((Array.isArray(list) ? list : []).filter(i => i && idOk(i.id) && i.type === "foto").map(i => [i.id, i]));
+  const mode = MEMORAMA.modes.includes(d.mode) ? d.mode : "iguales", items = [];
+  const side = (v, n) => {
+    if (v && v.key) return MEMORAMA.keys.includes(v.key) ? { key: v.key } : { error: `Una de las imágenes del par ${n} no es válida.` };
+    if (v && v.img) {
+      const m = files.get(v.img); if (!m) return { error: `Falta la imagen del par ${n}. Vuelve a subirla.` };
+      const it = { id: m.id, type: "foto", w: Math.round(Number(m.w)) || 0, h: Math.round(Number(m.h)) || 0 };
+      if (!(it.w > 0 && it.w <= 4000 && it.h > 0 && it.h <= 4000)) return { error: "Faltan las medidas de una de tus imágenes." };
+      if (!items.some(i => i.id === it.id)) items.push(it);
+      return { img: it.id };
+    }
+    const t = String(v && v.t || "").replace(/\s+/g, " ").trim().slice(0, 40);
+    return t ? { t } : { error: `Llena las cartas del par ${n}.` };
+  };
+  const src = Array.isArray(d.pairs) ? d.pairs : [];
+  if (src.length < MEMORAMA.min) return { error: `Pon al menos ${MEMORAMA.min} pares.` };
+  if (src.length > MEMORAMA.max) return { error: `Puedes poner hasta ${MEMORAMA.max} pares.` };
+  const pairs = [], ids = new Set();
+  for (const [k, p] of src.entries()) {
+    if (!p || !idOk(p.id) || ids.has(p.id)) return { error: "Uno de tus pares no es válido." };
+    ids.add(p.id);
+    const a = side(p.a, k + 1); if (a.error) return a;
+    const pr = { id: p.id, a };
+    if (mode === "parejas") { const b = side(p.b, k + 1); if (b.error) return b; pr.b = b; }
+    pairs.push(pr);
+  }
+  const memorama = { mode, pairs, time: MEMORAMA.times.includes(Number(d.time)) ? Number(d.time) : 30, color: HEX.test(String(d.color || "")) ? String(d.color).toLowerCase() : "#8b3fd6" };
+  const nm = String(d.name || "").replace(/\s+/g, " ").trim().slice(0, 80); if (nm) memorama.name = nm;   // on its screens (the experience title is apart)
+  const sub = String(d.sub || "").replace(/\r/g, "").trim().slice(0, 160); if (sub) memorama.sub = sub;
+  return { memorama, items };
+}
 // the contact card ("Guardar contacto"), with the profile picture when it is a JPEG
 async function vcard(env, row, request) {
   const d = JSON.parse(row.data || "{}"), lk = d.links || {}, c = lk.contact || {};
@@ -1315,6 +1358,10 @@ function cleanMeta(m, P) {
   if (m.kind === "ruleta") {
     const rl = cleanRuleta(m.ruleta, m.items);
     return rl.error ? rl : { kind: "ruleta", title, ruleta: rl.ruleta, items: rl.items, buttons: {} };
+  }
+  if (m.kind === "memorama") {
+    const mm = cleanMemorama(m.memorama, m.items);
+    return mm.error ? mm : { kind: "memorama", title, memorama: mm.memorama, items: mm.items, buttons: {} };
   }
   if (m.kind === "dispara") {
     const dp = cleanDispara(m.dispara, m.items);
