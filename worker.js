@@ -21,7 +21,7 @@ const LIMITS = { imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, code
 // Elements (video, image, text, 3D) per experience: items = how many, totalMB = weight of all its files together
 // (each video ≤ videoMB, each GLB ≤ modelMB). The Worker reads the whole upload in memory (128 MB): keep totalMB ≤ 60.
 const PLANS = {
-  gratis:  { name: "Gratis",  exp: 5,    days: 15, videoMB: 25, modelMB: 15, items: 3, totalMB: 30, price: 0, views: 1000 },
+  gratis:  { name: "Gratis",  exp: 3,    days: 15, videoMB: 25, modelMB: 15, items: 3, totalMB: 30, price: 0, views: 1000 },
   basico:  { name: "Básico",  exp: 5,    days: 0,  videoMB: 25, modelMB: 15, items: 6, totalMB: 40, price: 199, year: 1990, legacy: true },
   pro:     { name: "Pro",     exp: 100,  days: 0,  videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 499, year: 4990 },
   premium: { name: "Premium", exp: 1000000, brand: true, days: 0, videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 1499, year: 14990 },
