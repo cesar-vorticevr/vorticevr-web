@@ -2,7 +2,9 @@
 // it keeps what model-viewer leaves out:
 //   · the motions in a loop and the sparkles: three's USDZExporter writes still meshes, so each mesh that moves gets its
 //     transform as time samples (FPS per second over the "magia" clip; Quick Look plays them on its own, in a loop)
-//   · the music: inside the file, with Apple's AR behaviors (on entering the scene → play, in a loop if it repeats)
+//   · the music, only when asked (?musica=archivo): inside the file, with Apple's AR behaviors (on entering the scene →
+//     play, in a loop if it repeats). Quick Look then shows its player instead of its camera button, so by default the
+//     page plays it.
 // The zip is written again so every file starts at a multiple of 64 bytes (USDZ needs it).
 import * as THREE from "three";
 
@@ -49,12 +51,6 @@ export async function sceneUSDZ(world, clip, audio) {
     const type = r.headers.get("content-type") || "", ext = /mpeg|mp3/.test(type) ? "mp3" : "m4a";
     files["audio." + ext] = new Uint8Array(await r.arrayBuffer());
     const anchor = 'token preliminary:planeAnchoring:alignment = "horizontal"\n';
-    if (audio.mode === "ambiente") {   // test: a plain audio of the file (UsdMedia SpatialAudio), without behaviors
-      const prim = `\n\t\tdef SpatialAudio "Musica"\n\t\t{\n\t\t\tuniform asset filePath = @audio.${ext}@\n\t\t\tuniform token auralMode = "nonSpatial"\n\t\t\tuniform token playbackMode = "${audio.loop ? "loopFromStart" : "onceFromStart"}"\n\t\t\tuniform timecode startTime = 0\n\t\t\tdouble gain = 1\n\t\t}\n`;
-      const at = usda.indexOf(anchor); if (at >= 0) usda = usda.slice(0, at + anchor.length) + prim + usda.slice(at + anchor.length);
-      files["model.usda"] = ff.strToU8(usda);
-      return zip(files);
-    }
     const S = "/Root/Scenes/Scene/Musica";
     const play = (name, ind) => `${ind}def Preliminary_Action "${name}"\n${ind}{\n${ind}\trel affectedObjects = </Root/Scenes/Scene>\n${ind}\ttoken info:id = "Audio"\n${ind}\ttoken type = "play"\n${ind}\tasset audio = @audio.${ext}@\n${ind}\tdouble gain = 1\n${ind}\ttoken auralMode = "nonSpatial"\n${ind}\ttoken multiplePerformOperation = "allow"\n${ind}}\n`;
     const action = audio.loop
