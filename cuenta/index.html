@@ -368,6 +368,7 @@ dialog .row{justify-content:space-between}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="../assets/plataforma.js"></script>
+<script src="../assets/origen.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 const Q=new URLSearchParams(location.search);
@@ -403,7 +404,7 @@ $("fEntrar").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,as
 
 // ---- sign up ----
 $("fRegistro").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,async()=>{ msg("mRegistro","Creando tu cuenta…");
-  try{ const r=await VVR.call("register",{json:{name:$("rName").value,email:$("rEmail").value,password:$("rPass").value,ref:refCode()}}); askCode("verify",$("rEmail").value,r.dev_code); }
+  try{ const r=await VVR.call("register",{json:{name:$("rName").value,email:$("rEmail").value,password:$("rPass").value,ref:refCode(),origin:window.vvrOrigen?vvrOrigen():null}}); askCode("verify",$("rEmail").value,r.dev_code); }
   catch(err){ msg("mRegistro",err.message,"bad"); if(err.status===409) setTimeout(()=>{ $("eEmail").value=$("rEmail").value; location.hash="#entrar"; },1500); } }); });
 
 // ---- code: confirm account, or reset password ----

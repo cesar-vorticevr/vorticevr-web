@@ -81,6 +81,7 @@ export default {
     await env.DB.prepare("DELETE FROM sessions WHERE expires < ?").bind(Date.now()).run();
     await env.DB.prepare("DELETE FROM users WHERE verified = 0 AND created < ?").bind(Date.now() - 7 * 864e5).run();
     await env.DB.prepare("DELETE FROM ratelimit WHERE reset < ?").bind(Date.now()).run();
+    await reminders(env).catch(e => console.error("avisos", e.message));
   },
 };
 
@@ -270,6 +271,17 @@ async function api(request, env, ctx, url) {
 
   if (path === "/api/slug" && M === "GET") { const who0 = await auth(request, env); return json(await slugStatus(env, (url.searchParams.get("s") || "").toLowerCase(), null, null, isAdmin(env, who0))); }
 
+  // ---- stop the reminder e-mails (link at their bottom): GET asks, POST does it (mail scanners only open links) ----
+  if (path === "/api/no-mail" && (M === "GET" || M === "POST")) {
+    const id = parseInt(url.searchParams.get("u")) || 0, ok = id && url.searchParams.get("s") === (await hmac(env, "nomail:" + id)).slice(0, 24);
+    if (ok && M === "POST") await env.DB.prepare("UPDATE users SET no_mail = 1 WHERE id = ?").bind(id).run();
+    const body = !ok ? "Este link no es válido." : M === "POST" ? "Listo: ya no te mandaremos avisos. Seguirás recibiendo los correos de tu cuenta (códigos y pagos)."
+      : `¿Ya no quieres recibir avisos de Vórtice VR (experiencias por vencer, ideas para empezar)?<form method="post" style="margin-top:22px"><button style="font:700 1rem Arial,sans-serif;background:#ffbe55;color:#1a0d33;border:0;border-radius:999px;padding:13px 22px;cursor:pointer">Dejar de recibirlos</button></form>`;
+    return new Response(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Avisos de Vórtice VR</title>
+<body style="margin:0;background:#05020b;color:#f2ecff;font-family:Arial,sans-serif"><div style="max-width:480px;margin:12vh auto;padding:28px 20px;text-align:center"><div style="font-weight:700;letter-spacing:.2em;color:#d2b8ff;font-size:13px;margin-bottom:18px">VÓRTICE VR</div><p style="font-size:1.1rem;line-height:1.5">${body}</p><p style="margin-top:28px"><a href="/" style="color:#d2b8ff">vorticevr.mx</a></p></div>`,
+      { status: ok ? 200 : 400, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+  }
+
   // ---- accounts: register → confirm email once → log in with password (session 30 days) ----
   if (path === "/api/register" && M === "POST") {
     const b = await request.json().catch(() => ({}));
@@ -284,8 +296,9 @@ async function api(request, env, ctx, url) {
     const code = String(b.ref || "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20);
     const by = code ? await env.DB.prepare("SELECT id, email FROM users WHERE ref_code = ?").bind(code).first() : null;
     const refBy = by && by.email !== em ? by.id : null;   // nobody refers themselves
-    if (user) await env.DB.prepare("UPDATE users SET name = ?, pass = ?, ref_by = COALESCE(ref_by, ?) WHERE id = ?").bind(name, hash, refBy, user.id).run();
-    else await env.DB.prepare("INSERT INTO users (email, name, pass, verified, created, ref_by) VALUES (?, ?, ?, 0, ?, ?)").bind(em, name, hash, Date.now(), refBy).run();
+    const origin = cleanOrigin(b.origin, refBy);
+    if (user) await env.DB.prepare("UPDATE users SET name = ?, pass = ?, ref_by = COALESCE(ref_by, ?), origin = COALESCE(origin, ?) WHERE id = ?").bind(name, hash, refBy, origin, user.id).run();
+    else await env.DB.prepare("INSERT INTO users (email, name, pass, verified, created, ref_by, origin) VALUES (?, ?, ?, 0, ?, ?, ?)").bind(em, name, hash, Date.now(), refBy, origin).run();
     return codeResponse(await sendCode(env, em, "verify"));
   }
 
@@ -484,6 +497,7 @@ async function api(request, env, ctx, url) {
     const expires = mine ? mine.expires : P.days ? now + P.days * 864e5 : FAR;
     await env.DB.prepare("INSERT INTO experiences (slug, email, title, data, created, updated, expires, views, paused) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0) ON CONFLICT(slug) DO UPDATE SET title = excluded.title, data = excluded.data, updated = excluded.updated")
       .bind(slug, who, data.title, JSON.stringify(data), created, now, expires, mine ? mine.views || 0 : 0).run();
+    if (isNew && !me.first_pub) await env.DB.prepare("UPDATE users SET first_pub = ? WHERE id = ? AND first_pub IS NULL").bind(now, me.id).run();
     const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(slug).first();
     const out = ownerExp(row, request, env);
     if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "links" ? "Tu página de links está lista" : data.kind === "ruleta" ? "Tu ruleta de premios está lista" : data.kind === "dispara" ? "Tu juego Dispara y gana está listo" : data.kind === "memorama" ? "Tu memorama está listo" : data.kind === "sopa" ? "Tu sopa de letras está lista" : data.kind === "rompecabezas" ? "Tu rompecabezas está listo" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
@@ -1476,6 +1490,8 @@ async function schema(env) {
     // taps on each button of a link page (assets/links.js); id = the button's id or the social network
     env.DB.prepare("CREATE TABLE IF NOT EXISTS clicks (slug TEXT NOT NULL, id TEXT NOT NULL, n INTEGER DEFAULT 0, PRIMARY KEY (slug, id))"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS stats (day TEXT PRIMARY KEY, views INTEGER DEFAULT 0, signups INTEGER DEFAULT 0, publishes INTEGER DEFAULT 0, contacts INTEGER DEFAULT 0)"),
+    // reminder e-mails already sent (cron): "act:<user>" = make your first experience, "exp:<slug>:<expires>" = it expires soon
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS mails (k TEXT PRIMARY KEY, at INTEGER)"),
   ]);
   await migrate(env);
   schemaReady = true;
@@ -1522,6 +1538,10 @@ async function migrate(env) {
     try { await env.DB.batch(["stripe_customer", "stripe_sub", "stripe_status", "stripe_mode"].map(c => env.DB.prepare(`ALTER TABLE users ADD COLUMN ${c} TEXT`))); }
     catch (e) { console.error("migración stripe", e); }
   }
+  if (!/\bfirst_pub\b/.test(sql.users)) {   // where the account came from (assets/origen.js), its first publish, and no reminder e-mails
+    try { await env.DB.batch(["origin TEXT", "first_pub INTEGER", "no_mail INTEGER DEFAULT 0"].map(c => env.DB.prepare(`ALTER TABLE users ADD COLUMN ${c}`))); }
+    catch (e) { console.error("migración origen", e); }
+  }
   await env.DB.batch([
     env.DB.prepare("CREATE INDEX IF NOT EXISTS experiences_email ON experiences (email)"),
     env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS users_ref_code ON users (ref_code)"),
@@ -1535,6 +1555,14 @@ async function limit(env, key, max, windowMs) {
   if (row.n >= max) return false;
   await env.DB.prepare("UPDATE ratelimit SET n = n + 1 WHERE k = ?").bind(key).run();
   return true;
+}
+// where a new account came from (assets/origen.js): {src, med, camp, land}; a referral code counts when nothing else came
+function cleanOrigin(o, refBy) {
+  o = o && typeof o === "object" ? o : {};
+  const cut = s => String(s || "").trim().toLowerCase().replace(/[^\w.\-:/ áéíóúñü]/g, "").slice(0, 60);
+  const out = { src: cut(o.src) || "directo", med: cut(o.med), camp: cut(o.camp), land: cut(o.land) };
+  if (refBy && out.src === "directo") { out.src = "recomendado"; out.med = "codigo"; }
+  return JSON.stringify(out);
 }
 const normEmail = e => { e = String(e || "").trim().toLowerCase(); return EMAIL.test(e) ? e : null; };
 const enc = new TextEncoder();
@@ -1580,7 +1608,7 @@ async function auth(request, env) {
   const t = bearer(request);
   if (!t) return null;
   const row = await env.DB.prepare(`SELECT u.id, u.email, u.name, u.verified, u.plan, u.plan_until, u.plan_note, u.stripe_customer, u.stripe_sub, u.stripe_status, u.stripe_mode,
-      u.owner_id, u.quota, u.extra_exp, u.temp_pw, u.ref_code, u.ref_by, u.seller, u.payout, o.plan AS o_plan, o.plan_until AS o_until, o.name AS o_name, o.email AS o_email, s.expires
+      u.owner_id, u.quota, u.extra_exp, u.temp_pw, u.ref_code, u.ref_by, u.seller, u.payout, u.first_pub, o.plan AS o_plan, o.plan_until AS o_until, o.name AS o_name, o.email AS o_email, s.expires
     FROM sessions s JOIN users u ON u.id = s.user_id LEFT JOIN users o ON o.id = u.owner_id WHERE s.token = ?`).bind(await sha256hex(t)).first();
   return row && row.expires > Date.now() && row.verified ? row : null;
 }
@@ -1680,13 +1708,17 @@ const PLAN_RANK = { gratis: 0, basico: 1, pro: 2, empresarial: 3, escuela: 3, pr
 // a 30-day daily series, and the most viewed experiences. About 10 queries.
 async function adminStats(env, request) {
   const now = Date.now(), d30 = now - 30 * 864e5, d7 = now - 7 * 864e5;
-  const [acc, plans, exps, top, days, cps] = await env.DB.batch([
+  const od = Math.min(3650, Math.max(1, parseInt(new URL(request.url).searchParams.get("dias")) || 90));
+  const [acc, plans, exps, top, days, cps, org] = await env.DB.batch([
     env.DB.prepare(`SELECT COUNT(*) AS users, SUM(created > ?1) AS new7, SUM(created > ?2) AS new30 FROM users WHERE verified = 1`).bind(d7, d30),
     env.DB.prepare(`SELECT plan, plan_until, plan_note, stripe_status FROM users WHERE COALESCE(plan, 'gratis') != 'gratis' AND (plan_until IS NULL OR plan_until > ?)`).bind(now),
     env.DB.prepare(`SELECT SUM(paused = 0) AS active, SUM(paused = 1) AS paused, SUM(created > ?2) AS new30, COALESCE(SUM(views), 0) AS views FROM experiences WHERE expires > ?1`).bind(now, d30),
     env.DB.prepare(`SELECT slug, title, email, views FROM experiences WHERE expires > ? ORDER BY views DESC LIMIT 10`).bind(now),
     env.DB.prepare(`SELECT * FROM stats WHERE day >= ? ORDER BY day`).bind(new Date(d30 - 6 * 3600e3).toISOString().slice(0, 10)),
     env.DB.prepare(`SELECT COUNT(*) AS coupons, COALESCE(SUM(uses), 0) AS uses FROM coupons`),
+    // accounts of the period by where they came from: did they publish? do they pay (not a courtesy code)?
+    env.DB.prepare(`SELECT u.origin, u.plan, u.plan_until, u.plan_note, (u.first_pub IS NOT NULL OR EXISTS (SELECT 1 FROM experiences e WHERE e.email = u.email)) AS pub
+      FROM users u WHERE u.verified = 1 AND u.owner_id IS NULL AND u.created > ? LIMIT 20000`).bind(now - od * 864e5),
   ]);
   const a = acc.results[0], e = exps.results[0];
   // paying accounts by plan; monthly income: Stripe (yearly ÷ 12) + plans activated by hand; courtesy codes are $0
@@ -1701,7 +1733,17 @@ async function adminStats(env, request) {
   const series = []; const map = Object.fromEntries(days.results.map(r => [r.day, r]));
   for (let i = 29; i >= 0; i--) { const day = new Date(now - 6 * 3600e3 - i * 864e5).toISOString().slice(0, 10), r = map[day] || {}; series.push({ day, views: r.views || 0, signups: r.signups || 0, publishes: r.publishes || 0, contacts: r.contacts || 0 }); }
   const paid = byPlan.basico + byPlan.pro + byPlan.premium + byPlan.empresarial + byPlan.escuela;
+  const bySrc = {}, byCamp = {};
+  for (const u of org.results) {
+    let o = {}; try { o = JSON.parse(u.origin || "null") || {}; } catch (e) {}
+    const src = u.origin ? o.src || "directo" : "sin dato", pays = u.plan && u.plan !== "gratis" && (!u.plan_until || u.plan_until > now) && !/^Cupón/.test(u.plan_note || "") ? 1 : 0;
+    const add = (m, k, extra) => { const r = m[k] || (m[k] = { n: 0, pub: 0, paid: 0, ...extra }); r.n++; r.pub += u.pub ? 1 : 0; r.paid += pays; };
+    add(bySrc, src, { src });
+    if (o.camp || o.med) add(byCamp, [src, o.med, o.camp].join("|"), { src, med: o.med || "", camp: o.camp || "" });
+  }
+  const rank = m => Object.values(m).sort((a, b) => b.paid - a.paid || b.n - a.n);
   return {
+    origins: { days: od, bySrc: rank(bySrc), byCamp: rank(byCamp).slice(0, 25) },
     users: a.users || 0, new7: a.new7 || 0, new30: a.new30 || 0, paid, byPlan, kind, mrr: Math.round(mrr),
     conversion: a.users ? Math.round(1000 * (paid - kind.cortesia) / a.users) / 10 : 0,
     experiences: { active: e.active || 0, paused: e.paused || 0, new30: e.new30 || 0, views: e.views || 0 },
@@ -1929,6 +1971,54 @@ const teamMail = (owner, name, email, pw, quota, origin) => shell(`<h1 style="fo
 <p>Entra en <a href="${esc(origin)}/cuenta/" style="color:#ffbe55;font-weight:700">${esc(origin.replace(/^https?:\/\//, ""))}/cuenta</a> con:</p>
 <p style="background:#1b0a36;border-radius:10px;padding:14px;font-size:16px">Correo: <b>${esc(email)}</b><br>Contraseña temporal: <b style="font-family:monospace;letter-spacing:.06em">${esc(pw)}</b></p>
 <p>Al entrar, cámbiala por una tuya en Mi cuenta → Cambiar contraseña.</p>`);
+// ---------- reminder e-mails (daily cron) ----------
+// 1) free experiences that expire in the next 3 days (one e-mail per account), 2) accounts 1–3 days old that have not
+// published anything yet. Each one once (table mails), at most MAIL_DAY a day so the sign-up codes always fit in Resend,
+// and never to accounts that asked to stop them (users.no_mail, link at the bottom).
+const MAIL_DAY = 50;
+const siteUrl = env => env.SITE_URL || "https://vorticevr.mx";
+async function unsubUrl(env, id) { return `${siteUrl(env)}/api/no-mail?u=${id}&s=${(await hmac(env, "nomail:" + id)).slice(0, 24)}`; }
+const remindShell = (body, unsub) => shell(`${body}<p style="color:#a99bcb;font-size:12px;margin-top:22px">¿No quieres estos avisos? <a href="${esc(unsub)}" style="color:#a99bcb">Dejar de recibirlos</a>.</p>`);
+const btnMail = (href, t) => `<p style="margin:22px 0"><a href="${esc(href)}" style="background:#ffbe55;color:#1a0d33;font-weight:700;text-decoration:none;padding:13px 22px;border-radius:999px;display:inline-block">${t}</a></p>`;
+async function reminders(env) {
+  const now = Date.now(), site = siteUrl(env); let left = MAIL_DAY;
+  const pause = () => new Promise(r => setTimeout(r, 600));   // Resend allows 2 per second
+  // claim the keys first (two runs never send the same reminder); if the e-mail fails they are freed to retry tomorrow
+  async function once(keys, to, subject, html) {
+    if (left <= 0) return;
+    const got = [];
+    for (const k of keys) if ((await env.DB.prepare("INSERT OR IGNORE INTO mails (k, at) VALUES (?, ?)").bind(k, now).run()).meta.changes) got.push(k);
+    if (!got.length) return;
+    left--;
+    if (!(await sendMail(env, to, subject, html, undefined, env.CONTACT_TO || "hola@vorticevr.mx"))) await env.DB.batch(got.map(k => env.DB.prepare("DELETE FROM mails WHERE k = ?").bind(k)));
+    await pause();
+  }
+  const { results: soon } = await env.DB.prepare(`SELECT e.slug, e.title, e.expires, u.id, u.email, u.name, u.plan, u.plan_until FROM experiences e JOIN users u ON u.email = e.email
+    WHERE e.expires > ? AND e.expires < ? AND e.paused = 0 AND u.verified = 1 AND u.owner_id IS NULL AND COALESCE(u.no_mail, 0) = 0 ORDER BY e.expires LIMIT 500`).bind(now, now + 3 * 864e5).all();
+  const byUser = new Map();
+  for (const r of soon) if (planOf(r).id === "gratis") (byUser.get(r.id) || byUser.set(r.id, { u: r, list: [] }).get(r.id)).list.push(r);
+  for (const { u, list } of byUser.values()) {
+    const one = list.length === 1, items = list.map(e => `<li style="margin:6px 0"><b>${esc(e.title || e.slug)}</b>: vence el ${fecha(e.expires)}</li>`).join("");
+    await once(list.map(e => `exp:${e.slug}:${e.expires}`), u.email, one ? `Tu experiencia "${String(list[0].title || list[0].slug).slice(0, 60)}" vence pronto` : `Tus experiencias vencen pronto`, remindShell(`
+<h1 style="font-size:20px">Hola${u.name ? " " + esc(u.name.split(" ")[0]) : ""}, ${one ? "tu experiencia vence" : "tus experiencias vencen"} en menos de 3 días</h1>
+<ul style="padding-left:18px">${items}</ul>
+<p>En el plan Gratis cada experiencia dura ${PLANS.gratis.days} días y luego se borra junto con su link y su QR. Si ya lo imprimiste o lo compartiste, dejará de funcionar.</p>
+<p>Con <b>Pro</b> ($${PLANS.pro.price}/mes, IVA incluido) tus experiencias no vencen mientras pagues, tienes vistas ilimitadas y hasta ${expCount(PLANS.pro.exp)}. Con el pago anual te regalamos 2 meses.</p>
+${btnMail(site + "/cuenta/#planes", "Que no se borre: pasar a Pro")}`, await unsubUrl(env, u.id)));
+  }
+  const { results: idle } = await env.DB.prepare(`SELECT u.id, u.email, u.name FROM users u WHERE u.verified = 1 AND u.owner_id IS NULL AND COALESCE(u.no_mail, 0) = 0
+    AND u.created < ? AND u.created > ? AND u.first_pub IS NULL AND NOT EXISTS (SELECT 1 FROM experiences e WHERE e.email = u.email) LIMIT 200`).bind(now - 864e5, now - 3 * 864e5).all();
+  const fav = [["crear/?tipo=ra", "Realidad aumentada con imagen", "tu imagen impresa cobra vida con un video encima"], ["crear/filtro/", "Filtro para tu cara", "como los de Instagram, para tu negocio o evento"],
+    ["crear/dispara/", "Dispara y gana", "un juego 360 con premio para tus clientes"], ["crear/ruleta/", "Ruleta de premios", "tus clientes giran y se llevan un cupón"]];
+  for (const u of idle) await once([`act:${u.id}`], u.email, "Crea tu primera experiencia en 3 minutos", remindShell(`
+<h1 style="font-size:20px">Hola${u.name ? " " + esc(u.name.split(" ")[0]) : ""}, ¿qué vas a crear primero?</h1>
+<p>Ya tienes tu cuenta en Vórtice VR, pero todavía no publicas tu primera experiencia. Sin programar: eliges una, llenas unos campos y te damos tu link y tu QR. Las favoritas:</p>
+<ul style="padding-left:18px">${fav.map(([p, t, d]) => `<li style="margin:8px 0"><a href="${site}/${p}" style="color:#ffbe55;font-weight:700">${t}</a>: ${d}</li>`).join("")}</ul>
+<p>Es gratis: puedes tener hasta ${expCount(PLANS.gratis.exp)} al mismo tiempo.</p>
+${btnMail(site + "/crear/", "Crear mi experiencia")}
+<p style="color:#a99bcb">¿Dudas? Responde este correo o escríbenos en Mi cuenta → Ayuda y soporte.</p>`, await unsubUrl(env, u.id)));
+  await env.DB.prepare("DELETE FROM mails WHERE at < ?").bind(now - 120 * 864e5).run();
+}
 const planMail = (user, plan, until) => shell(`<h1 style="font-size:20px">¡Tu plan ${PLANS[plan].name} está activo!</h1>
 <p>Hola ${esc(user.name || "")}, ya puedes tener hasta <b>${expCount(PLANS[plan].exp)}</b> activas al mismo tiempo, con videos de hasta ${PLANS[plan].videoMB} MB, sin fecha de vencimiento mientras tu plan esté vigente.</p>
 ${until ? `<p>Pagado hasta el <b>${fecha(until)}</b>.</p>` : ""}

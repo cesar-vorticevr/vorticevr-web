@@ -85,8 +85,13 @@ input:focus,select:focus{border-color:var(--lav);outline:none}
 table.top{width:100%;border-collapse:collapse;font-size:.88rem}
 table.top th,table.top td{text-align:left;padding:8px;border-bottom:1px solid var(--line)}
 table.top th{color:var(--mute);font-weight:600}
-table.top td.n{text-align:right;font-variant-numeric:tabular-nums}
+table.top td.n,table.top th.n{text-align:right;font-variant-numeric:tabular-nums}
 .note{font-size:.82rem;color:var(--mute)}
+.origins{margin-top:16px}
+.origins .ohead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.origins h3{font-family:var(--fd);font-size:1rem;margin:18px 0 4px}
+.origins code{font-family:var(--fm);font-size:.8rem;color:var(--lav);overflow-wrap:anywhere}
+.origins td small{color:var(--mute)}
 .cform{border-top:0;padding-top:4px}
 #couponList{margin-top:12px}
 .coupon{display:flex;gap:10px 16px;align-items:center;flex-wrap:wrap;padding:14px 18px;margin-bottom:10px}
@@ -126,6 +131,14 @@ table.top td.n{text-align:right;font-variant-numeric:tabular-nums}
         <figure class="card chart" id="cPublishes"></figure>
       </div>
       <div class="card"><h2>Experiencias más vistas</h2><div class="tablewrap"><table class="top" id="topT"></table></div></div>
+      <div class="card origins">
+        <div class="ohead"><h2>¿De dónde llegan?</h2>
+          <select id="oDays" aria-label="Periodo"><option value="30">Últimos 30 días</option><option value="90" selected>Últimos 90 días</option><option value="365">Último año</option><option value="3650">Todo</option></select></div>
+        <p class="note">Cuentas nuevas por el lugar de donde llegaron, cuántas publicaron al menos una experiencia y cuántas pagan (sin contar cortesías). Para medir un anuncio o una publicación, comparte el link con su etiqueta, por ejemplo <code>vorticevr.mx/?utm_source=tiktok&amp;utm_campaign=muertos</code>, y sale en "Campañas".</p>
+        <div class="tablewrap"><table class="top" id="oSrc"></table></div>
+        <h3>Campañas</h3>
+        <div class="tablewrap"><table class="top" id="oCamp"></table></div>
+      </div>
       <p class="note">Las gráficas cuentan desde octubre de 2026 (cuando se empezó a registrar cada día). "Ingreso mensual" estima lo que entra al mes: Stripe (los anuales divididos entre 12) más los planes que activas a mano; las cortesías cuentan $0.</p>
     </section>
 
@@ -278,8 +291,21 @@ function drawCharts(s){
   bars($("cSignups"),"Cuentas nuevas por día","Cuentas que confirmaron su correo",s.series,"signups","cuentas");
   bars($("cPublishes"),"Experiencias creadas por día","Experiencias nuevas publicadas",s.series,"publishes","experiencias");
 }
+// accounts by where they came from (assets/origen.js): signed up → published → pay
+const SRC_NAMES={directo:"Directo",experiencia:"Vieron una experiencia",recomendado:"Código de recomendado o vendedor","sin dato":"Sin dato (cuentas de antes del 22 oct 2026)",google:"Google",ia:"Asistentes de IA (ChatGPT, etc.)"};
+function originRows(list,label){
+  const pc=(a,b)=>b?` <small>${Math.round(100*a/b)}%</small>`:"";
+  return list.length?list.map(r=>`<tr><td>${label(r)}</td><td class="n">${nf(r.n)}</td><td class="n">${nf(r.pub)}${pc(r.pub,r.n)}</td><td class="n">${nf(r.paid)}${pc(r.paid,r.n)}</td></tr>`).join(""):"<tr><td colspan='4'>Todavía no hay cuentas en este periodo.</td></tr>";
+}
+function drawOrigins(o){
+  const head=first=>`<tr><th>${first}</th><th class='n'>Cuentas</th><th class='n'>Publicaron</th><th class='n'>Pagan</th></tr>`;
+  $("oSrc").innerHTML=head("Origen")+originRows(o.bySrc,r=>esc(SRC_NAMES[r.src]||r.src));
+  $("oCamp").innerHTML=head("Campaña")+originRows(o.byCamp,r=>`${esc(r.camp||"(sin nombre)")} <small>${esc(SRC_NAMES[r.src]||r.src)}${r.med?" · "+esc(r.med):""}</small>`);
+}
+$("oDays").addEventListener("change",async()=>{ try{ drawOrigins((await VVR.call("admin/stats?dias="+$("oDays").value)).origins); }catch(e){} });
 async function loadStats(){
-  const s=lastStats=await VVR.call("admin/stats");
+  const s=lastStats=await VVR.call("admin/stats?dias="+$("oDays").value);
+  drawOrigins(s.origins);
   const k=[[nf(s.users),"cuentas confirmadas",`+${nf(s.new7)} en 7 días · +${nf(s.new30)} en 30`],
     [nf(s.paid),"con plan pagado",`Pro ${s.byPlan.pro} · Premium ${s.byPlan.premium||0}${s.byPlan.basico?" · Básico "+s.byPlan.basico:""}${s.byPlan.empresarial?" · Empresarial "+s.byPlan.empresarial:""}${s.byPlan.escuela?" · Escuela "+s.byPlan.escuela:""}`],
     ["$"+nf(s.mrr),"ingreso mensual estimado",`Stripe ${s.kind.stripe} · a mano ${s.kind.manual} · cortesías ${s.kind.cortesia}`],
