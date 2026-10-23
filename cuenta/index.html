@@ -378,7 +378,8 @@ function refCode(){ try{ const r=JSON.parse(localStorage.getItem(REFKEY)||"null"
 { const c=(Q.get("ref")||"").toUpperCase().replace(/[^A-Z0-9-]/g,""); if(c){ try{ localStorage.setItem(REFKEY,JSON.stringify({code:c,t:Date.now()})); }catch(e){} } }
 (async()=>{ const c=refCode(); if(!c) return; try{ const r=await (await fetch(`${VVR.api}/api/ref/${encodeURIComponent(c)}`)).json();
   if(r.ok){ const b=$("rInvite"); b.hidden=false; b.innerHTML=`✦ <b>${esc(r.name)}</b> te invitó: tendrás <b>${r.discount}% de descuento</b> en tu primer pago de cualquier plan.`; } }catch(e){} })();
-const NEXT=Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":Q.get("siguiente")==="vendedor"?"../vendedor/":null;
+// siguiente=crear/ruleta (the segment pages) goes straight to that creator after signing in
+const NEXT=/^crear\/[a-z]+$/.test(Q.get("siguiente")||"")?"../"+Q.get("siguiente")+"/":Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":Q.get("siguiente")==="vendedor"?"../vendedor/":null;
 // public plans: [id, name, monthly price, yearly price, what it includes] (a year is ~10 months; IVA included)
 const PLANS=[["gratis","Gratis",0,0,"Para probar la magia",["Hasta <b>3</b> experiencias de cualquier tipo","Realidad aumentada: hasta <b>3</b> elementos por imagen (video, foto, texto o 3D)","Activa <b>15 días</b>","Hasta <b>1,000</b> vistas","Videos de hasta 25 MB"]],
   ["pro","Pro",499,4990,"Para crear y vender experiencias",["<b>100</b> experiencias de cualquier tipo","Realidad aumentada: hasta <b>15</b> elementos por imagen","Cámbialas cuando quieras","Sin vencimiento mientras pagues","Vistas ilimitadas","Videos de hasta <b>50 MB</b>"]],

@@ -13,5 +13,7 @@
   a.dataset.en = `<span class="av">${ini}</span><span class="nm">My account</span>`;
   a.setAttribute("aria-label", "Mi cuenta: " + first);
   a.innerHTML = window.vvrLang && vvrLang() === "en" ? a.dataset.en : a.dataset.es;
-  document.querySelectorAll('a[href*="cuenta/?siguiente=crear"]').forEach(l => { l.href = base + "crear/"; });
+  document.querySelectorAll('a[href*="cuenta/?siguiente=crear"]').forEach(l => {   // …/crear/ruleta stays on that creator
+    const m = l.getAttribute("href").match(/siguiente=crear(\/[a-z]+)?/); l.href = base + "crear/" + (m[1] ? m[1].slice(1) + "/" : "");
+  });
 })();
