@@ -28,7 +28,7 @@
 {"@type":"Question","name":"¿El taller gratis tiene algún compromiso?","acceptedAnswer":{"@type":"Answer","text":"No. Es una hora para conocer la plataforma y crear su primera experiencia. Si después quieren el taller completo, lo platicamos."}},
 {"@type":"Question","name":"¿Qué incluye el taller completo?","acceptedAnswer":{"@type":"Answer","text":"Tres horas en las que crean realidad aumentada completa: objetos 3D, imágenes, videos y canciones hechos con inteligencia artificial sobre su propia hoja, más un año del plan Premium para la escuela: experiencias ilimitadas, sin vencimiento y con el logo de la escuela."}},
 {"@type":"Question","name":"¿Lo pueden tomar los alumnos?","acceptedAnswer":{"@type":"Answer","text":"Sí. El taller funciona con maestros, con alumnos o con los dos juntos. Dinos el grado en el formulario y lo adaptamos."}},
-{"@type":"Question","name":"¿Cuántas personas pueden entrar?","acceptedAnswer":{"@type":"Answer","text":"Lo ideal son 20 personas. Pueden ser hasta 40 si hay un salón grande. Cada quien con su computadora, internet y su celular."}}]}
+{"@type":"Question","name":"¿Cuántas personas pueden entrar?","acceptedAnswer":{"@type":"Answer","text":"El taller gratis es para hasta 20 personas y el completo para hasta 40. Cada quien con su computadora, internet y su celular."}}]}
 ]}
 </script>
 <style>
@@ -95,7 +95,7 @@ header.top nav a:hover{color:var(--ink)}
 /* hero stage: phone + orbiting tools */
 .stage{position:relative;aspect-ratio:1;max-width:520px;width:100%;justify-self:center}
 .ring{position:absolute;inset:6%;border-radius:50%;border:1px dashed var(--line2);transform:rotateX(68deg)}
-.phone{position:absolute;left:50%;top:50%;width:42%;aspect-ratio:9/18.5;transform:translate(-50%,-50%) rotate(-6deg);border-radius:32px;background:#0b0418;border:3px solid #3a2560;box-shadow:0 30px 80px -20px rgba(139,63,214,.8),inset 0 0 0 6px #0b0418;overflow:hidden}
+.phone{position:absolute;left:50%;top:50%;width:42%;aspect-ratio:9/18.5;transform:translate(-50%,-50%) rotate(-6deg);z-index:2;border-radius:32px;background:#0b0418;border:3px solid #3a2560;box-shadow:0 30px 80px -20px rgba(139,63,214,.8),inset 0 0 0 6px #0b0418;overflow:hidden}
 .screen{position:absolute;inset:6px;border-radius:26px;background:linear-gradient(170deg,#2a1450,#120826 60%);overflow:hidden}
 .sheet{position:absolute;left:12%;right:12%;bottom:14%;height:38%;background:#f6f0ff;border-radius:8px;transform:perspective(300px) rotateX(48deg);box-shadow:0 10px 30px rgba(0,0,0,.4)}
 .sheet::before,.sheet::after{content:"";position:absolute;left:12%;height:7%;border-radius:4px;background:#c9b6ea}
@@ -148,6 +148,19 @@ section.blk{padding-block:90px}
 .value{border-radius:18px;padding:16px 18px;background:rgba(255,190,85,.1);border:1px dashed var(--sun);display:grid;gap:4px}
 .value b{color:var(--sun)}
 .strike{text-decoration:line-through;color:var(--mute)}
+.save{display:grid;gap:10px;padding:18px;border-radius:20px;background:linear-gradient(140deg,rgba(255,190,85,.16),rgba(139,63,214,.18));border:1px solid rgba(255,190,85,.45)}
+.save .bar{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;font-size:.95rem}
+.save .bar i{display:block;height:12px;border-radius:999px;background:var(--line2);margin-top:6px}
+.save .bar.pay i{background:linear-gradient(90deg,var(--sun),#ff9d3d);width:82.8%}
+.save .bar b{font-family:var(--fd);font-variant-numeric:tabular-nums}
+.save .off{justify-self:start;font-family:var(--fd);font-weight:800;font-size:1.5rem;color:#1a0d33;background:var(--sun);border-radius:14px;padding:6px 14px;transform:rotate(-2deg);box-shadow:0 8px 30px -8px rgba(255,190,85,.8)}
+.seats-k{display:flex;flex-wrap:wrap;gap:16px;font-size:.92rem;color:var(--mute)}
+.seats-k span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:6px;vertical-align:-1px;background:var(--ok)}
+.seats-k span.g::before{background:var(--sun)}
+.pill.acct{background:transparent}
+.pill.acct.in{padding:5px 14px 5px 5px;background:rgba(139,63,214,.18)}
+.pill.acct .av{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--vortex);font-size:.8rem;letter-spacing:0}
+@media (max-width:760px){header.top nav a.pill{padding:8px 12px;font-size:.72rem}.pill.acct.in{padding:4px}.pill.acct.in .nm{display:none}}
 @property --a{syntax:"<angle>";inherits:false;initial-value:0deg}
 @media (prefers-reduced-motion:no-preference){.plan.pro{animation:spinb 6s linear infinite}@keyframes spinb{to{--a:360deg}}}
 @media (max-width:860px){.plans{grid-template-columns:1fr}}
@@ -340,12 +353,12 @@ footer a{color:var(--mute)}
       <article class="plan rv">
         <span class="tag">Para conocer</span>
         <h3 style="font-size:1.7rem">Taller gratis</h3>
-        <div class="price"><b>$0</b><span>· 1 hora</span></div>
+        <div class="price"><b>$0</b><span>· 1 hora · hasta 20 personas</span></div>
         <p class="mute">Una sesión tranquila para conocer la plataforma y ver la realidad aumentada funcionando en su salón.</p>
         <ul>
           <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Demostración de realidad aumentada y recorrido por la plataforma</span></li>
           <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Cada quien crea su <b>primera realidad aumentada</b>: un video sobre su propia hoja</span></li>
-          <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Cuentas gratis para todos los participantes</span></li>
+          <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Para <b>hasta 20 personas</b>, con cuentas gratis para todos</span></li>
           <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Manual digital para seguir practicando</span></li>
         </ul>
         <a class="btn" href="#agenda" data-plan="gratis">Agendar taller gratis</a>
@@ -353,10 +366,10 @@ footer a{color:var(--mute)}
       <article class="plan pro rv">
         <span class="tag">★ El más completo</span>
         <h3 style="font-size:1.7rem">Taller completo + Premium</h3>
-        <div class="price"><b>$14,900</b><span>MXN · 3 horas</span></div>
+        <div class="price"><b>$14,900</b><span>MXN · 3 horas · hasta 40 personas</span></div>
         <p class="mute">Maestros y alumnos aprenden a crear <b style="color:var(--ink)">realidad aumentada completa</b> con inteligencia artificial, y la escuela se queda con la plataforma sin límites todo un año.</p>
         <ul>
-          <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Todo lo del taller gratis</span></li>
+          <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Todo lo del taller gratis, para <b>hasta 40 personas</b></span></li>
           <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span><b>Objetos 3D</b>: escanear objetos reales con el celular y convertir cualquier imagen en 3D</span></li>
           <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span><b>Imágenes, videos y canciones</b> hechos con inteligencia artificial, listos para aparecer sobre la hoja</span></li>
           <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Cada participante sale con su <b>realidad aumentada completa publicada</b>: 3D, video y música sobre su propia hoja</span></li>
@@ -364,7 +377,12 @@ footer a{color:var(--mute)}
           <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Realidad aumentada sobre la mesa: objetos 3D de tamaño real para caminar a su alrededor</span></li>
           <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Manual digital y ejemplos listos para cada materia</span></li>
         </ul>
-        <div class="value"><b>El taller te sale gratis.</b><span>Solo el año de Premium cuesta <span class="strike">$14,990</span>. Con el taller pagas $14,900 y maestros y alumnos aprenden a sacarle todo el provecho.</span></div>
+        <div class="save">
+          <div class="bar"><span>12 meses de Premium ($1,499 al mes)<i></i></span><b class="strike">$17,988</b></div>
+          <div class="bar pay"><span>Taller de 3 horas + 12 meses de Premium<i></i></span><b style="color:var(--sun)">$14,900</b></div>
+          <span class="off">Ahorras $3,088</span>
+          <span class="mute" style="font-size:.92rem">Y las 3 horas de taller van <b style="color:var(--ink)">de regalo</b>.</span>
+        </div>
         <a class="btn sun" href="#agenda" data-plan="completo">Quiero el taller completo</a>
       </article>
     </div>
@@ -374,6 +392,8 @@ footer a{color:var(--mute)}
         <thead><tr><th>Qué incluye</th><th>Gratis</th><th>Completo</th></tr></thead>
         <tbody>
           <tr><td>Duración</td><td>1 hora</td><td><b>3 horas</b></td></tr>
+          <tr><td>Personas</td><td>Hasta 20</td><td><b>Hasta 40</b></td></tr>
+          <tr><td>Precio</td><td>Gratis</td><td><b>$14,900</b> <span class="mute">(12 meses de Premium valen <span class="strike">$17,988</span>)</span></td></tr>
           <tr><td>Crear su primera realidad aumentada</td><td class="y">✓</td><td class="y">✓</td></tr>
           <tr><td>Objetos 3D: escanearlos y crearlos desde una imagen</td><td class="n">—</td><td class="y">✓</td></tr>
           <tr><td>Imágenes, videos y canciones con inteligencia artificial</td><td class="n">—</td><td class="y">✓</td></tr>
@@ -459,9 +479,10 @@ footer a{color:var(--mute)}
       <div class="req rv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a5 5 0 0 1 5 5v1h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2h1V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v1h6V7a3 3 0 0 0-3-3zm0 9a2 2 0 0 0-1 3.7V18h2v-1.3A2 2 0 0 0 12 13z"/></svg><div><h3>Una cuenta de Google</h3><p>Para entrar rápido a las herramientas.</p></div></div>
     </div>
     <div class="room rv">
-      <h3>Grupo ideal: <span style="color:var(--ok)">20 personas</span> · hasta <span style="color:var(--sun)">40</span> en un salón grande</h3>
+      <h3>Taller gratis: hasta <span style="color:var(--ok)">20 personas</span> · Taller completo: hasta <span style="color:var(--sun)">40</span></h3>
       <div class="seats" id="seats" aria-hidden="true"></div>
-      <p class="mute">Con 20, cada quien recibe ayuda personal. Si son más de 40, hacemos dos grupos.</p>
+      <div class="seats-k"><span>Taller gratis</span><span class="g">Se suman en el taller completo</span></div>
+      <p class="mute">El completo con más de 20 personas necesita un salón grande. Si son más, hacemos otro grupo.</p>
     </div>
   </div>
 </section>
@@ -474,8 +495,8 @@ footer a{color:var(--mute)}
         <div class="step">
           <h3><span class="n">1</span>¿Qué taller quieren?</h3>
           <div class="pick">
-            <label class="opt"><input type="radio" name="plan" value="gratis" id="pGratis"><b>Taller gratis</b><span>1 hora · conocer la plataforma</span><em>$0</em></label>
-            <label class="opt"><input type="radio" name="plan" value="completo" id="pCompleto" checked><b>Taller completo + Premium</b><span>3 horas · todas las herramientas · 1 año Premium</span><em>$14,900</em></label>
+            <label class="opt"><input type="radio" name="plan" value="gratis" id="pGratis"><b>Taller gratis</b><span>1 hora · hasta 20 personas · conocer la plataforma</span><em>$0</em></label>
+            <label class="opt"><input type="radio" name="plan" value="completo" id="pCompleto" checked><b>Taller completo + Premium</b><span>3 horas · hasta 40 personas · 12 meses de Premium (valen $17,988)</span><em>$14,900</em></label>
           </div>
         </div>
         <div class="step">
@@ -545,6 +566,7 @@ footer a{color:var(--mute)}
           <div><dt>Personas</dt><dd id="sPpl">20</dd></div>
         </dl>
         <span class="tot" id="sPrice">$14,900 MXN</span>
+        <span class="mute" id="sSave" style="margin-top:-8px">12 meses de Premium valen <span class="strike">$17,988</span>: <b style="color:var(--sun)">ahorras $3,088</b></span>
         <ul id="sInc"></ul>
         <button class="btn sun" type="submit" form="fTaller" id="send">Enviar solicitud</button>
         <p class="err" id="err" role="alert"></p>
@@ -569,11 +591,11 @@ footer a{color:var(--mute)}
     <div class="shead rv"><span class="kick">Preguntas</span><h2>Lo que nos preguntan.</h2></div>
     <div class="faq">
       <details class="rv"><summary>¿El taller gratis tiene algún compromiso?</summary><p>No. Es una hora para conocer la plataforma y crear su primera experiencia. Si después quieren el taller completo, lo platicamos.</p></details>
-      <details class="rv"><summary>¿Qué incluye el plan Premium de la escuela?</summary><p>Experiencias ilimitadas que no vencen mientras el plan esté activo, hasta 15 elementos por experiencia, videos de hasta 50 MB y el logo de tu escuela (o ningún logo) en todas sus experiencias, fotos y videos. Dura un año desde el taller.</p></details>
+      <details class="rv"><summary>¿Qué incluye el plan Premium de la escuela?</summary><p>Normalmente cuesta $1,499 al mes ($17,988 los 12 meses); con el taller completo la escuela lo tiene un año por $14,900. Incluye experiencias ilimitadas que no vencen mientras el plan esté activo, hasta 15 elementos por experiencia, videos de hasta 50 MB y el logo de tu escuela (o ningún logo) en todas sus experiencias, fotos y videos. Dura un año desde el taller.</p></details>
       <details class="rv"><summary>¿Lo pueden tomar los alumnos?</summary><p>Sí. El taller funciona con maestros, con alumnos o con los dos juntos. Dinos el grado en el formulario y lo adaptamos.</p></details>
       <details class="rv"><summary>¿Cada quien necesita su propia cuenta?</summary><p>El Premium es una cuenta para la escuela, donde se publican las experiencias sin límite y donde pueden trabajar los alumnos. Además, cada maestro puede abrir su cuenta gratis para practicar.</p></details>
       <details class="rv"><summary>¿Las herramientas de inteligencia artificial cuestan?</summary><p>Todas tienen versión gratis, y con esa se hace todo el taller. Algunas tienen límites de uso al día o al mes; en el taller les explicamos cómo aprovecharlas.</p></details>
-      <details class="rv"><summary>¿Cuántas personas pueden entrar?</summary><p>Lo ideal son 20, para que cada quien reciba ayuda. Pueden ser hasta 40 si hay un salón grande. Si son más, hacemos dos grupos.</p></details>
+      <details class="rv"><summary>¿Cuántas personas pueden entrar?</summary><p>El taller gratis es para hasta 20 personas y el completo para hasta 40 (con más de 20 se necesita un salón grande). Si son más, hacemos otro grupo.</p></details>
       <details class="rv"><summary>¿Necesitan saber de tecnología?</summary><p>No. Si saben usar el celular y la computadora para lo básico, pueden crear realidad aumentada. Todo se hace llenando campos y arrastrando.</p></details>
       <details class="rv"><summary>¿Qué es la realidad aumentada?</summary><p>Es ver cosas digitales sobre el mundo real con la cámara del celular: al enfocar una hoja aparecen encima un objeto 3D, un video o una canción. Funciona en el navegador, sin instalar nada.</p></details>
       <details class="rv"><summary>¿Los alumnos necesitan una app?</summary><p>No. Escanean el QR y la experiencia se abre en el navegador del celular, sin instalar nada ni dar datos.</p></details>
@@ -621,8 +643,10 @@ document.documentElement.classList.add("js");
   // hero: tools orbit the phone; the mouse tilts the stage
   const stage = $("stage"), tools = [...stage.querySelectorAll(".tool")];
   let a = 0, tx = 0, ty = 0;
-  const place = () => { const r = stage.clientWidth; tools.forEach((el, i) => { const ang = a + i * (Math.PI * 2 / tools.length), x = Math.cos(ang) * r * .44, y = Math.sin(ang) * r * .2 + r * .02, z = Math.sin(ang);
-    el.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) scale(${.82 + .22 * (z + 1) / 2})`; el.style.zIndex = z > 0 ? 3 : 0; el.style.opacity = .55 + .45 * (z + 1) / 2; });
+  const place = () => { const r = stage.clientWidth; tools.forEach((el, i) => { const ang = a + i * (Math.PI * 2 / tools.length), z = Math.sin(ang), k = .82 + .22 * (z + 1) / 2;
+    const x = Math.cos(ang) * Math.min(r * .44, r / 2 - el.offsetWidth * k / 2 - 4), y = z * r * .2 + r * .02;   // stays inside the stage on phones
+    el.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) scale(${k})`; el.style.zIndex = z > 0 ? 3 : 1;   // the phone is 2: chips pass behind it
+    el.style.opacity = z > 0 ? 1 : .45 + .4 * (z + 1); el.style.filter = z > 0 ? "none" : `blur(${(-z * 1.6).toFixed(1)}px)`; });
     stage.style.transform = `perspective(900px) rotateY(${tx}deg) rotateX(${ty}deg)`; };
   const loop = () => { a += .006; place(); requestAnimationFrame(loop); };
   if (reduce) place(); else requestAnimationFrame(loop);
@@ -671,8 +695,11 @@ document.documentElement.classList.add("js");
     $("sWho").textContent = f.who.value;
     $("pplOut").textContent = n >= 60 ? "60+" : n; $("sPpl").textContent = n >= 60 ? "60+" : n;
     const note = $("pplNote");
-    note.className = "note" + (n > 20 ? " warn" : "");
-    note.textContent = n <= 20 ? "¡Grupo ideal! Cada quien recibe ayuda personal." : n <= 40 ? "Muy bien: necesitamos un salón grande para que todos trabajen cómodos." : "Más de 40: lo dividimos en dos grupos para que nadie se quede atrás.";
+    const cap = plan === "gratis" ? 20 : 40;
+    note.className = "note" + (n > cap || (plan === "completo" && n > 20) ? " warn" : "");
+    note.textContent = plan === "gratis" ? (n <= 20 ? "¡Perfecto! El taller gratis es para hasta 20 personas." : "El taller gratis es para hasta 20 personas. Para más, elige el taller completo (hasta 40) o hacemos otro grupo.")
+      : n <= 20 ? "¡Grupo ideal! Cada quien recibe ayuda personal." : n <= 40 ? "Muy bien: necesitamos un salón grande para que todos trabajen cómodos." : "Más de 40: hacemos otro grupo para que nadie se quede atrás.";
+    $("sSave").hidden = plan === "gratis";
     $("sInc").innerHTML = INC[plan].map(x => `<li>${x}</li>`).join("");
   };
   f.addEventListener("input", sum); f.addEventListener("change", sum); sum();
