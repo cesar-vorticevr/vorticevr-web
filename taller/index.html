@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Manual del taller para maestros</title>
+<meta name="description" content="Manual del taller para maestros: Polycam, ChatGPT, PixVerse, Suno y Vórtice VR.">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: una sola columna de lectura (manual), con bandas por herramienta; cada herramienta tiene su color y su dibujo */
+:root{
+  --bg:#05020b; --surface:#120a22; --surface2:#1b1030; --line:#2e1f4a;
+  --fg:#f3edff; --muted:#bfb2dc;
+  --violet:#8b3fd6; --lilac:#d2b8ff; --gold:#ffbe55; --on-gold:#1c1206;
+  --poly:#3fd6c3; --gpt:#7ee08a; --pix:#ff7ab8; --suno:#ffa24a; --vvr:#d2b8ff;
+  --check-a:#2a1d42; --check-b:#1b1030;
+  --f-display:"Sora", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#fbf8ff; --surface:#ffffff; --surface2:#f3ecff; --line:#e0d3f5;
+  --fg:#1d1230; --muted:#5a4a78;
+  --violet:#6b279b; --lilac:#6b279b; --gold:#b87400; --on-gold:#ffffff;
+  --poly:#0d8a7b; --gpt:#2f8a3c; --pix:#c2266f; --suno:#b85a00; --vvr:#6b279b;
+  --check-a:#e6dcf5; --check-b:#ffffff;
+  color-scheme:light;
+}}
+:root[data-theme="light"]{
+  --bg:#fbf8ff; --surface:#ffffff; --surface2:#f3ecff; --line:#e0d3f5;
+  --fg:#1d1230; --muted:#5a4a78;
+  --violet:#6b279b; --lilac:#6b279b; --gold:#b87400; --on-gold:#ffffff;
+  --poly:#0d8a7b; --gpt:#2f8a3c; --pix:#c2266f; --suno:#b85a00; --vvr:#6b279b;
+  --check-a:#e6dcf5; --check-b:#ffffff;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{font-size:20px}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:1rem;line-height:1.6;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:0 48px}
+.wrap{max-width:900px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(2.1rem,6vw,3.3rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(1.6rem,4.5vw,2.3rem);font-weight:800}
+h3{font-size:1.25rem;font-weight:700}
+p{margin:0}
+a{color:var(--lilac);text-underline-offset:3px}
+a:focus-visible,button:focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-radius:6px}
+.mono{font-family:var(--f-mono)}
+.muted{color:var(--muted)}
+b{font-weight:600}
+
+/* Portada */
+.hero{padding-block:44px 28px;display:grid;gap:18px}
+.eyebrow{font-family:var(--f-mono);font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.hero h1 em{font-style:normal;color:var(--lilac)}
+.lead{font-size:1.15rem;color:var(--muted);max-width:40ch}
+.flow{margin-top:8px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:18px;overflow-x:auto}
+.flow svg{display:block;width:100%;min-width:560px;height:auto}
+.flow text{font-family:var(--f-display);font-weight:700;fill:var(--fg)}
+.flow .sm{font-family:var(--f-body);font-weight:500;font-size:13px;fill:var(--muted)}
+
+/* Índice */
+.toc{display:flex;flex-wrap:wrap;gap:10px;padding-block:6px 10px}
+.toc a{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:var(--fg);background:var(--surface2);border:1px solid var(--line);
+  border-radius:999px;padding:10px 16px;font-weight:600;font-size:.9rem}
+.toc a i{width:12px;height:12px;border-radius:50%;background:var(--c)}
+
+/* Secciones */
+section{padding-block:40px 8px;scroll-margin-top:12px}
+.shead{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;margin-bottom:22px}
+.badge{width:76px;height:76px;border-radius:22px;display:grid;place-items:center;background:var(--surface2);border:2px solid var(--c)}
+.badge svg{width:46px;height:46px}
+.kick{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--c)}
+.shead p.muted{margin-top:6px;font-size:1.02rem}
+.art{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:14px;margin-bottom:20px}
+.art svg{display:block;width:100%;height:auto;max-height:280px}
+.art .cap{text-align:center;color:var(--muted);font-size:.9rem;margin-top:6px}
+
+/* Pasos */
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:14px;counter-reset:s}
+.steps>li{counter-increment:s;display:grid;grid-template-columns:52px 1fr;gap:16px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px 18px}
+.steps>li::before{content:counter(s);width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:var(--c);color:var(--bg);
+  font-family:var(--f-display);font-weight:800;font-size:1.4rem}
+.steps>li>div{min-width:0;display:grid;gap:6px}
+.steps h3{font-size:1.1rem}
+.where{display:inline-block;font-family:var(--f-mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;padding:3px 10px;border-radius:999px;
+  border:1px solid var(--c);color:var(--c);width:max-content}
+.ui{font-family:var(--f-mono);font-size:.88rem;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:1px 8px;white-space:nowrap}
+.go{display:inline-flex;align-items:center;gap:8px;margin-top:4px;width:max-content;max-width:100%;background:var(--gold);color:var(--on-gold);font-weight:700;
+  text-decoration:none;border-radius:999px;padding:10px 18px;font-size:.95rem;overflow-wrap:anywhere}
+
+/* Notas */
+.tip,.warn{border-radius:18px;padding:16px 18px;display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;margin-top:14px}
+.tip{background:var(--surface2);border:1px dashed var(--c)}
+.warn{background:var(--surface2);border:2px solid var(--gold)}
+.tip .ico,.warn .ico{font-family:var(--f-display);font-weight:800;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:8px;color:var(--bg)}
+.tip .ico{background:var(--c)}
+.warn .ico{background:var(--gold);color:var(--on-gold)}
+.tip ul,.warn ul{margin:6px 0 0;padding-left:1.1em;display:grid;gap:4px}
+
+/* Prompts */
+.prompts{display:grid;gap:12px;margin-top:14px}
+.prompt{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:14px;padding:14px 16px;display:grid;gap:10px}
+.prompt .lab{font-family:var(--f-mono);font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--c)}
+.prompt q{quotes:none;font-size:1.02rem}
+.copy{justify-self:start;font:600 .85rem var(--f-body);color:var(--fg);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:8px 16px;cursor:pointer}
+.copy.ok{background:var(--c);color:var(--bg);border-color:var(--c)}
+
+/* Tablas */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:18px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:.95rem}
+th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-display);font-weight:700;background:var(--surface2)}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* Botones del editor */
+.tools{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.tool{display:grid;justify-items:center;gap:4px;width:92px;padding:12px 6px;border-radius:14px;background:var(--surface2);border:1px solid var(--line);font-weight:600;font-size:.85rem;text-align:center}
+.tool svg{width:30px;height:30px;fill:var(--vvr)}
+.tool small{font-weight:400;color:var(--muted);font-size:.72rem;line-height:1.3}
+
+/* Tarjetas de otras experiencias */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px 18px;display:grid;gap:6px;align-content:start}
+.card .emo{font-size:1.8rem;line-height:1}
+.card p{color:var(--muted);font-size:.93rem}
+
+/* Ligas */
+.links{display:grid;gap:10px}
+.link{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;text-decoration:none;color:var(--fg)}
+.link i{width:14px;height:14px;border-radius:50%;background:var(--c)}
+.link span{min-width:0}
+.link b{display:block}
+.link small{color:var(--lilac);font-family:var(--f-mono);font-size:.82rem;overflow-wrap:anywhere}
+
+.foot{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:.9rem;display:grid;gap:6px}
+
+/* Colores de cada herramienta */
+[data-t="poly"]{--c:var(--poly)} [data-t="gpt"]{--c:var(--gpt)} [data-t="pix"]{--c:var(--pix)} [data-t="suno"]{--c:var(--suno)} [data-t="vvr"]{--c:var(--vvr)} [data-t="gold"]{--c:var(--gold)}
+
+@media (max-width:560px){
+  html{font-size:18px}
+  .shead{grid-template-columns:1fr}
+  .badge{width:64px;height:64px}
+  .steps>li{grid-template-columns:1fr;gap:10px}
+  .steps>li::before{width:44px;height:44px;font-size:1.2rem}
+}
+@media (prefers-reduced-motion: no-preference){
+  .spin{transform-origin:center;transform-box:fill-box;animation:spin 14s linear infinite}
+  .bob{animation:bob 3s ease-in-out infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes bob{50%{transform:translateY(-6px)}}
+}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+.qrbox{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:6px}
+.qrbox canvas{width:150px;height:150px;border-radius:14px;background:#fff;display:block}
+.qrbox h3{margin-bottom:6px}
+@media (max-width:560px){.qrbox{grid-template-columns:1fr;justify-items:center;text-align:center}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="eyebrow">Vórtice VR · Taller para maestros</span>
+  <h1>Haz que tu clase <em>salga de la hoja</em></h1>
+  <p class="lead">Escanea objetos en 3D, crea imágenes, videos y canciones con inteligencia artificial y júntalo todo en una experiencia que tus alumnos abren con un QR.</p>
+  <div class="flow" aria-label="Cómo se junta todo: Polycam, ChatGPT, PixVerse y Suno van a la plataforma Vórtice VR, que da un QR para tus alumnos">
+    <svg viewBox="0 0 760 250" role="img">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--muted)"/></marker></defs>
+      <g>
+        <rect x="10" y="10" width="200" height="48" rx="14" style="fill:var(--surface2);stroke:var(--poly);stroke-width:2"/>
+        <text x="28" y="34">Polycam</text><text class="sm" x="28" y="50">objeto 3D (.glb)</text>
+        <rect x="10" y="68" width="200" height="48" rx="14" style="fill:var(--surface2);stroke:var(--gpt);stroke-width:2"/>
+        <text x="28" y="92">ChatGPT</text><text class="sm" x="28" y="108">imagen transparente (.png)</text>
+        <rect x="10" y="126" width="200" height="48" rx="14" style="fill:var(--surface2);stroke:var(--pix);stroke-width:2"/>
+        <text x="28" y="150">PixVerse</text><text class="sm" x="28" y="166">video (.mp4)</text>
+        <rect x="10" y="184" width="200" height="48" rx="14" style="fill:var(--surface2);stroke:var(--suno);stroke-width:2"/>
+        <text x="28" y="208">Suno</text><text class="sm" x="28" y="224">canción (.mp3)</text>
+      </g>
+      <g style="stroke:var(--muted);stroke-width:2;fill:none" marker-end="url(#ar)">
+        <path d="M212 34 C 290 34, 290 120, 340 120"/><path d="M212 92 C 280 92, 290 120, 340 120"/>
+        <path d="M212 150 C 280 150, 290 120, 340 120"/><path d="M212 208 C 290 208, 290 120, 340 120"/>
+      </g>
+      <rect x="346" y="78" width="210" height="84" rx="18" style="fill:var(--violet)"/>
+      <text x="366" y="112" style="fill:#fff">Vórtice VR</text>
+      <text x="366" y="138" style="font-family:var(--f-body);font-weight:500;font-size:14px;fill:#f3edff">la juntas en tu experiencia</text>
+      <path d="M560 120 L 600 120" style="stroke:var(--muted);stroke-width:2" marker-end="url(#ar)"/>
+      <g transform="translate(612 58)">
+        <rect width="124" height="124" rx="16" style="fill:var(--surface2);stroke:var(--gold);stroke-width:2"/>
+        <g style="fill:var(--gold)">
+          <rect x="14" y="14" width="30" height="30" rx="4"/><rect x="80" y="14" width="30" height="30" rx="4"/><rect x="14" y="80" width="30" height="30" rx="4"/>
+          <rect x="54" y="20" width="10" height="10"/><rect x="54" y="40" width="10" height="10"/><rect x="66" y="54" width="10" height="10"/><rect x="54" y="66" width="10" height="10"/>
+          <rect x="84" y="56" width="10" height="10"/><rect x="98" y="70" width="10" height="10"/><rect x="80" y="86" width="10" height="10"/><rect x="96" y="98" width="10" height="10"/><rect x="58" y="94" width="10" height="10"/><rect x="20" y="56" width="10" height="10"/>
+        </g>
+      </g>
+      <text x="620" y="204" class="sm" style="font-size:14px">QR para tus alumnos</text>
+    </svg>
+  </div>
+</header>
+
+<div class="qrbox" data-t="gold">
+  <canvas id="qr" width="300" height="300" aria-label="QR de este manual"></canvas>
+  <div><h3>Abre este manual en tu celular</h3><p class="muted">Escanea el código con la cámara o entra a <b class="mono" style="color:var(--lilac)">vorticevr.mx/taller</b></p></div>
+</div>
+
+<nav class="toc" aria-label="Contenido">
+  <a href="#cuenta" data-t="gold"><i></i>Tu cuenta</a>
+  <a href="#polycam" data-t="poly"><i></i>3D con Polycam</a>
+  <a href="#chatgpt" data-t="gpt"><i></i>Imágenes con ChatGPT</a>
+  <a href="#pixverse" data-t="pix"><i></i>Videos con PixVerse</a>
+  <a href="#suno" data-t="suno"><i></i>Música con Suno</a>
+  <a href="#armar" data-t="vvr"><i></i>Arma tu experiencia</a>
+  <a href="#juegos" data-t="vvr"><i></i>Juegos para clase</a>
+  <a href="#ligas" data-t="gold"><i></i>Todas las ligas</a>
+</nav>
+
+<!-- 0. Cuenta -->
+<section id="cuenta" data-t="gold">
+  <div class="shead">
+    <div class="badge"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="17" r="8" style="fill:var(--gold)"/><path d="M8 42c2-9 9-13 16-13s14 4 16 13z" style="fill:var(--gold)"/></svg></div>
+    <div><span class="kick">Paso cero · 3 minutos</span><h2>Crea tu cuenta gratis</h2><p class="muted">Todo lo que hagas hoy lo vas a juntar aquí.</p></div>
+  </div>
+  <ol class="steps">
+    <li><div><span class="where">En tu celular o computadora</span><h3>Entra a vorticevr.mx/cuenta</h3><p>Toca <span class="ui">Crear cuenta</span> y escribe tu nombre, tu correo y una contraseña.</p><a class="go" href="../cuenta/#registro" target="_blank" rel="noopener">Crear mi cuenta →</a></div></li>
+    <li><div><h3>Confirma con el código</h3><p>Te llega un código de <b>6 números</b> a tu correo. Escríbelo y listo: ya estás dentro. (Si no llega, revisa la carpeta de spam).</p></div></li>
+    <li><div><h3>Toca “+ Crear experiencia”</h3><p>Ahí está el catálogo con todo lo que puedes crear. Hoy vamos a usar sobre todo <b>Realidad aumentada con imagen</b> y <b>en superficie</b>.</p></div></li>
+  </ol>
+  <div class="tip"><span class="ico">Plan Gratis</span><div><p>Con la cuenta gratis tienes <b>3 experiencias</b> al mismo tiempo, cada una dura <b>15 días</b> y se puede abrir <b>1,000 veces</b>. En realidad aumentada puedes poner hasta <b>3 elementos</b> por experiencia (un video, un 3D, una imagen, un texto o un audio). Para que sigan vivas todo el ciclo escolar, se pasa al plan Pro.</p></div></div>
+</section>
+
+<!-- 1. Polycam -->
+<section id="polycam" data-t="poly">
+  <div class="shead">
+    <div class="badge"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 6 8 15v18l16 9 16-9V15z" style="fill:none;stroke:var(--poly);stroke-width:3;stroke-linejoin:round"/><path d="M8 15l16 9 16-9M24 24v18" style="fill:none;stroke:var(--poly);stroke-width:3;stroke-linejoin:round"/></svg></div>
+    <div><span class="kick">Herramienta 1 · objetos en 3D</span><h2>Escanea un objeto con Polycam</h2><p class="muted">Con la cámara de tu celular conviertes una maceta, un fósil, una artesanía o una maqueta en un objeto 3D.</p></div>
+  </div>
+
+  <div class="art">
+    <svg viewBox="0 0 640 260" role="img" aria-label="Dibujo: el celular da vueltas alrededor del objeto en dos alturas tomando fotos">
+      <ellipse cx="320" cy="200" rx="250" ry="42" style="fill:none;stroke:var(--poly);stroke-width:2;stroke-dasharray:8 8"/>
+      <ellipse cx="320" cy="120" rx="190" ry="30" style="fill:none;stroke:var(--poly);stroke-width:2;stroke-dasharray:8 8;opacity:.6"/>
+      <ellipse cx="320" cy="214" rx="120" ry="16" style="fill:var(--surface2)"/>
+      <g class="bob">
+        <path d="M285 210 L 300 140 L 340 140 L 355 210 Z" style="fill:var(--suno)"/>
+        <rect x="292" y="128" width="56" height="16" rx="5" style="fill:var(--gold)"/>
+        <path d="M320 128 C 300 90, 280 80, 270 60 M320 128 C 330 90, 350 85, 365 62 M320 128 C 320 100, 318 80, 322 52" style="fill:none;stroke:var(--gpt);stroke-width:6;stroke-linecap:round"/>
+        <circle cx="268" cy="58" r="12" style="fill:var(--gpt)"/><circle cx="367" cy="60" r="12" style="fill:var(--gpt)"/><circle cx="322" cy="48" r="12" style="fill:var(--gpt)"/>
+      </g>
+      <g style="fill:var(--surface2);stroke:var(--poly);stroke-width:3">
+        <rect x="56" y="168" width="34" height="58" rx="7"/><rect x="550" y="168" width="34" height="58" rx="7"/>
+        <rect x="120" y="90" width="30" height="50" rx="6"/><rect x="492" y="90" width="30" height="50" rx="6"/>
+        <rect x="304" y="226" width="34" height="30" rx="6" transform="rotate(90 321 241)"/>
+      </g>
+      <g style="fill:var(--poly)"><circle cx="73" cy="186" r="6"/><circle cx="567" cy="186" r="6"/><circle cx="135" cy="105" r="5"/><circle cx="507" cy="105" r="5"/></g>
+      <text x="320" y="24" text-anchor="middle" style="font-family:var(--f-display);font-weight:700;font-size:18px;fill:var(--fg)">Dos vueltas: una a la altura del objeto y otra desde arriba</text>
+    </svg>
+    <p class="cap">Entre 60 y 100 fotos, cada una encimada con la anterior. El objeto no se mueve; tú caminas.</p>
+  </div>
+
+  <h3 style="margin-bottom:12px">En la app del celular</h3>
+  <ol class="steps">
+    <li><div><span class="where">App Store o Google Play</span><h3>Descarga Polycam y crea tu cuenta</h3><p>Es gratis. Usa un correo que recuerdes: con esa misma cuenta vas a entrar después en la computadora.</p><a class="go" href="https://poly.cam/" target="_blank" rel="noopener">poly.cam →</a></div></li>
+    <li><div><h3>Prepara el objeto</h3><p>Ponlo sobre una mesa con <b>luz pareja</b> (sin sol directo ni sombras fuertes) y con espacio para caminar alrededor. Un mantel liso ayuda.</p></div></li>
+    <li><div><h3>Elige el modo <span class="ui">Foto (Photo)</span></h3><p>Toca el botón para empezar y rodea el objeto <b>despacio</b>: una vuelta a su altura, otra más arriba (como a 45°) y unas fotos desde arriba.</p></div></li>
+    <li><div><h3>Toca <span class="ui">Procesar (Process)</span></h3><p>Espera unos minutos. Mientras, puedes seguir escaneando otro objeto.</p></div></li>
+    <li><div><h3>Recorta con <span class="ui">Recortar (Crop)</span></h3><p>Quita la mesa y todo lo que sobra alrededor. Así el objeto aparece solo, “flotando”, en la experiencia.</p></div></li>
+  </ol>
+
+  <h3 style="margin:26px 0 12px">En la página de Polycam (computadora)</h3>
+  <ol class="steps">
+    <li><div><span class="where">En la computadora</span><h3>Entra a poly.cam con tu misma cuenta</h3><p>Tus escaneos aparecen solos en tu biblioteca (<span class="ui">Library</span>).</p><a class="go" href="https://poly.cam/" target="_blank" rel="noopener">Abrir poly.cam →</a></div></li>
+    <li><div><h3>Abre tu escaneo y toca <span class="ui">Exportar (Export)</span></h3><p>De la lista de formatos elige <b>GLB</b>. Es el que entiende la plataforma, y en la cuenta gratis de Polycam está incluido.</p></div></li>
+    <li><div><h3>Descarga el archivo .glb</h3><p>Queda en tu carpeta de Descargas. Ese archivo es el que vas a subir con el botón <span class="ui">3D</span> de Vórtice VR (te lo explicamos en <a href="#armar">Arma tu experiencia</a>).</p></div></li>
+  </ol>
+
+  <div class="tip"><span class="ico">Tips</span><div><ul>
+    <li>Salen mejor los objetos <b>mates</b> y con textura. Evita vidrio, metal muy brilloso, cosas transparentes o muy delgadas (como cables o hilos).</li>
+    <li>Si el archivo pesa mucho, no te preocupes: la plataforma lo <b>comprime sola</b> al subirlo. En la cuenta gratis, ya comprimido debe pesar hasta 15 MB.</li>
+    <li>¿Tienes un 3D en FBX u OBJ? Ábrelo en Blender (gratis) → <span class="ui">Archivo → Exportar → glTF 2.0 (.glb)</span>.</li>
+  </ul></div></div>
+</section>
+
+<!-- 2. ChatGPT -->
+<section id="chatgpt" data-t="gpt">
+  <div class="shead">
+    <div class="badge"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="7" y="9" width="34" height="30" rx="5" style="fill:none;stroke:var(--gpt);stroke-width:3"/><circle cx="17" cy="19" r="4" style="fill:var(--gpt)"/><path d="M10 36l10-10 6 6 5-5 8 9z" style="fill:var(--gpt)"/></svg></div>
+    <div><span class="kick">Herramienta 2 · imágenes</span><h2>Crea imágenes con fondo transparente en ChatGPT</h2><p class="muted">Personajes, etiquetas, flechas, planetas o dibujos que “flotan” sobre la hoja sin un cuadro blanco alrededor.</p></div>
+  </div>
+
+  <div class="art">
+    <svg viewBox="0 0 640 230" role="img" aria-label="Comparación: imagen con fondo blanco contra imagen con fondo transparente">
+      <defs><pattern id="chk" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" style="fill:var(--check-b)"/><rect width="10" height="10" style="fill:var(--check-a)"/><rect x="10" y="10" width="10" height="10" style="fill:var(--check-a)"/></pattern></defs>
+      <text x="160" y="24" text-anchor="middle" style="font-family:var(--f-display);font-weight:700;font-size:17px;fill:var(--muted)">Con fondo blanco</text>
+      <text x="480" y="24" text-anchor="middle" style="font-family:var(--f-display);font-weight:700;font-size:17px;fill:var(--gpt)">Con fondo transparente ✓</text>
+      <rect x="40" y="40" width="240" height="170" rx="14" style="fill:var(--surface2)"/>
+      <rect x="80" y="58" width="160" height="134" rx="4" style="fill:#ffffff"/>
+      <g transform="translate(160 125)"><circle r="44" style="fill:#e86a3a"/><ellipse rx="70" ry="14" style="fill:none;stroke:#f2c14e;stroke-width:6" transform="rotate(-18)"/></g>
+      <rect x="360" y="40" width="240" height="170" rx="14" style="fill:url(#chk)"/>
+      <g transform="translate(480 125)" class="bob"><circle r="44" style="fill:#e86a3a"/><ellipse rx="70" ry="14" style="fill:none;stroke:#f2c14e;stroke-width:6" transform="rotate(-18)"/></g>
+    </svg>
+    <p class="cap">Los cuadritos grises significan “aquí no hay nada”: eso es transparente.</p>
+  </div>
+
+  <ol class="steps">
+    <li><div><span class="where">chatgpt.com o la app</span><h3>Abre ChatGPT y pide tu imagen</h3><p>Siempre incluye estas palabras: <b>“fondo transparente, en PNG”</b>. Abajo tienes ejemplos listos para copiar.</p><a class="go" href="https://chatgpt.com/" target="_blank" rel="noopener">chatgpt.com →</a></div></li>
+    <li><div><h3>Revisa que no traiga fondo</h3><p>Si salió con fondo blanco o de color, contesta: <b>“Hazla otra vez con fondo transparente, sin sombra en el piso”</b>.</p></div></li>
+    <li><div><h3>Descárgala</h3><p>Toca la imagen y luego el botón de <span class="ui">Descargar ↓</span>. Debe quedar como archivo <b>.png</b>.</p></div></li>
+    <li><div><h3>Súbela con el botón <span class="ui">Imagen</span></h3><p>En el editor de Vórtice VR. También sirve para el Memorama, el Rompecabezas y Dispara y gana.</p></div></li>
+  </ol>
+
+  <div class="prompts">
+    <div class="prompt"><span class="lab">Ciencias</span><q id="p1">Ilustración estilo caricatura de una célula animal con sus partes señaladas con flechas y nombres en español, colores alegres, fondo transparente, en PNG.</q><button class="copy" data-for="p1" type="button">Copiar</button></div>
+    <div class="prompt"><span class="lab">Personaje para explicar</span><q id="p2">Personaje amigable estilo caricatura de un ajolote con lentes y bata de científico, de cuerpo completo, saludando, fondo transparente, en PNG.</q><button class="copy" data-for="p2" type="button">Copiar</button></div>
+    <div class="prompt"><span class="lab">Historia</span><q id="p3">Dibujo estilo libro infantil de una pirámide maya con una ceiba al lado, colores cálidos, sin texto, fondo transparente, en PNG.</q><button class="copy" data-for="p3" type="button">Copiar</button></div>
+    <div class="prompt"><span class="lab">Para hacer video después (pantalla verde)</span><q id="p4">El mismo personaje de cuerpo completo, de frente, sobre un fondo verde liso de pantalla verde (#00FF00), sin sombras, imagen horizontal.</q><button class="copy" data-for="p4" type="button">Copiar</button></div>
+  </div>
+
+  <div class="tip"><span class="ico">Tips</span><div><ul>
+    <li>Pide <b>un solo objeto por imagen</b>. Si quieres tres planetas, haz tres imágenes: así los acomodas como quieras.</li>
+    <li>Si ChatGPT no logra quitar el fondo, quítalo gratis en <a href="https://www.remove.bg/es" target="_blank" rel="noopener">remove.bg</a> o con “Quitar fondo” de Canva.</li>
+    <li>La <b>imagen que se imprime</b> (la hoja que van a enfocar con el celular) es otra cosa: esa sí lleva fondo y entre más detalles y colores tenga, mejor la reconoce la cámara.</li>
+  </ul></div></div>
+</section>
+
+<!-- 3. PixVerse -->
+<section id="pixverse" data-t="pix">
+  <div class="shead">
+    <div class="badge"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="11" width="28" height="26" rx="5" style="fill:none;stroke:var(--pix);stroke-width:3"/><path d="M33 20l10-6v20l-10-6z" style="fill:var(--pix)"/><path d="M15 18v12l9-6z" style="fill:var(--pix)"/></svg></div>
+    <div><span class="kick">Herramienta 3 · videos</span><h2>Dale vida a tu imagen con PixVerse</h2><p class="muted">Subes una imagen, le dices cómo se mueve y en un minuto tienes un video corto.</p></div>
+  </div>
+
+  <div class="art">
+    <svg viewBox="0 0 640 210" role="img" aria-label="Dibujo: una imagen fija se convierte en un video">
+      <rect x="40" y="40" width="170" height="130" rx="14" style="fill:var(--surface2);stroke:var(--line);stroke-width:2"/>
+      <circle cx="125" cy="98" r="30" style="fill:var(--gpt)"/><circle cx="114" cy="92" r="5" style="fill:var(--bg)"/><circle cx="136" cy="92" r="5" style="fill:var(--bg)"/><path d="M112 108 q13 10 26 0" style="fill:none;stroke:var(--bg);stroke-width:4;stroke-linecap:round"/>
+      <text x="125" y="160" text-anchor="middle" style="font-family:var(--f-body);font-size:14px;fill:var(--muted)">tu imagen</text>
+      <g style="fill:var(--pix)"><path d="M240 92h90v-16l34 29-34 29v-16h-90z"/></g>
+      <text x="297" y="160" text-anchor="middle" style="font-family:var(--f-display);font-weight:700;font-size:14px;fill:var(--pix)">“que salude”</text>
+      <rect x="390" y="30" width="220" height="150" rx="14" style="fill:var(--surface2);stroke:var(--pix);stroke-width:3"/>
+      <g style="fill:var(--line)"><rect x="398" y="38" width="14" height="10" rx="2"/><rect x="398" y="162" width="14" height="10" rx="2"/><rect x="588" y="38" width="14" height="10" rx="2"/><rect x="588" y="162" width="14" height="10" rx="2"/></g>
+      <g class="bob"><circle cx="500" cy="100" r="30" style="fill:var(--gpt)"/><circle cx="489" cy="94" r="5" style="fill:var(--bg)"/><circle cx="511" cy="94" r="5" style="fill:var(--bg)"/><path d="M487 110 q13 10 26 0" style="fill:none;stroke:var(--bg);stroke-width:4;stroke-linecap:round"/>
+      <path d="M528 92 l22 -26" style="stroke:var(--gpt);stroke-width:8;stroke-linecap:round"/></g>
+      <circle cx="585" cy="58" r="8" style="fill:var(--pix)"/>
+    </svg>
+    <p class="cap">De imagen fija a video de 5 segundos.</p>
+  </div>
+
+  <ol class="steps">
+    <li><div><span class="where">En la computadora o la app</span><h3>Entra a PixVerse</h3><p>Inicia sesión con tu cuenta de Google. Cada día te regala créditos para hacer videos.</p><a class="go" href="https://app.pixverse.ai/" target="_blank" rel="noopener">app.pixverse.ai →</a></div></li>
+    <li><div><h3>Elige <span class="ui">Imagen a video (Image to Video)</span></h3><p>Sube tu imagen de ChatGPT (o una foto tuya, de un dibujo o de una lámina).</p></div></li>
+    <li><div><h3>Escribe qué pasa en el video</h3><p>Corto y claro: <b>“El ajolote saluda con la mano y sonríe, la cámara no se mueve”</b>. Duración: <b>5 segundos</b> es suficiente.</p></div></li>
+    <li><div><h3>Toca <span class="ui">Crear (Create)</span> y descárgalo</h3><p>Cuando termine, ábrelo y toca <span class="ui">Descargar ↓</span>. Queda en <b>.mp4</b>, que es el formato que pide la plataforma.</p></div></li>
+    <li><div><h3>Súbelo con el botón <span class="ui">Video</span></h3><p>En el editor el video aparece al ancho de tu imagen; luego lo mueves y lo haces más chico o más grande.</p></div></li>
+  </ol>
+
+  <div class="tip"><span class="ico">Truco</span><div><p><b>Personaje sin fondo, encima de la hoja.</b> Haz la imagen del personaje con <b>fondo verde</b> (ejemplo 4 de ChatGPT), conviértela en video en PixVerse y, en Vórtice VR, al elegir el video activa <span class="ui">Quitar el fondo verde</span>. El personaje se mueve solo, sin recuadro, sobre la hoja impresa.</p></div></div>
+  <div class="tip"><span class="ico">Ojo</span><div><p>En la cuenta gratis de PixVerse los videos salen con su <b>marca de agua</b> y en calidad media; para la clase funcionan bien. En la cuenta gratis de Vórtice VR cada video puede pesar hasta <b>25 MB</b> (un video de 5 a 10 segundos pesa mucho menos).</p></div></div>
+</section>
+
+<!-- 4. Suno -->
+<section id="suno" data-t="suno">
+  <div class="shead">
+    <div class="badge"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 8v22.5A6 6 0 1 0 22 36V16h14v10.5A6 6 0 1 0 40 32V8z" style="fill:var(--suno)"/></svg></div>
+    <div><span class="kick">Herramienta 4 · música</span><h2>Haz una canción con Suno</h2><p class="muted">Escribes de qué trata y Suno compone la canción, con voz o solo música. Ideal para repasar un tema cantando.</p></div>
+  </div>
+
+  <div class="art">
+    <svg viewBox="0 0 640 170" role="img" aria-label="Dibujo: una onda de sonido con notas musicales">
+      <g style="fill:var(--suno)">
+        <rect x="40" y="70" width="12" height="30" rx="6"/><rect x="62" y="50" width="12" height="70" rx="6"/><rect x="84" y="30" width="12" height="110" rx="6"/><rect x="106" y="55" width="12" height="60" rx="6"/>
+        <rect x="128" y="40" width="12" height="90" rx="6"/><rect x="150" y="62" width="12" height="46" rx="6"/><rect x="172" y="25" width="12" height="120" rx="6"/><rect x="194" y="48" width="12" height="74" rx="6"/>
+        <rect x="216" y="66" width="12" height="38" rx="6"/><rect x="238" y="36" width="12" height="98" rx="6"/><rect x="260" y="58" width="12" height="54" rx="6"/><rect x="282" y="72" width="12" height="26" rx="6"/>
+      </g>
+      <g class="bob" style="fill:var(--gold)"><path d="M370 40v60a14 14 0 1 0 8 13V64h40v26a14 14 0 1 0 8 13V40z"/></g>
+      <rect x="470" y="40" width="140" height="90" rx="16" style="fill:var(--surface2);stroke:var(--suno);stroke-width:2"/>
+      <text x="540" y="80" text-anchor="middle" style="font-family:var(--f-display);font-weight:800;font-size:22px;fill:var(--fg)">.mp3</text>
+      <text x="540" y="108" text-anchor="middle" style="font-family:var(--f-body);font-size:14px;fill:var(--muted)">hasta 10 MB</text>
+    </svg>
+  </div>
+
+  <ol class="steps">
+    <li><div><span class="where">suno.com o la app</span><h3>Entra a Suno y toca <span class="ui">Crear (Create)</span></h3><p>Inicia sesión con tu cuenta de Google.</p><a class="go" href="https://suno.com/" target="_blank" rel="noopener">suno.com →</a></div></li>
+    <li><div><h3>Describe tu canción</h3><p>Di el tema, para qué edad, el ritmo y el idioma. Si quieres solo música de fondo, activa <span class="ui">Instrumental</span>.</p></div></li>
+    <li><div><h3>¿Ya tienes la letra? Usa <span class="ui">Personalizado (Custom)</span></h3><p>Pega tu letra y escribe el estilo (por ejemplo: “cumbia infantil alegre”).</p></div></li>
+    <li><div><h3>Escucha las dos versiones</h3><p>Suno siempre hace dos. Quédate con la que más te guste.</p></div></li>
+    <li><div><h3>Descárgala en MP3</h3><p>En los tres puntitos <span class="ui">⋯</span> de la canción → <span class="ui">Descargar → MP3</span>.</p></div></li>
+    <li><div><h3>Súbela con el botón <span class="ui">Audio</span></h3><p>Suena mientras tus alumnos enfocan la hoja. Puedes elegir que se <b>repita</b> o que suene <b>una sola vez</b>. Una canción por escena, hasta 10 MB.</p></div></li>
+  </ol>
+
+  <div class="prompts">
+    <div class="prompt"><span class="lab">Ciencias</span><q id="p5">Canción infantil alegre en español sobre el ciclo del agua: evaporación, condensación y precipitación. Para niños de 8 años, ritmo pegajoso, coro fácil de repetir.</q><button class="copy" data-for="p5" type="button">Copiar</button></div>
+    <div class="prompt"><span class="lab">Matemáticas</span><q id="p6">Canción en español para aprender la tabla del 7, estilo cumbia infantil, voz clara y lenta, que repita cada resultado.</q><button class="copy" data-for="p6" type="button">Copiar</button></div>
+    <div class="prompt"><span class="lab">Música de fondo</span><q id="p7">Música instrumental tranquila y misteriosa de selva, con marimba y tambores suaves, para un museo infantil.</q><button class="copy" data-for="p7" type="button">Copiar</button></div>
+  </div>
+
+  <div class="warn"><span class="ico">Importante</span><div><p>La cuenta gratis de Suno da créditos diarios para crear, pero <b>permite pocas descargas</b>: crea todas las que quieras y <b>descarga solo la final</b>. Las canciones de la cuenta gratis son para uso escolar, <b>no para vender</b> ni para anuncios.</p></div></div>
+</section>
+
+<!-- 5. Armar -->
+<section id="armar" data-t="vvr">
+  <div class="shead">
+    <div class="badge"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="14" y="4" width="20" height="40" rx="5" style="fill:none;stroke:var(--vvr);stroke-width:3"/><path d="M24 14l2.6 5.4 5.9.8-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z" style="fill:var(--gold)"/></svg></div>
+    <div><span class="kick">Vórtice VR · todo junto</span><h2>Arma tu experiencia</h2><p class="muted">Una hoja impresa que, al enfocarla con el celular, muestra tu 3D, tus imágenes, tu video y tu canción.</p></div>
+  </div>
+
+  <div class="art">
+    <svg viewBox="0 0 640 260" role="img" aria-label="Dibujo: un celular enfoca una hoja impresa y sobre ella aparecen un objeto 3D, una imagen y un video">
+      <path d="M150 230 L 230 150 L 520 150 L 470 230 Z" style="fill:var(--surface2);stroke:var(--line);stroke-width:2"/>
+      <g style="fill:var(--line)"><rect x="250" y="168" width="90" height="8" rx="4"/><rect x="250" y="184" width="150" height="8" rx="4"/><rect x="235" y="200" width="120" height="8" rx="4"/></g>
+      <g class="bob">
+        <path d="M300 150 L 320 92 L 350 92 L 368 150 Z" style="fill:var(--suno)"/>
+        <rect x="312" y="84" width="46" height="12" rx="4" style="fill:var(--gold)"/>
+        <rect x="390" y="80" width="96" height="60" rx="8" style="fill:var(--surface);stroke:var(--pix);stroke-width:3"/><path d="M430 98v24l20-12z" style="fill:var(--pix)"/>
+        <g transform="translate(250 100)"><circle r="20" style="fill:#e86a3a"/><ellipse rx="32" ry="7" style="fill:none;stroke:#f2c14e;stroke-width:4" transform="rotate(-18)"/></g>
+      </g>
+      <g style="fill:var(--gold)"><path d="M210 60l3 7 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/><path d="M520 50l2 5 5 1-4 3 1 5-4-2-4 2 1-5-4-3 5-1z"/><path d="M460 30l2 5 5 1-4 3 1 5-4-2-4 2 1-5-4-3 5-1z"/></g>
+      <rect x="40" y="70" width="90" height="170" rx="16" style="fill:var(--surface);stroke:var(--vvr);stroke-width:3" transform="rotate(-12 85 155)"/>
+      <path d="M128 120 L 240 140 M128 190 L 200 210" style="stroke:var(--vvr);stroke-width:2;stroke-dasharray:6 6"/>
+    </svg>
+    <p class="cap">Tus alumnos escanean el QR, tocan “Abrir la cámara” y enfocan la hoja.</p>
+  </div>
+
+  <ol class="steps">
+    <li><div><span class="where">vorticevr.mx/crear</span><h3>Elige <b>Realidad aumentada con imagen</b></h3><p>En el catálogo, la primera tarjeta.</p><a class="go" href="../crear/?tipo=ra" target="_blank" rel="noopener">Abrir el creador →</a></div></li>
+    <li><div><h3>Paso 1 · Tu imagen</h3><p>Sube la hoja que vas a imprimir (una lámina, una página del libro, un póster). La plataforma te da de <b>1 a 5 estrellas</b>: busca 4 o 5. Las imágenes con muchos detalles y contraste funcionan mejor; las muy lisas, no.</p></div></li>
+    <li><div><h3>Paso 2 · Tu contenido</h3><p>Con los botones de la izquierda agregas lo que hiciste hoy:</p>
+      <div class="tools" aria-label="Botones del editor">
+        <span class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h11a2 2 0 0 1 2 2v2.5l4-2.5v10l-4-2.5V17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg>Video<small>PixVerse</small></span>
+        <span class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 13h16l-5-6-4 5-3-3zM8 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>Imagen<small>ChatGPT</small></span>
+        <span class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v4h-2V6h-5v12h2v2H9v-2h2V6H6v2H4z"/></svg>Texto<small>escríbelo ahí</small></span>
+        <span class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.7 8 12 11.7 5.3 8zM5 9.7l6 3.3v6.7l-6-3.3zm8 10V13l6-3.3v6.7z"/></svg>3D<small>Polycam</small></span>
+        <span class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v10.6A3.5 3.5 0 1 0 11 18V8h7v6.6a3.5 3.5 0 1 0 2 3.2V4H9z"/></svg>Audio<small>Suno</small></span>
+      </div></div></li>
+    <li><div><h3>Acomoda cada elemento</h3><p>Tócalo para elegirlo. Arriba del lienzo están <span class="ui">Mover</span>, <span class="ui">Girar</span> y <span class="ui">Tamaño</span>. El botón <span class="ui">Parar / acostar</span> pone de pie tu 3D o tu imagen. En <span class="ui">Movimiento en loop</span> puedes hacer que tu 3D gire solo, y abajo puedes encender <span class="ui">✦ Destellos mágicos</span>.</p></div></li>
+    <li><div><h3>Paso 3 · Título y link</h3><p>Escribe un título (“La célula animal”) y elige el link, por ejemplo <b>celula-5a</b>. Tus alumnos lo abren en <span class="mono">celula-5a.vorticevr.mx</span>.</p></div></li>
+    <li><div><h3>Paso 4 · Publicar</h3><p>Toca <span class="ui">Publicar mi experiencia</span>. En <span class="ui">Mi cuenta</span> está tu experiencia con su botón de <b>QR</b> para descargarlo, imprimirlo junto a la hoja o proyectarlo en el pizarrón.</p></div></li>
+    <li><div><h3>Pruébala tú primero</h3><p>Escanea el QR con tu celular, toca <span class="ui">Abrir la cámara</span> y enfoca la hoja impresa (o en la pantalla de tu compu). Si algo no te gusta, en Mi cuenta toca <span class="ui">Editar</span>: el QR no cambia.</p></div></li>
+  </ol>
+
+  <div class="tip"><span class="ico">Otra opción</span><div><p><b>Realidad aumentada en superficie</b>: tu objeto de Polycam aparece en el piso o en la mesa del salón, <b>de su tamaño real</b>, y los alumnos caminan a su alrededor. No necesita hoja impresa. Lleva objetos 3D, imágenes, textos y audio (sin video). En el editor cada cuadro del piso mide 25 cm.</p><a class="go" href="../crear/?tipo=superficie" target="_blank" rel="noopener" style="margin-top:10px">Crear en superficie →</a></div></div>
+
+  <h3 style="margin:28px 0 12px">¿Cuánto puede pesar cada archivo?</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Archivo</th><th>Formato</th><th>Plan Gratis</th><th>Plan Pro</th></tr></thead>
+    <tbody>
+      <tr><td>Video (PixVerse)</td><td>MP4</td><td class="num">25 MB</td><td class="num">50 MB</td></tr>
+      <tr><td>Objeto 3D (Polycam)</td><td>GLB</td><td class="num">15 MB ya comprimido</td><td class="num">30 MB ya comprimido</td></tr>
+      <tr><td>Canción (Suno)</td><td>MP3 o M4A</td><td class="num">10 MB</td><td class="num">10 MB</td></tr>
+      <tr><td>Imagen (ChatGPT)</td><td>PNG, JPG o WebP</td><td>se ajusta sola</td><td>se ajusta sola</td></tr>
+      <tr><td>Elementos por experiencia</td><td></td><td class="num">3</td><td class="num">15</td></tr>
+      <tr><td>Todo junto</td><td></td><td class="num">30 MB</td><td class="num">60 MB</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- 6. Juegos -->
+<section id="juegos" data-t="vvr">
+  <div class="shead">
+    <div class="badge"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="6" width="16" height="16" rx="4" style="fill:var(--vvr)"/><rect x="26" y="6" width="16" height="16" rx="4" style="fill:none;stroke:var(--vvr);stroke-width:3"/><rect x="6" y="26" width="16" height="16" rx="4" style="fill:none;stroke:var(--vvr);stroke-width:3"/><rect x="26" y="26" width="16" height="16" rx="4" style="fill:var(--gold)"/></svg></div>
+    <div><span class="kick">Más para tu clase</span><h2>Juegos listos en minutos</h2><p class="muted">Sin cámara ni hoja impresa: solo llenas los campos y compartes el link o el QR. Usa ahí tus imágenes de ChatGPT.</p></div>
+  </div>
+  <div class="grid">
+    <a class="card" href="../crear/memorama/" target="_blank" rel="noopener" style="text-decoration:none;color:var(--fg)"><span class="emo" aria-hidden="true">🃏</span><h3>Memorama</h3><p>Pares iguales o parejas: “Rojo” con “Red”, “3 × 4” con “12”. Contra el reloj.</p></a>
+    <a class="card" href="../crear/sopa/" target="_blank" rel="noopener" style="text-decoration:none;color:var(--fg)"><span class="emo" aria-hidden="true">🔤</span><h3>Sopa de letras</h3><p>Con la lista de palabras o con pistas (“el planeta rojo”). Cada partida es una sopa nueva.</p></a>
+    <a class="card" href="../crear/rompecabezas/" target="_blank" rel="noopener" style="text-decoration:none;color:var(--fg)"><span class="emo" aria-hidden="true">🧩</span><h3>Rompecabezas</h3><p>Tu imagen en piezas de 6 a 35, con un “¿Sabías que…?” al terminar.</p></a>
+    <a class="card" href="../crear/trivia/" target="_blank" rel="noopener" style="text-decoration:none;color:var(--fg)"><span class="emo" aria-hidden="true">🤔</span><h3>Trivia con tu cara</h3><p>Las preguntas flotan sobre su cabeza y contestan inclinándola.</p></a>
+    <a class="card" href="../crear/colorear/" target="_blank" rel="noopener" style="text-decoration:none;color:var(--fg)"><span class="emo" aria-hidden="true">🎨</span><h3>Colorea mi dibujo</h3><p>Sube un dibujo de líneas (o pide uno a ChatGPT) y lo pintan con el dedo.</p></a>
+    <a class="card" href="../crear/dispara/" target="_blank" rel="noopener" style="text-decoration:none;color:var(--fg)"><span class="emo" aria-hidden="true">🎯</span><h3>Dispara y gana</h3><p>Las cosas vuelan alrededor del salón: dispárales a las malas (por ejemplo, la basura) y deja las buenas.</p></a>
+  </div>
+</section>
+
+<!-- Antes de usarlo -->
+<section data-t="gold">
+  <h2 style="margin-bottom:14px">Antes de llevarlo al salón</h2>
+  <div class="warn" style="margin-top:0"><span class="ico">Checklist</span><div><ul>
+    <li>Prueba la experiencia en <b>tu</b> celular y en uno de gama media.</li>
+    <li>Imprime la hoja en buen tamaño (carta o más) y sin brillo que refleje la luz.</li>
+    <li>Revisa que el salón tenga <b>internet</b> o comparte datos.</li>
+    <li>Pide a tus alumnos subir el volumen y tocar <span class="ui">Abrir la cámara</span>.</li>
+    <li><b>No subas fotos de tus alumnos</b> a ChatGPT, PixVerse ni Suno.</li>
+    <li>En la cuenta gratis, la experiencia se borra a los 15 días: deja tu clase planeada dentro de ese tiempo.</li>
+  </ul></div></div>
+</section>
+
+<!-- Ligas -->
+<section id="ligas" data-t="gold">
+  <h2 style="margin-bottom:14px">Todas las ligas</h2>
+  <div class="links">
+    <a class="link" data-t="vvr" href="../cuenta/#registro" target="_blank" rel="noopener"><i></i><span><b>Crear tu cuenta en Vórtice VR</b><small>vorticevr.mx/cuenta</small></span></a>
+    <a class="link" data-t="vvr" href="../crear/" target="_blank" rel="noopener"><i></i><span><b>Catálogo para crear experiencias</b><small>vorticevr.mx/crear</small></span></a>
+    <a class="link" data-t="vvr" href="../escuelas/" target="_blank" rel="noopener"><i></i><span><b>Ideas para escuelas</b><small>vorticevr.mx/escuelas</small></span></a>
+    <a class="link" data-t="poly" href="https://poly.cam/" target="_blank" rel="noopener"><i></i><span><b>Polycam: escanear en 3D</b><small>poly.cam</small></span></a>
+    <a class="link" data-t="gpt" href="https://chatgpt.com/" target="_blank" rel="noopener"><i></i><span><b>ChatGPT: imágenes con fondo transparente</b><small>chatgpt.com</small></span></a>
+    <a class="link" data-t="gpt" href="https://www.remove.bg/es" target="_blank" rel="noopener"><i></i><span><b>remove.bg: quitar el fondo de una imagen</b><small>remove.bg</small></span></a>
+    <a class="link" data-t="pix" href="https://app.pixverse.ai/" target="_blank" rel="noopener"><i></i><span><b>PixVerse: de imagen a video</b><small>app.pixverse.ai</small></span></a>
+    <a class="link" data-t="suno" href="https://suno.com/" target="_blank" rel="noopener"><i></i><span><b>Suno: canciones con inteligencia artificial</b><small>suno.com</small></span></a>
+    <a class="link" data-t="gold" href="https://www.blender.org/download/" target="_blank" rel="noopener"><i></i><span><b>Blender: convertir un 3D a GLB (opcional)</b><small>blender.org</small></span></a>
+  </div>
+
+  <div class="foot">
+    <p><b style="color:var(--fg)">¿Dudas?</b> Escríbenos a <span class="mono" style="color:var(--lilac)">hola@vorticevr.mx</span> o, ya con tu cuenta, en <span class="ui">Mi cuenta → Ayuda y soporte</span>.</p>
+    <p>Polycam, ChatGPT, PixVerse y Suno son servicios de otras empresas; sus planes gratis pueden cambiar.</p>
+    <p>© Vórtice VR · Estudio de tecnología inmersiva</p>
+  </div>
+</section>
+
+</div>
+
+<script>
+document.querySelectorAll(".copy").forEach(b => b.addEventListener("click", () => {
+  const el = document.getElementById(b.dataset.for), txt = el.textContent.trim();
+  const done = () => { b.textContent = "¡Copiado!"; b.classList.add("ok"); setTimeout(() => { b.textContent = "Copiar"; b.classList.remove("ok"); }, 1800); };
+  const pick = () => { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = "Selecciona y copia"; };
+  try { navigator.clipboard.writeText(txt).then(done, pick); } catch (e) { pick(); }
+}));
+
+(function(){
+  const c = document.getElementById("qr"), url = location.origin + "/taller/";
+  if (typeof qrcode !== "function") { c.closest(".qrbox").hidden = true; return; }
+  const qr = qrcode(0, "M"); qr.addData(url); qr.make();
+  const n = qr.getModuleCount(), m = 4, cell = c.width / (n + m * 2), x = c.getContext("2d");
+  x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); x.fillStyle = "#2a0d45";
+  for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (qr.isDark(r, k)) x.fillRect(Math.floor((k + m) * cell), Math.floor((r + m) * cell), Math.ceil(cell), Math.ceil(cell));
+})();
+</script>
+</body>
+</html>
