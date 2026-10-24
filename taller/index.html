@@ -16,7 +16,7 @@
   --bg:#05020b; --surface:#120a22; --surface2:#1b1030; --line:#2e1f4a;
   --fg:#f3edff; --muted:#bfb2dc;
   --violet:#8b3fd6; --lilac:#d2b8ff; --gold:#ffbe55; --on-gold:#1c1206;
-  --poly:#3fd6c3; --gpt:#7ee08a; --pix:#ff7ab8; --suno:#ffa24a; --vvr:#d2b8ff;
+  --poly:#3fd6c3; --gpt:#7ee08a; --pix:#ff7ab8; --suno:#ffa24a; --meshy:#8fb6ff; --vvr:#d2b8ff;
   --check-a:#2a1d42; --check-b:#1b1030;
   --f-display:"Sora", "Segoe UI", system-ui, sans-serif;
   --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
@@ -27,7 +27,7 @@
   --bg:#fbf8ff; --surface:#ffffff; --surface2:#f3ecff; --line:#e0d3f5;
   --fg:#1d1230; --muted:#5a4a78;
   --violet:#6b279b; --lilac:#6b279b; --gold:#b87400; --on-gold:#ffffff;
-  --poly:#0d8a7b; --gpt:#2f8a3c; --pix:#c2266f; --suno:#b85a00; --vvr:#6b279b;
+  --poly:#0d8a7b; --gpt:#2f8a3c; --pix:#c2266f; --suno:#b85a00; --meshy:#2f5fc4; --vvr:#6b279b;
   --check-a:#e6dcf5; --check-b:#ffffff;
   color-scheme:light;
 }}
@@ -35,7 +35,7 @@
   --bg:#fbf8ff; --surface:#ffffff; --surface2:#f3ecff; --line:#e0d3f5;
   --fg:#1d1230; --muted:#5a4a78;
   --violet:#6b279b; --lilac:#6b279b; --gold:#b87400; --on-gold:#ffffff;
-  --poly:#0d8a7b; --gpt:#2f8a3c; --pix:#c2266f; --suno:#b85a00; --vvr:#6b279b;
+  --poly:#0d8a7b; --gpt:#2f8a3c; --pix:#c2266f; --suno:#b85a00; --meshy:#2f5fc4; --vvr:#6b279b;
   --check-a:#e6dcf5; --check-b:#ffffff;
   color-scheme:light;
 }
@@ -143,7 +143,7 @@ td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
 .foot{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:.9rem;display:grid;gap:6px}
 
 /* Colores de cada herramienta */
-[data-t="poly"]{--c:var(--poly)} [data-t="gpt"]{--c:var(--gpt)} [data-t="pix"]{--c:var(--pix)} [data-t="suno"]{--c:var(--suno)} [data-t="vvr"]{--c:var(--vvr)} [data-t="gold"]{--c:var(--gold)}
+[data-t="poly"]{--c:var(--poly)} [data-t="gpt"]{--c:var(--gpt)} [data-t="pix"]{--c:var(--pix)} [data-t="suno"]{--c:var(--suno)} [data-t="meshy"]{--c:var(--meshy)} [data-t="vvr"]{--c:var(--vvr)} [data-t="gold"]{--c:var(--gold)}
 
 @media (max-width:560px){
   html{font-size:18px}
@@ -174,29 +174,32 @@ img{max-width:100%}
 <header class="hero">
   <span class="eyebrow">Vórtice VR · Taller para maestros</span>
   <h1>Haz que tu clase <em>salga de la hoja</em></h1>
-  <p class="lead">Escanea objetos en 3D, crea imágenes, videos y canciones con inteligencia artificial y júntalo todo en una experiencia que tus alumnos abren con un QR.</p>
-  <div class="flow" aria-label="Cómo se junta todo: Polycam, ChatGPT, PixVerse y Suno van a la plataforma Vórtice VR, que da un QR para tus alumnos">
-    <svg viewBox="0 0 760 250" role="img">
+  <p class="lead">Escanea objetos en 3D o créalos desde una imagen, haz imágenes, videos y canciones con inteligencia artificial y júntalo todo en una experiencia que tus alumnos abren con un QR.</p>
+  <div class="flow" aria-label="Cómo se junta todo: Polycam, ChatGPT, Meshy, PixVerse y Suno van a la plataforma Vórtice VR, que da un QR para tus alumnos">
+    <svg viewBox="0 0 760 300" role="img">
       <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--muted)"/></marker></defs>
       <g>
         <rect x="10" y="10" width="200" height="48" rx="14" style="fill:var(--surface2);stroke:var(--poly);stroke-width:2"/>
-        <text x="28" y="34">Polycam</text><text class="sm" x="28" y="50">objeto 3D (.glb)</text>
+        <text x="28" y="34">Polycam</text><text class="sm" x="28" y="50">objeto real en 3D (.glb)</text>
         <rect x="10" y="68" width="200" height="48" rx="14" style="fill:var(--surface2);stroke:var(--gpt);stroke-width:2"/>
         <text x="28" y="92">ChatGPT</text><text class="sm" x="28" y="108">imagen transparente (.png)</text>
-        <rect x="10" y="126" width="200" height="48" rx="14" style="fill:var(--surface2);stroke:var(--pix);stroke-width:2"/>
-        <text x="28" y="150">PixVerse</text><text class="sm" x="28" y="166">video (.mp4)</text>
-        <rect x="10" y="184" width="200" height="48" rx="14" style="fill:var(--surface2);stroke:var(--suno);stroke-width:2"/>
-        <text x="28" y="208">Suno</text><text class="sm" x="28" y="224">canción (.mp3)</text>
+        <rect x="10" y="126" width="200" height="48" rx="14" style="fill:var(--surface2);stroke:var(--meshy);stroke-width:2"/>
+        <text x="28" y="150">Meshy</text><text class="sm" x="28" y="166">de imagen a 3D (.glb)</text>
+        <rect x="10" y="184" width="200" height="48" rx="14" style="fill:var(--surface2);stroke:var(--pix);stroke-width:2"/>
+        <text x="28" y="208">PixVerse</text><text class="sm" x="28" y="224">video (.mp4)</text>
+        <rect x="10" y="242" width="200" height="48" rx="14" style="fill:var(--surface2);stroke:var(--suno);stroke-width:2"/>
+        <text x="28" y="266">Suno</text><text class="sm" x="28" y="282">canción (.mp3)</text>
       </g>
       <g style="stroke:var(--muted);stroke-width:2;fill:none" marker-end="url(#ar)">
-        <path d="M212 34 C 290 34, 290 120, 340 120"/><path d="M212 92 C 280 92, 290 120, 340 120"/>
-        <path d="M212 150 C 280 150, 290 120, 340 120"/><path d="M212 208 C 290 208, 290 120, 340 120"/>
+        <path d="M212 34 C 290 34, 290 150, 340 150"/><path d="M212 92 C 280 92, 290 150, 340 150"/>
+        <path d="M212 150 L 340 150"/>
+        <path d="M212 208 C 280 208, 290 150, 340 150"/><path d="M212 266 C 290 266, 290 150, 340 150"/>
       </g>
-      <rect x="346" y="78" width="210" height="84" rx="18" style="fill:var(--violet)"/>
-      <text x="366" y="112" style="fill:#fff">Vórtice VR</text>
-      <text x="366" y="138" style="font-family:var(--f-body);font-weight:500;font-size:14px;fill:#f3edff">la juntas en tu experiencia</text>
-      <path d="M560 120 L 600 120" style="stroke:var(--muted);stroke-width:2" marker-end="url(#ar)"/>
-      <g transform="translate(612 58)">
+      <rect x="346" y="108" width="210" height="84" rx="18" style="fill:var(--violet)"/>
+      <text x="366" y="142" style="fill:#fff">Vórtice VR</text>
+      <text x="366" y="168" style="font-family:var(--f-body);font-weight:500;font-size:14px;fill:#f3edff">la juntas en tu experiencia</text>
+      <path d="M560 150 L 600 150" style="stroke:var(--muted);stroke-width:2" marker-end="url(#ar)"/>
+      <g transform="translate(612 88)">
         <rect width="124" height="124" rx="16" style="fill:var(--surface2);stroke:var(--gold);stroke-width:2"/>
         <g style="fill:var(--gold)">
           <rect x="14" y="14" width="30" height="30" rx="4"/><rect x="80" y="14" width="30" height="30" rx="4"/><rect x="14" y="80" width="30" height="30" rx="4"/>
@@ -204,7 +207,7 @@ img{max-width:100%}
           <rect x="84" y="56" width="10" height="10"/><rect x="98" y="70" width="10" height="10"/><rect x="80" y="86" width="10" height="10"/><rect x="96" y="98" width="10" height="10"/><rect x="58" y="94" width="10" height="10"/><rect x="20" y="56" width="10" height="10"/>
         </g>
       </g>
-      <text x="620" y="204" class="sm" style="font-size:14px">QR para tus alumnos</text>
+      <text x="620" y="234" class="sm" style="font-size:14px">QR para tus alumnos</text>
     </svg>
   </div>
 </header>
@@ -218,6 +221,7 @@ img{max-width:100%}
   <a href="#cuenta" data-t="gold"><i></i>Tu cuenta</a>
   <a href="#polycam" data-t="poly"><i></i>3D con Polycam</a>
   <a href="#chatgpt" data-t="gpt"><i></i>Imágenes con ChatGPT</a>
+  <a href="#meshy" data-t="meshy"><i></i>3D con Meshy</a>
   <a href="#pixverse" data-t="pix"><i></i>Videos con PixVerse</a>
   <a href="#suno" data-t="suno"><i></i>Música con Suno</a>
   <a href="#armar" data-t="vvr"><i></i>Arma tu experiencia</a>
@@ -287,6 +291,7 @@ img{max-width:100%}
   <div class="tip"><span class="ico">Tips</span><div><ul>
     <li>Salen mejor los objetos <b>mates</b> y con textura. Evita vidrio, metal muy brilloso, cosas transparentes o muy delgadas (como cables o hilos).</li>
     <li>Si el archivo pesa mucho, no te preocupes: la plataforma lo <b>comprime sola</b> al subirlo. En la cuenta gratis, ya comprimido debe pesar hasta 15 MB.</li>
+    <li>¿No tienes el objeto a la mano? Créalo desde una imagen con <a href="#meshy">Meshy</a>.</li>
     <li>¿Tienes un 3D en FBX u OBJ? Ábrelo en Blender (gratis) → <span class="ui">Archivo → Exportar → glTF 2.0 (.glb)</span>.</li>
   </ul></div></div>
 </section>
@@ -333,11 +338,62 @@ img{max-width:100%}
   </ul></div></div>
 </section>
 
-<!-- 3. PixVerse -->
+<!-- 3. Meshy -->
+<section id="meshy" data-t="meshy">
+  <div class="shead">
+    <div class="badge"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="14" width="16" height="20" rx="3" style="fill:none;stroke:var(--meshy);stroke-width:3"/><path d="M21 24h6" style="stroke:var(--meshy);stroke-width:3;stroke-linecap:round"/><path d="M36 12 28 16.5v9L36 30l8-4.5v-9z" style="fill:var(--meshy)"/></svg></div>
+    <div><span class="kick">Herramienta 3 · 3D desde una imagen</span><h2>Convierte una imagen en objeto 3D con Meshy</h2><p class="muted">¿No tienes el objeto para escanearlo? Haz un dibujo o una imagen en ChatGPT y Meshy lo convierte en un 3D que puedes girar.</p></div>
+  </div>
+
+  <div class="art">
+    <svg viewBox="0 0 640 230" role="img" aria-label="Dibujo: una imagen plana de un personaje se convierte en un objeto 3D">
+      <rect x="40" y="35" width="170" height="170" rx="14" style="fill:var(--surface2);stroke:var(--line);stroke-width:2"/>
+      <circle cx="125" cy="95" r="28" style="fill:var(--gpt)"/><rect x="100" y="125" width="50" height="56" rx="16" style="fill:var(--gpt)"/>
+      <circle cx="115" cy="90" r="4" style="fill:var(--bg)"/><circle cx="135" cy="90" r="4" style="fill:var(--bg)"/>
+      <text x="125" y="226" text-anchor="middle" style="font-family:var(--f-body);font-size:14px;fill:var(--muted)">imagen plana</text>
+      <g style="fill:var(--meshy)"><path d="M240 112h90v-16l34 29-34 29v-16h-90z"/></g>
+      <text x="297" y="185" text-anchor="middle" style="font-family:var(--f-display);font-weight:700;font-size:14px;fill:var(--meshy)">Imagen a 3D</text>
+      <g class="bob">
+        <ellipse cx="500" cy="190" rx="70" ry="12" style="fill:var(--surface2)"/>
+        <rect x="465" y="115" width="70" height="72" rx="22" style="fill:var(--gpt)"/>
+        <rect x="465" y="115" width="24" height="72" rx="12" style="fill:var(--bg);opacity:.18"/>
+        <circle cx="500" cy="82" r="36" style="fill:var(--gpt)"/>
+        <path d="M466 70 a36 36 0 0 0 14 44" style="fill:none;stroke:var(--bg);stroke-width:10;opacity:.18"/>
+        <circle cx="490" cy="78" r="5" style="fill:var(--bg)"/><circle cx="514" cy="78" r="5" style="fill:var(--bg)"/>
+      </g>
+      <g class="spin"><ellipse cx="500" cy="120" rx="96" ry="22" style="fill:none;stroke:var(--meshy);stroke-width:2;stroke-dasharray:6 8"/></g>
+      <text x="500" y="226" text-anchor="middle" style="font-family:var(--f-body);font-size:14px;fill:var(--muted)">objeto 3D que gira</text>
+    </svg>
+    <p class="cap">La misma imagen, ahora con volumen y por todos lados.</p>
+  </div>
+
+  <ol class="steps">
+    <li><div><span class="where">En ChatGPT</span><h3>Haz una imagen pensada para 3D</h3><p>Un solo objeto o personaje, <b>de cuerpo completo</b>, de frente, sin partes cortadas y con <b>fondo blanco liso</b>. Abajo tienes el texto listo para copiar.</p></div></li>
+    <li><div><span class="where">En la computadora</span><h3>Entra a Meshy</h3><p>Inicia sesión con tu cuenta de Google. La cuenta gratis trae créditos cada mes.</p><a class="go" href="https://www.meshy.ai/" target="_blank" rel="noopener">meshy.ai →</a></div></li>
+    <li><div><h3>Elige <span class="ui">Imagen a 3D (Image to 3D)</span></h3><p>Sube tu imagen. Si te lo pregunta, deja encendida la <b>textura (Texture)</b> para que salga con colores.</p></div></li>
+    <li><div><h3>Toca <span class="ui">Generar (Generate)</span></h3><p>Espera uno o dos minutos. Gíralo con el mouse para revisarlo por todos lados; si no te gusta, prueba otra vez o cambia la imagen.</p></div></li>
+    <li><div><h3>Descárgalo en <span class="ui">GLB</span></h3><p>Toca <span class="ui">Descargar (Download)</span> y elige el formato <b>GLB</b>.</p></div></li>
+    <li><div><h3>Súbelo con el botón <span class="ui">3D</span></h3><p>Igual que el de Polycam: en realidad aumentada con imagen o en superficie. Puedes ponerle <span class="ui">Movimiento en loop</span> para que gire solo.</p></div></li>
+  </ol>
+
+  <div class="prompts">
+    <div class="prompt"><span class="lab">Imagen para Meshy (en ChatGPT)</span><q id="p8">Personaje estilo juguete 3D de un jaguar amigable, de cuerpo completo, de frente, parado con los brazos un poco separados del cuerpo, colores planos, fondo blanco liso, sin sombras, sin texto.</q><button class="copy" data-for="p8" type="button">Copiar</button></div>
+    <div class="prompt"><span class="lab">Objeto para la clase</span><q id="p9">Un volcán de caricatura con lava naranja, visto un poco desde arriba, objeto completo y centrado, fondo blanco liso, sin sombras, sin texto.</q><button class="copy" data-for="p9" type="button">Copiar</button></div>
+  </div>
+
+  <div class="tip"><span class="ico">Tips</span><div><ul>
+    <li>Salen mejor las formas <b>sencillas y gorditas</b> (juguetes, animales, frutas, edificios) que las muy delgadas o con muchos detalles chiquitos.</li>
+    <li>Si es un personaje, Meshy también puede darle <b>animación</b> (caminar, bailar) con <span class="ui">Animar (Animate)</span>. Al subirlo, la plataforma te deja elegir cuál animación se ve.</li>
+    <li>Cada modelo gasta créditos. Con la cuenta gratis alcanza para <b>unos 5 modelos al mes</b>: prueba bien tu imagen antes de generar.</li>
+    <li>Los modelos de la cuenta gratis de Meshy llevan la licencia CC BY: si los publicas, menciona “hecho con Meshy”.</li>
+  </ul></div></div>
+</section>
+
+<!-- 4. PixVerse -->
 <section id="pixverse" data-t="pix">
   <div class="shead">
     <div class="badge"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="11" width="28" height="26" rx="5" style="fill:none;stroke:var(--pix);stroke-width:3"/><path d="M33 20l10-6v20l-10-6z" style="fill:var(--pix)"/><path d="M15 18v12l9-6z" style="fill:var(--pix)"/></svg></div>
-    <div><span class="kick">Herramienta 3 · videos</span><h2>Dale vida a tu imagen con PixVerse</h2><p class="muted">Subes una imagen, le dices cómo se mueve y en un minuto tienes un video corto.</p></div>
+    <div><span class="kick">Herramienta 4 · videos</span><h2>Dale vida a tu imagen con PixVerse</h2><p class="muted">Subes una imagen, le dices cómo se mueve y en un minuto tienes un video corto.</p></div>
   </div>
 
   <div class="art">
@@ -372,7 +428,7 @@ img{max-width:100%}
 <section id="suno" data-t="suno">
   <div class="shead">
     <div class="badge"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 8v22.5A6 6 0 1 0 22 36V16h14v10.5A6 6 0 1 0 40 32V8z" style="fill:var(--suno)"/></svg></div>
-    <div><span class="kick">Herramienta 4 · música</span><h2>Haz una canción con Suno</h2><p class="muted">Escribes de qué trata y Suno compone la canción, con voz o solo música. Ideal para repasar un tema cantando.</p></div>
+    <div><span class="kick">Herramienta 5 · música</span><h2>Haz una canción con Suno</h2><p class="muted">Escribes de qué trata y Suno compone la canción, con voz o solo música. Ideal para repasar un tema cantando.</p></div>
   </div>
 
   <div class="art">
@@ -439,7 +495,7 @@ img{max-width:100%}
         <span class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h11a2 2 0 0 1 2 2v2.5l4-2.5v10l-4-2.5V17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg>Video<small>PixVerse</small></span>
         <span class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 13h16l-5-6-4 5-3-3zM8 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>Imagen<small>ChatGPT</small></span>
         <span class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v4h-2V6h-5v12h2v2H9v-2h2V6H6v2H4z"/></svg>Texto<small>escríbelo ahí</small></span>
-        <span class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.7 8 12 11.7 5.3 8zM5 9.7l6 3.3v6.7l-6-3.3zm8 10V13l6-3.3v6.7z"/></svg>3D<small>Polycam</small></span>
+        <span class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.7 8 12 11.7 5.3 8zM5 9.7l6 3.3v6.7l-6-3.3zm8 10V13l6-3.3v6.7z"/></svg>3D<small>Polycam o Meshy</small></span>
         <span class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v10.6A3.5 3.5 0 1 0 11 18V8h7v6.6a3.5 3.5 0 1 0 2 3.2V4H9z"/></svg>Audio<small>Suno</small></span>
       </div></div></li>
     <li><div><h3>Acomoda cada elemento</h3><p>Tócalo para elegirlo. Arriba del lienzo están <span class="ui">Mover</span>, <span class="ui">Girar</span> y <span class="ui">Tamaño</span>. El botón <span class="ui">Parar / acostar</span> pone de pie tu 3D o tu imagen. En <span class="ui">Movimiento en loop</span> puedes hacer que tu 3D gire solo, y abajo puedes encender <span class="ui">✦ Destellos mágicos</span>.</p></div></li>
@@ -455,7 +511,7 @@ img{max-width:100%}
     <thead><tr><th>Archivo</th><th>Formato</th><th>Plan Gratis</th><th>Plan Pro</th></tr></thead>
     <tbody>
       <tr><td>Video (PixVerse)</td><td>MP4</td><td class="num">25 MB</td><td class="num">50 MB</td></tr>
-      <tr><td>Objeto 3D (Polycam)</td><td>GLB</td><td class="num">15 MB ya comprimido</td><td class="num">30 MB ya comprimido</td></tr>
+      <tr><td>Objeto 3D (Polycam o Meshy)</td><td>GLB</td><td class="num">15 MB ya comprimido</td><td class="num">30 MB ya comprimido</td></tr>
       <tr><td>Canción (Suno)</td><td>MP3 o M4A</td><td class="num">10 MB</td><td class="num">10 MB</td></tr>
       <tr><td>Imagen (ChatGPT)</td><td>PNG, JPG o WebP</td><td>se ajusta sola</td><td>se ajusta sola</td></tr>
       <tr><td>Elementos por experiencia</td><td></td><td class="num">3</td><td class="num">15</td></tr>
@@ -503,6 +559,7 @@ img{max-width:100%}
     <a class="link" data-t="poly" href="https://poly.cam/" target="_blank" rel="noopener"><i></i><span><b>Polycam: escanear en 3D</b><small>poly.cam</small></span></a>
     <a class="link" data-t="gpt" href="https://chatgpt.com/" target="_blank" rel="noopener"><i></i><span><b>ChatGPT: imágenes con fondo transparente</b><small>chatgpt.com</small></span></a>
     <a class="link" data-t="gpt" href="https://www.remove.bg/es" target="_blank" rel="noopener"><i></i><span><b>remove.bg: quitar el fondo de una imagen</b><small>remove.bg</small></span></a>
+    <a class="link" data-t="meshy" href="https://www.meshy.ai/" target="_blank" rel="noopener"><i></i><span><b>Meshy: de imagen a objeto 3D</b><small>meshy.ai</small></span></a>
     <a class="link" data-t="pix" href="https://app.pixverse.ai/" target="_blank" rel="noopener"><i></i><span><b>PixVerse: de imagen a video</b><small>app.pixverse.ai</small></span></a>
     <a class="link" data-t="suno" href="https://suno.com/" target="_blank" rel="noopener"><i></i><span><b>Suno: canciones con inteligencia artificial</b><small>suno.com</small></span></a>
     <a class="link" data-t="gold" href="https://www.blender.org/download/" target="_blank" rel="noopener"><i></i><span><b>Blender: convertir un 3D a GLB (opcional)</b><small>blender.org</small></span></a>
@@ -510,7 +567,7 @@ img{max-width:100%}
 
   <div class="foot">
     <p><b style="color:var(--fg)">¿Dudas?</b> Escríbenos a <span class="mono" style="color:var(--lilac)">hola@vorticevr.mx</span> o, ya con tu cuenta, en <span class="ui">Mi cuenta → Ayuda y soporte</span>.</p>
-    <p>Polycam, ChatGPT, PixVerse y Suno son servicios de otras empresas; sus planes gratis pueden cambiar.</p>
+    <p>Polycam, ChatGPT, Meshy, PixVerse y Suno son servicios de otras empresas; sus planes gratis pueden cambiar.</p>
     <p>© Vórtice VR · Estudio de tecnología inmersiva</p>
   </div>
 </section>
