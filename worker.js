@@ -278,7 +278,7 @@ async function api(request, env, ctx, url) {
     if (!(await limit(env, "contact:" + ip, 5, 3600e3)) || !(await limit(env, "contact:all", 200, 864e5))) return json({ error: "Recibimos muchas solicitudes seguidas. Intenta en un rato o escríbenos a hola@vorticevr.mx." }, 429);
     const P = TALLER[plan], fmt = d => d ? new Date(d + "T12:00:00Z").toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) : "Por definir";
     const rows = [["Taller", `${P.name} · ${P.hours} · ${P.price}`], ["Escuela", school], ["Nivel", t(b.level, 40)], ["Ciudad", t(b.city, 80)], ["Nombre", name], ["Cargo", t(b.role, 80)],
-      ["Correo", em], ["WhatsApp / teléfono", phone], ["Personas", String(people)], ["Fecha tentativa", fmt(date)], ["Otra fecha", date2 ? fmt(date2) : ""], ["Horario", t(b.time, 40)],
+      ["Correo", em], ["WhatsApp / teléfono", phone], ["Participantes", t(b.who, 40)], ["Personas", String(people)], ["Fecha tentativa", fmt(date)], ["Otra fecha", date2 ? fmt(date2) : ""], ["Horario", t(b.time, 40)],
       ["Computadoras", t(b.pcs, 80)], ["Comentarios", t(b.message, 1500)]].filter(r => r[1]);
     const table = rows.map(([k, v]) => `<tr><td style="color:#a99bcb;padding:6px 12px 6px 0;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:6px 0;white-space:pre-wrap"><b>${esc(v)}</b></td></tr>`).join("");
     const html = shell(`<h1 style="font-size:20px">Solicitud de taller: ${esc(P.name)}</h1><table style="border-collapse:collapse;font-size:14px">${table}</table>
