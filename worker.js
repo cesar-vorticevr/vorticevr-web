@@ -30,7 +30,7 @@ const PLANS = {
 };
 const UNLIMITED = 1000000;   // PLANS.premium.exp: shown as "ilimitadas"
 // Workshops for schools (/talleres/): requested by e-mail, activated by hand in /admin/ (the full one includes a year of Premium)
-const TALLER = { gratis: { name: "Taller gratis", hours: "1 hora", price: "Gratis" }, completo: { name: "Taller completo", hours: "3 horas", price: "$14,900 MXN con un año de Premium" } };
+const TALLER = { gratis: { name: "Taller gratis", hours: "1 hora", price: "Gratis" }, completo: { name: "Taller completo", hours: "3 horas", price: "$14,990 MXN con un año de Premium" } };
 const yearPrice = plan => PLANS[plan].year || PLANS[plan].price * YEAR_MONTHS;
 const FAR = 253402300799000; // expires of an experience on a paid plan: "while the plan is active" (year 9999)
 const ADMINS_DEFAULT = "lad.cesargarcia@gmail.com";
