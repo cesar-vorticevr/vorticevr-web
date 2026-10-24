@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Talleres de realidad aumentada e inteligencia artificial para escuelas | Vórtice VR</title>
+<meta name="description" content="Talleres para maestros: aprendan a crear realidad aumentada, objetos 3D, videos y canciones con inteligencia artificial para sus clases, sin programar. Taller gratis de 1 hora o taller completo de 3 horas con un año de plan Premium.">
+<link rel="canonical" href="https://vorticevr.mx/talleres/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Vórtice VR">
+<meta property="og:locale" content="es_MX">
+<meta property="og:url" content="https://vorticevr.mx/talleres/">
+<meta property="og:title" content="Talleres para escuelas · Vórtice VR">
+<meta property="og:description" content="Tus maestros creando realidad aumentada e inteligencia artificial para sus clases en una tarde. Agenda tu taller gratis.">
+<meta property="og:image" content="https://vorticevr.mx/assets/proyectos/orbita.webp">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+{"@type":"WebPage","@id":"https://vorticevr.mx/talleres/","url":"https://vorticevr.mx/talleres/","name":"Talleres de realidad aumentada e inteligencia artificial para escuelas | Vórtice VR","inLanguage":"es-MX","isPartOf":{"@id":"https://vorticevr.mx/#web"},"publisher":{"@id":"https://vorticevr.mx/#org"}},
+{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Vórtice VR","item":"https://vorticevr.mx/"},{"@type":"ListItem","position":2,"name":"Talleres para escuelas","item":"https://vorticevr.mx/talleres/"}]},
+{"@type":"Service","name":"Talleres para escuelas","serviceType":"Capacitación docente en realidad aumentada e inteligencia artificial","provider":{"@id":"https://vorticevr.mx/#org"},"areaServed":"MX","offers":[{"@type":"Offer","name":"Taller gratis (1 hora)","price":"0","priceCurrency":"MXN"},{"@type":"Offer","name":"Taller completo (3 horas) con un año del plan Premium","price":"14900","priceCurrency":"MXN"}]},
+{"@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"¿El taller gratis tiene algún compromiso?","acceptedAnswer":{"@type":"Answer","text":"No. Es una hora para conocer la plataforma y crear su primera experiencia. Si después quieren el taller completo, lo platicamos."}},
+{"@type":"Question","name":"¿Qué incluye el taller completo?","acceptedAnswer":{"@type":"Answer","text":"Tres horas en las que aprenden Polycam, ChatGPT, Meshy, PixVerse y Suno y las juntan en la plataforma, más un año del plan Premium para la escuela: experiencias ilimitadas, sin vencimiento y con el logo de la escuela."}},
+{"@type":"Question","name":"¿Cuántas personas pueden entrar?","acceptedAnswer":{"@type":"Answer","text":"Lo ideal son 20 personas. Pueden ser hasta 40 si hay un salón grande. Cada quien con su computadora, internet y su celular."}}]}
+]}
+</script>
+<style>
+/* Landing de venta: talleres para escuelas. Fondo y morados de la marca, dorado para lo que vende. */
+:root{
+  --void:#05020b; --deep:#0d0620; --surface:rgba(20,9,40,.72); --solid:#120826; --solid2:#1a0d33;
+  --line:rgba(190,150,255,.18); --line2:rgba(190,150,255,.42);
+  --vortex:#8b3fd6; --lav:#d2b8ff; --ink:#f2ecff; --mute:#a99bcb; --sun:#ffbe55; --sun2:#ffd98f; --ok:#5fe0a0;
+  --poly:#3fd6c3; --gpt:#7ee08a; --meshy:#8fb6ff; --pix:#ff7ab8; --suno:#ffa24a;
+  --fd:"Sora",ui-sans-serif,system-ui,sans-serif;
+  --fb:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --fm:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.2,.8,.2,1);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--void);color:var(--ink);font-family:var(--fb);font-size:18px;line-height:1.6;overflow-x:hidden}
+img{max-width:100%;display:block}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--sun);outline-offset:3px}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--fd);line-height:1.1;margin:0;text-wrap:balance}
+h2{font-size:clamp(2rem,4.6vw,3.2rem);font-weight:800;letter-spacing:-.02em}
+h3{font-size:1.25rem;font-weight:700}
+p{margin:0}
+.kick{font-family:var(--fd);font-size:.8rem;letter-spacing:.26em;text-transform:uppercase;color:var(--sun);font-weight:600}
+.mute{color:var(--mute)}
+.grad{background:linear-gradient(100deg,var(--lav),var(--sun) 70%);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* header */
+#progress{position:fixed;left:0;top:0;height:3px;width:100%;transform-origin:0 50%;transform:scaleX(0);background:linear-gradient(90deg,var(--vortex),var(--sun));z-index:30}
+header.top{position:fixed;left:0;right:0;top:0;z-index:20;transition:background .4s,border-color .4s;border-bottom:1px solid transparent}
+header.top.solid{background:rgba(5,2,11,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom-color:var(--line)}
+header.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:calc(12px + env(safe-area-inset-top,0px)) 12px}
+header.top .brand img{height:38px;width:auto}
+header.top nav{display:flex;align-items:center;gap:18px;font-family:var(--fd);font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600}
+header.top nav a{text-decoration:none;color:var(--mute)}
+header.top nav a:hover{color:var(--ink)}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;border:1px solid var(--line2);background:rgba(139,63,214,.18);color:var(--ink)!important}
+.pill.sun{background:var(--sun);border-color:var(--sun);color:#1a0d33!important}
+@media (max-width:760px){header.top nav .hide-m{display:none} header.top .brand img{height:28px}}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;font-family:var(--fd);font-weight:700;font-size:1.02rem;text-decoration:none;border-radius:999px;padding:16px 26px;border:1px solid var(--line2);background:rgba(139,63,214,.2);color:var(--ink);cursor:pointer;transition:transform .2s var(--ease),box-shadow .3s}
+.btn:hover{transform:translateY(-2px)}
+.btn.sun{background:linear-gradient(135deg,var(--sun),#ff9d3d);border-color:transparent;color:#1a0d33;box-shadow:0 10px 40px -10px rgba(255,190,85,.7)}
+.btn.sun:hover{box-shadow:0 16px 50px -8px rgba(255,190,85,.9)}
+.btn svg{width:20px;height:20px;fill:currentColor}
+
+/* hero */
+.hero{position:relative;padding-block:130px 70px;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:-20% -10% auto;height:120%;background:radial-gradient(50% 50% at 70% 40%,rgba(139,63,214,.35),transparent 70%),radial-gradient(30% 30% at 20% 20%,rgba(255,190,85,.12),transparent 70%);pointer-events:none}
+.hero .wrap{position:relative;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
+.hero h1{font-size:clamp(2.4rem,6vw,4.3rem);font-weight:800;letter-spacing:-.03em;margin:16px 0 20px}
+.hero .lead{font-size:1.2rem;color:var(--mute);max-width:34ch}
+.hero .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px}
+.chip{display:inline-flex;align-items:center;gap:8px;font-size:.88rem;padding:7px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
+@media (max-width:900px){.hero .wrap{grid-template-columns:1fr}.hero{padding-top:110px}}
+
+/* hero stage: phone + orbiting tools */
+.stage{position:relative;aspect-ratio:1;max-width:520px;width:100%;justify-self:center}
+.ring{position:absolute;inset:6%;border-radius:50%;border:1px dashed var(--line2);transform:rotateX(68deg)}
+.phone{position:absolute;left:50%;top:50%;width:42%;aspect-ratio:9/18.5;transform:translate(-50%,-50%) rotate(-6deg);border-radius:32px;background:#0b0418;border:3px solid #3a2560;box-shadow:0 30px 80px -20px rgba(139,63,214,.8),inset 0 0 0 6px #0b0418;overflow:hidden}
+.screen{position:absolute;inset:6px;border-radius:26px;background:linear-gradient(170deg,#2a1450,#120826 60%);overflow:hidden}
+.sheet{position:absolute;left:12%;right:12%;bottom:14%;height:38%;background:#f6f0ff;border-radius:8px;transform:perspective(300px) rotateX(48deg);box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.sheet::before,.sheet::after{content:"";position:absolute;left:12%;height:7%;border-radius:4px;background:#c9b6ea}
+.sheet::before{top:20%;width:60%} .sheet::after{top:38%;width:76%}
+.planet{position:absolute;left:50%;top:30%;width:46%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffd98f,#ff9d3d 40%,#b4471a 75%);box-shadow:0 0 40px rgba(255,157,61,.6)}
+.planet::after{content:"";position:absolute;left:-30%;right:-30%;top:42%;height:16%;border-radius:50%;border:4px solid rgba(210,184,255,.85);transform:rotate(-16deg)}
+.scan{position:absolute;left:0;right:0;height:30%;background:linear-gradient(transparent,rgba(210,184,255,.25),transparent);top:-30%}
+.tool{position:absolute;left:50%;top:50%;display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;background:var(--solid2);border:1.5px solid var(--c);font-family:var(--fd);font-weight:700;font-size:.85rem;white-space:nowrap;box-shadow:0 6px 24px -6px var(--c);will-change:transform}
+.tool i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.spark{position:absolute;width:26px;opacity:.9}
+
+/* marquee */
+.marquee{border-block:1px solid var(--line);padding-block:16px;overflow:hidden;background:rgba(13,6,32,.6)}
+.marquee .track{display:flex;gap:36px;width:max-content;font-family:var(--fd);font-weight:700;font-size:1.05rem;color:var(--lav);text-transform:uppercase;letter-spacing:.08em}
+.marquee .track span::after{content:"✦";margin-left:36px;color:var(--sun)}
+
+section.blk{padding-block:90px}
+.shead{max-width:760px;margin-bottom:44px;display:grid;gap:14px}
+.shead.c{margin-inline:auto;text-align:center}
+
+/* why */
+.why{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:28px;display:grid;gap:12px;align-content:start;transition:transform .3s var(--ease),border-color .3s}
+.card:hover{transform:translateY(-4px);border-color:var(--line2)}
+.card .ico{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:rgba(139,63,214,.22)}
+.card .ico svg{width:30px;height:30px;fill:var(--sun)}
+.card p{color:var(--mute)}
+@media (max-width:860px){.why{grid-template-columns:1fr}}
+
+/* counters */
+.nums{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:40px}
+.num{text-align:center;padding:22px 10px;border-radius:20px;background:linear-gradient(160deg,rgba(139,63,214,.22),rgba(13,6,32,.6));border:1px solid var(--line)}
+.num b{display:block;font-family:var(--fd);font-weight:800;font-size:clamp(2.2rem,5vw,3.2rem);line-height:1;color:var(--sun);font-variant-numeric:tabular-nums}
+.num span{display:block;margin-top:8px;color:var(--mute);font-size:.92rem}
+@media (max-width:700px){.nums{grid-template-columns:repeat(2,1fr)}}
+
+/* plans */
+.plans{display:grid;grid-template-columns:1fr 1.15fr;gap:22px;align-items:stretch}
+.plan{position:relative;border-radius:28px;padding:34px 30px;background:var(--surface);border:1px solid var(--line);display:grid;gap:18px;align-content:start}
+.plan .tag{justify-self:start;font-family:var(--fm);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;padding:5px 12px;border-radius:999px;border:1px solid var(--line2);color:var(--lav)}
+.plan .price{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.plan .price b{font-family:var(--fd);font-weight:800;font-size:3.2rem;line-height:1}
+.plan .price span{color:var(--mute)}
+.plan ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.plan li{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start}
+.plan li svg{width:22px;height:22px;margin-top:3px;fill:var(--ok)}
+.plan .btn{justify-self:stretch;margin-top:6px}
+.plan.pro{border:2px solid transparent;background:linear-gradient(var(--solid),var(--solid)) padding-box,conic-gradient(from var(--a,0deg),var(--sun),var(--vortex),var(--lav),var(--sun)) border-box;box-shadow:0 30px 90px -30px rgba(255,190,85,.45)}
+.plan.pro .tag{background:var(--sun);color:#1a0d33;border-color:var(--sun);font-weight:600}
+.value{border-radius:18px;padding:16px 18px;background:rgba(255,190,85,.1);border:1px dashed var(--sun);display:grid;gap:4px}
+.value b{color:var(--sun)}
+.strike{text-decoration:line-through;color:var(--mute)}
+@property --a{syntax:"<angle>";inherits:false;initial-value:0deg}
+@media (prefers-reduced-motion:no-preference){.plan.pro{animation:spinb 6s linear infinite}@keyframes spinb{to{--a:360deg}}}
+@media (max-width:860px){.plans{grid-template-columns:1fr}}
+
+/* compare */
+.cmp{margin-top:34px;overflow-x:auto;border-radius:22px;border:1px solid var(--line);background:var(--surface)}
+.cmp table{width:100%;border-collapse:collapse;min-width:560px}
+.cmp th,.cmp td{padding:14px 18px;border-bottom:1px solid var(--line);text-align:left}
+.cmp th{font-family:var(--fd);background:rgba(139,63,214,.15)}
+.cmp td:not(:first-child),.cmp th:not(:first-child){text-align:center;width:22%}
+.cmp tr:last-child td{border-bottom:0}
+.y{color:var(--ok);font-weight:700}.n{color:var(--mute)}
+
+/* tabs (program + ideas) */
+.tabs{display:inline-flex;gap:6px;padding:6px;border-radius:999px;background:var(--surface);border:1px solid var(--line);flex-wrap:wrap}
+.tabs button{font:600 .95rem var(--fd);color:var(--mute);background:none;border:0;border-radius:999px;padding:10px 18px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--sun);color:#1a0d33}
+.timeline{list-style:none;margin:28px 0 0;padding:0;display:grid;gap:12px;position:relative}
+.timeline li{display:grid;grid-template-columns:90px 1fr;gap:18px;align-items:start;padding:18px 20px;border-radius:20px;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--c,var(--vortex))}
+.timeline .t{font-family:var(--fm);color:var(--sun);font-size:.95rem;padding-top:2px}
+.timeline p{color:var(--mute);margin-top:4px}
+@media (max-width:560px){.timeline li{grid-template-columns:1fr;gap:4px}}
+
+/* tools */
+.tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.tcard{border-radius:22px;padding:22px;background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--c);display:grid;gap:8px;align-content:start;transition:transform .3s var(--ease),box-shadow .3s}
+.tcard:hover{transform:translateY(-5px) rotate(-.6deg);box-shadow:0 20px 50px -20px var(--c)}
+.tcard .k{font-family:var(--fm);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--c)}
+.tcard p{color:var(--mute);font-size:.95rem}
+
+/* ideas */
+.idea{margin-top:26px;display:grid;grid-template-columns:auto 1fr;gap:26px;align-items:center;padding:30px;border-radius:26px;background:linear-gradient(140deg,rgba(139,63,214,.25),rgba(13,6,32,.7));border:1px solid var(--line2);min-height:190px}
+.idea .big{font-size:4rem;line-height:1}
+.idea h3{font-size:1.6rem;margin-bottom:8px}
+.idea p{color:var(--mute)}
+.idea .exp{display:inline-block;margin-top:12px;font-family:var(--fm);font-size:.8rem;color:var(--sun);letter-spacing:.06em}
+@media (max-width:600px){.idea{grid-template-columns:1fr}}
+
+/* requirements */
+.reqs{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.req{display:grid;grid-template-columns:52px 1fr;gap:14px;align-items:center;padding:18px;border-radius:20px;background:var(--surface);border:1px solid var(--line)}
+.req svg{width:52px;height:52px;padding:12px;border-radius:14px;background:rgba(255,190,85,.12);fill:var(--sun)}
+.req p{font-size:.92rem;color:var(--mute)}
+.room{margin-top:22px;padding:22px 24px;border-radius:22px;border:1px solid var(--line2);background:rgba(139,63,214,.12);display:grid;gap:14px}
+.seats{display:flex;flex-wrap:wrap;gap:5px}
+.seats i{width:16px;height:16px;border-radius:5px;background:var(--line)}
+.seats i.on{background:var(--ok)} .seats i.big{background:var(--sun)}
+
+/* agenda form */
+.agenda{display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start}
+@media (max-width:980px){.agenda{grid-template-columns:1fr}}
+form .step{border-radius:24px;padding:26px;background:var(--surface);border:1px solid var(--line);display:grid;gap:16px;margin-bottom:16px}
+.step h3{display:flex;align-items:center;gap:12px}
+.step h3 .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--sun);color:#1a0d33;font-size:1rem;flex:none}
+.pick{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:560px){.pick{grid-template-columns:1fr}}
+.opt{position:relative;display:grid;gap:4px;padding:18px;border-radius:18px;border:2px solid var(--line);background:rgba(5,2,11,.4);cursor:pointer;transition:border-color .2s,background .2s,transform .2s}
+.opt:hover{transform:translateY(-2px)}
+.opt input{position:absolute;opacity:0;pointer-events:none}
+.opt b{font-family:var(--fd);font-size:1.1rem}
+.opt span{color:var(--mute);font-size:.9rem}
+.opt em{font-style:normal;font-family:var(--fd);font-weight:800;color:var(--sun);font-size:1.3rem}
+.opt:has(input:checked){border-color:var(--sun);background:rgba(255,190,85,.1)}
+.opt:has(input:focus-visible){outline:2px solid var(--sun);outline-offset:3px}
+.slots{display:flex;flex-wrap:wrap;gap:8px}
+.slots .opt{padding:10px 16px;border-radius:999px;grid-template-columns:auto}
+.slots .opt b{font-size:.95rem}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:560px){.row{grid-template-columns:1fr}}
+label.f{display:grid;gap:6px;font-weight:600;font-size:.95rem}
+label.f small{font-weight:400;color:var(--mute)}
+input[type=text],input[type=email],input[type=tel],input[type=date],select,textarea{width:100%;font:inherit;font-size:1rem;color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:14px;padding:13px 14px}
+textarea{min-height:100px;resize:vertical}
+input[type=range]{width:100%;accent-color:var(--sun);height:28px}
+.ppl{display:flex;align-items:baseline;gap:12px}
+.ppl output{font-family:var(--fd);font-weight:800;font-size:2.6rem;color:var(--sun);line-height:1;font-variant-numeric:tabular-nums}
+.note{font-size:.92rem;padding:10px 14px;border-radius:12px;background:rgba(95,224,160,.1);color:var(--ok)}
+.note.warn{background:rgba(255,190,85,.12);color:var(--sun)}
+.hp{position:absolute;left:-9999px}
+.summary{position:sticky;top:90px;border-radius:26px;padding:26px;display:grid;gap:14px;border:2px solid transparent;background:linear-gradient(var(--solid),var(--solid)) padding-box,linear-gradient(140deg,var(--sun),var(--vortex)) border-box}
+.summary dl{margin:0;display:grid;gap:10px}
+.summary dl div{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:8px}
+.summary dt{color:var(--mute)} .summary dd{margin:0;font-weight:600;text-align:right}
+.summary .tot{font-family:var(--fd);font-weight:800;font-size:2rem;color:var(--sun)}
+.summary ul{margin:0;padding-left:1.1em;color:var(--mute);font-size:.92rem;display:grid;gap:4px}
+.summary .btn{width:100%}
+.err{color:#ff8f8f;font-weight:600}
+.done{text-align:center;padding:50px 26px;border-radius:28px;background:var(--surface);border:1px solid var(--line2);display:grid;gap:16px;justify-items:center}
+.done .check{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;background:var(--ok);box-shadow:0 0 60px rgba(95,224,160,.6)}
+.done .check svg{width:52px;height:52px;fill:#06210f}
+
+/* faq */
+.faq{display:grid;gap:12px;max-width:860px}
+.faq details{border-radius:18px;background:var(--surface);border:1px solid var(--line);padding:18px 22px}
+.faq summary{cursor:pointer;font-family:var(--fd);font-weight:700;font-size:1.08rem;list-style:none;display:flex;justify-content:space-between;gap:16px}
+.faq summary::after{content:"+";color:var(--sun);font-size:1.5rem;line-height:1;transition:transform .3s}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq details p{margin-top:12px;color:var(--mute)}
+
+.final{text-align:center;padding:70px 26px;border-radius:32px;background:radial-gradient(60% 80% at 50% 0%,rgba(139,63,214,.45),transparent),var(--deep);border:1px solid var(--line2);display:grid;gap:18px;justify-items:center}
+.final h2{max-width:20ch}
+
+footer{border-top:1px solid var(--line);padding-block:30px;color:var(--mute);font-size:.9rem;margin-top:80px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:14px 26px;align-items:center;justify-content:space-between}
+footer img{height:30px;width:auto}
+footer a{color:var(--mute)}
+
+/* reveal */
+.rv{opacity:1;transform:none}
+@media (prefers-reduced-motion:no-preference){
+  .js .rv{opacity:0;transform:translateY(26px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+  .js .rv.in{opacity:1;transform:none}
+  .planet{animation:bob 3.4s ease-in-out infinite}
+  .scan{animation:scan 3s linear infinite}
+  .marquee .track{animation:mq 38s linear infinite}
+  .spark{animation:tw 2.4s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateX(-50%) translateY(-10px) scale(1.04)}}
+  @keyframes scan{to{top:110%}}
+  @keyframes mq{to{transform:translateX(-50%)}}
+  @keyframes tw{50%{opacity:.2;transform:scale(.6) rotate(40deg)}}
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<header class="top" id="top"><div class="wrap">
+  <a class="brand" href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
+  <nav aria-label="Secciones">
+    <a class="hide-m" href="#planes">Talleres</a><a class="hide-m" href="#programa">Programa</a><a class="hide-m" href="#faq">Preguntas</a>
+    <a class="pill sun" href="#agenda">Agendar</a>
+    <a class="pill acct" id="acct" href="../cuenta/#entrar">Entrar</a>
+  </nav>
+</div></header>
+
+<main>
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <span class="kick">Talleres para escuelas</span>
+      <h1>Tus maestros creando <span class="grad">realidad aumentada</span> en una tarde.</h1>
+      <p class="lead">Un taller práctico donde tu equipo aprende a crear experiencias inmersivas con inteligencia artificial para sus clases. Sin programar. Salen con su primera experiencia publicada.</p>
+      <div class="ctas">
+        <a class="btn sun" href="#agenda" data-plan="gratis"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h2v2h6V2h2v2h3a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h3zm12 8H5v9h14zM5 8h14V6H5z"/></svg>Agenda tu taller gratis</a>
+        <a class="btn" href="#planes">Ver el taller completo</a>
+      </div>
+      <div class="chips">
+        <span class="chip"><i></i>Sin programar</span><span class="chip"><i></i>Para todas las materias</span><span class="chip"><i></i>De preescolar a universidad</span>
+      </div>
+    </div>
+    <div class="stage" id="stage" aria-hidden="true">
+      <div class="ring"></div>
+      <div class="phone"><div class="screen"><div class="scan"></div><div class="sheet"></div><div class="planet"></div></div></div>
+      <span class="tool" style="--c:var(--poly)"><i></i>Polycam</span>
+      <span class="tool" style="--c:var(--gpt)"><i></i>ChatGPT</span>
+      <span class="tool" style="--c:var(--meshy)"><i></i>Meshy</span>
+      <span class="tool" style="--c:var(--pix)"><i></i>PixVerse</span>
+      <span class="tool" style="--c:var(--suno)"><i></i>Suno</span>
+      <img class="spark" src="../assets/filtros/particula-estrella.webp" alt="" style="left:8%;top:14%">
+      <img class="spark" src="../assets/filtros/particula-estrella.webp" alt="" style="right:6%;top:30%;animation-delay:.8s">
+      <img class="spark" src="../assets/filtros/particula-estrella.webp" alt="" style="left:20%;bottom:8%;animation-delay:1.5s">
+    </div>
+  </div>
+</section>
+
+<div class="marquee" aria-hidden="true"><div class="track" id="mq">
+  <span>Realidad aumentada</span><span>Objetos 3D</span><span>Videos con IA</span><span>Canciones con IA</span><span>Memorama</span><span>Sopa de letras</span><span>Rompecabezas</span><span>Trivia con tu cara</span><span>Filtros</span><span>Colorea mi dibujo</span>
+</div></div>
+
+<section class="blk" id="porque">
+  <div class="wrap">
+    <div class="shead rv"><span class="kick">Lo que se vive, no se olvida</span><h2>Clases que tus alumnos <span class="grad">quieren repetir</span>.</h2><p class="mute" style="font-size:1.1rem">Cuando un planeta sale del libro o un personaje explica el tema desde la hoja, la atención cambia. Tus maestros aprenden a hacerlo ellos mismos, en minutos.</p></div>
+    <div class="why">
+      <article class="card rv"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zm-3.5 6a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm7 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM7.5 14a5 5 0 0 0 9 0z"/></svg></span><h3>Alumnos atentos</h3><p>La realidad aumentada, los juegos y el 3D convierten un tema en algo que se toca, se escucha y se juega.</p></article>
+      <article class="card rv"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75zM20.7 7.04a1 1 0 0 0 0-1.41l-2.33-2.33a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"/></svg></span><h3>Maestros que crean</h3><p>Sin programar: suben una imagen, un video o un 3D, lo acomodan y publican. La inteligencia artificial hace lo difícil.</p></article>
+      <article class="card rv"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h8v8H3zm2 2v4h4V5zm8-2h8v8h-8zm2 2v4h4V5zM3 13h8v8H3zm2 2v4h4v-4zm11-2h2v3h3v2h-3v3h-2v-3h-3v-2h3z"/></svg></span><h3>Un QR y listo</h3><p>Los alumnos no instalan nada ni crean cuentas: escanean el QR y la experiencia se abre en el celular.</p></article>
+    </div>
+    <div class="nums">
+      <div class="num rv"><b data-to="5">5</b><span>herramientas de inteligencia artificial</span></div>
+      <div class="num rv"><b data-to="12">12</b><span>tipos de experiencias</span></div>
+      <div class="num rv"><b data-to="3">3</b><span>horas para dominarlas</span></div>
+      <div class="num rv"><b>∞</b><span>experiencias con Premium</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="blk" id="planes" style="padding-top:20px">
+  <div class="wrap">
+    <div class="shead c rv"><span class="kick">Elige tu taller</span><h2>Empieza gratis. <span class="grad">Domínalo todo</span> en 3 horas.</h2></div>
+    <div class="plans">
+      <article class="plan rv">
+        <span class="tag">Para conocer</span>
+        <h3 style="font-size:1.7rem">Taller gratis</h3>
+        <div class="price"><b>$0</b><span>· 1 hora</span></div>
+        <p class="mute">Una sesión tranquila para conocer la plataforma y ver lo que pueden lograr en el salón.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Recorrido por la plataforma y sus 12 experiencias</span></li>
+          <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Cada quien crea su <b>primera experiencia</b> (un juego o una realidad aumentada)</span></li>
+          <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Cuentas gratis para todos los participantes</span></li>
+          <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Manual digital para seguir practicando</span></li>
+        </ul>
+        <a class="btn" href="#agenda" data-plan="gratis">Agendar taller gratis</a>
+      </article>
+      <article class="plan pro rv">
+        <span class="tag">★ El más completo</span>
+        <h3 style="font-size:1.7rem">Taller completo + Premium</h3>
+        <div class="price"><b>$14,900</b><span>MXN · 3 horas</span></div>
+        <p class="mute">Tu equipo aprende a crear <b style="color:var(--ink)">con todas las herramientas</b> y la escuela se queda con la plataforma sin límites todo un año.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Todo lo del taller gratis</span></li>
+          <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Escanear objetos reales en 3D con <b>Polycam</b> y crear 3D desde una imagen con <b>Meshy</b></span></li>
+          <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Imágenes con fondo transparente en <b>ChatGPT</b>, videos con <b>PixVerse</b> y canciones con <b>Suno</b></span></li>
+          <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Cada participante sale con una <b>experiencia completa publicada</b>: 3D, video y música sobre su propia hoja</span></li>
+          <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span><b>Un año del plan Premium</b> para la escuela: experiencias <b>ilimitadas</b>, sin vencimiento y con el <b>logo de tu escuela</b></span></li>
+          <li><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Manual digital y ejemplos listos para cada materia</span></li>
+        </ul>
+        <div class="value"><b>El taller te sale gratis.</b><span>Solo el año de Premium cuesta <span class="strike">$14,990</span>. Con el taller pagas $14,900 y tus maestros aprenden a sacarle todo el provecho.</span></div>
+        <a class="btn sun" href="#agenda" data-plan="completo">Quiero el taller completo</a>
+      </article>
+    </div>
+
+    <div class="cmp rv">
+      <table>
+        <thead><tr><th>Qué incluye</th><th>Gratis</th><th>Completo</th></tr></thead>
+        <tbody>
+          <tr><td>Duración</td><td>1 hora</td><td><b>3 horas</b></td></tr>
+          <tr><td>Conocer la plataforma y crear su primera experiencia</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Objetos 3D con Polycam y Meshy</td><td class="n">—</td><td class="y">✓</td></tr>
+          <tr><td>Imágenes, videos y canciones con inteligencia artificial</td><td class="n">—</td><td class="y">✓</td></tr>
+          <tr><td>Experiencia completa publicada por participante</td><td class="n">—</td><td class="y">✓</td></tr>
+          <tr><td>Plan de la escuela</td><td>Gratis: 3 experiencias de 15 días</td><td><b>Premium 1 año: ilimitadas</b></td></tr>
+          <tr><td>Logo de la escuela en sus experiencias</td><td class="n">—</td><td class="y">✓</td></tr>
+          <tr><td>Manual digital</td><td class="y">✓</td><td class="y">✓</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="blk" id="programa">
+  <div class="wrap">
+    <div class="shead rv"><span class="kick">Así se vive</span><h2>El programa, <span class="grad">minuto a minuto</span>.</h2></div>
+    <div class="tabs rv" role="tablist" aria-label="Programa">
+      <button role="tab" aria-selected="false" data-tab="g" id="tg" type="button">Taller gratis · 1 h</button>
+      <button role="tab" aria-selected="true" data-tab="c" id="tc" type="button">Taller completo · 3 h</button>
+    </div>
+    <ol class="timeline" id="tl-g" hidden>
+      <li><span class="t">0:00</span><div><h3>¡Wow! Demostración en vivo</h3><p>Realidad aumentada, filtros y juegos funcionando en sus propios celulares.</p></div></li>
+      <li><span class="t">0:15</span><div><h3>Recorrido por la plataforma</h3><p>Las 12 experiencias y para qué sirve cada una en clase.</p></div></li>
+      <li><span class="t">0:30</span><div><h3>Crea tu primera experiencia</h3><p>Un memorama, una sopa de letras o una realidad aumentada con su tema de la semana.</p></div></li>
+      <li><span class="t">0:50</span><div><h3>Preguntas y siguientes pasos</h3><p>Ideas para su materia y cómo seguir practicando con el manual.</p></div></li>
+    </ol>
+    <ol class="timeline" id="tl-c">
+      <li><span class="t">0:00</span><div><h3>¡Wow! Demostración en vivo</h3><p>Todo lo que van a poder hacer al terminar, funcionando en sus celulares.</p></div></li>
+      <li style="--c:var(--lav)"><span class="t">0:15</span><div><h3>La plataforma a fondo</h3><p>Cuentas, catálogo, juegos listos y cómo se comparte con un QR.</p></div></li>
+      <li style="--c:var(--poly)"><span class="t">0:40</span><div><h3>Objetos reales en 3D con Polycam</h3><p>Escanean un objeto con el celular y lo descargan en GLB.</p></div></li>
+      <li style="--c:var(--gpt)"><span class="t">1:05</span><div><h3>Imágenes con ChatGPT</h3><p>Personajes y elementos con fondo transparente, listos para flotar sobre la hoja.</p></div></li>
+      <li style="--c:var(--meshy)"><span class="t">1:25</span><div><h3>De imagen a 3D con Meshy</h3><p>Convierten su personaje en un objeto 3D que gira.</p></div></li>
+      <li style="--c:var(--pix)"><span class="t">1:45</span><div><h3>Videos con PixVerse</h3><p>Su imagen cobra vida; el truco de la pantalla verde para que el personaje aparezca sin fondo.</p></div></li>
+      <li style="--c:var(--suno)"><span class="t">2:05</span><div><h3>Canciones con Suno</h3><p>Una canción sobre su tema para que los alumnos la repasen cantando.</p></div></li>
+      <li style="--c:var(--sun)"><span class="t">2:25</span><div><h3>Arma y publica tu experiencia</h3><p>Juntan 3D, video, imágenes y música sobre su hoja impresa. Publican y prueban con el QR.</p></div></li>
+      <li style="--c:var(--ok)"><span class="t">2:50</span><div><h3>Galería y cierre</h3><p>Se prueban entre todos, se comparten ideas y se activa el Premium de la escuela.</p></div></li>
+    </ol>
+  </div>
+</section>
+
+<section class="blk" id="herramientas" style="padding-top:20px">
+  <div class="wrap">
+    <div class="shead rv"><span class="kick">Lo que van a dominar</span><h2>Cinco herramientas, <span class="grad">un solo QR</span>.</h2></div>
+    <div class="tools">
+      <article class="tcard rv" style="--c:var(--poly)"><span class="k">Objetos reales</span><h3>Polycam</h3><p>Una artesanía, un fósil o una maqueta escaneados con el celular.</p></article>
+      <article class="tcard rv" style="--c:var(--gpt)"><span class="k">Imágenes</span><h3>ChatGPT</h3><p>Personajes, etiquetas y dibujos sin fondo para poner sobre la hoja.</p></article>
+      <article class="tcard rv" style="--c:var(--meshy)"><span class="k">3D desde imagen</span><h3>Meshy</h3><p>Lo que imaginen, convertido en un objeto 3D que gira.</p></article>
+      <article class="tcard rv" style="--c:var(--pix)"><span class="k">Videos</span><h3>PixVerse</h3><p>Una imagen fija que se mueve, saluda y explica.</p></article>
+      <article class="tcard rv" style="--c:var(--suno)"><span class="k">Música</span><h3>Suno</h3><p>Canciones con su propia letra para aprender cantando.</p></article>
+      <article class="tcard rv" style="--c:var(--sun)"><span class="k">Todo junto</span><h3>Vórtice VR</h3><p>Lo juntan en una experiencia y la comparten con un QR.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="blk" id="ideas" style="padding-top:20px">
+  <div class="wrap">
+    <div class="shead rv"><span class="kick">Para cada materia</span><h2>¿Qué podría hacer <span class="grad">tu maestro de…</span>?</h2></div>
+    <div class="tabs rv" role="tablist" aria-label="Materias" id="subj"></div>
+    <div class="idea rv" id="idea" aria-live="polite"><span class="big" id="iEmo"></span><div><h3 id="iT"></h3><p id="iP"></p><span class="exp" id="iX"></span></div></div>
+  </div>
+</section>
+
+<section class="blk" id="requisitos" style="padding-top:20px">
+  <div class="wrap">
+    <div class="shead rv"><span class="kick">Para que salga increíble</span><h2>Lo que necesitan <span class="grad">ese día</span>.</h2></div>
+    <div class="reqs">
+      <div class="req rv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v10H3V6a1 1 0 0 1 1-1zm1 2v7h14V7zM1 17h22v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2z"/></svg><div><h3>Una computadora por persona</h3><p>Laptop o sala de cómputo.</p></div></div>
+      <div class="req rv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 18a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM2 8.8a14.5 14.5 0 0 1 20 0l-1.5 1.6a12.4 12.4 0 0 0-17 0zm3.5 3.6a9.3 9.3 0 0 1 13 0L17 14a7.1 7.1 0 0 0-10 0z"/></svg><div><h3>Internet estable</h3><p>WiFi para todo el grupo.</p></div></div>
+      <div class="req rv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 3v13h10V5zm5 14.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg><div><h3>Su celular con cámara</h3><p>Para escanear y probar.</p></div></div>
+      <div class="req rv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h14a1 1 0 0 1 1 1v3l4-2v8l-4-2v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg><div><h3>Proyector y bocinas</h3><p>Para ver todo en grande.</p></div></div>
+      <div class="req rv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a5 5 0 0 1 5 5v1h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2h1V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v1h6V7a3 3 0 0 0-3-3zm0 9a2 2 0 0 0-1 3.7V18h2v-1.3A2 2 0 0 0 12 13z"/></svg><div><h3>Una cuenta de Google</h3><p>Para entrar rápido a las herramientas.</p></div></div>
+    </div>
+    <div class="room rv">
+      <h3>Grupo ideal: <span style="color:var(--ok)">20 personas</span> · hasta <span style="color:var(--sun)">40</span> en un salón grande</h3>
+      <div class="seats" id="seats" aria-hidden="true"></div>
+      <p class="mute">Con 20, cada quien recibe ayuda personal. Si son más de 40, hacemos dos grupos.</p>
+    </div>
+  </div>
+</section>
+
+<section class="blk" id="agenda" style="padding-top:20px">
+  <div class="wrap">
+    <div class="shead rv"><span class="kick">Aparta tu fecha</span><h2>Agenda tu taller <span class="grad">en 2 minutos</span>.</h2><p class="mute" style="font-size:1.1rem">Elige el taller y una fecha tentativa. Te escribimos para confirmar el día y la hora.</p></div>
+    <div class="agenda" id="agendaBox">
+      <form id="fTaller" novalidate>
+        <div class="step">
+          <h3><span class="n">1</span>¿Qué taller quieren?</h3>
+          <div class="pick">
+            <label class="opt"><input type="radio" name="plan" value="gratis" id="pGratis"><b>Taller gratis</b><span>1 hora · conocer la plataforma</span><em>$0</em></label>
+            <label class="opt"><input type="radio" name="plan" value="completo" id="pCompleto" checked><b>Taller completo + Premium</b><span>3 horas · todas las herramientas · 1 año Premium</span><em>$14,900</em></label>
+          </div>
+        </div>
+        <div class="step">
+          <h3><span class="n">2</span>¿Cuándo les gustaría?</h3>
+          <div class="row">
+            <label class="f" for="date">Fecha tentativa<input type="date" id="date" name="date" required></label>
+            <label class="f" for="date2">Otra fecha posible <small>(opcional)</small><input type="date" id="date2" name="date2"></label>
+          </div>
+          <div>
+            <p style="font-weight:600;font-size:.95rem;margin-bottom:8px">Horario</p>
+            <div class="slots" role="radiogroup" aria-label="Horario">
+              <label class="opt"><input type="radio" name="time" value="Mañana (8:00 a 11:00)" checked><b>Mañana</b></label>
+              <label class="opt"><input type="radio" name="time" value="Mediodía (11:00 a 14:00)"><b>Mediodía</b></label>
+              <label class="opt"><input type="radio" name="time" value="Tarde (14:00 a 18:00)"><b>Tarde</b></label>
+              <label class="opt"><input type="radio" name="time" value="Sábado"><b>Sábado</b></label>
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <h3><span class="n">3</span>¿Cuántos van a ser?</h3>
+          <div class="ppl"><output id="pplOut" for="people">20</output><span class="mute">personas</span></div>
+          <input type="range" id="people" name="people" min="5" max="60" value="20" aria-label="Número de personas">
+          <p class="note" id="pplNote"></p>
+          <label class="f" for="pcs">¿Cómo van a trabajar?
+            <select id="pcs" name="pcs">
+              <option>Cada quien trae su laptop</option>
+              <option>Tenemos sala de cómputo con internet</option>
+              <option>Todavía no lo sabemos</option>
+            </select>
+          </label>
+        </div>
+        <div class="step">
+          <h3><span class="n">4</span>Tus datos</h3>
+          <div class="row">
+            <label class="f" for="name">Tu nombre<input type="text" id="name" name="name" autocomplete="name" required maxlength="80"></label>
+            <label class="f" for="role">Cargo<input type="text" id="role" name="role" placeholder="Directora, coordinador, maestra…" maxlength="80"></label>
+          </div>
+          <label class="f" for="school">Escuela o institución<input type="text" id="school" name="school" autocomplete="organization" required maxlength="120"></label>
+          <div class="row">
+            <label class="f" for="level">Nivel
+              <select id="level" name="level"><option>Preescolar</option><option selected>Primaria</option><option>Secundaria</option><option>Preparatoria</option><option>Universidad</option><option>Varios niveles</option><option>Museo u otra institución</option></select>
+            </label>
+            <label class="f" for="city">Ciudad y estado<input type="text" id="city" name="city" autocomplete="address-level2" maxlength="80"></label>
+          </div>
+          <div class="row">
+            <label class="f" for="email">Correo<input type="email" id="email" name="email" autocomplete="email" required maxlength="120"></label>
+            <label class="f" for="phone">WhatsApp o teléfono<input type="tel" id="phone" name="phone" autocomplete="tel" maxlength="20"></label>
+          </div>
+          <label class="f" for="message">Comentarios <small>(opcional)</small><textarea id="message" name="message" maxlength="1500" placeholder="Materias, edades de los alumnos, lo que les gustaría lograr…"></textarea></label>
+          <input class="hp" type="text" name="web" id="web" tabindex="-1" autocomplete="off" aria-hidden="true">
+        </div>
+      </form>
+
+      <aside class="summary" aria-label="Resumen de tu solicitud">
+        <span class="kick">Tu taller</span>
+        <h3 id="sName" style="font-size:1.4rem">Taller completo + Premium</h3>
+        <dl>
+          <div><dt>Duración</dt><dd id="sHours">3 horas</dd></div>
+          <div><dt>Fecha</dt><dd id="sDate">Elige una fecha</dd></div>
+          <div><dt>Horario</dt><dd id="sTime">Mañana</dd></div>
+          <div><dt>Personas</dt><dd id="sPpl">20</dd></div>
+        </dl>
+        <span class="tot" id="sPrice">$14,900 MXN</span>
+        <ul id="sInc"></ul>
+        <button class="btn sun" type="submit" form="fTaller" id="send">Enviar solicitud</button>
+        <p class="err" id="err" role="alert"></p>
+        <p class="mute" style="font-size:.82rem">Es una fecha tentativa: no se cobra nada al enviar. Usamos tus datos solo para organizar el taller (<a href="../privacidad/">aviso de privacidad</a>).</p>
+      </aside>
+    </div>
+
+    <div class="done" id="done" hidden>
+      <span class="check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>
+      <h2>¡Listo! Ya apartamos tu fecha.</h2>
+      <p class="mute" style="max-width:52ch">Te mandamos una copia a tu correo. Te escribimos pronto para confirmar el día y la hora del taller.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
+        <a class="btn sun" href="../cuenta/#registro">Crear mi cuenta gratis</a>
+        <a class="btn" href="../taller/">Ver el manual</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="blk" id="faq" style="padding-top:20px">
+  <div class="wrap">
+    <div class="shead rv"><span class="kick">Preguntas</span><h2>Lo que nos preguntan.</h2></div>
+    <div class="faq">
+      <details class="rv"><summary>¿El taller gratis tiene algún compromiso?</summary><p>No. Es una hora para conocer la plataforma y crear su primera experiencia. Si después quieren el taller completo, lo platicamos.</p></details>
+      <details class="rv"><summary>¿Qué incluye el plan Premium de la escuela?</summary><p>Experiencias ilimitadas que no vencen mientras el plan esté activo, hasta 15 elementos por experiencia, videos de hasta 50 MB y el logo de tu escuela (o ningún logo) en todas sus experiencias, fotos y videos. Dura un año desde el taller.</p></details>
+      <details class="rv"><summary>¿Cada maestro necesita su propia cuenta?</summary><p>El Premium es una cuenta para la escuela, donde se publican las experiencias sin límite. Además, cada maestro puede abrir su cuenta gratis para practicar.</p></details>
+      <details class="rv"><summary>¿Las herramientas de inteligencia artificial cuestan?</summary><p>Polycam, ChatGPT, Meshy, PixVerse y Suno tienen cuentas gratis con las que se hace todo el taller. Algunas tienen límites de uso al día o al mes; les explicamos cómo aprovecharlas.</p></details>
+      <details class="rv"><summary>¿Cuántas personas pueden entrar?</summary><p>Lo ideal son 20, para que cada quien reciba ayuda. Pueden ser hasta 40 si hay un salón grande. Si son más, hacemos dos grupos.</p></details>
+      <details class="rv"><summary>¿Necesitan saber de tecnología?</summary><p>No. Si saben usar el celular y la computadora para lo básico, pueden crear. Todo se hace llenando campos y arrastrando.</p></details>
+      <details class="rv"><summary>¿Los alumnos necesitan una app?</summary><p>No. Escanean el QR y la experiencia se abre en el navegador del celular, sin instalar nada ni dar datos.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="blk" style="padding-top:10px">
+  <div class="wrap">
+    <div class="final rv">
+      <span class="kick">Cupo limitado por fecha</span>
+      <h2>Que tu escuela sea <span class="grad">la que todos quieren visitar</span>.</h2>
+      <p class="mute" style="max-width:50ch;font-size:1.1rem">Empieza con el taller gratis de 1 hora o lleva a tu equipo directo al taller completo.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
+        <a class="btn sun" href="#agenda" data-plan="completo">Agendar taller completo</a>
+        <a class="btn" href="#agenda" data-plan="gratis">Empezar con el gratis</a>
+      </div>
+      <p class="mute" style="font-size:.95rem">¿Dudas? Escríbenos a <b style="color:var(--lav)">hola@vorticevr.mx</b></p>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer><div class="wrap"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span>© Vórtice VR</span><nav class="explore" aria-label="Explora"><a href="../escuelas/">Escuelas</a> · <a href="../educacion/">Educación</a> · <a href="../realidad-aumentada/">Realidad aumentada</a> · <a href="../experiencias-inmersivas/">Experiencias inmersivas</a></nav><span class="legal"><a href="../privacidad/">Privacidad</a> · <a href="../terminos/">Términos</a></span></div></footer>
+
+<script>
+document.documentElement.classList.add("js");
+(function(){
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const $ = id => document.getElementById(id);
+
+  // header + progress
+  const top = $("top"), prog = $("progress");
+  const onScroll = () => { top.classList.toggle("solid", scrollY > 30); const h = document.documentElement.scrollHeight - innerHeight; prog.style.transform = `scaleX(${h > 0 ? scrollY / h : 0})`; };
+  addEventListener("scroll", onScroll, { passive: true }); onScroll();
+
+  // reveal + counters
+  const count = el => { const to = +el.dataset.to; if (!to || reduce) return; let t0; const f = t => { t0 ??= t; const k = Math.min(1, (t - t0) / 1200); el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(f); }; requestAnimationFrame(f); };
+  const io = new IntersectionObserver(es => es.forEach(e => { if (!e.isIntersecting) return; e.target.classList.add("in"); e.target.querySelectorAll("[data-to]").forEach(count); io.unobserve(e.target); }), { threshold: .15 });
+  document.querySelectorAll(".rv").forEach(el => io.observe(el));
+
+  // marquee: duplicate for a seamless loop
+  const mq = $("mq"); mq.innerHTML += mq.innerHTML;
+
+  // hero: tools orbit the phone; the mouse tilts the stage
+  const stage = $("stage"), tools = [...stage.querySelectorAll(".tool")];
+  let a = 0, tx = 0, ty = 0;
+  const place = () => { const r = stage.clientWidth; tools.forEach((el, i) => { const ang = a + i * (Math.PI * 2 / tools.length), x = Math.cos(ang) * r * .44, y = Math.sin(ang) * r * .2 + r * .02, z = Math.sin(ang);
+    el.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) scale(${.82 + .22 * (z + 1) / 2})`; el.style.zIndex = z > 0 ? 3 : 0; el.style.opacity = .55 + .45 * (z + 1) / 2; });
+    stage.style.transform = `perspective(900px) rotateY(${tx}deg) rotateX(${ty}deg)`; };
+  const loop = () => { a += .006; place(); requestAnimationFrame(loop); };
+  if (reduce) place(); else requestAnimationFrame(loop);
+  if (!reduce && matchMedia("(pointer: fine)").matches) addEventListener("mousemove", e => { tx = (e.clientX / innerWidth - .5) * 10; ty = (e.clientY / innerHeight - .5) * -8; });
+  addEventListener("resize", place);
+
+  // program tabs
+  const tabs = [$("tg"), $("tc")];
+  tabs.forEach(b => b.addEventListener("click", () => { tabs.forEach(x => x.setAttribute("aria-selected", x === b)); $("tl-g").hidden = b.dataset.tab !== "g"; $("tl-c").hidden = b.dataset.tab !== "c"; }));
+
+  // ideas by subject
+  const IDEAS = [
+    ["Ciencias", "🔬", "La célula sale de la hoja", "Una lámina de la célula que, al enfocarla, muestra la célula en 3D girando con sus partes señaladas y un video que explica cada una.", "Realidad aumentada con imagen + Meshy + PixVerse"],
+    ["Historia", "🏛️", "El personaje histórico explica su época", "Sobre la página del libro aparece el personaje en video, sin fondo, contando lo que vivió.", "Realidad aumentada + ChatGPT + PixVerse"],
+    ["Español", "📖", "El cuento que se escucha", "La portada del cuento muestra a sus personajes en 3D y suena una canción con la moraleja.", "Realidad aumentada + Meshy + Suno"],
+    ["Inglés", "🗣️", "Memorama bilingüe", "Pares “Red – Rojo”, “Dog – Perro” con imágenes propias, contra el reloj, en el celular.", "Memorama en modo parejas"],
+    ["Matemáticas", "➗", "Las tablas cantadas", "Una canción pegajosa de la tabla del 7 que suena al enfocar la hoja de ejercicios, más una sopa de letras de números.", "Suno + Sopa de letras"],
+    ["Geografía", "🌎", "El volcán en la mesa", "Un volcán en 3D aparece sobre la mesa del salón, de tamaño real, para caminar a su alrededor.", "Realidad aumentada en superficie + Polycam o Meshy"],
+    ["Artes", "🎨", "Su obra, para colorear", "Los alumnos dibujan, el maestro sube el dibujo y todos lo colorean en el celular y lo comparten.", "Colorea mi dibujo"],
+  ];
+  const subj = $("subj");
+  const show = i => { const [, e, t, p, x] = IDEAS[i]; $("iEmo").textContent = e; $("iT").textContent = t; $("iP").textContent = p; $("iX").textContent = "✦ " + x; subj.querySelectorAll("button").forEach((b, j) => b.setAttribute("aria-selected", j === i)); };
+  IDEAS.forEach((d, i) => { const b = document.createElement("button"); b.type = "button"; b.role = "tab"; b.textContent = d[0]; b.onclick = () => { show(i); auto = false; }; subj.appendChild(b); });
+  let auto = true, cur = 0; show(0);
+  if (!reduce) setInterval(() => { if (auto) show(cur = (cur + 1) % IDEAS.length); }, 4200);
+
+  // room seats
+  const seats = $("seats"); for (let i = 0; i < 40; i++) { const s = document.createElement("i"); s.className = i < 20 ? "on" : "big"; seats.appendChild(s); }
+
+  // form + live summary
+  const f = $("fTaller"), INC = {
+    gratis: ["Recorrido por la plataforma", "Su primera experiencia", "Cuentas gratis", "Manual digital"],
+    completo: ["Polycam, ChatGPT, Meshy, PixVerse y Suno", "Experiencia completa por participante", "1 año de Premium: ilimitadas y con su logo", "Manual digital"] };
+  const tomorrow = new Date(Date.now() + 864e5).toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" });
+  $("date").min = tomorrow; $("date2").min = tomorrow;
+  const fmt = d => d ? new Date(d + "T12:00:00").toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" }) : "Elige una fecha";
+  const sum = () => {
+    const plan = f.plan.value, n = +$("people").value;
+    $("sName").textContent = plan === "gratis" ? "Taller gratis" : "Taller completo + Premium";
+    $("sHours").textContent = plan === "gratis" ? "1 hora" : "3 horas";
+    $("sPrice").textContent = plan === "gratis" ? "Gratis" : "$14,900 MXN";
+    $("sDate").textContent = fmt($("date").value);
+    $("sTime").textContent = (f.time.value || "").split(" (")[0];
+    $("pplOut").textContent = n >= 60 ? "60+" : n; $("sPpl").textContent = n >= 60 ? "60+" : n;
+    const note = $("pplNote");
+    note.className = "note" + (n > 20 ? " warn" : "");
+    note.textContent = n <= 20 ? "¡Grupo ideal! Cada quien recibe ayuda personal." : n <= 40 ? "Muy bien: necesitamos un salón grande para que todos trabajen cómodos." : "Más de 40: lo dividimos en dos grupos para que nadie se quede atrás.";
+    $("sInc").innerHTML = INC[plan].map(x => `<li>${x}</li>`).join("");
+  };
+  f.addEventListener("input", sum); f.addEventListener("change", sum); sum();
+
+  // buttons that pick a plan before jumping to the form
+  document.querySelectorAll("[data-plan]").forEach(a => a.addEventListener("click", () => { const r = f.querySelector(`input[name=plan][value=${a.dataset.plan}]`); r.checked = true; sum(); }));
+
+  f.addEventListener("submit", async e => {
+    e.preventDefault();
+    const err = $("err"), btn = $("send"); err.textContent = "";
+    const d = Object.fromEntries(new FormData(f));
+    const miss = !d.name.trim() ? "name" : !d.school.trim() ? "school" : !/^\S+@\S+\.\S+$/.test(d.email) ? "email" : !d.date ? "date" : "";
+    if (miss) { err.textContent = { name: "Escribe tu nombre.", school: "Escribe el nombre de tu escuela.", email: "Escribe un correo válido.", date: "Elige una fecha tentativa." }[miss]; $(miss).focus(); return; }
+    btn.disabled = true; btn.textContent = "Enviando…";
+    try {
+      const r = await fetch("../api/taller", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.error || "No se pudo enviar. Escríbenos a hola@vorticevr.mx.");
+      $("agendaBox").hidden = true; $("done").hidden = false; $("done").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+      if (!reduce) confetti();
+    } catch (x) { err.textContent = x.message; btn.disabled = false; btn.textContent = "Enviar solicitud"; }
+  });
+
+  function confetti() {
+    const c = document.createElement("canvas"), x = c.getContext("2d"), cols = ["#ffbe55", "#d2b8ff", "#8b3fd6", "#5fe0a0", "#ff7ab8", "#8fb6ff"];
+    c.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50"; document.body.appendChild(c);
+    const W = c.width = innerWidth, H = c.height = innerHeight, P = Array.from({ length: 160 }, () => ({ x: W / 2, y: H * .45, vx: (Math.random() - .5) * 16, vy: -Math.random() * 16 - 4, r: Math.random() * 6 + 4, c: cols[Math.random() * cols.length | 0], a: Math.random() * 6, s: (Math.random() - .5) * .3 }));
+    let t = 0; const step = () => { x.clearRect(0, 0, W, H); P.forEach(p => { p.vy += .35; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.a += p.s; x.save(); x.translate(p.x, p.y); x.rotate(p.a); x.fillStyle = p.c; x.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); x.restore(); }); if (++t < 180) requestAnimationFrame(step); else c.remove(); };
+    requestAnimationFrame(step);
+  }
+})();
+</script>
+<script src="../assets/origen.js"></script>
+<script src="../assets/cuenta-chip.js"></script>
+<script src="../assets/magia.js" defer></script>
+</body>
+</html>

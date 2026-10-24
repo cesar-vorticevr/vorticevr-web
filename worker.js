@@ -29,6 +29,8 @@ const PLANS = {
   escuela: { name: "Escuela", exp: 1000, brand: true, days: 0,  videoMB: 50, modelMB: 30, items: 15, totalMB: 60, price: 1500, year: 15000, legacy: true },
 };
 const UNLIMITED = 1000000;   // PLANS.premium.exp: shown as "ilimitadas"
+// Workshops for schools (/talleres/): requested by e-mail, activated by hand in /admin/ (the full one includes a year of Premium)
+const TALLER = { gratis: { name: "Taller gratis", hours: "1 hora", price: "Gratis" }, completo: { name: "Taller completo", hours: "3 horas", price: "$14,900 MXN con un año de Premium" } };
 const yearPrice = plan => PLANS[plan].year || PLANS[plan].price * YEAR_MONTHS;
 const FAR = 253402300799000; // expires of an experience on a paid plan: "while the plan is active" (year 9999)
 const ADMINS_DEFAULT = "lad.cesargarcia@gmail.com";
@@ -261,6 +263,34 @@ async function api(request, env, ctx, url) {
     ctx.waitUntil(bump(env, "contacts").run());
     const sent = await sendMail(env, env.CONTACT_TO || "hola@vorticevr.mx", `Contacto: ${name} · ${topic}`, html, undefined, em);
     return sent ? json({ ok: true }) : json({ error: "No se pudo enviar. Escríbenos a hola@vorticevr.mx." }, 502);
+  }
+
+  // workshop request from /talleres/ → email to CONTACT_TO with everything, and a short confirmation to the school
+  if (path === "/api/taller" && M === "POST") {
+    const b = await request.json().catch(() => ({}));
+    if (b.web) return json({ ok: true }); // honeypot
+    const t = (v, n) => String(v || "").trim().slice(0, n);
+    const plan = TALLER[b.plan] ? b.plan : "", em = normEmail(b.email), name = t(b.name, 80), school = t(b.school, 120);
+    const phone = String(b.phone || "").replace(/[^\d+ ()-]/g, "").slice(0, 20);
+    const people = Math.max(1, Math.min(200, parseInt(b.people) || 0));
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(b.date || "") ? b.date : "", date2 = /^\d{4}-\d{2}-\d{2}$/.test(b.date2 || "") ? b.date2 : "";
+    if (!plan || !name || !school || !em) return json({ error: "Elige el taller y escribe tu nombre, tu escuela y un correo válido." }, 400);
+    if (!(await limit(env, "contact:" + ip, 5, 3600e3)) || !(await limit(env, "contact:all", 200, 864e5))) return json({ error: "Recibimos muchas solicitudes seguidas. Intenta en un rato o escríbenos a hola@vorticevr.mx." }, 429);
+    const P = TALLER[plan], fmt = d => d ? new Date(d + "T12:00:00Z").toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) : "Por definir";
+    const rows = [["Taller", `${P.name} · ${P.hours} · ${P.price}`], ["Escuela", school], ["Nivel", t(b.level, 40)], ["Ciudad", t(b.city, 80)], ["Nombre", name], ["Cargo", t(b.role, 80)],
+      ["Correo", em], ["WhatsApp / teléfono", phone], ["Personas", String(people)], ["Fecha tentativa", fmt(date)], ["Otra fecha", date2 ? fmt(date2) : ""], ["Horario", t(b.time, 40)],
+      ["Computadoras", t(b.pcs, 80)], ["Comentarios", t(b.message, 1500)]].filter(r => r[1]);
+    const table = rows.map(([k, v]) => `<tr><td style="color:#a99bcb;padding:6px 12px 6px 0;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:6px 0;white-space:pre-wrap"><b>${esc(v)}</b></td></tr>`).join("");
+    const html = shell(`<h1 style="font-size:20px">Solicitud de taller: ${esc(P.name)}</h1><table style="border-collapse:collapse;font-size:14px">${table}</table>
+<p style="color:#a99bcb;font-size:12px">Contesta este correo para responderle directamente.</p>`);
+    ctx.waitUntil(bump(env, "contacts").run());
+    const sent = await sendMail(env, env.CONTACT_TO || "hola@vorticevr.mx", `Taller ${P.name}: ${school} · ${people} personas`, html, undefined, em);
+    if (!sent) return json({ error: "No se pudo enviar. Escríbenos a hola@vorticevr.mx." }, 502);
+    ctx.waitUntil(sendMail(env, em, `Recibimos tu solicitud: ${P.name} de Vórtice VR`, shell(`<h1 style="font-size:20px">¡Gracias, ${esc(name.split(" ")[0])}!</h1>
+<p>Recibimos tu solicitud del <b>${esc(P.name)}</b> (${esc(P.hours)}) para <b>${esc(school)}</b>, con fecha tentativa: <b>${esc(fmt(date))}</b>${b.time ? `, ${esc(t(b.time, 40))}` : ""}.</p>
+<p>Te escribimos pronto para confirmar el día y la hora. Mientras, ve preparando: cada participante con su computadora, internet y su celular.</p>
+<p style="color:#a99bcb;font-size:12px">Si tienes dudas, contesta este correo.</p>`, "Recibiste este correo porque se pidió un taller con esta dirección en vorticevr.mx. Si no fuiste tú, ignóralo."), undefined, env.CONTACT_TO || "hola@vorticevr.mx"));
+    return json({ ok: true });
   }
 
   m = path.match(/^\/api\/ref\/([A-Za-z0-9-]{3,20})$/);
@@ -1954,9 +1984,9 @@ async function sendMail(env, to, subject, html, attachments, replyTo) {
   return r.ok;
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const shell = body => `<div style="font-family:Arial,sans-serif;background:#0d0620;color:#f2ecff;padding:28px;border-radius:14px;max-width:520px;margin:auto">
+const shell = (body, note = "Recibiste este correo por tu cuenta en vorticevr.mx. Si no fuiste tú, ignóralo.") => `<div style="font-family:Arial,sans-serif;background:#0d0620;color:#f2ecff;padding:28px;border-radius:14px;max-width:520px;margin:auto">
 <div style="font-weight:700;letter-spacing:.2em;color:#d2b8ff;font-size:13px">VÓRTICE VR</div>${body}
-<p style="color:#a99bcb;font-size:12px;margin-top:28px">Recibiste este correo por tu cuenta en vorticevr.mx. Si no fuiste tú, ignóralo.</p></div>`;
+<p style="color:#a99bcb;font-size:12px;margin-top:28px">${note}</p></div>`;
 const codeMail = (code, purpose) => shell(`<h1 style="font-size:20px">${purpose === "reset" ? "Tu código para cambiar tu contraseña" : "Confirma tu cuenta de Vórtice VR"}</h1>
 <p style="font-size:34px;font-weight:700;letter-spacing:.3em;color:#ffbe55;margin:18px 0">${code}</p><p>Vence en ${LIMITS.codeMinutes} minutos.</p>`);
 const linkMail = e => shell(`<h1 style="font-size:20px">¡Tu experiencia de realidad aumentada está lista!</h1>
