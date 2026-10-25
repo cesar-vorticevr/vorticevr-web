@@ -474,7 +474,7 @@ const TYPE={video:"Video",image:"Imagen",text:"Texto",model:"Objeto 3D",audio:"A
 const ACCEPT={video:"video/mp4,video/webm,video/quicktime",image:"image/png,image/jpeg,image/webp",model:".glb,model/gltf-binary",audio:"audio/mpeg,audio/mp4,audio/x-m4a,.mp3,.m4a"};
 const AUDIO_MB=10;   // one audio per scene (MP3 or M4A), it plays while that scene is on view
 const MODEL_IN_MB=150;   // a GLB this big can still be opened; it is compressed in the browser and must end ≤ plan.modelMB
-const TIPS={none:"Toca un elemento para editarlo · arrastra el fondo para girar la vista · clic derecho para desplazarla",mover:"Arrastra el elemento o sus flechas · rueda o pellizco: tamaño",girar:"Arrastra un anillo para girarlo en ese eje",escalar:"Arrastra un cuadro para cambiar su tamaño"};
+const TIPS={none:"Toca un elemento para editarlo · arrastra el fondo para girar la vista · rueda: acercar o alejar · clic derecho para desplazarla",mover:"Arrastra el elemento o sus flechas · pellizca con dos dedos para cambiar su tamaño",girar:"Arrastra un anillo para girarlo en ese eje",escalar:"Arrastra un cuadro para cambiar su tamaño"};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const uid=()=>Array.from(crypto.getRandomValues(new Uint8Array(10)),b=>"abcdefghijklmnopqrstuvwxyz0123456789"[b%36]).join("");
 const IH=()=>S.imgW?S.imgH/S.imgW:2/3;

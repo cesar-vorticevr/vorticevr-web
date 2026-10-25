@@ -1,7 +1,7 @@
 // 3D editor of /crear/: the image with its elements (video, image, text, 3D) as they will look on the phone.
 // The page keeps the list of elements (items) and the panel; this module draws them and lets you move them:
 //   tap an element to select it: its handles appear (Mover = arrows, Girar = 3 rings, Tamaño = boxes; W / E / R)
-//   drag its body to slide it over the image · wheel or pinch over it = size · twist two fingers = turn
+//   drag its body to slide it over the image · pinch over it = size · twist two fingers = turn · the wheel only zooms the view
 //   drag the background to turn the view · tap the background to deselect
 // Same placement math as the viewer (assets/escena.js).
 import * as THREE from "three";
@@ -193,14 +193,8 @@ export async function createEditor(box, cb) {
     down = null;
   };
   el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up);
-  let wheelT = 0;
-  el.addEventListener("wheel", e => {
-    const id = hitItem(e); if (!id) return;
-    e.preventDefault(); e.stopImmediatePropagation();
-    const it = itemOf(id); if (selected !== id) select(id);
-    it.s = r3(clamp(it.s * Math.pow(1.0015, -e.deltaY), 0.02, 4)); update(it); cb.change(it);
-    clearTimeout(wheelT); wheelT = setTimeout(done, 400);
-  }, { passive: false, capture: true });
+  // the wheel only zooms the view (OrbitControls), also over an element: sizes change with the handles, the panel or a pinch
+  // (César, 25 de octubre de 2026: scrolling over an element resized it by accident)
 
   // ---- size and drawing ----
   function resize() { const w = box.clientWidth, h = box.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }

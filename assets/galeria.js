@@ -148,8 +148,10 @@ function gltfTools() {   // the same loaders as assets/escena.js (Draco and Mesh
 }
 
 const CSS = `
-.gl{position:absolute;inset:0;overflow:hidden;background:#05020b;color:#f4eeff;font-family:"IBM Plex Sans",system-ui,sans-serif;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.gl{position:absolute;inset:0;overflow:hidden;background:#05020b;color:#f4eeff;font-family:"IBM Plex Sans",system-ui,sans-serif;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none;-webkit-touch-callout:none}
 .gl *{box-sizing:border-box}
+.gl button{touch-action:manipulation}
+.gl-card p{touch-action:pan-y}
 .gl [hidden]{display:none!important}
 .gl button{font:inherit;color:inherit;cursor:pointer}
 .gl canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
@@ -884,6 +886,21 @@ export function run(o) {
   });
   on(keyTarget, "keyup", e => keys.delete(e.code));
   on(window, "blur", () => keys.clear());
+  // no page zoom while walking (César: pinching by accident left the room zoomed in and hard to get back): two fingers,
+  // double taps and iOS gestures do nothing; at the link, the page is also locked to its size and snaps back if it zoomed
+  const stop = e => { if (e.cancelable) e.preventDefault(); };
+  for (const ev of ["gesturestart", "gesturechange", "gestureend"]) on(o.embedded ? el : document, ev, stop, { passive: false });
+  on(el, "touchmove", e => { if (e.touches.length > 1) stop(e); }, { passive: false });
+  on(el, "dblclick", stop);
+  let lastTouch = 0;
+  on(el, "touchend", e => { const t = performance.now(); if (t - lastTouch < 320 && e.target === canvas) stop(e); lastTouch = t; }, { passive: false });
+  const vpMeta = document.querySelector('meta[name="viewport"]'), vpWas = vpMeta && vpMeta.content;
+  const lockVP = () => { if (vpMeta) vpMeta.content = "width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"; };
+  if (!o.embedded && vpMeta) {
+    lockVP();
+    if (window.visualViewport) on(visualViewport, "resize", () => { if (visualViewport.scale > 1.01) { vpMeta.content = vpWas; requestAnimationFrame(lockVP); } });
+    offs.push(() => { vpMeta.content = vpWas; });
+  }
   const joyEl = $("[data-joy]"), knob = joyEl.querySelector("i"); let joyId = null;
   const joyMove = e => {
     const r = joyEl.getBoundingClientRect(), R = r.width / 2;
