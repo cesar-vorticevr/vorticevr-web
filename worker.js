@@ -233,7 +233,7 @@ async function api(request, env, ctx, url) {
   // link page: one tap on a button; prize wheel: spins, each prize that came out, "lose", review… (navigator.sendBeacon); only counted while it is live
   m = path.match(/^\/api\/click\/([a-z0-9-]+)\/([a-z0-9]{1,16})$/);
   if (m && M === "POST") {
-    ctx.waitUntil(env.DB.prepare("INSERT INTO clicks (slug, id, n) SELECT slug, ?, 1 FROM experiences WHERE slug = ? AND paused = 0 AND expires > ? AND (data LIKE '%\"kind\":\"links\"%' OR data LIKE '%\"kind\":\"ruleta\"%' OR data LIKE '%\"kind\":\"dispara\"%' OR data LIKE '%\"kind\":\"memorama\"%' OR data LIKE '%\"kind\":\"sopa\"%' OR data LIKE '%\"kind\":\"rompecabezas\"%') ON CONFLICT(slug, id) DO UPDATE SET n = n + 1")
+    ctx.waitUntil(env.DB.prepare("INSERT INTO clicks (slug, id, n) SELECT slug, ?, 1 FROM experiences WHERE slug = ? AND paused = 0 AND expires > ? AND (data LIKE '%\"kind\":\"links\"%' OR data LIKE '%\"kind\":\"ruleta\"%' OR data LIKE '%\"kind\":\"dispara\"%' OR data LIKE '%\"kind\":\"memorama\"%' OR data LIKE '%\"kind\":\"sopa\"%' OR data LIKE '%\"kind\":\"rompecabezas\"%' OR data LIKE '%\"kind\":\"galeria\"%') ON CONFLICT(slug, id) DO UPDATE SET n = n + 1")
       .bind(m[2], m[1], Date.now()).run().catch(e => console.error("click", e.message)));
     return new Response(null, { status: 204 });
   }
@@ -469,7 +469,7 @@ async function api(request, env, ctx, url) {
     const isNew = !mine;
     if (data.kind === "trivia" && data.trivia.logo && !image && !(mine && (JSON.parse(mine.data || "{}").trivia || {}).logo)) data.trivia.logo = false;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
-    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu" && data.kind !== "links" && data.kind !== "ruleta" && data.kind !== "dispara" && data.kind !== "memorama" && data.kind !== "sopa" && data.kind !== "rompecabezas" && data.kind !== "superficie"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
+    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu" && data.kind !== "links" && data.kind !== "ruleta" && data.kind !== "dispara" && data.kind !== "memorama" && data.kind !== "sopa" && data.kind !== "rompecabezas" && data.kind !== "galeria" && data.kind !== "superficie"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
     if (target && target.size > LIMITS.targetBytes) return json({ error: "La imagen no se pudo preparar. Intenta con otra." }, 400);
     // each element's file: uploaded now (field f_<id>) or kept from the version being edited (same id and type)
@@ -530,7 +530,7 @@ async function api(request, env, ctx, url) {
     if (isNew && !me.first_pub) await env.DB.prepare("UPDATE users SET first_pub = ? WHERE id = ? AND first_pub IS NULL").bind(now, me.id).run();
     const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(slug).first();
     const out = ownerExp(row, request, env);
-    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "links" ? "Tu página de links está lista" : data.kind === "ruleta" ? "Tu ruleta de premios está lista" : data.kind === "dispara" ? "Tu juego Dispara y gana está listo" : data.kind === "memorama" ? "Tu memorama está listo" : data.kind === "sopa" ? "Tu sopa de letras está lista" : data.kind === "rompecabezas" ? "Tu rompecabezas está listo" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
+    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "links" ? "Tu página de links está lista" : data.kind === "ruleta" ? "Tu ruleta de premios está lista" : data.kind === "dispara" ? "Tu juego Dispara y gana está listo" : data.kind === "memorama" ? "Tu memorama está listo" : data.kind === "sopa" ? "Tu sopa de letras está lista" : data.kind === "rompecabezas" ? "Tu rompecabezas está listo" : data.kind === "galeria" ? "Tu galería en 3D está lista" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
     return json({ ok: true, experience: out });
   }
 
@@ -878,6 +878,7 @@ function publicKind(row, d) {
   if (d.kind === "colorear") return { slug: row.slug, kind: "colorear", title: row.title, img: d.img, color: d.color, buttons: d.buttons, expires: row.expires };
   if (d.kind === "menu") return { slug: row.slug, kind: "menu", title: row.title, menu: d.menu, items: d.items || [], buttons: d.buttons, updated: row.updated, expires: row.expires };
   if (d.kind === "links") return { slug: row.slug, kind: "links", title: row.title, links: d.links, items: d.items || [], updated: row.updated, expires: row.expires };
+  if (d.kind === "galeria") return { slug: row.slug, kind: "galeria", title: row.title, galeria: d.galeria, items: d.items || [], updated: row.updated, expires: row.expires };
   if (d.kind === "rompecabezas") return { slug: row.slug, kind: "rompecabezas", title: row.title, img: d.img, rompecabezas: d.rompecabezas, updated: row.updated, expires: row.expires };
   if (d.kind === "sopa") return { slug: row.slug, kind: "sopa", title: row.title, sopa: d.sopa, updated: row.updated, expires: row.expires };
   if (d.kind === "memorama") return { slug: row.slug, kind: "memorama", title: row.title, memorama: d.memorama, items: d.items || [], updated: row.updated, expires: row.expires };
@@ -1401,6 +1402,35 @@ function cleanPuzzle(d) {
   const info = String(d.info || "").replace(/\r/g, "").trim().slice(0, 300); if (info) p.info = info;
   return { rompecabezas: p };
 }
+// Galería 3D (assets/galeria.js): a room with easels to walk through. obras = 1 to 12 {id, img (an item "foto"), frame,
+// mat (a white passe-partout), t (title, up to 60), d (description, up to 300)}, on the easels in that order; amb = the room
+// (noche | blanca | museo); name = on its back wall. Tours and shares are counted in clicks.
+const GALERIA = { max: 12, frames: ["dorado", "madera", "negro", "blanco", "plata", "neon", "lienzo"], ambs: ["noche", "blanca", "museo"] };
+function cleanGaleria(d, list) {
+  d = d || {};
+  const idOk = v => /^[a-z0-9]{6,16}$/.test(String(v || ""));
+  const files = new Map((Array.isArray(list) ? list : []).filter(i => i && idOk(i.id) && i.type === "foto").map(i => [i.id, i]));
+  const src = Array.isArray(d.obras) ? d.obras : [];
+  if (!src.length) return { error: "Sube al menos una imagen." };
+  if (src.length > GALERIA.max) return { error: `Tu galería puede tener hasta ${GALERIA.max} obras.` };
+  const obras = [], items = [], ids = new Set();
+  for (const [k, x] of src.entries()) {
+    if (!x || !idOk(x.id) || ids.has(x.id)) return { error: "Una de tus obras no es válida." };
+    ids.add(x.id);
+    const m = files.get(x.img); if (!m) return { error: `Falta la imagen de la obra ${k + 1}. Vuelve a subirla.` };
+    const it = { id: m.id, type: "foto", w: Math.round(Number(m.w)) || 0, h: Math.round(Number(m.h)) || 0 };
+    if (!(it.w > 0 && it.w <= 4000 && it.h > 0 && it.h <= 4000)) return { error: "Faltan las medidas de una de tus imágenes." };
+    if (!items.some(i => i.id === it.id)) items.push(it);
+    const ob = { id: x.id, img: it.id, frame: GALERIA.frames.includes(x.frame) ? x.frame : "dorado" };
+    if (x.mat && ob.frame !== "lienzo") ob.mat = true;
+    const t = String(x.t || "").replace(/\s+/g, " ").trim().slice(0, 60); if (t) ob.t = t;
+    const de = String(x.d || "").replace(/\r/g, "").trim().slice(0, 300); if (de) ob.d = de;
+    obras.push(ob);
+  }
+  const galeria = { obras, amb: GALERIA.ambs.includes(d.amb) ? d.amb : "noche" };
+  const nm = String(d.name || "").replace(/\s+/g, " ").trim().slice(0, 80); if (nm) galeria.name = nm;   // on its back wall (the experience title is apart)
+  return { galeria, items };
+}
 // the contact card ("Guardar contacto"), with the profile picture when it is a JPEG
 async function vcard(env, row, request) {
   const d = JSON.parse(row.data || "{}"), lk = d.links || {}, c = lk.contact || {};
@@ -1448,6 +1478,10 @@ function cleanMeta(m, P) {
   if (m.kind === "memorama") {
     const mm = cleanMemorama(m.memorama, m.items);
     return mm.error ? mm : { kind: "memorama", title, memorama: mm.memorama, items: mm.items, buttons: {} };
+  }
+  if (m.kind === "galeria") {
+    const gl = cleanGaleria(m.galeria, m.items);
+    return gl.error ? gl : { kind: "galeria", title, galeria: gl.galeria, items: gl.items, buttons: {} };
   }
   if (m.kind === "sopa") {
     const sp = cleanSopa(m.sopa);
