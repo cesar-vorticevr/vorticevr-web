@@ -419,6 +419,17 @@ header.top .brand{flex:none}
 .gx-p{color:#b9addb;font-size:.95rem;line-height:1.5;max-width:62ch}
 .gx-go{font:600 .78rem "Sora",system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#ffbe55;margin-top:4px}
 @media (max-width:640px){.galx{flex-direction:column;align-items:flex-start;padding:22px}}
+
+/* "Galerías Vórtice VR" card, before Educación: a gallery wall with spotlights and golden frames */
+.stcard.gal{margin-bottom:22px;border-color:rgba(255,190,85,.5)}
+.stcard.gal:hover{border-color:#ffd88a;box-shadow:0 0 50px rgba(255,190,85,.3)}
+.stcard.gal .kick{color:var(--sun)}
+.stgal{position:relative;min-height:240px;display:flex;align-items:center;justify-content:center;gap:18px;background:radial-gradient(ellipse 22% 60% at 22% 0%,rgba(255,230,190,.28),transparent 70%),radial-gradient(ellipse 22% 60% at 50% 0%,rgba(255,230,190,.32),transparent 70%),radial-gradient(ellipse 22% 60% at 78% 0%,rgba(255,230,190,.28),transparent 70%),linear-gradient(180deg,#1a1028 0 74%,#2a1c16 74%)}
+.stgal i{display:block;border:7px solid;border-image:linear-gradient(135deg,#8a6420,#f2d47c 35%,#b8862f 60%,#f7dc8d) 1;box-shadow:0 14px 28px rgba(0,0,0,.6);margin-bottom:26px}
+.stgal i:nth-child(1){width:74px;height:96px;background:linear-gradient(135deg,#3a1c5e,#8b3fd6 50%,#ffbe55)}
+.stgal i:nth-child(2){width:120px;height:150px;background:linear-gradient(160deg,#0f2a4f,#2f8fd6 60%,#d2b8ff)}
+.stgal i:nth-child(3){width:80px;height:80px;background:linear-gradient(160deg,#4f1020,#c8102e 60%,#ffbe55)}
+@media (max-width:760px){.stgal{min-height:200px}}
 </style>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
@@ -431,7 +442,7 @@ header.top .brand{flex:none}
 <header class="top" id="top"><div class="wrap">
   <a class="brand" href="./" aria-label="Vórtice VR, inicio" data-en-aria="Vórtice VR, home"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
   <nav aria-label="Secciones" data-en-aria="Sections">
-    <a href="#tipos" data-en="Experiences">Experiencias</a><a href="educacion/" data-en="Education">Educación</a><a href="#nosotros" data-en="About">Nosotros</a><a class="pill sun mag" href="crear/" data-en="Create&lt;span class=&quot;l2&quot;&gt; experience&lt;/span&gt;">Crear<span class="l2"> experiencia</span></a>
+    <a href="#tipos" data-en="Experiences">Experiencias</a><a href="galerias/" data-en="Galleries">Galerías</a><a href="educacion/" data-en="Education">Educación</a><a href="#nosotros" data-en="About">Nosotros</a><a class="pill sun mag" href="crear/" data-en="Create&lt;span class=&quot;l2&quot;&gt; experience&lt;/span&gt;">Crear<span class="l2"> experiencia</span></a>
     <a class="pill acct mag" id="acct" href="cuenta/#entrar" data-en="Sign in">Entrar</a>
     <button class="lang mag" id="lang" type="button" aria-label="Ver en inglés" data-en-aria="Ver en español"><span data-en="ES">EN</span></button>
   </nav>
@@ -558,6 +569,15 @@ header.top .brand{flex:none}
   </div></section>
 
   <section id="estudio" class="stz"><div class="wrap">
+    <a class="stcard gal reveal" href="galerias/">
+      <div class="stgal" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="stbody">
+        <span class="kick" data-en="Vórtice VR Galleries">Galerías Vórtice VR</span>
+        <h2 data-en="Art you can walk through.">Arte que se recorre.</h2>
+        <p data-en="Exhibitions in 3D: artworks at their real size, museum halls and galleries floating in space. Visit them or mount yours with Pro and Premium.">Exposiciones en 3D: obras a tamaño real, salas de museo y galerías que flotan en el espacio. Visítalas o monta la tuya con Pro y Premium.</p>
+        <span class="xgo"><span data-en="See the galleries">Ver las galerías</span><span class="arr">→</span></span>
+      </div>
+    </a>
     <a class="stcard reveal" href="educacion/">
       <div class="stimgs" aria-hidden="true"><img src="assets/proyectos/observatorio.webp" alt="" loading="lazy"><img src="assets/proyectos/orbita.webp" alt="" loading="lazy"><img src="assets/proyectos/deletreo-lsm.webp" alt="" loading="lazy"></div>
       <div class="stbody">
