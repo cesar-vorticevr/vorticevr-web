@@ -5,9 +5,10 @@
 //  - a picture on the wall at its real size (w or h in cm; it keeps its proportion inside those measures) or on an easel,
 //    with its frame (FRAMES) and, if they want, a white mat (passe-partout);
 //  - a 3D object (GLB) on a square pedestal of its frame's color, or on the floor; s = its largest side in cm.
-// As in a real exhibition, the room's text (texto) hangs first, right of the entrance, and the pieces follow to the right:
-// the walls take them in order (each wall the next ones that fit, evenly spread); easels and 3D take the floor spots in
-// order. Whatever doesn't fit is reported (o.onLayout) and not shown.
+// As in a real exhibition, the room's text (texto) hangs first and the pieces follow left to right as you face each wall
+// (the tour starts on the wall left of the entrance): the walls share them in order, hung together and centered; easels
+// and 3D take the floor spots in order; each piece has its wall label (cédula) below it. What is left empty gets plants
+// and wall panelling (glowing crystals in space). Whatever doesn't fit is reported (o.onLayout) and not shown.
 // Drag to look; WASD/arrows or the joystick (phone) to walk; tap the floor to go there; tap a piece (or the text) to see
 // its card; "Iniciar recorrido" goes through the text and the pieces, room after room.
 // cfg.galeria = { name, autor, salas: [{ tipo: clasica | museo | espacio, amb (clasica: noche | blanca | museo),
@@ -70,70 +71,87 @@ const salaName = (s, i) => s.nombre || `Sala ${i + 1}`;
 /* ---------- the rooms' plans: walls to hang on, floor spots, size (no meshes yet) ---------- */
 // seg = a wall to hang on, from (x1,z1) to (x2,z2) (the pieces go in that direction), facing n, pieces up to `top` m
 const seg = (x1, z1, x2, z2, nx, nz, top) => ({ x1, z1, x2, z2, nx, nz, top, len: Math.hypot(x2 - x1, z2 - z1) });
-const SIZES = { clasica: 5, museo: 4, espacio: 6 };   // how many sizes each room comes in
+// The tour goes left to right as you face each wall, like reading (César: "Siguiente" must go to the piece on the right):
+// it starts on the wall left of the entrance, goes along the back and comes back on the right. Each room comes in sizes
+// from small to big (SIZES) and takes the smallest where everything fits; a few pieces get a small, cozy room.
+const SIZES = { clasica: 6, museo: 5, espacio: 6 };   // how many sizes each room comes in
+const CLASICA = [[10, 10], [12, 14], [16, 18], [16, 22], [16, 26], [16, 30]];   // width × length (m)
+const MUSEO = [{ W: 14, D: 16, H: 6, p: 0 }, { W: 20, D: 22, H: 8, p: 0 }, { W: 22, D: 30, H: 9, p: 1 }, { W: 24, D: 38, H: 9, p: 2 }, { W: 26, D: 46, H: 9, p: 2 }];
 function specOf(tipo, k, amb, next) {
   if (tipo === "museo") {
-    const D = [22, 30, 38, 46][k], W = [20, 22, 24, 26][k], hw = W / 2, hd = D / 2, H = 9;
-    const parts = k === 0 ? [] : k === 1 ? [0] : [D / 6, -D / 6], L = 12, pl = L / 2 - .4, e = hw - 1.5;
-    const segs = [seg(hw, hd - 2, hw, -(hd - 2), -1, 0, 8.3)];   // the right wall first
-    if (next) segs.push(seg(e, -hd, 3, -hd, 0, 1, 6.6), seg(-3, -hd, -e, -hd, 0, 1, 6.6)); else segs.push(seg(e, -hd, -e, -hd, 0, 1, 6.6));
-    segs.push(seg(-hw, -(hd - 2), -hw, hd - 2, 1, 0, 8.3));
-    for (const z of parts) segs.push(seg(pl, z + .21, -pl, z + .21, 0, 1, 5.2), seg(-pl, z - .21, pl, z - .21, 0, -1, 5.2));
-    segs.push(seg(-e, hd, e, hd, 0, -1, 6.6));
+    const { W, D, H, p } = MUSEO[k], hw = W / 2, hd = D / 2;
+    const parts = p === 0 ? [] : p === 1 ? [0] : [D / 6, -D / 6], L = 12, pl = L / 2 - .4, e = hw - 1.5, top = H - .7, back = H - 2.4;
+    // the free-standing walls first (they face the entrance), then left, back and right walls, their back faces, the entrance
+    const segs = [];
+    for (const z of parts) segs.push(Object.assign(seg(-pl, z + .21, pl, z + .21, 0, 1, 5.2), { part: true }));
+    segs.push(seg(-hw, hd - 2, -hw, -(hd - 2), 1, 0, top));
+    if (next) segs.push(seg(-e, -hd, -3, -hd, 0, 1, back), seg(3, -hd, e, -hd, 0, 1, back)); else segs.push(seg(-e, -hd, e, -hd, 0, 1, back));
+    segs.push(seg(hw, -(hd - 2), hw, hd - 2, -1, 0, top));
+    for (const z of [...parts].reverse()) segs.push(Object.assign(seg(pl, z - .21, -pl, z - .21, 0, -1, 5.2), { part: true }));
+    segs.push(Object.assign(seg(e, hd, -e, hd, 0, -1, back), { extra: true }));
     const bands = [hd, ...parts, -hd], zs = [];
     for (let i = 0; i < bands.length - 1; i++) { const a = bands[i], b = bands[i + 1]; if (a - b > 7) zs.push((a + b) / 2); }
-    if (!parts.length) zs.splice(0, zs.length, hd - 6, -(hd - 6));
-    const sx = hw - 5, spots = [...zs.map(z => ({ x: sx, z, ry: 0 })), ...[...zs].reverse().map(z => ({ x: -sx, z, ry: 0 })), ...zs.map(z => ({ x: 0, z, ry: 0 }))];
+    if (!parts.length) zs.splice(0, zs.length, ...(D > 18 ? [hd - 6, -(hd - 6)] : [0]));
+    const sx = Math.max(3, hw - 5), spots = [...zs.map(z => ({ x: -sx, z, ry: 0 })), ...[...zs].reverse().map(z => ({ x: sx, z, ry: 0 })), ...zs.map(z => ({ x: 0, z, ry: 0 }))];
     return { tipo, k, W, D, H, hw, hd, parts, segs, spots, bounds: { rect: [hw - .45, hd - .45] }, obst: [], walls: parts.map(z => ({ x1: -L / 2, z1: z, x2: L / 2, z2: z, r: .2 })),
-      start: { x: 0, z: hd - .8, to: hd - 3.2 }, shot: { y: 2.6, z: hd - 1, pitch: -.1 }, name: { y: 7.6, z: -hd + .02, w: 14 }, logo: { y: 7.6, z: hd - .02, w: 6, h: 1.8 },
-      portal: next ? { x: 0, z: -hd + 1.8, ry: 0 } : null, spotI: 30, speed: 3.2, poolI: .18, dark: false };
+      start: { x: 0, z: hd - .8, to: hd - Math.min(3.2, D * .2) }, shot: { y: Math.min(2.6, H * .4), z: hd - 1, pitch: -.1 }, name: { y: H - 1.4, z: -hd + .02, w: Math.min(14, W * .6) }, logo: { y: H - 1.4, z: hd - .02, w: Math.min(6, W * .3), h: 1.8 },
+      portal: next ? { x: 0, z: -hd + 1.8, ry: 0 } : null, spotI: 30, speed: D > 25 ? 3.2 : 2.6, poolI: .18, dark: false };
   }
   if (tipo === "espacio") {
-    const n = 3 + k, R = 7 + n * 1.1, segs = [], spots = [];
-    for (let j = 0; j < n; j++) {   // panels in a ring from the right of the entrance (+z) around to its left
-      const a = Math.PI / 4 + j * 1.5 * Math.PI / (n - 1), cx = Math.sin(a) * R, cz = Math.cos(a) * R, ux = -Math.cos(a), uz = Math.sin(a), f = .14;
+    const n = 3 + k, R = 5.5 + n * 1.25, segs = [], spots = [];
+    for (let j = 0; j < n; j++) {   // panels in a ring from the left of the entrance (+z) around to its right
+      const a = -Math.PI / 4 - j * 1.5 * Math.PI / (n - 1), cx = Math.sin(a) * R, cz = Math.cos(a) * R, ux = -Math.cos(a), uz = Math.sin(a), f = .14;
       segs.push(Object.assign(seg(cx - ux * 3.8 - Math.sin(a) * f, cz - uz * 3.8 - Math.cos(a) * f, cx + ux * 3.8 - Math.sin(a) * f, cz + uz * 3.8 - Math.cos(a) * f, -Math.sin(a), -Math.cos(a), 4.45), { a, cx, cz }));
     }
     const r = R * .45;
-    for (let j = 0; j < 8; j++) { const a = Math.PI / 8 + j * Math.PI / 4; spots.push({ x: Math.sin(a) * r, z: Math.cos(a) * r, ry: a }); }
+    for (let j = 0; j < 8; j++) { const a = -Math.PI / 8 - j * Math.PI / 4; spots.push({ x: Math.sin(a) * r, z: Math.cos(a) * r, ry: a }); }
     return { tipo, k, R, H: 6, segs, spots, bounds: { circle: R - 1.2 }, obst: next ? [{ x: 0, z: 0, r: 1.3 }] : [], walls: [],
       start: { x: 0, z: R - 1.6, to: R - 3.4 }, shot: { y: 3, z: R - 1.4, pitch: -.14 }, name: { y: 6.4, z: -R - 1, w: 10, float: true }, logo: { y: 6.4, z: R + 2.5, w: 5, h: 1.5, float: true },
-      portal: next ? { x: 0, z: 0, ry: 0 } : null, spotI: 40, speed: 2.8, poolI: .35, dark: true };
+      portal: next ? { x: 0, z: 0, ry: 0 } : null, spotI: 40, speed: 2.6, poolI: .35, dark: true };
   }
-  const A = AMBIENTES[amb] || AMBIENTES.noche, W = 16, D = 14 + 4 * k, hw = W / 2, hd = D / 2, e = hd - 1.4, H = 5;
-  const segs = [seg(hw, e, hw, -e, -1, 0, 4.6)];
-  if (next) segs.push(seg(6.6, -hd, 2.2, -hd, 0, 1, 3.15), seg(-2.2, -hd, -6.6, -hd, 0, 1, 3.15)); else segs.push(seg(6.6, -hd, -6.6, -hd, 0, 1, 3.15));
-  segs.push(seg(-hw, -e, -hw, e, 1, 0, 4.6), seg(-6.6, hd, 6.6, hd, 0, -1, 3));
+  const A = AMBIENTES[amb] || AMBIENTES.noche, [W, D] = CLASICA[k], hw = W / 2, hd = D / 2, e = hd - 1.4, H = W < 14 ? 4.2 : 5, ew = hw - 1.4;
+  const segs = [seg(-hw, e, -hw, -e, 1, 0, H - .4)];
+  if (next) segs.push(seg(-ew, -hd, -2.2, -hd, 0, 1, H - 1.85), seg(2.2, -hd, ew, -hd, 0, 1, H - 1.85)); else segs.push(seg(-ew, -hd, ew, -hd, 0, 1, H - 1.85));
+  segs.push(seg(hw, -e, hw, e, -1, 0, H - .4), Object.assign(seg(ew, hd, -ew, hd, 0, -1, H - 2), { extra: true }));
   // easels along the walls (galleries with only easels, as they always were) or in two rows down the middle
   const zs = []; for (let z = hd - 4; z > -hd + 3; z -= 4.5) zs.push(z);
-  const side = [...zs.map(z => ({ x: hw - 2.1, z, ry: -Math.PI / 2 })), { x: 2.6, z: -hd + 2.3, ry: 0 }, { x: -2.6, z: -hd + 2.3, ry: 0 }, ...[...zs].reverse().map(z => ({ x: -(hw - 2.1), z, ry: Math.PI / 2 }))];
+  if (!zs.length) zs.push(0);
+  const bx = Math.min(2.6, hw - 2.2);
+  const side = [...zs.map(z => ({ x: -(hw - 2.1), z, ry: Math.PI / 2 })), { x: -bx, z: -hd + 2.3, ry: 0 }, { x: bx, z: -hd + 2.3, ry: 0 }, ...[...zs].reverse().map(z => ({ x: hw - 2.1, z, ry: -Math.PI / 2 }))];
   const mz = []; for (let z = hd - 3.5; z > -hd + 3.5; z -= 4.5) mz.push(z);
-  const mid = [...mz.map(z => ({ x: 2.8, z, ry: 0 })), ...[...mz].reverse().map(z => ({ x: -2.8, z, ry: 0 }))];
+  if (!mz.length) mz.push(0);
+  const mx = Math.min(2.8, hw - 2.4), mid = [...mz.map(z => ({ x: -mx, z, ry: 0 })), ...[...mz].reverse().map(z => ({ x: mx, z, ry: 0 }))];
   const bench = D >= 22;
-  return { tipo, k, A, W, D, H, hw, hd, segs, spots: mid, sideSpots: side, bench, bounds: { rect: [hw - .45, hd - .45] }, obst: bench ? [-1.05, -.35, .35, 1.05].map(z => ({ x: 0, z, r: .42 })) : [], walls: [],
-    start: { x: 0, z: hd - .6, to: hd - 2.4 }, shot: { y: 2.1, z: hd - 1, pitch: -.12 }, name: { y: 3.75, z: -hd + .02, w: 9 }, logo: { y: 3.6, z: hd - .02, w: 4.2, h: 1.3 },
-    portal: next ? { x: 0, z: -hd + 1.2, ry: 0 } : null, spotI: 46, speed: 2.4, poolI: A.dark ? .5 : .25, dark: A.dark };
+  return { tipo, k, A, ambKey: AMBIENTES[amb] ? amb : "noche", W, D, H, hw, hd, segs, spots: mid, sideSpots: side, bench, bounds: { rect: [hw - .45, hd - .45] }, obst: bench ? [-1.05, -.35, .35, 1.05].map(z => ({ x: 0, z, r: .42 })) : [], walls: [],
+    start: { x: 0, z: hd - .6, to: hd - Math.min(2.4, D * .18) }, shot: { y: Math.min(2.1, H * .45), z: hd - 1, pitch: -.12 }, name: { y: H - 1.25, z: -hd + .02, w: Math.min(9, W * .62) }, logo: { y: H - 1.4, z: hd - .02, w: Math.min(4.2, W * .3), h: 1.3 },
+    portal: next ? { x: 0, z: -hd + 1.2, ry: 0 } : null, spotI: 46, speed: D > 20 ? 2.4 : 2, poolI: A.dark ? .5 : .25, dark: A.dark };
 }
-// the walls take the pieces in order: each wall the next ones that fit (70 cm between them), evenly spread
+// The walls share the pieces in order, each about its part (by length; the entrance wall only if they don't fit
+// elsewhere), and on each wall they hang together, centered, with up to 1.6 m between them, like in a museum.
 function planWalls(spec, items) {
-  const missing = [], out = [];
+  const missing = [];
   const fits = it => spec.segs.some(S => it.h + .2 <= S.top && it.w + 2 * GAP <= S.len);
-  const queue = items.filter(it => fits(it) || (missing.push(it.key), false));   // bigger than every wall of this room
-  for (const S of spec.segs) {
-    if (!queue.length) break;
-    const take = []; let used = GAP;
-    while (queue.length) {
-      const it = queue[0];
-      if (it.h + .2 > S.top || used + it.w + GAP > S.len) break;   // it goes on the next wall
-      take.push(it); used += it.w + GAP; queue.shift();
+  const all = items.filter(it => fits(it) || (missing.push(it.key), false));   // bigger than every wall of this room
+  const main = spec.segs.filter(S => !S.extra), sum = main.reduce((a, S) => a + S.len, 0);
+  for (const grow of [1, 1.5, 2, 3, Infinity]) {
+    const queue = [...all], out = [], used = [];
+    for (const S of spec.segs) {
+      if (!queue.length) break;
+      const quota = grow === Infinity ? Infinity : S.extra ? 0 : Math.ceil(all.length * S.len / sum * grow);
+      const take = []; let w = GAP;
+      while (queue.length && take.length < quota) {
+        const it = queue[0];
+        if (it.h + .2 > S.top || w + it.w + GAP > S.len) break;   // it goes on the next wall
+        take.push(it); w += it.w + GAP; queue.shift();
+      }
+      if (!take.length) continue;
+      const sumW = take.reduce((a, t) => a + t.w, 0), gap = Math.min((S.len - sumW) / (take.length + 1), Math.max(1.2, Math.min(1.6, sumW / take.length)));
+      let at = (S.len - sumW - gap * (take.length - 1)) / 2;
+      used.push({ S, from: at, to: at + sumW + gap * (take.length - 1) });
+      for (const it of take) { out.push({ it, S, mid: at + it.w / 2, cy: clamp(Math.max(1.6, it.h / 2 + .45), it.h / 2 + .1, S.top - it.h / 2) }); at += it.w + gap; }
     }
-    if (!take.length) continue;
-    const free = (S.len - take.reduce((a, t) => a + t.w, 0)) / (take.length + 1);
-    let at = free;
-    for (const it of take) { out.push({ it, S, mid: at + it.w / 2, cy: clamp(Math.max(1.6, it.h / 2 + .45), it.h / 2 + .1, S.top - it.h / 2) }); at += it.w + free; }
+    if (!queue.length || grow === Infinity) return { out, used, missing: [...missing, ...queue.map(q => q.key)] };
   }
-  missing.push(...queue.map(q => q.key));
-  return { out, missing };
 }
 
 let gltfP = null;
@@ -368,7 +386,22 @@ export function run(o) {
         const base = box(w, .05, .03, m.trim); base.position.set(x, .09, z); base.rotation.y = ry; base.translateZ(.015); grp.add(base);   // a glowing skirting
         const top = box(w, .03, .02, m.trim); top.position.set(x, H - .35, z); top.rotation.y = ry; top.translateZ(.01); grp.add(top);
       }
-      for (const x of [-3.6, 3.6]) { const s = box(.1, .02, D - 4, m.strip); s.position.set(x, H - .01, 0); grp.add(s); }
+      for (const x of W > 12 ? [-3.6, 3.6] : [-2.4, 2.4]) { const s = box(.1, .02, D - 4, m.strip); s.position.set(x, H - .01, 0); grp.add(s); }
+      // wainscoting: framed panels and a rail up to 1 m, so the walls never look bare
+      const base = new THREE.Color(A.wall).multiplyScalar(A.dark ? .72 : .93), cv = document.createElement("canvas"); cv.width = 512; cv.height = 384;
+      { const g = cv.getContext("2d"), hex = "#" + base.getHexString(); g.fillStyle = hex; g.fillRect(0, 0, 512, 384);
+        g.strokeStyle = A.dark ? "rgba(255,255,255,.1)" : "rgba(0,0,0,.12)"; g.lineWidth = 6; g.strokeRect(46, 48, 420, 288);
+        g.strokeStyle = A.dark ? "rgba(0,0,0,.35)" : "rgba(255,255,255,.7)"; g.lineWidth = 3; g.strokeRect(54, 56, 404, 272); }
+      const wain = canvasTex(cv);
+      const rail = new THREE.MeshStandardMaterial({ color: A.dark ? (amb => amb === "museo" ? 0x8a6420 : 0x2c2140)(P.ambKey) : 0xd6d0c4, roughness: .5, metalness: P.ambKey === "museo" ? .6 : 0 });
+      m.rail = rail;
+      for (const [w, x, z, ry] of [[D, -W / 2, 0, Math.PI / 2], [D, W / 2, 0, -Math.PI / 2], [W, 0, -D / 2, 0], [W, 0, D / 2, Math.PI]]) {
+        const t = wain.clone(); t.wrapS = THREE.RepeatWrapping; t.repeat.set(w / 1.4, 1); t.needsUpdate = true; owned.add(t);
+        const p = new THREE.Mesh(new THREE.PlaneGeometry(w, 1.05), new THREE.MeshStandardMaterial({ map: t, roughness: .9, envMapIntensity: .2 }));
+        p.position.set(x, .525, z); p.rotation.y = ry; p.translateZ(.006); grp.add(p);
+        const r = box(w, .045, .035, rail); r.position.set(x, 1.07, z); r.rotation.y = ry; r.translateZ(.018); grp.add(r);
+      }
+      freeTex(wain);
       if (P.bench) {
         const top = box(.55, .08, 2.8, m.benchTop); top.position.y = .46; grp.add(top);
         const body = box(.46, .42, 2.6, m.bench); body.position.y = .21; grp.add(body);
@@ -423,6 +456,14 @@ export function run(o) {
     const floor = new THREE.Mesh(new THREE.CircleGeometry(Rp, 96), m.floor); floor.rotation.x = -Math.PI / 2; floor.userData.floor = true; grp.add(floor);
     const under = new THREE.Mesh(new THREE.CylinderGeometry(Rp, Rp * .55, 3, 96, 1, true), m.under); under.position.y = -1.5; grp.add(under);
     const edge = new THREE.Mesh(new THREE.TorusGeometry(Rp, .06, 8, 160), MAT.gold); edge.rotation.x = Math.PI / 2; edge.position.y = .02; grp.add(edge);
+    // rocks that float around the platform, so the space never feels empty
+    const rock = new THREE.MeshStandardMaterial({ color: 0x3a3150, roughness: .9, flatShading: true });
+    for (let i = 0; i < 16; i++) {
+      const a = i / 16 * Math.PI * 2 + rnd(-.15, .15), d = Rp + rnd(1.5, 6), y = rnd(-1, 6), sz = rnd(.25, 1.1);
+      const m2 = new THREE.Mesh(new THREE.IcosahedronGeometry(sz, 0), rock); m2.position.set(Math.sin(a) * d, y, Math.cos(a) * d); m2.rotation.set(rnd(0, 3), rnd(0, 3), 0); grp.add(m2);
+      const ph = rnd(0, 6);
+      anim.push(t => { m2.position.y = y + Math.sin(t * .4 + ph) * .3; m2.rotation.y += .002; });
+    }
     for (const S of P.segs) {   // panels of 8 × 4.4 m, at eye height, with glowing edges
       const p = box(8, 4.4, .25, m.panel); p.position.set(S.cx, 2.45, S.cz); p.rotation.y = S.a; grp.add(p);
       for (const y of [.25, 4.65]) { const s = box(8, .05, .27, MAT.glow); s.position.set(S.cx, y, S.cz); s.rotation.y = S.a; grp.add(s); }
@@ -588,6 +629,61 @@ export function run(o) {
     const fix = new THREE.Mesh(new THREE.CylinderGeometry(.07, .09, .16, 20), MAT.metal); fix.position.set(x, y, z); parent.add(fix);
     const lens = new THREE.Mesh(new THREE.CircleGeometry(.065, 20), MAT.lens); lens.rotation.x = Math.PI / 2; lens.position.set(x, y - .085, z); parent.add(lens);
   }
+  // the piece's wall label (cédula), as in a museum: its title, its card (author, technique, year…) and its size
+  function labelOf(ob, sizeText, _dark, LW = .34) {
+    const dark = false;   // white like a museum label, it reads on any wall
+    const body = String(ob.d || "").trim();
+    if (!ob.t && !body && !sizeText) return null;
+    const W = 512, P = 30, cv = document.createElement("canvas"); cv.width = W; let g = cv.getContext("2d");
+    const ink = dark ? "#ffffff" : "#15101f", soft = dark ? "#ddd2f0" : "#3a3248", acc = dark ? "#ffbe55" : "#7a2fc4", lines = [];
+    const wrap = (text, font, lh, color, max) => {
+      g.font = font;
+      for (const para of String(text).split(/\n+/)) {
+        let line = "";
+        for (const word of para.split(/\s+/)) { const t = line ? line + " " + word : word; if (g.measureText(t).width > W - 2 * P && line) { lines.push({ text: line, font, lh, color }); line = word; } else line = t; }
+        if (line) lines.push({ text: line, font, lh, color });
+        if (lines.length >= max) break;
+      }
+      if (lines.length > max) lines.length = max;
+    };
+    wrap(ob.t || "Sin título", "600 34px Sora, sans-serif", 44, ink, 2);
+    if (body) wrap(body, "400 25px 'IBM Plex Sans', sans-serif", 34, soft, 10);
+    if (sizeText) lines.push({ text: sizeText, font: "500 22px 'IBM Plex Mono', monospace", lh: 34, color: acc });
+    cv.height = Math.round(P * 2 + lines.reduce((a, l) => a + l.lh, 0)); g = cv.getContext("2d");
+    g.fillStyle = dark ? "#150e25" : "#fbfaf6"; g.fillRect(0, 0, W, cv.height);
+    g.textBaseline = "top"; let y = P;
+    for (const l of lines) { g.font = l.font; g.fillStyle = l.color; g.fillText(l.text, P, y + (l.lh - 30) / 2); y += l.lh; }
+    const LH = LW * cv.height / W, grp = new THREE.Group(), map = canvasTex(cv);
+    const card = new THREE.Mesh(new THREE.PlaneGeometry(LW, LH), new THREE.MeshStandardMaterial({ map, emissive: 0xffffff, emissiveMap: map, emissiveIntensity: dark ? .35 : .1, roughness: .9 }));
+    card.position.z = .004; card.userData.ownMap = true; grp.add(card);
+    const back = box(LW, LH, .006, MAT.passe); grp.add(back);
+    return { g: grp, w: LW, h: LH };
+  }
+  // plants for what the pieces leave empty: a snake plant in the classic room, a tree in the museum, crystals in space
+  function plantOf(tipo) {
+    const g = new THREE.Group();
+    if (tipo === "espacio") {
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(.3, .24, .4, 8), new THREE.MeshStandardMaterial({ color: 0x1b1430, metalness: .5, roughness: .4 })); pot.position.y = .2; g.add(pot);
+      const glow = new THREE.MeshStandardMaterial({ color: 0x9b6bff, emissive: 0x8b3fd6, emissiveIntensity: 1.4, roughness: .2, metalness: .2, transparent: true, opacity: .9 });
+      for (let i = 0; i < 6; i++) { const h = rnd(.5, 1.3), c = new THREE.Mesh(new THREE.OctahedronGeometry(.12, 0), glow); c.scale.set(1, h / .24, 1); c.position.set(rnd(-.14, .14), .4 + h / 2, rnd(-.14, .14)); c.rotation.set(rnd(-.3, .3), rnd(0, 3), rnd(-.3, .3)); g.add(c); }
+      const halo = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), new THREE.MeshBasicMaterial({ map: GLOW, color: 0x9b4dff, transparent: true, opacity: .5, depthWrite: false, blending: THREE.AdditiveBlending })); halo.rotation.x = -Math.PI / 2; halo.position.y = .01; halo.userData.glow = true; g.add(halo);
+      return { g, r: .4 };
+    }
+    if (tipo === "museo") {
+      const planter = box(.7, .55, .7, new THREE.MeshStandardMaterial({ color: 0xe9e6e0, roughness: .85 })); planter.position.y = .275; g.add(planter);
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.04, .06, 1.6, 6), new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: .9 })); trunk.position.y = 1.3; g.add(trunk);
+      const leaf = new THREE.MeshStandardMaterial({ color: 0x3f7a45, roughness: .8, flatShading: true });
+      for (let i = 0; i < 7; i++) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(rnd(.3, .48), 1), leaf); b.position.set(rnd(-.35, .35), rnd(1.8, 2.6), rnd(-.35, .35)); g.add(b); }
+      return { g, r: .6 };
+    }
+    const pot = new THREE.Mesh(new THREE.CylinderGeometry(.21, .16, .42, 16), new THREE.MeshStandardMaterial({ color: spec.dark ? 0x1d1a22 : 0xb5653d, roughness: .7 })); pot.position.y = .21; g.add(pot);
+    const greens = [0x2f6b3a, 0x3f8a4a, 0x355f2e].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: .6, side: THREE.DoubleSide }));
+    for (let i = 0; i < 10; i++) {   // snake plant: tall flat leaves
+      const h = rnd(.55, 1.05), l = new THREE.Mesh(new THREE.ConeGeometry(.055, h, 4), greens[i % 3]);
+      l.scale.z = .3; const a = i / 10 * Math.PI * 2; l.position.set(Math.sin(a) * .07, .42 + h / 2, Math.cos(a) * .07); l.rotation.set(Math.cos(a) * .18, a, -Math.sin(a) * .18); g.add(l);
+    }
+    return { g, r: .35 };
+  }
   // the door to the next room: a glowing arch with its name
   function portal(next) {
     const g = new THREE.Group(), W = 2.4, H = 3.2;
@@ -668,7 +764,7 @@ export function run(o) {
     const R = spec, dark = R.dark;
     for (const a of plan.out) {
       const S = a.S, ry = Math.atan2(S.nx, S.nz), ux = (S.x2 - S.x1) / S.len, uz = (S.z2 - S.z1) / S.len;
-      const x = S.x1 + ux * a.mid + S.nx * .02, z = S.z1 + uz * a.mid + S.nz * .02;
+      const x = S.x1 + ux * a.mid + S.nx * .05, z = S.z1 + uz * a.mid + S.nz * .05;   // off the wall, in front of the wainscot rail
       let g, OW, OH;
       if (a.it.key === "txt") {
         g = textPanel(salaI === 0 ? G().name || cfg.title || "La exposición" : salaName(s, salaI), salaI === 0 && G().autor ? G().autor : "", texto, dark); OW = TXT.w; OH = TXT.h;
@@ -680,12 +776,21 @@ export function run(o) {
       g.position.set(x, a.cy - OH / 2, z); g.rotation.y = ry;
       const pool = new THREE.Mesh(new THREE.PlaneGeometry(OW + 1.6, OH + 2.2), new THREE.MeshBasicMaterial({ map: POOL, transparent: true, opacity: R.poolI, depthWrite: false, blending: dark ? THREE.AdditiveBlending : THREE.NormalBlending }));
       pool.position.set(0, OH / 2 + .35, -.03); g.add(pool);   // the warm light of its spot on the wall
+      if (a.it.key !== "txt") {   // its label below it, lined up with its left edge (at its right when it nearly touches the floor)
+        const i = a.it.key, lb = labelOf(list[i], placed.get(i).size, dark, clamp(.28 + OW * .09, .34, .62));   // bigger pieces, bigger labels
+        if (lb) {
+          const bottom = a.cy - OH / 2;
+          if (bottom - .1 - lb.h >= .2) lb.g.position.set(OW > lb.w ? -OW / 2 + lb.w / 2 : 0, -.1 - lb.h / 2, .006);
+          else lb.g.position.set(OW / 2 + .14 + lb.w / 2, 1.35 - bottom, .006);
+          g.add(lb.g);
+        }
+      }
       tag(g, a.it.key); pieces.add(g);
       if (a.it.key === "txt") placed.set("txt", { cx: x, cy: a.cy, cz: z, nx: S.nx, nz: S.nz, w: OW, h: OH, size: "" });
     }
     // the floor: easels and 3D take the spots in order (in the classic room, easels go along the walls when nothing hangs)
     const spots = [...(useSide ? R.sideSpots : R.spots)];
-    let lights = 0;
+    let lights = 0; const floorUsed = [];
     for (const i of floorIdx) {
       const sp = spots.shift(); if (!sp) { missing.push(i); continue; }
       const ob = list[i], root = new THREE.Group(); root.position.set(sp.x, 0, sp.z); root.rotation.y = sp.ry;
@@ -693,9 +798,9 @@ export function run(o) {
       if (ob.model) {
         const gltf = assets[i], sm = clamp((Number(ob.s) || 80) / 100, .1, 6), onPed = mountOf(ob, tipo) === "pedestal";
         const pm = FRAMES[ob.frame] && !FRAMES[ob.frame].lienzo ? fmat(ob.frame).main : MAT.plinth;   // the pedestal in the color of its frame
-        let topY = 0;
+        let topY = 0, pw = 0, ph = 0;
         if (onPed) {   // a square column, with a base and a cap a little wider
-          const pw = clamp(sm * .55, .32, .8), ph = sm > 1.5 ? .6 : sm > 1 ? .8 : 1;
+          pw = clamp(sm * .55, .32, .8); ph = sm > 1.5 ? .6 : sm > 1 ? .8 : 1;
           const col = box(pw, ph - .08, pw, pm); col.position.y = .04 + (ph - .08) / 2; root.add(col);
           const base = box(pw + .06, .04, pw + .06, pm); base.position.y = .02; root.add(base);
           const cap = box(pw + .06, .04, pw + .06, pm); cap.position.y = ph - .02; root.add(cap);
@@ -718,6 +823,13 @@ export function run(o) {
           const q = new THREE.Mesh(new THREE.IcosahedronGeometry(sm * .35), new THREE.MeshStandardMaterial({ color: 0x8b3fd6, roughness: .4 })); q.position.y = sm * .35; turn.add(q); h = sm * .7;
         }
         if (ob.gira && !REDUCED) turners.push(turn);
+        const lb = labelOf(ob, ob.s ? `${Math.round(sm * 100)} cm` : "", dark, onPed ? Math.min(pw * .85, .34) : .3);
+        if (lb && onPed) { lb.g.position.set(0, ph - .1 - lb.h / 2, pw / 2 + .002); root.add(lb.g); }   // on the front of its pedestal
+        else if (lb) {   // on the floor: a small stand in front of it
+          const st = new THREE.Group(), post = box(.035, .85, .035, MAT.metal); post.position.y = .425; st.add(post);
+          lb.g.position.set(0, .9 + lb.h / 2 * .8, .03); lb.g.rotation.x = -.6; st.add(lb.g); st.position.set(0, 0, sm * .6 + .4); root.add(st);
+        }
+        floorUsed.push({ x: sp.x, z: sp.z });
         OBST.push({ x: sp.x, z: sp.z, r: Math.max(.5, sm * .6) });
         if (lights < 10) { addSpot(root, 0, R.H - .12, 1.6, 0, topY + h / 2, 0, R.spotI * .8); lights++; }
         tag(root, i); pieces.add(root);
@@ -731,13 +843,32 @@ export function run(o) {
         const holder = new THREE.Group(); holder.position.set(0, .89, .14); holder.rotation.x = -.1; root.add(holder);
         const art = buildArt(ob, tex, w, h2, 0); holder.add(art.g);
         const clampM = box(.12, .055, .09, MAT.easel); clampM.position.set(0, art.OH + .02, -.04); holder.add(clampM);
+        const lb = labelOf(ob, rs ? `${Math.round(rs.w)} × ${Math.round(rs.h)} cm` : "", dark, .3);   // under the painting, between the legs
+        if (lb) { lb.g.position.set(0, Math.max(.1 + lb.h / 2, .8 - lb.h / 2), .2); lb.g.rotation.x = -.1; root.add(lb.g); }
+        floorUsed.push({ x: sp.x, z: sp.z });
         OBST.push({ x: sp.x - fx * .25, z: sp.z - fz * .25, r: .7 });
         if (lights < 10) { addSpot(root, 0, R.H - .12, 1.9, 0, 1.5, .1, R.spotI, ob.frame === "neon" ? 0xe9d8ff : 0xfff1dc); lights++; }
         tag(root, i); pieces.add(root);
-        placed.set(i, { cx: sp.x + fx * .1, cy: .89 + art.OH / 2, cz: sp.z + fz * .1, nx: fx, nz: fz, w: art.OW, h: art.OH, size: rs ? `${Math.round(w * 100)} × ${Math.round(h2 * 100)} cm` : "" });
+        placed.set(i, { cx: sp.x + fx * .1, cy: .89 + art.OH / 2, cz: sp.z + fz * .1, nx: fx, nz: fz, w: art.OW, h: art.OH, size: rs ? `${Math.round(rs.w)} × ${Math.round(rs.h)} cm` : "" });
       }
     }
     if (R.portal) { const pg = portal(next); pg.position.set(R.portal.x, 0, R.portal.z); pg.rotation.y = R.portal.ry; pieces.add(pg); if (R.tipo !== "espacio") OBST.push({ x: R.portal.x, z: R.portal.z, r: .9 }); }
+    // what the pieces leave empty gets plants (the classic room also has its wainscoting): never a bare room
+    const busy = [...floorUsed, ...(R.portal ? [{ x: R.portal.x, z: R.portal.z }] : []), { x: R.start.x, z: R.start.z }];
+    let plants = 0;
+    const put = (x, z) => {
+      if (plants >= 12 || busy.some(b => Math.hypot(b.x - x, b.z - z) < 1.7)) return;
+      const p = plantOf(R.tipo); p.g.position.set(x, 0, z); p.g.rotation.y = rnd(0, 6); pieces.add(p.g); OBST.push({ x, z, r: p.r }); busy.push({ x, z }); plants++;
+    };
+    if (R.tipo === "espacio") { for (const S of R.segs) if (!plan.used.some(u => u.S === S)) put(S.cx * .84, S.cz * .84); }   // crystals before the empty panels
+    else for (const S of R.segs) {
+      if (S.part) continue;
+      const u = plan.used.find(x => x.S === S), ux = (S.x2 - S.x1) / S.len, uz = (S.z2 - S.z1) / S.len;
+      const at = t => put(S.x1 + ux * t + S.nx * .6, S.z1 + uz * t + S.nz * .6);
+      if (!u) { at(1.1); if (S.len > 3.5) at(S.len - 1.1); continue; }
+      if (u.from > 2.2) at(Math.min(1.1, u.from / 2));
+      if (S.len - u.to > 2.2) at(S.len - Math.min(1.1, (S.len - u.to) / 2));
+    }
     pieces.traverse(x => { if (x.userData.glow) glows.push(x); });
     if (o.onLayout) o.onLayout({ sala: salaI, missing: missing.sort((a, b) => a - b) });
     if (focusKey !== null && !placed.has(focusKey)) { focusKey = null; showCard(); }
