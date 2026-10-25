@@ -468,6 +468,10 @@ async function api(request, env, ctx, url) {
     const st = await slugStatus(env, slug, who, mine && mine.slug, isAdmin(env, me));
     if (!st.ok) return json({ error: st.reason }, 400);
     if (meta.kind === "galeria" && !galleryPlan(P)) return json({ error: "Las galerías son de los planes Pro y Premium. Mejora tu plan para publicarla.", plan: true }, 403);
+    if (meta.kind === "galeria" && !mine) {   // one gallery per account (César, 25 de octubre de 2026); the ones from before can still be edited
+      const other = await env.DB.prepare("SELECT slug FROM experiences WHERE email = ? AND expires > ? AND data LIKE ?").bind(who, Date.now(), '%"kind":"galeria"%').first();
+      if (other) return json({ error: "Solo puedes tener una galería por cuenta. Edita la que ya tienes desde Mi cuenta.", galeria: other.slug }, 409);
+    }
     const data = cleanMeta(meta, P);
     if (data.error) return json({ error: data.error }, 400);
     const image = form.get("image"), target = form.get("target"), qr = form.get("qr");
@@ -1430,7 +1434,7 @@ function cleanPuzzle(d) {
 // pedestal | piso, s (its largest side in cm), frame (the pedestal's color), gira}; both with t (title, up to 60) and d
 // (description, up to 300). Galleries from before ({sala, amb, obras}) come in as one room. Tours and shares are counted.
 const GALERIA = { obras: 20, models: 6, texto: 3000, frames: ["dorado", "madera", "negro", "blanco", "plata", "neon", "lienzo"], ambs: ["noche", "blanca", "museo"], tipos: ["clasica", "museo", "espacio"],
-  salas: { basico: 1, pro: 2, premium: 5, empresarial: 5, escuela: 5 },   // how many rooms each paid plan can have
+  salas: { basico: 1, pro: 1, premium: 5, empresarial: 5, escuela: 5 },   // how many rooms each paid plan can have (one gallery per account)
   mb: { basico: 60, pro: 150, premium: 400, empresarial: 400, escuela: 400 } };   // all its files (each upload is still ≤ 60 MB)
 const galleryPlan = P => GALERIA.salas[P.id] || 0;   // 0 = its plan has no galleries (Gratis)
 function cleanGaleria(d, list, P) {
