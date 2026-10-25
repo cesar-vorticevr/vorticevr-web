@@ -1402,32 +1402,47 @@ function cleanPuzzle(d) {
   const info = String(d.info || "").replace(/\r/g, "").trim().slice(0, 300); if (info) p.info = info;
   return { rompecabezas: p };
 }
-// Galería 3D (assets/galeria.js): a room with easels to walk through. obras = 1 to 12 {id, img (an item "foto"), frame,
-// mat (a white passe-partout), t (title, up to 60), d (description, up to 300)}, on the easels in that order; amb = the room
-// (noche | blanca | museo); name = on its back wall. Tours and shares are counted in clicks.
-const GALERIA = { max: 12, frames: ["dorado", "madera", "negro", "blanco", "plata", "neon", "lienzo"], ambs: ["noche", "blanca", "museo"] };
+// Galería 3D (assets/galeria.js): an art space to walk through. sala = clasica | museo | espacio (amb = the classic
+// room's ambience: noche | blanca | museo). obras = 1 to 20, in order: a picture {id, img (an item "foto"), mount: pared |
+// caballete, w, h (its real size in cm, either or both), frame, mat (a white passe-partout)} or a 3D object {id, model (an
+// item "model", up to 6), mount: pedestal | piso, s (its largest side in cm), gira (turns slowly)}; both with t (title, up
+// to 60) and d (description, up to 300). name = on the back wall. Tours and shares are counted in clicks.
+const GALERIA = { max: 20, models: 6, frames: ["dorado", "madera", "negro", "blanco", "plata", "neon", "lienzo"], ambs: ["noche", "blanca", "museo"], salas: ["clasica", "museo", "espacio"] };
 function cleanGaleria(d, list) {
   d = d || {};
   const idOk = v => /^[a-z0-9]{6,16}$/.test(String(v || ""));
-  const files = new Map((Array.isArray(list) ? list : []).filter(i => i && idOk(i.id) && i.type === "foto").map(i => [i.id, i]));
+  const files = new Map((Array.isArray(list) ? list : []).filter(i => i && idOk(i.id) && (i.type === "foto" || i.type === "model")).map(i => [i.id, i]));
+  const cm = (v, a, b) => { v = Math.round(Number(v)); return Number.isFinite(v) && v >= a && v <= b ? v : 0; };
   const src = Array.isArray(d.obras) ? d.obras : [];
-  if (!src.length) return { error: "Sube al menos una imagen." };
+  if (!src.length) return { error: "Sube al menos una obra." };
   if (src.length > GALERIA.max) return { error: `Tu galería puede tener hasta ${GALERIA.max} obras.` };
+  if (src.filter(x => x && x.model).length > GALERIA.models) return { error: `Tu galería puede tener hasta ${GALERIA.models} objetos 3D.` };
   const obras = [], items = [], ids = new Set();
   for (const [k, x] of src.entries()) {
     if (!x || !idOk(x.id) || ids.has(x.id)) return { error: "Una de tus obras no es válida." };
     ids.add(x.id);
-    const m = files.get(x.img); if (!m) return { error: `Falta la imagen de la obra ${k + 1}. Vuelve a subirla.` };
-    const it = { id: m.id, type: "foto", w: Math.round(Number(m.w)) || 0, h: Math.round(Number(m.h)) || 0 };
-    if (!(it.w > 0 && it.w <= 4000 && it.h > 0 && it.h <= 4000)) return { error: "Faltan las medidas de una de tus imágenes." };
-    if (!items.some(i => i.id === it.id)) items.push(it);
-    const ob = { id: x.id, img: it.id, frame: GALERIA.frames.includes(x.frame) ? x.frame : "dorado" };
-    if (x.mat && ob.frame !== "lienzo") ob.mat = true;
+    let ob;
+    if (x.model) {
+      const m = files.get(x.model); if (!m || m.type !== "model") return { error: `Falta el objeto 3D de la obra ${k + 1}. Vuelve a subirlo.` };
+      if (!items.some(i => i.id === m.id)) items.push({ id: m.id, type: "model" });
+      ob = { id: x.id, model: m.id, mount: x.mount === "piso" ? "piso" : "pedestal" };
+      const s = cm(x.s, 5, 1000); if (s) ob.s = s;
+      if (x.gira) ob.gira = true;
+    } else {
+      const m = files.get(x.img); if (!m || m.type !== "foto") return { error: `Falta la imagen de la obra ${k + 1}. Vuelve a subirla.` };
+      const it = { id: m.id, type: "foto", w: Math.round(Number(m.w)) || 0, h: Math.round(Number(m.h)) || 0 };
+      if (!(it.w > 0 && it.w <= 4000 && it.h > 0 && it.h <= 4000)) return { error: "Faltan las medidas de una de tus imágenes." };
+      if (!items.some(i => i.id === it.id)) items.push(it);
+      ob = { id: x.id, img: it.id, frame: GALERIA.frames.includes(x.frame) ? x.frame : "dorado" };
+      if (x.mount === "pared" || x.mount === "caballete") ob.mount = x.mount;
+      const w = cm(x.w, 5, 2000), h = cm(x.h, 5, 2000); if (w) ob.w = w; if (h) ob.h = h;
+      if (x.mat && ob.frame !== "lienzo") ob.mat = true;
+    }
     const t = String(x.t || "").replace(/\s+/g, " ").trim().slice(0, 60); if (t) ob.t = t;
     const de = String(x.d || "").replace(/\r/g, "").trim().slice(0, 300); if (de) ob.d = de;
     obras.push(ob);
   }
-  const galeria = { obras, amb: GALERIA.ambs.includes(d.amb) ? d.amb : "noche" };
+  const galeria = { obras, sala: GALERIA.salas.includes(d.sala) ? d.sala : "clasica", amb: GALERIA.ambs.includes(d.amb) ? d.amb : "noche" };
   const nm = String(d.name || "").replace(/\s+/g, " ").trim().slice(0, 80); if (nm) galeria.name = nm;   // on its back wall (the experience title is apart)
   return { galeria, items };
 }

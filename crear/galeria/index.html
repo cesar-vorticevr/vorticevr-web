@@ -87,6 +87,31 @@ input:focus,textarea:focus{border-color:var(--lav);outline:none}
 .tog input{width:17px;height:17px;accent-color:var(--vortex)}
 .tog.off{opacity:.4;pointer-events:none}
 .cnt{font-size:.82rem;color:var(--mute);margin-top:10px}
+.cnt.bad{color:var(--bad)}
+/* rooms */
+.salas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.salas{grid-template-columns:1fr}}
+.salas button{border:2px solid var(--line);border-radius:14px;background:rgba(5,2,11,.5);color:var(--ink);cursor:pointer;padding:0 0 10px;text-align:left;overflow:hidden;font:inherit}
+.salas button[aria-pressed="true"]{border-color:var(--sun);box-shadow:0 0 0 3px rgba(255,190,85,.2)}
+.salas .art{display:block;height:74px;position:relative}
+.salas b{display:block;font:600 .95rem var(--fd);margin:8px 12px 2px}
+.salas small{display:block;margin:0 12px;color:var(--mute);font-size:.8rem;line-height:1.35}
+.art.clasica{background:linear-gradient(180deg,#1c1528 0 62%,#3b2a22 62%)}
+.art.clasica::after{content:"";position:absolute;left:18%;top:22%;width:16%;height:30%;background:#c89b3c;box-shadow:42px 6px 0 -2px #c89b3c,84px 0 0 #c89b3c}
+.art.museo{background:linear-gradient(180deg,#fafaf7 0 70%,#c9c6c0 70%)}
+.art.museo::after{content:"";position:absolute;left:12%;top:18%;width:44%;height:44%;background:linear-gradient(135deg,#2c3e8f,#e4007c);box-shadow:64px 10px 0 -14px #ffbe55}
+.art.espacio{background:radial-gradient(circle at 78% 30%,#d9a65c 0 14%,transparent 15%),radial-gradient(1px 1px at 20% 30%,#fff,transparent),radial-gradient(1px 1px at 60% 15%,#fff,transparent),radial-gradient(1px 1px at 40% 50%,#fff,transparent),linear-gradient(180deg,#120826 0 72%,#2a1650 72%)}
+.art.espacio::after{content:"";position:absolute;left:10%;top:26%;width:30%;height:40%;background:#1b1430;border-bottom:3px solid #b37bff;border-top:3px solid #b37bff}
+.ups{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:520px){.ups{grid-template-columns:1fr}}
+.ob.miss{border-color:var(--bad)}
+.ob .pic.m3d{background:linear-gradient(150deg,#2a1650,#5a1f8f);display:grid;place-items:center;font:800 1.4rem var(--fd);color:#fff}
+.ob .row2{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.ob .seg button{padding:6px 11px;font-size:.8rem}
+.ob .cmx{display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--mute)}
+.ob .cmx input{width:84px;padding:7px 9px;font:500 .9rem var(--fm)}
+.ob .real{font:500 .8rem var(--fm);color:var(--sun)}
+.ob .miss-t{font-size:.8rem;color:var(--bad);margin-top:6px}
 .allf{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;font-size:.85rem;color:var(--mute)}
 /* stats */
 .stats{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px}
@@ -135,14 +160,19 @@ input:focus,textarea:focus{border-color:var(--lav);outline:none}
         <label class="f" for="dname" style="margin-top:0">Nombre de la galería</label>
         <input type="text" id="dname" maxlength="80" placeholder="Ej. Exposición de fin de curso · Arte 6° A">
         <div class="note">Va en grande en la pared del fondo.</div>
-        <label class="f">Ambiente</label>
-        <div class="seg" id="ambSeg"></div>
+        <label class="f">La sala</label>
+        <div class="salas" id="salaSeg"></div>
+        <div id="ambBox"><label class="f">Ambiente</label><div class="seg" id="ambSeg"></div></div>
       </section>
 
       <section class="step" id="s2">
         <h2><span class="n" id="n2">2</span>Tus obras</h2>
-        <p class="hint">De 1 a 12 imágenes; cada una va en su caballete, en este orden. Elige su marco y, si quieres, el paspartú (borde blanco), el título y una descripción que aparece al acercarse.</p>
-        <label class="drop" id="drop"><input type="file" id="upFile" accept="image/png,image/webp,image/jpeg" multiple hidden><b>Subir imágenes</b>JPG, PNG o WebP · puedes elegir varias o soltarlas aquí</label>
+        <p class="hint">Hasta 20 obras, en el orden en que se recorren: imágenes en la pared o en caballete, y hasta 6 objetos 3D sobre pedestal o en el piso. Escribe su medida real (el ancho, el alto o los dos) y la imagen se pone de ese tamaño sin deformarse.</p>
+        <div class="ups" id="ups">
+          <label class="drop" id="drop"><input type="file" id="upFile" accept="image/png,image/webp,image/jpeg" multiple hidden><b>Subir imágenes</b>JPG, PNG o WebP · varias a la vez o suéltalas aquí</label>
+          <label class="drop" id="drop3d"><input type="file" id="upModel" accept=".glb,model/gltf-binary" hidden><b>Subir objeto 3D</b>Archivo GLB (Blender, Polycam…) · se comprime solo</label>
+        </div>
+        <div class="msg" id="mUp"></div>
         <div class="allf" id="allf" hidden>Poner a todas el marco: <span class="frames" id="allFrames" style="margin:0"></span></div>
         <div class="obras" id="obras"></div>
         <div class="cnt" id="cnt"></div>
@@ -181,18 +211,20 @@ input:focus,textarea:focus{border-color:var(--lav);outline:none}
 <script src="../../assets/marca.js"></script>
 <script src="../../assets/plataforma.js" data-api="../.."></script>
 <script type="module">
-import { run, FRAMES, AMBIENTES, MAX } from "../../assets/galeria.js";
+import { run, FRAMES, AMBIENTES, SALAS, MAX, MAX_3D, mountOf, realSize } from "../../assets/galeria.js";
 const $=id=>document.getElementById(id);
 const API=VVR.api;
 const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
 $("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
 const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const rid=()=>Array.from(crypto.getRandomValues(new Uint8Array(10)),b=>"abcdefghijklmnopqrstuvwxyz0123456789"[b%36]).join("");
-// S.d is what gets published; S.files = images picked here (id → {blob,url,w,h}); S.old = the published ones
-const S={token:null,email:null,mine:null,files:new Map(),old:new Map(),lastFrame:"dorado",d:{amb:"noche",obras:[]}};
+const MODEL_IN_MB=150;   // a GLB this big can still be opened; it is compressed here and must end ≤ plan.modelMB
+// S.d is what gets published; S.files = files picked here (id → {blob,url,w,h} or {blob,url,model}); S.old = the published ones
+const S={token:null,email:null,mine:null,plan:{modelMB:15},files:new Map(),old:new Map(),lastFrame:"dorado",missing:[],d:{sala:"clasica",amb:"noche",obras:[]}};
 const fileUrl=id=>{ if(!id) return ""; const f=S.files.get(id); if(f) return f.url; const o=S.old.get(id); return o&&S.mine?`${API}/m/${S.mine.slug}/${o.file}?v=${S.mine.updated||""}`:""; };
+const dimsOf=id=>{ const f=S.files.get(id)||S.old.get(id); return f&&f.w&&f.h?{w:f.w,h:f.h}:null; };
 const loadImg=src=>new Promise((ok,bad)=>{ const i=new Image(); i.crossOrigin="anonymous"; i.onload=()=>ok(i); i.onerror=bad; i.src=src; });
-// 1600 px is plenty for a picture on an easel and keeps the room light on a phone
+// 2048 px: enough for a picture several meters wide seen up close on a phone, and still light
 async function shrink(file,max){
   const url=URL.createObjectURL(file); const im=await loadImg(url); URL.revokeObjectURL(url);
   const k=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)), c=document.createElement("canvas"); c.width=Math.round(im.naturalWidth*k); c.height=Math.round(im.naturalHeight*k);
@@ -201,36 +233,74 @@ async function shrink(file,max){
   return {blob:b,w:c.width,h:c.height};
 }
 const nameFrom=f=>f.name.replace(/\.[^.]+$/,"").replace(/[_-]+/g," ").replace(/\s+/g," ").trim().slice(0,60);
+const msgUp=(cls,t)=>{ const m=$("mUp"); m.className="msg "+(cls||""); m.textContent=t||""; };
 
 // ---------- 1. the room ----------
-function drawAmb(){ $("ambSeg").innerHTML=Object.entries(AMBIENTES).map(([k,A])=>`<button type="button" data-v="${k}" aria-pressed="${S.d.amb===k}"><i style="background:#${A.wall.toString(16).padStart(6,"0")}"></i>${A.t}</button>`).join(""); }
-$("ambSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.d.amb=b.dataset.v; drawAmb(); changed(); });
+function drawSala(){
+  $("salaSeg").innerHTML=Object.entries(SALAS).map(([k,s])=>`<button type="button" data-v="${k}" aria-pressed="${S.d.sala===k}"><span class="art ${k}"></span><b>${s.t}</b><small>${s.d}</small></button>`).join("");
+  $("ambBox").hidden=S.d.sala!=="clasica";
+  $("ambSeg").innerHTML=Object.entries(AMBIENTES).map(([k,A])=>`<button type="button" data-v="${k}" aria-pressed="${S.d.amb===k}"><i style="background:#${A.wall.toString(16).padStart(6,"0")}"></i>${A.t}</button>`).join("");
+}
+$("salaSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.d.sala=b.dataset.v; drawSala(); drawObras(); changed(); });
+$("ambSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.d.amb=b.dataset.v; drawSala(); changed(); });
 $("dname").addEventListener("input",changed);
 
-// ---------- 2. pictures ----------
+// ---------- 2. pieces ----------
 const swatch=(k,F)=>`<div class="sw" style="--fr:${F.css};${F.lienzo?"padding:0;":""}${F.glow?"box-shadow:0 0 12px #a45bff;":""}"><i></i></div>${F.t}`;
 $("allFrames").innerHTML=Object.entries(FRAMES).map(([k,F])=>`<button type="button" data-all="${k}" title="${F.t}">${swatch(k,F)}</button>`).join("");
-$("allFrames").addEventListener("click",e=>{ const b=e.target.closest("[data-all]"); if(!b) return; S.lastFrame=b.dataset.all; for(const o of S.d.obras) o.frame=S.lastFrame; drawObras(); changed(); });
-function drawObras(){
-  const n=S.d.obras.length;
-  $("obras").innerHTML=S.d.obras.map((o,i)=>`<div class="ob" data-id="${o.id}">
-    <div><button class="pic" type="button" data-see style="background-image:url('${esc(fileUrl(o.img))}')" title="Verla en la galería"><span>${i+1}</span></button>
-      <div class="tools"><button type="button" data-up title="Antes" aria-label="Mover antes" ${i?"":"disabled"}>↑</button><button type="button" data-down title="Después" aria-label="Mover después" ${i<n-1?"":"disabled"}>↓</button><button class="del" type="button" data-del title="Quitar" aria-label="Quitar la obra ${i+1}">✕</button></div></div>
-    <div><input type="text" data-k="t" maxlength="60" value="${esc(o.t)}" placeholder="Título de la obra" aria-label="Título de la obra ${i+1}">
-      <textarea data-k="d" maxlength="300" rows="2" placeholder="Descripción (opcional): autor, técnica, año, una historia…" aria-label="Descripción de la obra ${i+1}">${esc(o.d)}</textarea>
+$("allFrames").addEventListener("click",e=>{ const b=e.target.closest("[data-all]"); if(!b) return; S.lastFrame=b.dataset.all; for(const o of S.d.obras) if(!o.model) o.frame=S.lastFrame; drawObras(); changed(); });
+const seg2=(key,val,opts)=>`<div class="seg">${opts.map(([v,t])=>`<button type="button" data-${key}="${v}" aria-pressed="${val===v}">${t}</button>`).join("")}</div>`;
+// the measure it will have, as the artist wrote it (the picture keeps its proportion inside it)
+function realText(o){ const d=dimsOf(o.img); if(!d) return ""; const r=realSize(o,d.w/d.h); return r?`Medida real: ${Math.round(r.w)} × ${Math.round(r.h)} cm`:mountOf(o,S.d.sala)==="pared"?"Sin medida: 1 m por su lado más largo":"Sin medida: del tamaño del caballete"; }
+// a piece that does not fit: what can be done in this room
+const missText=()=>`No cabe en esta sala: hazla más chica${S.d.sala==="museo"?" o ponla en caballete":", ponla en caballete o elige el Gran museo"}.`;
+function obHtml(o,i,n){
+  const tools=`<div class="tools"><button type="button" data-up title="Antes" aria-label="Mover antes" ${i?"":"disabled"}>↑</button><button type="button" data-down title="Después" aria-label="Mover después" ${i<n-1?"":"disabled"}>↓</button><button class="del" type="button" data-del title="Quitar" aria-label="Quitar la obra ${i+1}">✕</button></div>`;
+  const text=`<input type="text" data-k="t" maxlength="60" value="${esc(o.t)}" placeholder="Título de la obra" aria-label="Título de la obra ${i+1}">
+      <textarea data-k="d" maxlength="300" rows="2" placeholder="Descripción (opcional): autor, técnica, año, una historia…" aria-label="Descripción de la obra ${i+1}">${esc(o.d)}</textarea>`;
+  const miss=S.missing.includes(i)?`<div class="miss-t">${missText()}</div>`:"";
+  if(o.model) return `<div class="ob${miss?" miss":""}" data-id="${o.id}">
+    <div><button class="pic m3d" type="button" data-see title="Verlo en la galería"><span>${i+1}</span>3D</button>${tools}</div>
+    <div>${text}
+      <div class="row2">${seg2("mount",mountOf(o,S.d.sala),[["pedestal","Sobre pedestal"],["piso","En el piso"]])}
+        <label class="cmx">Lado más largo <input type="text" inputmode="numeric" data-n="s" value="${o.s||""}" placeholder="80"> cm</label></div>
+      <label class="tog"><input type="checkbox" data-gira ${o.gira?"checked":""}> Que gire despacio</label>${miss}</div></div>`;
+  const m=mountOf(o,S.d.sala);
+  return `<div class="ob${miss?" miss":""}" data-id="${o.id}">
+    <div><button class="pic" type="button" data-see style="background-image:url('${esc(fileUrl(o.img))}')" title="Verla en la galería"><span>${i+1}</span></button>${tools}</div>
+    <div>${text}
+      <div class="row2">${seg2("mount",m,[["pared","En la pared"],["caballete","En caballete"]])}</div>
+      <div class="row2"><label class="cmx">Ancho <input type="text" inputmode="numeric" data-n="w" value="${o.w||""}" placeholder="cm"></label><label class="cmx">Alto <input type="text" inputmode="numeric" data-n="h" value="${o.h||""}" placeholder="cm"> cm</label><span class="real" data-real>${realText(o)}</span></div>
       <div class="frames">${Object.entries(FRAMES).map(([k,F])=>`<button type="button" data-frame="${k}" aria-pressed="${o.frame===k}">${swatch(k,F)}</button>`).join("")}</div>
-      <label class="tog${o.frame==="lienzo"?" off":""}"><input type="checkbox" data-mat ${o.mat?"checked":""}> Paspartú (borde blanco)</label></div></div>`).join("");
-  $("drop").hidden=n>=MAX; $("allf").hidden=n<2;
-  $("cnt").textContent=n?`${n} de ${MAX} obras`:"";
+      <label class="tog${o.frame==="lienzo"?" off":""}"><input type="checkbox" data-mat ${o.mat?"checked":""}> Paspartú (borde blanco)</label>${miss}</div></div>`;
+}
+function drawObras(){
+  const n=S.d.obras.length, n3=S.d.obras.filter(o=>o.model).length;
+  $("obras").innerHTML=S.d.obras.map((o,i)=>obHtml(o,i,n)).join("");
+  $("drop").hidden=n>=MAX; $("drop3d").hidden=n>=MAX||n3>=MAX_3D; $("allf").hidden=n-n3<2;
+  drawCount();
+}
+function drawCount(){
+  const n=S.d.obras.length, c=$("cnt");
+  c.className="cnt"+(S.missing.length?" bad":"");
+  c.textContent=!n?"":S.missing.length?`${S.missing.length===1?"Una obra no cabe":S.missing.length+" obras no caben"} en esta sala (${S.missing.length===1?"marcada":"marcadas"} en rojo). ${n} de ${MAX} obras.`:`${n} de ${MAX} obras.`;
 }
 const obOf=el=>S.d.obras.find(o=>o.id===el.closest(".ob").dataset.id);
-$("obras").addEventListener("input",e=>{ const k=e.target.dataset.k; if(!k) return; obOf(e.target)[k]=e.target.value; changed(); });
-$("obras").addEventListener("change",e=>{ if(!e.target.matches("[data-mat]")) return; obOf(e.target).mat=e.target.checked; changed(); });
+$("obras").addEventListener("input",e=>{
+  const k=e.target.dataset.k, nk=e.target.dataset.n; if(!k&&!nk) return; const o=obOf(e.target);
+  if(k) o[k]=e.target.value;
+  else{ const v=e.target.value.replace(/[^\d]/g,""); if(v!==e.target.value) e.target.value=v; o[nk]=v?Math.min(+v,nk==="s"?1000:2000):""; const r=e.target.closest(".ob").querySelector("[data-real]"); if(r) r.textContent=realText(o); }
+  changed();
+});
+$("obras").addEventListener("change",e=>{ const o=e.target.closest(".ob")&&obOf(e.target); if(!o) return;
+  if(e.target.matches("[data-mat]")){ o.mat=e.target.checked; changed(); }
+  if(e.target.matches("[data-gira]")){ o.gira=e.target.checked; changed(); } });
 $("obras").addEventListener("click",e=>{
   if(!e.target.closest(".ob")) return; const o=obOf(e.target), i=S.d.obras.indexOf(o);
   const fr=e.target.closest("[data-frame]"); if(fr){ o.frame=S.lastFrame=fr.dataset.frame; drawObras(); changed(); return; }
+  const mt=e.target.closest("[data-mount]"); if(mt){ o.mount=mt.dataset.mount; drawObras(); changed(); return; }
   if(e.target.closest("[data-see]")){ if(app) app.focus(i); return; }
-  if(e.target.closest("[data-del]")){ S.d.obras.splice(i,1); drawObras(); changed(); return; }
+  if(e.target.closest("[data-del]")){ S.d.obras.splice(i,1); S.missing=[]; drawObras(); changed(); return; }
   const mv=e.target.closest("[data-up]")?-1:e.target.closest("[data-down]")?1:0;
   if(mv){ S.d.obras.splice(i,1); S.d.obras.splice(i+mv,0,o); drawObras(); changed(); }
 });
@@ -239,28 +309,59 @@ async function addFiles(list){
   if(!files.length) return;
   if(files.length>room) alert(room?`Solo caben ${room} más: tu galería puede tener hasta ${MAX} obras.`:`Tu galería ya tiene ${MAX} obras.`);
   for(const f of files.slice(0,room)){
-    try{ const r=await shrink(f,1600), id=rid(); S.files.set(id,{blob:r.blob,url:URL.createObjectURL(r.blob),w:r.w,h:r.h});
-      S.d.obras.push({id:rid(),img:id,frame:S.lastFrame,mat:false,t:nameFrom(f),d:""}); drawObras(); changed(); }
+    try{ const r=await shrink(f,2048), id=rid(); S.files.set(id,{blob:r.blob,url:URL.createObjectURL(r.blob),w:r.w,h:r.h});
+      S.d.obras.push({id:rid(),img:id,mount:S.d.sala==="clasica"?"caballete":"pared",frame:S.lastFrame,mat:false,w:"",h:"",t:nameFrom(f),d:""}); drawObras(); changed(); }
     catch(err){ alert(`No pude abrir ${f.name}. Usa PNG, JPG o WebP.`); }
   }
 }
+async function addModel(file){
+  if(!file) return;
+  if(S.d.obras.length>=MAX||S.d.obras.filter(o=>o.model).length>=MAX_3D) return msgUp("bad",`Tu galería puede tener hasta ${MAX_3D} objetos 3D.`);
+  if(/\.(fbx|obj|gltf|stl|dae|blend|3ds|usdz)$/i.test(file.name)) return msgUp("bad","Ese formato no se puede ver en el celular. Conviértelo a GLB: en Blender, Archivo → Exportar → glTF 2.0 (.glb).");
+  if(file.size>MODEL_IN_MB*1048576) return msgUp("bad",`El objeto pesa ${(file.size/1048576).toFixed(1)} MB. Se pueden abrir hasta ${MODEL_IN_MB} MB: expórtalo con texturas más chicas.`);
+  let buf=await file.arrayBuffer();
+  if(new TextDecoder().decode(new Uint8Array(buf,0,4))!=="glTF") return msgUp("bad","Ese archivo no es un GLB. Expórtalo como glTF 2.0 en formato .glb.");
+  const mb=n=>(n/1048576).toFixed(1); let done="";
+  try{ const {compressGLB}=await import("../../assets/comprimir-3d.js");
+    const r=await compressGLB(buf,t=>msgUp("",`Comprimiendo tu 3D (${mb(file.size)} MB): ${t}`));
+    if(r.changed){ buf=r.buffer; done=`Listo: tu 3D pasó de ${mb(r.before)} MB a ${mb(r.after)} MB.`; }
+  }catch(e){ console.warn("No se pudo comprimir el 3D",e); }
+  if(buf.byteLength>S.plan.modelMB*1048576) return msgUp("bad",`Aun comprimido, el objeto pesa ${mb(buf.byteLength)} MB. Tu plan permite ${S.plan.modelMB} MB por objeto 3D: expórtalo con texturas más chicas o menos detalle.`);
+  const blob=new Blob([buf],{type:"model/gltf-binary"}), id=rid();
+  S.files.set(id,{blob,url:URL.createObjectURL(blob),model:true});
+  S.d.obras.push({id:rid(),model:id,mount:"pedestal",s:"",gira:false,t:nameFrom(file),d:""});
+  msgUp(done?"ok":"",done); drawObras(); changed();
+}
 $("upFile").addEventListener("change",e=>{ const fs=e.target.files; addFiles(fs).then(()=>{ e.target.value=""; }); });
-const drop=$("drop");
-drop.addEventListener("dragover",e=>{ e.preventDefault(); drop.classList.add("over"); });
-drop.addEventListener("dragleave",()=>drop.classList.remove("over"));
-drop.addEventListener("drop",e=>{ e.preventDefault(); drop.classList.remove("over"); addFiles(e.dataTransfer.files); });
+$("upModel").addEventListener("change",e=>{ const f=e.target.files[0]; addModel(f).finally(()=>{ e.target.value=""; }); });
+for(const [id,fn] of [["drop",fs=>addFiles(fs)],["drop3d",fs=>addModel(fs[0])]]){
+  const d=$(id);
+  d.addEventListener("dragover",e=>{ e.preventDefault(); d.classList.add("over"); });
+  d.addEventListener("dragleave",()=>d.classList.remove("over"));
+  d.addEventListener("drop",e=>{ e.preventDefault(); d.classList.remove("over"); fn(e.dataTransfer.files); });
+}
 
 // ---------- live preview ----------
 let app=null, pvT=0;
-function dNow(){ return {name:$("dname").value.trim(),amb:S.d.amb,obras:S.d.obras.map(o=>{ const x={id:o.id,img:o.img,frame:o.frame}; if(o.mat&&o.frame!=="lienzo") x.mat=true; if(o.t.trim()) x.t=o.t.trim(); if(o.d.trim()) x.d=o.d.trim(); return x; })}; }
+const num=v=>Number(v)||0;
+function dNow(){ return {name:$("dname").value.trim(),sala:S.d.sala,amb:S.d.amb,obras:S.d.obras.map(o=>{
+  const x={id:o.id}; if(o.t.trim()) x.t=o.t.trim(); if(o.d.trim()) x.d=o.d.trim();
+  if(o.model){ x.model=o.model; x.mount=o.mount==="piso"?"piso":"pedestal"; if(num(o.s)) x.s=num(o.s); if(o.gira) x.gira=true; return x; }
+  x.img=o.img; x.frame=o.frame; x.mount=mountOf(o,S.d.sala); if(num(o.w)) x.w=num(o.w); if(num(o.h)) x.h=num(o.h); if(o.mat&&o.frame!=="lienzo") x.mat=true; return x; })}; }
 const cfgNow=()=>({slug:"vista-previa",title:$("title").value.trim()||"Tu galería",galeria:dNow()});
 function brand(){ const mk=S.marca&&S.marca.get(); if(mk&&mk.brand==="none") return null;
   if(mk&&mk.brand==="own"&&mk.preview) return {src:mk.preview,own:true};
   return {src:"../../assets/logo-vorticevr-blanco.png"}; }
-// tapping a picture in the room shows its card here
+// tapping a piece in the room shows its card here
 const onPick=i=>{ const el=$("obras").children[i]; if(!el) return; el.classList.add("hl"); setTimeout(()=>el.classList.remove("hl"),1600);
   if(matchMedia("(min-width:901px)").matches) el.scrollIntoView({behavior:"smooth",block:"center"}); };
-function preview(){ if(app) app.destroy(); app=run({root:$("screen"),cfg:cfgNow(),src:fileUrl,brand:brand(),embedded:true,onPick}); }
+// pieces that don't fit in the room: marked in red
+const onLayout=r=>{ const m=r.missing||[]; if(m.join()===S.missing.join()) return; S.missing=m;
+  [...$("obras").children].forEach((el,i)=>{ const bad=m.includes(i); el.classList.toggle("miss",bad); const t=el.querySelector(".miss-t");
+    if(bad&&!t) el.lastElementChild.insertAdjacentHTML("beforeend",`<div class="miss-t">${missText()}</div>`);
+    if(!bad&&t) t.remove(); });
+  drawCount(); check(); };
+function preview(){ if(app) app.destroy(); app=run({root:$("screen"),cfg:cfgNow(),src:fileUrl,brand:brand(),embedded:true,onPick,onLayout}); }
 function changed(){ clearTimeout(pvT); pvT=setTimeout(()=>{ if(app) app.update(cfgNow(),brand()); else preview(); },220); check(); }
 
 // ---------- link ----------
@@ -278,7 +379,8 @@ const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
 // ---------- publish ----------
 function problems(){
   if(!$("dname").value.trim()) return "Escribe el nombre de tu galería (paso 1).";
-  if(!S.d.obras.length) return "Sube al menos una imagen (paso 2).";
+  if(!S.d.obras.length) return "Sube al menos una obra (paso 2).";
+  if(S.missing.length===S.d.obras.length) return "Ninguna obra cabe en esta sala: hazlas más chicas o elige el Gran museo (paso 2).";
   if(!$("title").value.trim()) return "Escribe el título de tu experiencia (paso 3).";
   if(!slugOk) return "Elige un link disponible.";
   if(!S.token) return "Inicia sesión de nuevo.";
@@ -287,18 +389,18 @@ function problems(){
 }
 function check(){
   const p=problems();
-  $("n1").classList.toggle("done",!!$("dname").value.trim()); $("n2").classList.toggle("done",S.d.obras.length>0);
+  $("n1").classList.toggle("done",!!$("dname").value.trim()); $("n2").classList.toggle("done",S.d.obras.length>0&&!S.missing.length);
   $("n3").classList.toggle("done",slugOk&&!!$("title").value.trim());
-  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
+  $("publish").disabled=!!p; $("pubHint").textContent=p||(S.missing.length?`Ojo: ${S.missing.length===1?"una obra no cabe y no se verá":S.missing.length+" obras no caben y no se verán"}. `:"")+`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
 }
 $("publish").addEventListener("click",async()=>{
   const p=problems(); if(p){ check(); return; }
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Preparando…"; bar.hidden=false; bar.firstElementChild.style.width="0%"; $("publish").disabled=true;
   const galeria=dNow(), items=[], fd=new FormData();
-  for(const ob of galeria.obras){ if(items.some(i=>i.id===ob.img)) continue; const f=S.files.get(ob.img), o=S.old.get(ob.img);
-    const it=f?{id:ob.img,type:"foto",w:f.w,h:f.h}:o?{id:ob.img,type:"foto",w:o.w,h:o.h}:null;
-    if(!it){ m.className="msg bad"; m.textContent="Falta una de tus imágenes: vuelve a subirla."; bar.hidden=true; $("publish").disabled=false; return; }
-    items.push(it); if(f) fd.append("f_"+ob.img,f.blob,ob.img+".img"); }
+  for(const ob of galeria.obras){ const id=ob.model||ob.img; if(items.some(i=>i.id===id)) continue; const f=S.files.get(id), o=S.old.get(id);
+    const it=ob.model?(f||o?{id,type:"model"}:null):f?{id,type:"foto",w:f.w,h:f.h}:o?{id,type:"foto",w:o.w,h:o.h}:null;
+    if(!it){ m.className="msg bad"; m.textContent="Falta uno de tus archivos: vuelve a subirlo."; bar.hidden=true; $("publish").disabled=false; return; }
+    items.push(it); if(f) fd.append("f_"+id,f.blob,id+(ob.model?".glb":".img")); }
   const meta={kind:"galeria",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),galeria,items,buttons:{}};
   const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
   fd.append("meta",JSON.stringify(meta));
@@ -322,10 +424,11 @@ $("publish").addEventListener("click",async()=>{
   const toLogin=()=>location.replace("../../cuenta/?siguiente=crear");
   const sess=VVR.session(); if(!sess){ toLogin(); return; }
   S.token=sess.token; S.email=sess.user&&sess.user.email;
-  drawAmb(); drawObras(); preview(); check();
+  drawSala(); drawObras(); preview(); check();
   try{
     const r=await VVR.call("me"); S.email=r.user.email;
     const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1}, LIM=r.limit??P.exp, member=r.team&&r.team.role==="member";
+    S.plan={modelMB:P.modelMB||15};
     if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name}`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
     const exp=ed?r.experiences.find(x=>x.slug===ed):null;
     if(window.VVRMarca){ S.marca=VVRMarca.mount($("sMarca"),{plan:P,exp,api:API,base:"../../",onChange:()=>{ check(); changed(); }}); $("sMarca").hidden=false; }
@@ -333,16 +436,18 @@ $("publish").addEventListener("click",async()=>{
     if(exp){
       S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza en el mismo link (tu QR sigue funcionando).`;
       for(const it of exp.items||[]) S.old.set(it.id,it);
-      const G=exp.galeria||{};
-      S.d={amb:G.amb||"noche",obras:(G.obras||[]).map(o=>({id:o.id,img:o.img,frame:o.frame||"dorado",mat:!!o.mat,t:o.t||"",d:o.d||""}))};
-      if(S.d.obras.length) S.lastFrame=S.d.obras[S.d.obras.length-1].frame;
+      const G=exp.galeria||{}, sala=SALAS[G.sala]?G.sala:"clasica";
+      S.d={sala,amb:G.amb||"noche",obras:(G.obras||[]).map(o=>o.model
+        ?{id:o.id,model:o.model,mount:o.mount==="piso"?"piso":"pedestal",s:o.s||"",gira:!!o.gira,t:o.t||"",d:o.d||""}
+        :{id:o.id,img:o.img,mount:mountOf(o,sala),frame:o.frame||"dorado",mat:!!o.mat,w:o.w||"",h:o.h||"",t:o.t||"",d:o.d||""})};
+      const last=S.d.obras.filter(o=>!o.model).pop(); if(last) S.lastFrame=last.frame;
       $("dname").value=G.name||exp.title; $("title").value=exp.title;
       slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
       $("publish").textContent="Guardar cambios";
       try{ const k=await VVR.call("clicks/"+encodeURIComponent(exp.slug)), c=k.clicks||{}, n=v=>(v||0).toLocaleString("es-MX");
         $("stats").innerHTML=`<div><b>${n(exp.views)}</b><span>visitas</span></div><div><b>${n(c.tour)}</b><span>recorridos</span></div><div><b>${n(c.share)}</b><span>la compartieron</span></div>`;
         $("statsBox").hidden=false; }catch(e){}
-      drawAmb(); drawObras(); preview();
+      drawSala(); drawObras(); preview();
     } else if(r.experiences.filter(x=>!x.paused).length>=LIM){
       document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); document.querySelector(".side").hidden=true; $("full").hidden=false;
       $("fullText").textContent=member?"Tu equipo te asignó todas las que puedes usar. Borra una o pide más a quien administra tu equipo.":`Tu plan ${P.name} incluye ${LIM.toLocaleString("es-MX")} ${LIM===1?"experiencia":"experiencias"}. Borra una desde tu cuenta o mejora tu plan para crear tu galería.`;
