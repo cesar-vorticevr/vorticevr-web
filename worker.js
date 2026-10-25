@@ -224,10 +224,26 @@ async function api(request, env, ctx, url) {
     if (row.paused) return json({ error: "Pausada", paused: true }, 410);
     const P = planOf(row);
     if (P.views && row.views >= P.views) return json({ error: "Límite de vistas", limit: true }, 410);
+    if (String(row.data || "").includes('"kind":"galeria"') && !galleryPlan(P)) return json({ error: "Pausada", paused: true }, 410);   // a gallery needs a paid plan
     ctx.waitUntil(env.DB.batch([env.DB.prepare("UPDATE experiences SET views = views + 1 WHERE slug = ?").bind(row.slug), bump(env, "views")]));
     const out = publicExp(row);
     if (out.brand && !P.brand) delete out.brand;   // its own logo (or none) only while the plan includes it (brand: Premium)
     return json(out, 200, { "Cache-Control": "no-store" });
+  }
+
+  // "Galerías Vórtice VR" (/galerias/): the galleries their makers chose to show (publica), while their plan includes them
+  if (path === "/api/galerias" && M === "GET") {
+    const { results } = await env.DB.prepare("SELECT e.slug, e.title, e.data, e.updated, e.views, u.plan, u.plan_until, u.owner_id, u.quota, o.plan AS o_plan, o.plan_until AS o_until FROM experiences e LEFT JOIN users u ON u.email = e.email LEFT JOIN users o ON o.id = u.owner_id WHERE e.paused = 0 AND e.expires > ? AND e.data LIKE ? AND e.data LIKE ? ORDER BY e.updated DESC LIMIT 200")
+      .bind(Date.now(), '%"kind":"galeria"%', '%"publica":true%').all();
+    const list = [];
+    for (const r of results) {
+      if (!galleryPlan(planOf(r))) continue;
+      const g = JSON.parse(r.data || "{}").galeria || {}; if (!g.publica) continue;
+      const salas = g.salas || [], obras = salas.reduce((a, s) => a + (s.obras || []).length, 0);
+      list.push({ slug: r.slug, name: g.name || r.title, autor: g.autor || "", salas: salas.length, obras, tipo: (salas[0] || {}).tipo || "clasica", image: `/m/${r.slug}/image?v=${r.updated}`, url: expUrl(r.slug, request, env), updated: r.updated });
+      if (list.length >= 100) break;
+    }
+    return json({ galerias: list }, 200, { "Cache-Control": "public, max-age=300" });
   }
 
   // link page: one tap on a button; prize wheel: spins, each prize that came out, "lose", review… (navigator.sendBeacon); only counted while it is live
@@ -451,6 +467,7 @@ async function api(request, env, ctx, url) {
     const slug = String(meta.slug || "").toLowerCase();
     const st = await slugStatus(env, slug, who, mine && mine.slug, isAdmin(env, me));
     if (!st.ok) return json({ error: st.reason }, 400);
+    if (meta.kind === "galeria" && !galleryPlan(P)) return json({ error: "Las galerías son de los planes Pro y Premium. Mejora tu plan para publicarla.", plan: true }, 403);
     const data = cleanMeta(meta, P);
     if (data.error) return json({ error: data.error }, 400);
     const image = form.get("image"), target = form.get("target"), qr = form.get("qr");
@@ -497,7 +514,10 @@ async function api(request, env, ctx, url) {
       }
       total += it.bytes;
     }
-    if (total > P.totalMB * 1048576) return json({ error: `Tus elementos pesan ${(total / 1048576).toFixed(1)} MB. Tu plan ${P.name} permite ${P.totalMB} MB por experiencia.` }, 400);
+    // a gallery can weigh more in all (its files are kept in R2), but each upload stays ≤ 60 MB (the Worker reads it in memory)
+    const maxMB = data.kind === "galeria" ? GALERIA.mb[P.id] || P.totalMB : P.totalMB;
+    if (total > maxMB * 1048576) return json({ error: `Tus ${data.kind === "galeria" ? "obras" : "elementos"} pesan ${(total / 1048576).toFixed(1)} MB. Tu plan ${P.name} permite ${maxMB} MB por ${data.kind === "galeria" ? "galería" : "experiencia"}.` }, 400);
+    if (uploads.reduce((a, u) => a + u[1].size, 0) > 60 * 1048576) return json({ error: "Son demasiados archivos nuevos a la vez (más de 60 MB). Publica una parte, luego agrega las demás y vuelve a guardar." }, 400);
     // an expired row with this slug that the cron has not deleted yet (anyone's): clear it first
     if (!mine || mine.slug !== slug) {
       const stale = await env.DB.prepare("SELECT slug, data FROM experiences WHERE slug = ?").bind(slug).first();
@@ -1402,48 +1422,67 @@ function cleanPuzzle(d) {
   const info = String(d.info || "").replace(/\r/g, "").trim().slice(0, 300); if (info) p.info = info;
   return { rompecabezas: p };
 }
-// Galería 3D (assets/galeria.js): an art space to walk through. sala = clasica | museo | espacio (amb = the classic
-// room's ambience: noche | blanca | museo). obras = 1 to 20, in order: a picture {id, img (an item "foto"), mount: pared |
-// caballete, w, h (its real size in cm, either or both), frame, mat (a white passe-partout)} or a 3D object {id, model (an
-// item "model", up to 6), mount: pedestal | piso, s (its largest side in cm), gira (turns slowly)}; both with t (title, up
-// to 60) and d (description, up to 300). name = on the back wall. Tours and shares are counted in clicks.
-const GALERIA = { max: 20, models: 6, frames: ["dorado", "madera", "negro", "blanco", "plata", "neon", "lienzo"], ambs: ["noche", "blanca", "museo"], salas: ["clasica", "museo", "espacio"] };
-function cleanGaleria(d, list) {
+// Galería 3D (assets/galeria.js): an art exhibition to walk through, only for paid plans (César, 25 de octubre de 2026).
+// name, autor (who presents it), publica (listed in /galerias/, "Galerías Vórtice VR") and salas = 1 to GALERIA.salas[plan]
+// rooms {tipo: clasica | museo | espacio, amb (the classic room's ambience), nombre, texto (the room's wall text, up to
+// 3000), obras}. obras = 1 to 20 per room, in order: a picture {id, img (an item "foto"), mount: pared | caballete, w, h
+// (its real size in cm, either or both), frame, mat} or a 3D object (up to 6 per room) {id, model (an item "model"), mount:
+// pedestal | piso, s (its largest side in cm), frame (the pedestal's color), gira}; both with t (title, up to 60) and d
+// (description, up to 300). Galleries from before ({sala, amb, obras}) come in as one room. Tours and shares are counted.
+const GALERIA = { obras: 20, models: 6, texto: 3000, frames: ["dorado", "madera", "negro", "blanco", "plata", "neon", "lienzo"], ambs: ["noche", "blanca", "museo"], tipos: ["clasica", "museo", "espacio"],
+  salas: { basico: 1, pro: 2, premium: 5, empresarial: 5, escuela: 5 },   // how many rooms each paid plan can have
+  mb: { basico: 60, pro: 150, premium: 400, empresarial: 400, escuela: 400 } };   // all its files (each upload is still ≤ 60 MB)
+const galleryPlan = P => GALERIA.salas[P.id] || 0;   // 0 = its plan has no galleries (Gratis)
+function cleanGaleria(d, list, P) {
   d = d || {};
   const idOk = v => /^[a-z0-9]{6,16}$/.test(String(v || ""));
   const files = new Map((Array.isArray(list) ? list : []).filter(i => i && idOk(i.id) && (i.type === "foto" || i.type === "model")).map(i => [i.id, i]));
   const cm = (v, a, b) => { v = Math.round(Number(v)); return Number.isFinite(v) && v >= a && v <= b ? v : 0; };
-  const src = Array.isArray(d.obras) ? d.obras : [];
-  if (!src.length) return { error: "Sube al menos una obra." };
-  if (src.length > GALERIA.max) return { error: `Tu galería puede tener hasta ${GALERIA.max} obras.` };
-  if (src.filter(x => x && x.model).length > GALERIA.models) return { error: `Tu galería puede tener hasta ${GALERIA.models} objetos 3D.` };
-  const obras = [], items = [], ids = new Set();
-  for (const [k, x] of src.entries()) {
-    if (!x || !idOk(x.id) || ids.has(x.id)) return { error: "Una de tus obras no es válida." };
-    ids.add(x.id);
-    let ob;
-    if (x.model) {
-      const m = files.get(x.model); if (!m || m.type !== "model") return { error: `Falta el objeto 3D de la obra ${k + 1}. Vuelve a subirlo.` };
-      if (!items.some(i => i.id === m.id)) items.push({ id: m.id, type: "model" });
-      ob = { id: x.id, model: m.id, mount: x.mount === "piso" ? "piso" : "pedestal" };
-      const s = cm(x.s, 5, 1000); if (s) ob.s = s;
-      if (x.gira) ob.gira = true;
-    } else {
-      const m = files.get(x.img); if (!m || m.type !== "foto") return { error: `Falta la imagen de la obra ${k + 1}. Vuelve a subirla.` };
-      const it = { id: m.id, type: "foto", w: Math.round(Number(m.w)) || 0, h: Math.round(Number(m.h)) || 0 };
-      if (!(it.w > 0 && it.w <= 4000 && it.h > 0 && it.h <= 4000)) return { error: "Faltan las medidas de una de tus imágenes." };
-      if (!items.some(i => i.id === it.id)) items.push(it);
-      ob = { id: x.id, img: it.id, frame: GALERIA.frames.includes(x.frame) ? x.frame : "dorado" };
-      if (x.mount === "pared" || x.mount === "caballete") ob.mount = x.mount;
-      const w = cm(x.w, 5, 2000), h = cm(x.h, 5, 2000); if (w) ob.w = w; if (h) ob.h = h;
-      if (x.mat && ob.frame !== "lienzo") ob.mat = true;
+  const line = (v, n) => String(v || "").replace(/\s+/g, " ").trim().slice(0, n);
+  const src = Array.isArray(d.salas) && d.salas.length ? d.salas : [{ tipo: d.sala, amb: d.amb, obras: d.obras }];
+  const maxSalas = Math.max(1, galleryPlan(P));
+  if (src.length > maxSalas) return { error: `Tu plan permite ${maxSalas} ${maxSalas === 1 ? "sala" : "salas"} por galería.` };
+  const salas = [], items = [], ids = new Set();
+  for (const [si, s] of src.entries()) {
+    const obs = Array.isArray(s && s.obras) ? s.obras : [], where = src.length > 1 ? ` de la sala ${si + 1}` : "";
+    if (obs.length > GALERIA.obras) return { error: `Cada sala puede tener hasta ${GALERIA.obras} obras.` };
+    if (obs.filter(x => x && x.model).length > GALERIA.models) return { error: `Cada sala puede tener hasta ${GALERIA.models} objetos 3D.` };
+    const obras = [];
+    for (const [k, x] of obs.entries()) {
+      if (!x || !idOk(x.id) || ids.has(x.id)) return { error: "Una de tus obras no es válida." };
+      ids.add(x.id);
+      let ob;
+      if (x.model) {
+        const m = files.get(x.model); if (!m || m.type !== "model") return { error: `Falta el objeto 3D de la obra ${k + 1}${where}. Vuelve a subirlo.` };
+        if (!items.some(i => i.id === m.id)) items.push({ id: m.id, type: "model" });
+        ob = { id: x.id, model: m.id, mount: x.mount === "piso" ? "piso" : "pedestal" };
+        const sz = cm(x.s, 5, 1000); if (sz) ob.s = sz;
+        if (GALERIA.frames.includes(x.frame)) ob.frame = x.frame;
+        if (x.gira) ob.gira = true;
+      } else {
+        const m = files.get(x.img); if (!m || m.type !== "foto") return { error: `Falta la imagen de la obra ${k + 1}${where}. Vuelve a subirla.` };
+        const it = { id: m.id, type: "foto", w: Math.round(Number(m.w)) || 0, h: Math.round(Number(m.h)) || 0 };
+        if (!(it.w > 0 && it.w <= 4000 && it.h > 0 && it.h <= 4000)) return { error: "Faltan las medidas de una de tus imágenes." };
+        if (!items.some(i => i.id === it.id)) items.push(it);
+        ob = { id: x.id, img: it.id, frame: GALERIA.frames.includes(x.frame) ? x.frame : "dorado" };
+        if (x.mount === "pared" || x.mount === "caballete") ob.mount = x.mount;
+        const w = cm(x.w, 5, 2000), h = cm(x.h, 5, 2000); if (w) ob.w = w; if (h) ob.h = h;
+        if (x.mat && ob.frame !== "lienzo") ob.mat = true;
+      }
+      const t = line(x.t, 60); if (t) ob.t = t;
+      const de = String(x.d || "").replace(/\r/g, "").trim().slice(0, 300); if (de) ob.d = de;
+      obras.push(ob);
     }
-    const t = String(x.t || "").replace(/\s+/g, " ").trim().slice(0, 60); if (t) ob.t = t;
-    const de = String(x.d || "").replace(/\r/g, "").trim().slice(0, 300); if (de) ob.d = de;
-    obras.push(ob);
+    const sala = { tipo: GALERIA.tipos.includes(s && s.tipo) ? s.tipo : "clasica", obras };
+    if (sala.tipo === "clasica") sala.amb = GALERIA.ambs.includes(s.amb) ? s.amb : "noche";
+    const nombre = line(s && s.nombre, 60); if (nombre) sala.nombre = nombre;
+    const texto = String(s && s.texto || "").replace(/\r/g, "").replace(/\n{3,}/g, "\n\n").trim().slice(0, GALERIA.texto); if (texto) sala.texto = texto;
+    salas.push(sala);
   }
-  const galeria = { obras, sala: GALERIA.salas.includes(d.sala) ? d.sala : "clasica", amb: GALERIA.ambs.includes(d.amb) ? d.amb : "noche" };
-  const nm = String(d.name || "").replace(/\s+/g, " ").trim().slice(0, 80); if (nm) galeria.name = nm;   // on its back wall (the experience title is apart)
+  if (!salas.some(s => s.obras.length)) return { error: "Sube al menos una obra." };
+  const galeria = { salas, publica: !!d.publica };
+  const nm = line(d.name, 80); if (nm) galeria.name = nm;   // on its back wall (the experience title is apart)
+  const autor = line(d.autor, 80); if (autor) galeria.autor = autor;
   return { galeria, items };
 }
 // the contact card ("Guardar contacto"), with the profile picture when it is a JPEG
@@ -1495,7 +1534,7 @@ function cleanMeta(m, P) {
     return mm.error ? mm : { kind: "memorama", title, memorama: mm.memorama, items: mm.items, buttons: {} };
   }
   if (m.kind === "galeria") {
-    const gl = cleanGaleria(m.galeria, m.items);
+    const gl = cleanGaleria(m.galeria, m.items, P);
     return gl.error ? gl : { kind: "galeria", title, galeria: gl.galeria, items: gl.items, buttons: {} };
   }
   if (m.kind === "sopa") {

@@ -235,6 +235,21 @@ a.xc.tap{transform:scale(.98);transition-duration:.1s;transition-delay:0s!import
 @keyframes mysTwinkle{0%,100%{opacity:.45}50%{opacity:1}}
 @media (prefers-reduced-motion:reduce){.xc.mys::after,.xc.mys .ic b,.xc.mys .go{animation:none}}
 .cnote{margin:18px 0 0;color:var(--mute);font-size:.9rem}
+
+/* "Galerías Vórtice VR": not one more card but its own corner (paid plans), golden and with framed pictures */
+.galx{position:relative;display:flex;align-items:center;gap:26px;margin-top:22px;padding:26px 28px;border-radius:22px;text-decoration:none;color:inherit;overflow:hidden;border:1px solid rgba(255,190,85,.55);background:radial-gradient(60% 140% at 0% 0%,rgba(255,220,160,.18),transparent 60%),linear-gradient(120deg,#1a0f2c,#0b0616 70%);box-shadow:0 24px 60px -30px rgba(255,190,85,.5)}
+.galx:hover{border-color:#ffd88a}
+.gx-fr{flex:none;display:flex;gap:10px;align-items:flex-end}
+.gx-fr i{display:block;border:5px solid;border-image:linear-gradient(135deg,#8a6420,#f2d47c 35%,#b8862f 60%,#f7dc8d) 1;box-shadow:0 10px 24px rgba(0,0,0,.6)}
+.gx-fr i:nth-child(1){width:54px;height:70px;background:linear-gradient(135deg,#3a1c5e,#8b3fd6 50%,#ffbe55)}
+.gx-fr i:nth-child(2){width:78px;height:100px;background:linear-gradient(160deg,#0f2a4f,#2f8fd6 60%,#d2b8ff)}
+.gx-fr i:nth-child(3){width:54px;height:54px;background:linear-gradient(160deg,#4f1020,#c8102e 60%,#ffbe55)}
+.gx-tx{display:flex;flex-direction:column;gap:6px;min-width:0}
+.gx-k{font:600 .72rem "Sora",system-ui,sans-serif;letter-spacing:.24em;text-transform:uppercase;color:#ffbe55}
+.galx b{font:700 clamp(1.3rem,3vw,1.8rem)/1.1 "Sora",system-ui,sans-serif;background:linear-gradient(100deg,#fff,#d2b8ff 55%,#ffbe55);-webkit-background-clip:text;background-clip:text;color:transparent}
+.gx-p{color:#b9addb;font-size:.95rem;line-height:1.5;max-width:62ch}
+.gx-go{font:600 .78rem "Sora",system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#ffbe55;margin-top:4px}
+@media (max-width:640px){.galx{flex-direction:column;align-items:flex-start;padding:22px}}
 </style>
 <script type="importmap">
 {"imports":{
@@ -269,10 +284,10 @@ a.xc.tap{transform:scale(.98);transition-duration:.1s;transition-delay:0s!import
       <a class="xc" data-x="memorama" href="memorama/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🃏</span><h3>Memorama</h3><p>Encuentra los pares contra el reloj, en el celular: con tus imágenes o tus palabras. Para repasar en clase, eventos y tu marca.</p><span class="go">Crear →</span></a>
       <a class="xc" data-x="sopa" href="sopa/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🔤</span><h3>Sopa de letras</h3><p>Encuentra las palabras deslizando el dedo, o adivínalas con pistas. Una sopa nueva cada vez que se juega.</p><span class="go">Crear →</span></a>
       <a class="xc" data-x="rompecabezas" href="rompecabezas/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🧩</span><h3>Rompecabezas</h3><p>Tu imagen en piezas de verdad para armar en el celular, con un dato para aprender al terminar.</p><span class="go">Crear →</span></a>
-      <a class="xc" data-x="galeria" href="galeria/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🖼️</span><h3>Galería en 3D</h3><p>Tus imágenes en caballetes dentro de una galería de arte en 3D: eliges el marco de cada obra y todos la recorren desde el celular o la computadora.</p><span class="go">Crear →</span></a>
       <a class="xc" data-x="menu" href="menu/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🍽️</span><h3>Menú interactivo</h3><p>Tu menú con link y QR: ayuda a elegir con preguntas y muestra tu platillo especial en 3D sobre la mesa.</p><span class="go">Crear →</span></a>
       <a class="xc" data-x="links" href="links/"><span class="tags"><span class="tag new" data-hasta="2026-11-30">Nuevo</span></span><span class="ic" aria-hidden="true">🔗</span><h3>Todos tus links</h3><p>Tus redes, tu WhatsApp y tus links en una sola página, como Linktree. Perfecta para tu tarjeta NFC: cambias tus links sin volver a grabarla.</p><span class="go">Crear →</span></a>
     </div>
+    <a class="galx" href="../galerias/"><span class="gx-fr" aria-hidden="true"><i></i><i></i><i></i></span><span class="gx-tx"><span class="gx-k">Galerías Vórtice VR · Pro y Premium</span><b>Monta tu exposición en 3D</b><span class="gx-p">Tus obras a tamaño real en un museo, una sala clásica o una galería en el espacio. Varias salas, el texto de la exposición y un link para compartirla.</span><span class="gx-go">Ver las galerías →</span></span></a>
     <p class="cnote">¿Tienes una idea de experiencia para tu negocio o tu escuela? <a href="../?tema=plataforma#contacto">Cuéntanos</a>.</p>
   </section>
 

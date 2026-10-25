@@ -3,19 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Crea tu galería en 3D · Vórtice VR</title>
-<meta name="description" content="Tus imágenes en caballetes dentro de una galería de arte en 3D, con el marco que elijas. Link y QR propios para recorrerla desde el celular o la computadora.">
+<title>Crea tu galería en 3D · Galerías Vórtice VR</title>
+<meta name="description" content="Monta tu exposición en una galería de arte en 3D: obras a tamaño real en muros, caballetes y pedestales, varias salas y el texto de la exposición. Link y QR propios.">
 <meta name="theme-color" content="#05020b">
 <link rel="icon" href="../../assets/icono.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-/* Galería 3D maker: the room (name and ambience), the pictures (each with its frame, mat, title and description) and the
-   link; the live room on the right (above on a phone). The room itself is assets/galeria.js (also at the link). */
+/* Galería 3D maker: the gallery (name, who presents it, public or personal), its rooms (type, name, wall text) and each
+   room's pieces (pictures at their real size on walls or easels, 3D on pedestals); the live room on the right (above on
+   a phone). The room itself is assets/galeria.js (also at the link). Galleries are for paid plans. */
 :root{--void:#05020b;--panel:rgba(20,9,40,.7);--line:rgba(190,150,255,.2);--line2:rgba(190,150,255,.45);--vortex:#8b3fd6;--vortex-d:#5a1f8f;--lav:#d2b8ff;--ink:#f2ecff;--mute:#a99bcb;--sun:#ffbe55;--ok:#74e8ba;--bad:#ff8a9e;
   --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55;min-height:100vh}
+body{margin:0;background:radial-gradient(80% 50% at 70% 0%,rgba(255,190,85,.12),transparent 70%),radial-gradient(60% 40% at 10% 10%,rgba(139,63,214,.2),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55;min-height:100vh}
 a{color:var(--lav)}
 :focus-visible{outline:2px solid var(--lav);outline-offset:3px}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1180px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 8px}
@@ -29,6 +30,7 @@ header .acts{display:flex;align-items:center;gap:14px}
 .hero{padding:28px 0 26px}
 .kick{font-family:var(--fd);font-size:.78rem;letter-spacing:.26em;text-transform:uppercase;color:var(--sun);font-weight:600}
 h1{font-family:var(--fd);font-size:clamp(2rem,5vw,3.2rem);line-height:1.02;margin:8px 0 10px;text-wrap:balance}
+h1 em{font-style:normal;background:linear-gradient(100deg,#fff,var(--lav) 45%,var(--sun));-webkit-background-clip:text;background-clip:text;color:transparent}
 .hero p{margin:0;color:var(--mute);max-width:62ch}
 .allx{display:inline-flex;align-items:center;gap:6px;margin:12px 16px 0 0;font:600 .85rem var(--fd);color:var(--lav);text-decoration:none}
 .step{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:20px;margin-bottom:16px}
@@ -37,6 +39,8 @@ h1{font-family:var(--fd);font-size:clamp(2rem,5vw,3.2rem);line-height:1.02;margi
 .step h2 .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--fm);font-size:.85rem;background:rgba(139,63,214,.3);border:1px solid var(--line2);flex:none}
 .step h2 .n.done{background:var(--ok);color:#0b2a1e;border-color:var(--ok)}
 .step>p.hint{margin:0 0 14px;color:var(--mute);font-size:.92rem}
+.paid{border-color:rgba(255,190,85,.55);background:linear-gradient(135deg,rgba(255,190,85,.14),rgba(20,9,40,.8))}
+.paid h2{color:var(--sun)}
 .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:10px}
 .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--vortex),var(--sun));transition:width .2s}
 .msg{font-size:.88rem;margin-top:8px}
@@ -55,6 +59,7 @@ input:focus,textarea:focus{border-color:var(--lav);outline:none}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--fd);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:.85rem;border:1px solid var(--line2);border-radius:999px;padding:13px 22px;color:var(--ink);background:rgba(20,9,40,.6);cursor:pointer;text-decoration:none}
 .btn.sm{padding:8px 13px;font-size:.72rem}
 .btn.primary{background:linear-gradient(135deg,var(--vortex),var(--vortex-d));border-color:var(--lav);box-shadow:0 0 26px rgba(139,63,214,.45)}
+.btn.gold{background:linear-gradient(135deg,#ffd88a,var(--sun));color:#1b0f00;border-color:var(--sun)}
 .btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
 .note{font-size:.85rem;color:var(--mute)}
@@ -62,33 +67,19 @@ input:focus,textarea:focus{border-color:var(--lav);outline:none}
 .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:28px;align-items:start}
 .side{position:sticky;top:16px}
 @media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.side{position:static;order:-1}}
-/* pictures */
-.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:110px;border-radius:14px;border:1.5px dashed var(--line2);background:rgba(139,63,214,.1);cursor:pointer;text-align:center;padding:16px;color:var(--mute);font-size:.88rem}
-.drop b{font:600 1rem var(--fd);color:var(--ink)}
-.drop.over{border-color:var(--sun);background:rgba(255,190,85,.1)}
-.obras{display:grid;gap:12px;margin-top:14px}
-.ob{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;padding:12px;border-radius:14px;background:rgba(5,2,11,.45);border:1px solid var(--line);transition:border-color .3s,box-shadow .3s}
-.ob.hl{border-color:var(--sun);box-shadow:0 0 0 3px rgba(255,190,85,.2)}
-@media (max-width:520px){.ob{grid-template-columns:64px minmax(0,1fr);gap:10px}}
-.ob .pic{width:100%;aspect-ratio:1;border-radius:10px;background:#000 center/contain no-repeat;border:0;cursor:pointer;position:relative;padding:0}
-.ob .pic span{position:absolute;left:4px;top:4px;font:700 .72rem var(--fm);background:rgba(5,2,11,.8);color:var(--sun);border-radius:6px;padding:1px 6px}
-.ob .tools{display:flex;gap:6px;margin-top:8px;justify-content:center;flex-wrap:wrap}
-.ob .tools button{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:none;color:var(--mute);cursor:pointer;font-size:.8rem}
-.ob .tools button:hover:not(:disabled){border-color:var(--lav);color:var(--ink)}
-.ob .tools button.del:hover{border-color:var(--bad);color:var(--bad)}
-.ob .tools button:disabled{opacity:.3;cursor:default}
-.ob input[type=text]{margin-bottom:8px}
-.frames{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.frames button{border:1px solid var(--line);background:rgba(255,255,255,.03);border-radius:10px;padding:6px 6px 4px;font:500 .7rem var(--fb);color:var(--mute);cursor:pointer;width:62px}
-.frames button[aria-pressed="true"]{border-color:var(--sun);color:var(--ink);background:rgba(255,190,85,.1)}
-.sw{width:40px;height:30px;margin:0 auto 4px;padding:4px;background:var(--fr);border-radius:2px;box-shadow:0 2px 6px rgba(0,0,0,.5)}
-.sw i{display:block;height:100%;background:linear-gradient(135deg,#5d3b94 0%,#c76a8f 55%,#ffbe55 100%)}
 .tog{display:inline-flex;align-items:center;gap:8px;margin-top:10px;font-size:.88rem;cursor:pointer}
 .tog input{width:17px;height:17px;accent-color:var(--vortex)}
 .tog.off{opacity:.4;pointer-events:none}
-.cnt{font-size:.82rem;color:var(--mute);margin-top:10px}
-.cnt.bad{color:var(--bad)}
+.pub{display:flex;gap:12px;align-items:flex-start;margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,190,85,.35);background:rgba(255,190,85,.06);cursor:pointer}
+.pub input{width:19px;height:19px;accent-color:var(--sun);margin-top:3px;flex:none}
+.pub b{font:600 .95rem var(--fd);display:block}
+.pub span{font-size:.85rem;color:var(--mute)}
 /* rooms */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tabs button{font:600 .85rem var(--fd);border:1px solid var(--line2);background:rgba(5,2,11,.6);color:var(--ink);border-radius:12px;padding:9px 14px;cursor:pointer}
+.tabs button[aria-pressed="true"]{border-color:var(--sun);background:rgba(255,190,85,.12);color:var(--sun)}
+.tabs button.add{border-style:dashed;color:var(--lav)}
+.tabs button small{font:500 .72rem var(--fm);color:var(--mute);margin-left:6px}
 .salas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 @media (max-width:560px){.salas{grid-template-columns:1fr}}
 .salas button{border:2px solid var(--line);border-radius:14px;background:rgba(5,2,11,.5);color:var(--ink);cursor:pointer;padding:0 0 10px;text-align:left;overflow:hidden;font:inherit}
@@ -102,16 +93,43 @@ input:focus,textarea:focus{border-color:var(--lav);outline:none}
 .art.museo::after{content:"";position:absolute;left:12%;top:18%;width:44%;height:44%;background:linear-gradient(135deg,#2c3e8f,#e4007c);box-shadow:64px 10px 0 -14px #ffbe55}
 .art.espacio{background:radial-gradient(circle at 78% 30%,#d9a65c 0 14%,transparent 15%),radial-gradient(1px 1px at 20% 30%,#fff,transparent),radial-gradient(1px 1px at 60% 15%,#fff,transparent),radial-gradient(1px 1px at 40% 50%,#fff,transparent),linear-gradient(180deg,#120826 0 72%,#2a1650 72%)}
 .art.espacio::after{content:"";position:absolute;left:10%;top:26%;width:30%;height:40%;background:#1b1430;border-bottom:3px solid #b37bff;border-top:3px solid #b37bff}
+.cntx{font:500 .78rem var(--fm);color:var(--mute);text-align:right;margin-top:4px}
+/* pieces */
 .ups{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:520px){.ups{grid-template-columns:1fr}}
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:100px;border-radius:14px;border:1.5px dashed var(--line2);background:rgba(139,63,214,.1);cursor:pointer;text-align:center;padding:16px;color:var(--mute);font-size:.88rem}
+.drop b{font:600 1rem var(--fd);color:var(--ink)}
+.drop.over{border-color:var(--sun);background:rgba(255,190,85,.1)}
+.obras{display:grid;gap:12px;margin-top:14px}
+.ob{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;padding:12px;border-radius:14px;background:rgba(5,2,11,.45);border:1px solid var(--line);transition:border-color .3s,box-shadow .3s}
+.ob.hl{border-color:var(--sun);box-shadow:0 0 0 3px rgba(255,190,85,.2)}
 .ob.miss{border-color:var(--bad)}
+@media (max-width:520px){.ob{grid-template-columns:64px minmax(0,1fr);gap:10px}}
+.ob .pic{width:100%;aspect-ratio:1;border-radius:10px;background:#000 center/contain no-repeat;border:0;cursor:pointer;position:relative;padding:0}
+.ob .pic span{position:absolute;left:4px;top:4px;font:700 .72rem var(--fm);background:rgba(5,2,11,.8);color:var(--sun);border-radius:6px;padding:1px 6px}
 .ob .pic.m3d{background:linear-gradient(150deg,#2a1650,#5a1f8f);display:grid;place-items:center;font:800 1.4rem var(--fd);color:#fff}
+.ob .tools{display:flex;gap:6px;margin-top:8px;justify-content:center;flex-wrap:wrap}
+.ob .tools button{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:none;color:var(--mute);cursor:pointer;font-size:.8rem}
+.ob .tools button:hover:not(:disabled){border-color:var(--lav);color:var(--ink)}
+.ob .tools button.del:hover{border-color:var(--bad);color:var(--bad)}
+.ob .tools button:disabled{opacity:.3;cursor:default}
+.ob input[type=text]{margin-bottom:8px}
 .ob .row2{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px}
 .ob .seg button{padding:6px 11px;font-size:.8rem}
 .ob .cmx{display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--mute)}
-.ob .cmx input{width:84px;padding:7px 9px;font:500 .9rem var(--fm)}
+.ob .cmx input{width:84px;padding:7px 9px;font:500 .9rem var(--fm);margin:0}
 .ob .real{font:500 .8rem var(--fm);color:var(--sun)}
 .ob .miss-t{font-size:.8rem;color:var(--bad);margin-top:6px}
+.ob .sub{font-size:.75rem;color:var(--mute);margin-top:10px;font-family:var(--fd);letter-spacing:.1em;text-transform:uppercase}
+.frames{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.frames button{border:1px solid var(--line);background:rgba(255,255,255,.03);border-radius:10px;padding:6px 6px 4px;font:500 .7rem var(--fb);color:var(--mute);cursor:pointer;width:62px}
+.frames button[aria-pressed="true"]{border-color:var(--sun);color:var(--ink);background:rgba(255,190,85,.1)}
+.sw{width:40px;height:30px;margin:0 auto 4px;padding:4px;background:var(--fr);border-radius:2px;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.sw i{display:block;height:100%;background:linear-gradient(135deg,#5d3b94 0%,#c76a8f 55%,#ffbe55 100%)}
+.sw.ped{width:24px;height:30px;padding:0;border-radius:2px}
+.sw.ped i{display:none}
+.cnt{font-size:.82rem;color:var(--mute);margin-top:10px}
+.cnt.bad{color:var(--bad)}
 .allf{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;font-size:.85rem;color:var(--mute)}
 /* stats */
 .stats{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px}
@@ -134,16 +152,22 @@ input:focus,textarea:focus{border-color:var(--lav);outline:none}
 </script>
 </head>
 <body>
-<header><a href="../../" aria-label="Vórtice VR, inicio"><img src="../../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a class="mybtn" href="../../cuenta/">Mi cuenta</a><a class="back" href="../../">← Sitio</a></div></header>
+<header><a href="../../" aria-label="Vórtice VR, inicio"><img src="../../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a class="mybtn" href="../../cuenta/">Mi cuenta</a><a class="back" href="../../galerias/">← Galerías</a></div></header>
 <main class="wrap">
   <div class="hero">
-    <span class="kick" id="kick">Gratis · prueba de 15 días</span>
-    <h1>Crea tu galería en 3D</h1>
-    <p>Tus imágenes en caballetes dentro de una galería de arte que se recorre caminando, desde el celular o la computadora. Eliges el marco de cada obra, le pones título y descripción, y compartes tu galería con un link y un QR. Para artistas, escuelas, exposiciones, portafolios y tu marca.</p>
-    <a class="allx" href="../">← Todas las experiencias</a>
+    <span class="kick" id="kick">Galerías Vórtice VR · Pro y Premium</span>
+    <h1>Monta tu <em>exposición en 3D</em></h1>
+    <p>Una galería que se recorre caminando, desde el celular o la computadora: tus obras a tamaño real en muros, caballetes y pedestales, el texto de la exposición al entrar y tantas salas como tu plan permita. Tú decides si es parte de Galerías Vórtice VR o es personal.</p>
+    <a class="allx" href="../../galerias/">← Ver las galerías</a>
   </div>
   <div class="grid">
     <div>
+      <section class="step paid" id="paid" hidden>
+        <h2>✦ Las galerías son de los planes Pro y Premium</h2>
+        <p class="hint" style="margin:0">Puedes armar tu galería y recorrerla aquí. Para publicarla y compartirla con su link y su QR, mejora tu plan: Pro incluye 2 salas por galería y Premium 5.</p>
+        <div class="row"><a class="btn gold" href="../../cuenta/#planes">Ver planes</a></div>
+      </section>
+
       <section class="step" id="full" hidden>
         <h2>Ya usaste todas tus experiencias</h2>
         <p class="hint" id="fullText"></p>
@@ -156,19 +180,32 @@ input:focus,textarea:focus{border-color:var(--lav);outline:none}
       </section>
 
       <section class="step" id="s1">
-        <h2><span class="n" id="n1">1</span>Tu galería</h2>
-        <label class="f" for="dname" style="margin-top:0">Nombre de la galería</label>
-        <input type="text" id="dname" maxlength="80" placeholder="Ej. Exposición de fin de curso · Arte 6° A">
-        <div class="note">Va en grande en la pared del fondo.</div>
-        <label class="f">La sala</label>
-        <div class="salas" id="salaSeg"></div>
-        <div id="ambBox"><label class="f">Ambiente</label><div class="seg" id="ambSeg"></div></div>
+        <h2><span class="n" id="n1">1</span>Tu exposición</h2>
+        <label class="f" for="dname" style="margin-top:0">Nombre de la exposición</label>
+        <input type="text" id="dname" maxlength="80" placeholder="Ej. Raíces · Pintura de Tabasco">
+        <label class="f" for="autor">Presenta</label>
+        <input type="text" id="autor" maxlength="80" placeholder="Artista, colectivo, curador o institución">
+        <label class="pub"><input type="checkbox" id="publica" checked><div><b>Mostrarla en Galerías Vórtice VR</b><span>Aparecerá en vorticevr.mx/galerias para que cualquiera la descubra. Si la quitas, es personal: solo la ve quien tenga el link o el QR.</span></div></label>
       </section>
 
       <section class="step" id="s2">
-        <h2><span class="n" id="n2">2</span>Tus obras</h2>
-        <p class="hint">Hasta 20 obras, en el orden en que se recorren: imágenes en la pared o en caballete, y hasta 6 objetos 3D sobre pedestal o en el piso. Escribe su medida real (el ancho, el alto o los dos) y la imagen se pone de ese tamaño sin deformarse.</p>
-        <div class="ups" id="ups">
+        <h2><span class="n" id="n2">2</span>Las salas</h2>
+        <p class="hint">Cada sala es un espacio con hasta 20 obras; se pasa de una a otra por un portal. Cada sala se hace del tamaño que necesitan sus obras.</p>
+        <div class="tabs" id="tabs"></div>
+        <label class="f" style="margin-top:0">Tipo de sala</label>
+        <div class="salas" id="salaSeg"></div>
+        <div id="ambBox"><label class="f">Ambiente</label><div class="seg" id="ambSeg"></div></div>
+        <div id="nameBox"><label class="f" for="snombre">Nombre de la sala</label><input type="text" id="snombre" maxlength="60" placeholder="Ej. Sala 2 · Los retratos"></div>
+        <label class="f" for="texto" id="textoLbl">Texto de la exposición</label>
+        <textarea id="texto" rows="6" maxlength="3000" placeholder="Como en un museo: de qué trata la exposición, el artista, la técnica, el contexto… Va en un muro a la derecha de la entrada y quien lo toque lo lee completo."></textarea>
+        <div class="cntx" id="textoN"></div>
+        <div class="row" id="delSalaRow"><button class="btn sm" type="button" id="delSala">Quitar esta sala</button></div>
+      </section>
+
+      <section class="step" id="s3">
+        <h2><span class="n" id="n3">3</span><span id="obrasTitle">Las obras</span></h2>
+        <p class="hint">En el orden en que se recorren, empezando a la derecha de la entrada. Imágenes en la pared o en caballete (escribe su medida real: ancho, alto o los dos; se pone de ese tamaño sin deformarse) y hasta 6 objetos 3D sobre pedestal o en el piso.</p>
+        <div class="ups">
           <label class="drop" id="drop"><input type="file" id="upFile" accept="image/png,image/webp,image/jpeg" multiple hidden><b>Subir imágenes</b>JPG, PNG o WebP · varias a la vez o suéltalas aquí</label>
           <label class="drop" id="drop3d"><input type="file" id="upModel" accept=".glb,model/gltf-binary" hidden><b>Subir objeto 3D</b>Archivo GLB (Blender, Polycam…) · se comprime solo</label>
         </div>
@@ -178,28 +215,28 @@ input:focus,textarea:focus{border-color:var(--lav);outline:none}
         <div class="cnt" id="cnt"></div>
       </section>
 
-      <section class="step" id="s3">
-        <h2><span class="n" id="n3">3</span>Título y link</h2>
+      <section class="step" id="s4">
+        <h2><span class="n" id="n4">4</span>Título y link</h2>
         <label class="f" for="title" style="margin-top:0">Título de la experiencia</label>
-        <input type="text" id="title" maxlength="80" placeholder="Ej. Galería de arte 6° A">
+        <input type="text" id="title" maxlength="80" placeholder="Ej. Galería Raíces">
         <div class="note">Es solo para ti: así la ves en Mi cuenta.</div>
         <label class="f" for="slug">Tu link</label>
         <div class="slugrow"><input type="text" id="slug" maxlength="30" placeholder="tu-galeria" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="root">.vorticevr.mx</span></div>
         <div class="msg" id="mSlug"></div>
       </section>
       <section class="step" id="sMarca" hidden></section>
-      <section class="step" id="s4">
-        <h2><span class="n" id="n4">4</span>Publicar</h2>
+      <section class="step" id="s5">
+        <h2><span class="n" id="n5">5</span>Publicar</h2>
         <div id="mine" hidden style="margin:0 0 12px"></div>
         <p class="hint" id="pubHint">Completa los pasos anteriores.</p>
         <button class="btn primary" id="publish" type="button" disabled>Publicar mi galería</button>
         <div class="bar" id="bPub" hidden><i></i></div><div class="msg" id="mPub"></div>
-        <p class="legal">Al publicar confirmas que tienes derecho a usar las imágenes que subas. Vórtice VR puede retirar contenido inapropiado (<a href="../../terminos/">términos</a>). <span id="legalDays">La experiencia se borra a los 15 días; puedes editarla o borrarla desde tu cuenta.</span></p>
+        <p class="legal">Al publicar confirmas que tienes derecho a mostrar las obras que subas. Vórtice VR puede retirar contenido inapropiado de su sitio y de Galerías Vórtice VR (<a href="../../terminos/">términos</a>).</p>
       </section>
     </div>
     <aside class="side">
       <div class="pv">
-        <h3>Vista previa <small>entra y recórrela</small></h3>
+        <h3>Vista previa <small id="pvSala">entra y recórrela</small></h3>
         <div class="phone"><div class="screen" id="screen"></div></div>
         <p class="note" style="margin:10px 0 0">Así se ve en el celular de quien abre tu link. Toca una obra para editarla.</p>
       </div>
@@ -211,7 +248,7 @@ input:focus,textarea:focus{border-color:var(--lav);outline:none}
 <script src="../../assets/marca.js"></script>
 <script src="../../assets/plataforma.js" data-api="../.."></script>
 <script type="module">
-import { run, FRAMES, AMBIENTES, SALAS, MAX, MAX_3D, mountOf, realSize } from "../../assets/galeria.js";
+import { run, FRAMES, AMBIENTES, SALAS, MAX, MAX_3D, mountOf, realSize, salasOf } from "../../assets/galeria.js";
 const $=id=>document.getElementById(id);
 const API=VVR.api;
 const ROOT=location.hostname.endsWith("vorticevr.mx")?"vorticevr.mx":null;
@@ -219,8 +256,13 @@ $("root").textContent=ROOT?"."+ROOT:"  (link de prueba)";
 const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const rid=()=>Array.from(crypto.getRandomValues(new Uint8Array(10)),b=>"abcdefghijklmnopqrstuvwxyz0123456789"[b%36]).join("");
 const MODEL_IN_MB=150;   // a GLB this big can still be opened; it is compressed here and must end ≤ plan.modelMB
-// S.d is what gets published; S.files = files picked here (id → {blob,url,w,h} or {blob,url,model}); S.old = the published ones
-const S={token:null,email:null,mine:null,plan:{modelMB:15},files:new Map(),old:new Map(),lastFrame:"dorado",missing:[],d:{sala:"clasica",amb:"noche",obras:[]}};
+const SALAS_PLAN={basico:1,pro:2,premium:5,empresarial:5,escuela:5};   // rooms per gallery (GALERIA.salas in worker.js)
+// S.d is what gets published; S.cur = the room being edited; S.files = files picked here (id → {blob,url,w,h} or
+// {blob,url,model}); S.old = the published ones; S.missing = room → pieces that don't fit
+const S={token:null,email:null,mine:null,plan:{id:"gratis",modelMB:15},salasMax:2,files:new Map(),old:new Map(),lastFrame:"dorado",cur:0,missing:{},
+  d:{salas:[{tipo:"museo",amb:"noche",nombre:"",texto:"",obras:[]}]}};
+const room=()=>S.d.salas[S.cur];
+const miss=()=>S.missing[S.cur]||[];
 const fileUrl=id=>{ if(!id) return ""; const f=S.files.get(id); if(f) return f.url; const o=S.old.get(id); return o&&S.mine?`${API}/m/${S.mine.slug}/${o.file}?v=${S.mine.updated||""}`:""; };
 const dimsOf=id=>{ const f=S.files.get(id)||S.old.get(id); return f&&f.w&&f.h?{w:f.w,h:f.h}:null; };
 const loadImg=src=>new Promise((ok,bad)=>{ const i=new Image(); i.crossOrigin="anonymous"; i.onload=()=>ok(i); i.onerror=bad; i.src=src; });
@@ -229,63 +271,87 @@ async function shrink(file,max){
   const url=URL.createObjectURL(file); const im=await loadImg(url); URL.revokeObjectURL(url);
   const k=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)), c=document.createElement("canvas"); c.width=Math.round(im.naturalWidth*k); c.height=Math.round(im.naturalHeight*k);
   c.getContext("2d").drawImage(im,0,0,c.width,c.height);
-  let b=await new Promise(r=>c.toBlob(r,"image/webp",.88)); if(!b||b.type!=="image/webp") b=await new Promise(r=>c.toBlob(r,"image/jpeg",.88));
+  let b=await new Promise(r=>c.toBlob(r,"image/webp",.86)); if(!b||b.type!=="image/webp") b=await new Promise(r=>c.toBlob(r,"image/jpeg",.86));
   return {blob:b,w:c.width,h:c.height};
 }
 const nameFrom=f=>f.name.replace(/\.[^.]+$/,"").replace(/[_-]+/g," ").replace(/\s+/g," ").trim().slice(0,60);
 const msgUp=(cls,t)=>{ const m=$("mUp"); m.className="msg "+(cls||""); m.textContent=t||""; };
 
-// ---------- 1. the room ----------
-function drawSala(){
-  $("salaSeg").innerHTML=Object.entries(SALAS).map(([k,s])=>`<button type="button" data-v="${k}" aria-pressed="${S.d.sala===k}"><span class="art ${k}"></span><b>${s.t}</b><small>${s.d}</small></button>`).join("");
-  $("ambBox").hidden=S.d.sala!=="clasica";
-  $("ambSeg").innerHTML=Object.entries(AMBIENTES).map(([k,A])=>`<button type="button" data-v="${k}" aria-pressed="${S.d.amb===k}"><i style="background:#${A.wall.toString(16).padStart(6,"0")}"></i>${A.t}</button>`).join("");
-}
-$("salaSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.d.sala=b.dataset.v; drawSala(); drawObras(); changed(); });
-$("ambSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.d.amb=b.dataset.v; drawSala(); changed(); });
-$("dname").addEventListener("input",changed);
+// ---------- 1. the exhibition ----------
+for(const id of ["dname","autor"]) $(id).addEventListener("input",changed);
+$("publica").addEventListener("change",changed);
 
-// ---------- 2. pieces ----------
+// ---------- 2. rooms ----------
+function drawTabs(){
+  const n=S.d.salas.length;
+  $("tabs").innerHTML=S.d.salas.map((s,i)=>`<button type="button" data-t="${i}" aria-pressed="${i===S.cur}">Sala ${i+1}${s.nombre?" · "+esc(s.nombre.slice(0,18)):""}<small>${(s.obras||[]).length}</small></button>`).join("")
+    +(n<Math.max(S.salasMax,1)?`<button type="button" class="add" data-add>+ Agregar sala</button>`:"");
+}
+function drawSala(){
+  const s=room();
+  $("salaSeg").innerHTML=Object.entries(SALAS).map(([k,x])=>`<button type="button" data-v="${k}" aria-pressed="${s.tipo===k}"><span class="art ${k}"></span><b>${x.t}</b><small>${x.d}</small></button>`).join("");
+  $("ambBox").hidden=s.tipo!=="clasica";
+  $("ambSeg").innerHTML=Object.entries(AMBIENTES).map(([k,A])=>`<button type="button" data-v="${k}" aria-pressed="${(s.amb||"noche")===k}"><i style="background:#${A.wall.toString(16).padStart(6,"0")}"></i>${A.t}</button>`).join("");
+  $("nameBox").hidden=S.cur===0; $("snombre").value=s.nombre||"";
+  $("textoLbl").textContent=S.cur===0?"Texto de la exposición":"Texto de esta sala (opcional)";
+  $("texto").value=s.texto||""; $("textoN").textContent=`${(s.texto||"").length} / 3000`;
+  $("delSalaRow").hidden=S.cur===0;
+  $("obrasTitle").textContent=S.d.salas.length>1?`Las obras de la sala ${S.cur+1}`:"Las obras";
+  $("pvSala").textContent=S.d.salas.length>1?`sala ${S.cur+1} de ${S.d.salas.length}`:"entra y recórrela";
+}
+function pickSala(i){ S.cur=i; drawTabs(); drawSala(); drawObras(); if(app) app.setSala(i); }
+$("tabs").addEventListener("click",e=>{
+  if(e.target.closest("[data-add]")){ const last=S.d.salas[S.d.salas.length-1]; S.d.salas.push({tipo:last.tipo,amb:last.amb||"noche",nombre:"",texto:"",obras:[]}); changed(); pickSala(S.d.salas.length-1); return; }
+  const b=e.target.closest("[data-t]"); if(b) pickSala(+b.dataset.t);
+});
+$("salaSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; room().tipo=b.dataset.v; drawSala(); drawObras(); changed(); });
+$("ambSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; room().amb=b.dataset.v; drawSala(); changed(); });
+$("snombre").addEventListener("input",()=>{ room().nombre=$("snombre").value; drawTabs(); changed(); });
+$("texto").addEventListener("input",()=>{ room().texto=$("texto").value; $("textoN").textContent=`${room().texto.length} / 3000`; changed(); });
+$("delSala").addEventListener("click",()=>{ if(S.cur===0) return; const s=room(); if((s.obras||[]).length&&!confirm(`¿Quitar la sala ${S.cur+1} con sus ${s.obras.length} obras?`)) return;
+  S.d.salas.splice(S.cur,1); S.missing={}; changed(); preview(); pickSala(Math.max(0,S.cur-1)); });
+
+// ---------- 3. pieces ----------
 const swatch=(k,F)=>`<div class="sw" style="--fr:${F.css};${F.lienzo?"padding:0;":""}${F.glow?"box-shadow:0 0 12px #a45bff;":""}"><i></i></div>${F.t}`;
+const pedSwatch=(k,F)=>`<div class="sw ped" style="--fr:${F.css};${F.glow?"box-shadow:0 0 12px #a45bff;":""}"><i></i></div>${F.t}`;
 $("allFrames").innerHTML=Object.entries(FRAMES).map(([k,F])=>`<button type="button" data-all="${k}" title="${F.t}">${swatch(k,F)}</button>`).join("");
-$("allFrames").addEventListener("click",e=>{ const b=e.target.closest("[data-all]"); if(!b) return; S.lastFrame=b.dataset.all; for(const o of S.d.obras) if(!o.model) o.frame=S.lastFrame; drawObras(); changed(); });
+$("allFrames").addEventListener("click",e=>{ const b=e.target.closest("[data-all]"); if(!b) return; S.lastFrame=b.dataset.all; for(const o of room().obras) if(!o.model) o.frame=S.lastFrame; drawObras(); changed(); });
 const seg2=(key,val,opts)=>`<div class="seg">${opts.map(([v,t])=>`<button type="button" data-${key}="${v}" aria-pressed="${val===v}">${t}</button>`).join("")}</div>`;
 // the measure it will have, as the artist wrote it (the picture keeps its proportion inside it)
-function realText(o){ const d=dimsOf(o.img); if(!d) return ""; const r=realSize(o,d.w/d.h); return r?`Medida real: ${Math.round(r.w)} × ${Math.round(r.h)} cm`:mountOf(o,S.d.sala)==="pared"?"Sin medida: 1 m por su lado más largo":"Sin medida: del tamaño del caballete"; }
-// a piece that does not fit: what can be done in this room
-const missText=()=>`No cabe en esta sala: hazla más chica${S.d.sala==="museo"?" o ponla en caballete":", ponla en caballete o elige el Gran museo"}.`;
+function realText(o){ const d=dimsOf(o.img); if(!d) return ""; const r=realSize(o,d.w/d.h); return r?`Medida real: ${Math.round(r.w)} × ${Math.round(r.h)} cm`:mountOf(o,room().tipo)==="pared"?"Sin medida: 1 m por su lado más largo":"Sin medida: del tamaño del caballete"; }
+const missText=()=>`No cabe en esta sala: hazla más chica${room().tipo==="museo"?" o ponla en caballete":", ponla en caballete o elige el Gran museo"}.`;
 function obHtml(o,i,n){
   const tools=`<div class="tools"><button type="button" data-up title="Antes" aria-label="Mover antes" ${i?"":"disabled"}>↑</button><button type="button" data-down title="Después" aria-label="Mover después" ${i<n-1?"":"disabled"}>↓</button><button class="del" type="button" data-del title="Quitar" aria-label="Quitar la obra ${i+1}">✕</button></div>`;
   const text=`<input type="text" data-k="t" maxlength="60" value="${esc(o.t)}" placeholder="Título de la obra" aria-label="Título de la obra ${i+1}">
-      <textarea data-k="d" maxlength="300" rows="2" placeholder="Descripción (opcional): autor, técnica, año, una historia…" aria-label="Descripción de la obra ${i+1}">${esc(o.d)}</textarea>`;
-  const miss=S.missing.includes(i)?`<div class="miss-t">${missText()}</div>`:"";
-  if(o.model) return `<div class="ob${miss?" miss":""}" data-id="${o.id}">
+      <textarea data-k="d" maxlength="300" rows="2" placeholder="Ficha (opcional): autor, técnica, año, medidas, una historia…" aria-label="Descripción de la obra ${i+1}">${esc(o.d)}</textarea>`;
+  const m=miss().includes(i)?`<div class="miss-t">${missText()}</div>`:"";
+  if(o.model) return `<div class="ob${m?" miss":""}" data-id="${o.id}">
     <div><button class="pic m3d" type="button" data-see title="Verlo en la galería"><span>${i+1}</span>3D</button>${tools}</div>
     <div>${text}
-      <div class="row2">${seg2("mount",mountOf(o,S.d.sala),[["pedestal","Sobre pedestal"],["piso","En el piso"]])}
+      <div class="row2">${seg2("mount",mountOf(o,room().tipo),[["pedestal","Sobre pedestal"],["piso","En el piso"]])}
         <label class="cmx">Lado más largo <input type="text" inputmode="numeric" data-n="s" value="${o.s||""}" placeholder="80"> cm</label></div>
-      <label class="tog"><input type="checkbox" data-gira ${o.gira?"checked":""}> Que gire despacio</label>${miss}</div></div>`;
-  const m=mountOf(o,S.d.sala);
-  return `<div class="ob${miss?" miss":""}" data-id="${o.id}">
+      ${o.mount!=="piso"?`<div class="sub">Color del pedestal</div><div class="frames">${Object.entries(FRAMES).filter(([k])=>k!=="lienzo").map(([k,F])=>`<button type="button" data-pframe="${k}" aria-pressed="${(o.frame||"blanco")===k}">${pedSwatch(k,F)}</button>`).join("")}</div>`:""}
+      <label class="tog"><input type="checkbox" data-gira ${o.gira?"checked":""}> Que gire despacio</label>${m}</div></div>`;
+  return `<div class="ob${m?" miss":""}" data-id="${o.id}">
     <div><button class="pic" type="button" data-see style="background-image:url('${esc(fileUrl(o.img))}')" title="Verla en la galería"><span>${i+1}</span></button>${tools}</div>
     <div>${text}
-      <div class="row2">${seg2("mount",m,[["pared","En la pared"],["caballete","En caballete"]])}</div>
+      <div class="row2">${seg2("mount",mountOf(o,room().tipo),[["pared","En la pared"],["caballete","En caballete"]])}</div>
       <div class="row2"><label class="cmx">Ancho <input type="text" inputmode="numeric" data-n="w" value="${o.w||""}" placeholder="cm"></label><label class="cmx">Alto <input type="text" inputmode="numeric" data-n="h" value="${o.h||""}" placeholder="cm"> cm</label><span class="real" data-real>${realText(o)}</span></div>
-      <div class="frames">${Object.entries(FRAMES).map(([k,F])=>`<button type="button" data-frame="${k}" aria-pressed="${o.frame===k}">${swatch(k,F)}</button>`).join("")}</div>
-      <label class="tog${o.frame==="lienzo"?" off":""}"><input type="checkbox" data-mat ${o.mat?"checked":""}> Paspartú (borde blanco)</label>${miss}</div></div>`;
+      <div class="sub">Marco</div><div class="frames">${Object.entries(FRAMES).map(([k,F])=>`<button type="button" data-frame="${k}" aria-pressed="${o.frame===k}">${swatch(k,F)}</button>`).join("")}</div>
+      <label class="tog${o.frame==="lienzo"?" off":""}"><input type="checkbox" data-mat ${o.mat?"checked":""}> Paspartú (borde blanco)</label>${m}</div></div>`;
 }
 function drawObras(){
-  const n=S.d.obras.length, n3=S.d.obras.filter(o=>o.model).length;
-  $("obras").innerHTML=S.d.obras.map((o,i)=>obHtml(o,i,n)).join("");
+  const list=room().obras, n=list.length, n3=list.filter(o=>o.model).length;
+  $("obras").innerHTML=list.map((o,i)=>obHtml(o,i,n)).join("");
   $("drop").hidden=n>=MAX; $("drop3d").hidden=n>=MAX||n3>=MAX_3D; $("allf").hidden=n-n3<2;
-  drawCount();
+  drawCount(); drawTabs();
 }
 function drawCount(){
-  const n=S.d.obras.length, c=$("cnt");
-  c.className="cnt"+(S.missing.length?" bad":"");
-  c.textContent=!n?"":S.missing.length?`${S.missing.length===1?"Una obra no cabe":S.missing.length+" obras no caben"} en esta sala (${S.missing.length===1?"marcada":"marcadas"} en rojo). ${n} de ${MAX} obras.`:`${n} de ${MAX} obras.`;
+  const n=room().obras.length, c=$("cnt"), m=miss();
+  c.className="cnt"+(m.length?" bad":"");
+  c.textContent=!n?"":m.length?`${m.length===1?"Una obra no cabe":m.length+" obras no caben"} en esta sala (${m.length===1?"marcada":"marcadas"} en rojo). ${n} de ${MAX} obras.`:`${n} de ${MAX} obras en esta sala.`;
 }
-const obOf=el=>S.d.obras.find(o=>o.id===el.closest(".ob").dataset.id);
+const obOf=el=>room().obras.find(o=>o.id===el.closest(".ob").dataset.id);
 $("obras").addEventListener("input",e=>{
   const k=e.target.dataset.k, nk=e.target.dataset.n; if(!k&&!nk) return; const o=obOf(e.target);
   if(k) o[k]=e.target.value;
@@ -296,27 +362,28 @@ $("obras").addEventListener("change",e=>{ const o=e.target.closest(".ob")&&obOf(
   if(e.target.matches("[data-mat]")){ o.mat=e.target.checked; changed(); }
   if(e.target.matches("[data-gira]")){ o.gira=e.target.checked; changed(); } });
 $("obras").addEventListener("click",e=>{
-  if(!e.target.closest(".ob")) return; const o=obOf(e.target), i=S.d.obras.indexOf(o);
+  if(!e.target.closest(".ob")) return; const list=room().obras, o=obOf(e.target), i=list.indexOf(o);
   const fr=e.target.closest("[data-frame]"); if(fr){ o.frame=S.lastFrame=fr.dataset.frame; drawObras(); changed(); return; }
+  const pf=e.target.closest("[data-pframe]"); if(pf){ o.frame=pf.dataset.pframe; drawObras(); changed(); return; }
   const mt=e.target.closest("[data-mount]"); if(mt){ o.mount=mt.dataset.mount; drawObras(); changed(); return; }
-  if(e.target.closest("[data-see]")){ if(app) app.focus(i); return; }
-  if(e.target.closest("[data-del]")){ S.d.obras.splice(i,1); S.missing=[]; drawObras(); changed(); return; }
+  if(e.target.closest("[data-see]")){ if(app) app.focus(S.cur,i); return; }
+  if(e.target.closest("[data-del]")){ list.splice(i,1); S.missing[S.cur]=[]; drawObras(); changed(); return; }
   const mv=e.target.closest("[data-up]")?-1:e.target.closest("[data-down]")?1:0;
-  if(mv){ S.d.obras.splice(i,1); S.d.obras.splice(i+mv,0,o); drawObras(); changed(); }
+  if(mv){ list.splice(i,1); list.splice(i+mv,0,o); drawObras(); changed(); }
 });
-async function addFiles(list){
-  const files=[...list].filter(f=>/^image\//.test(f.type)), room=MAX-S.d.obras.length;
+async function addFiles(files){
+  files=[...files].filter(f=>/^image\//.test(f.type)); const s=room(), free=MAX-s.obras.length;
   if(!files.length) return;
-  if(files.length>room) alert(room?`Solo caben ${room} más: tu galería puede tener hasta ${MAX} obras.`:`Tu galería ya tiene ${MAX} obras.`);
-  for(const f of files.slice(0,room)){
+  if(files.length>free) alert(free?`En esta sala solo caben ${free} más (hasta ${MAX} por sala).${S.d.salas.length<S.salasMax?" Agrega otra sala para las demás.":""}`:`Esta sala ya tiene ${MAX} obras.${S.d.salas.length<S.salasMax?" Agrega otra sala.":""}`);
+  for(const f of files.slice(0,free)){
     try{ const r=await shrink(f,2048), id=rid(); S.files.set(id,{blob:r.blob,url:URL.createObjectURL(r.blob),w:r.w,h:r.h});
-      S.d.obras.push({id:rid(),img:id,mount:S.d.sala==="clasica"?"caballete":"pared",frame:S.lastFrame,mat:false,w:"",h:"",t:nameFrom(f),d:""}); drawObras(); changed(); }
+      s.obras.push({id:rid(),img:id,mount:s.tipo==="clasica"?"caballete":"pared",frame:S.lastFrame,mat:false,w:"",h:"",t:nameFrom(f),d:""}); if(s===room()) drawObras(); changed(); }
     catch(err){ alert(`No pude abrir ${f.name}. Usa PNG, JPG o WebP.`); }
   }
 }
 async function addModel(file){
-  if(!file) return;
-  if(S.d.obras.length>=MAX||S.d.obras.filter(o=>o.model).length>=MAX_3D) return msgUp("bad",`Tu galería puede tener hasta ${MAX_3D} objetos 3D.`);
+  if(!file) return; const s=room();
+  if(s.obras.length>=MAX||s.obras.filter(o=>o.model).length>=MAX_3D) return msgUp("bad",`Cada sala puede tener hasta ${MAX_3D} objetos 3D.`);
   if(/\.(fbx|obj|gltf|stl|dae|blend|3ds|usdz)$/i.test(file.name)) return msgUp("bad","Ese formato no se puede ver en el celular. Conviértelo a GLB: en Blender, Archivo → Exportar → glTF 2.0 (.glb).");
   if(file.size>MODEL_IN_MB*1048576) return msgUp("bad",`El objeto pesa ${(file.size/1048576).toFixed(1)} MB. Se pueden abrir hasta ${MODEL_IN_MB} MB: expórtalo con texturas más chicas.`);
   let buf=await file.arrayBuffer();
@@ -329,8 +396,8 @@ async function addModel(file){
   if(buf.byteLength>S.plan.modelMB*1048576) return msgUp("bad",`Aun comprimido, el objeto pesa ${mb(buf.byteLength)} MB. Tu plan permite ${S.plan.modelMB} MB por objeto 3D: expórtalo con texturas más chicas o menos detalle.`);
   const blob=new Blob([buf],{type:"model/gltf-binary"}), id=rid();
   S.files.set(id,{blob,url:URL.createObjectURL(blob),model:true});
-  S.d.obras.push({id:rid(),model:id,mount:"pedestal",s:"",gira:false,t:nameFrom(file),d:""});
-  msgUp(done?"ok":"",done); drawObras(); changed();
+  s.obras.push({id:rid(),model:id,mount:"pedestal",frame:"blanco",s:"",gira:false,t:nameFrom(file),d:""});
+  msgUp(done?"ok":"",done); if(s===room()) drawObras(); changed();
 }
 $("upFile").addEventListener("change",e=>{ const fs=e.target.files; addFiles(fs).then(()=>{ e.target.value=""; }); });
 $("upModel").addEventListener("change",e=>{ const f=e.target.files[0]; addModel(f).finally(()=>{ e.target.value=""; }); });
@@ -344,24 +411,27 @@ for(const [id,fn] of [["drop",fs=>addFiles(fs)],["drop3d",fs=>addModel(fs[0])]])
 // ---------- live preview ----------
 let app=null, pvT=0;
 const num=v=>Number(v)||0;
-function dNow(){ return {name:$("dname").value.trim(),sala:S.d.sala,amb:S.d.amb,obras:S.d.obras.map(o=>{
-  const x={id:o.id}; if(o.t.trim()) x.t=o.t.trim(); if(o.d.trim()) x.d=o.d.trim();
-  if(o.model){ x.model=o.model; x.mount=o.mount==="piso"?"piso":"pedestal"; if(num(o.s)) x.s=num(o.s); if(o.gira) x.gira=true; return x; }
-  x.img=o.img; x.frame=o.frame; x.mount=mountOf(o,S.d.sala); if(num(o.w)) x.w=num(o.w); if(num(o.h)) x.h=num(o.h); if(o.mat&&o.frame!=="lienzo") x.mat=true; return x; })}; }
+function dNow(){ return {name:$("dname").value.trim(),autor:$("autor").value.trim(),publica:$("publica").checked,salas:S.d.salas.map(s=>{
+  const x={tipo:s.tipo,obras:s.obras.map(o=>{
+    const y={id:o.id}; if(o.t.trim()) y.t=o.t.trim(); if(o.d.trim()) y.d=o.d.trim();
+    if(o.model){ y.model=o.model; y.mount=o.mount==="piso"?"piso":"pedestal"; if(num(o.s)) y.s=num(o.s); if(o.frame) y.frame=o.frame; if(o.gira) y.gira=true; return y; }
+    y.img=o.img; y.frame=o.frame; y.mount=mountOf(o,s.tipo); if(num(o.w)) y.w=num(o.w); if(num(o.h)) y.h=num(o.h); if(o.mat&&o.frame!=="lienzo") y.mat=true; return y; })};
+  if(s.tipo==="clasica") x.amb=s.amb||"noche"; if((s.nombre||"").trim()) x.nombre=s.nombre.trim(); if((s.texto||"").trim()) x.texto=s.texto.trim();
+  return x; })}; }
 const cfgNow=()=>({slug:"vista-previa",title:$("title").value.trim()||"Tu galería",galeria:dNow()});
 function brand(){ const mk=S.marca&&S.marca.get(); if(mk&&mk.brand==="none") return null;
   if(mk&&mk.brand==="own"&&mk.preview) return {src:mk.preview,own:true};
   return {src:"../../assets/logo-vorticevr-blanco.png"}; }
 // tapping a piece in the room shows its card here
-const onPick=i=>{ const el=$("obras").children[i]; if(!el) return; el.classList.add("hl"); setTimeout(()=>el.classList.remove("hl"),1600);
+const onPick=(si,i)=>{ if(si!==S.cur){ S.cur=si; drawTabs(); drawSala(); drawObras(); } const el=$("obras").children[i]; if(!el) return; el.classList.add("hl"); setTimeout(()=>el.classList.remove("hl"),1600);
   if(matchMedia("(min-width:901px)").matches) el.scrollIntoView({behavior:"smooth",block:"center"}); };
-// pieces that don't fit in the room: marked in red
-const onLayout=r=>{ const m=r.missing||[]; if(m.join()===S.missing.join()) return; S.missing=m;
-  [...$("obras").children].forEach((el,i)=>{ const bad=m.includes(i); el.classList.toggle("miss",bad); const t=el.querySelector(".miss-t");
+// pieces that don't fit in their room: marked in red
+const onLayout=r=>{ const m=r.missing||[]; if((S.missing[r.sala]||[]).join()===m.join()) return; S.missing[r.sala]=m;
+  if(r.sala===S.cur) [...$("obras").children].forEach((el,i)=>{ const bad=m.includes(i); el.classList.toggle("miss",bad); const t=el.querySelector(".miss-t");
     if(bad&&!t) el.lastElementChild.insertAdjacentHTML("beforeend",`<div class="miss-t">${missText()}</div>`);
     if(!bad&&t) t.remove(); });
   drawCount(); check(); };
-function preview(){ if(app) app.destroy(); app=run({root:$("screen"),cfg:cfgNow(),src:fileUrl,brand:brand(),embedded:true,onPick,onLayout}); }
+function preview(){ if(app) app.destroy(); app=run({root:$("screen"),cfg:cfgNow(),src:fileUrl,brand:brand(),embedded:true,sala:S.cur,onPick,onLayout}); }
 function changed(){ clearTimeout(pvT); pvT=setTimeout(()=>{ if(app) app.update(cfgNow(),brand()); else preview(); },220); check(); }
 
 // ---------- link ----------
@@ -377,35 +447,40 @@ function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false;
 const linkFor=s=>ROOT?`${s}.${ROOT}`:`${location.origin}/e/${s}/`;
 
 // ---------- publish ----------
+const total=()=>S.d.salas.reduce((a,s)=>a+s.obras.length,0);
+const totalMiss=()=>Object.values(S.missing).reduce((a,m)=>a+m.length,0);
 function problems(){
-  if(!$("dname").value.trim()) return "Escribe el nombre de tu galería (paso 1).";
-  if(!S.d.obras.length) return "Sube al menos una obra (paso 2).";
-  if(S.missing.length===S.d.obras.length) return "Ninguna obra cabe en esta sala: hazlas más chicas o elige el Gran museo (paso 2).";
-  if(!$("title").value.trim()) return "Escribe el título de tu experiencia (paso 3).";
+  if(!S.salasMax) return "Las galerías son de los planes Pro y Premium: mejora tu plan para publicarla.";
+  if(!$("dname").value.trim()) return "Escribe el nombre de la exposición (paso 1).";
+  if(!total()) return "Sube al menos una obra (paso 3).";
+  if(totalMiss()===total()) return "Ninguna obra cabe en su sala: hazlas más chicas o elige el Gran museo.";
+  if(S.d.salas.length>S.salasMax) return `Tu plan permite ${S.salasMax} ${S.salasMax===1?"sala":"salas"}: quita alguna.`;
+  if(!$("title").value.trim()) return "Escribe el título de tu experiencia (paso 4).";
   if(!slugOk) return "Elige un link disponible.";
   if(!S.token) return "Inicia sesión de nuevo.";
   const mk=S.marca&&S.marca.get(); if(mk&&!mk.ok) return "Sube el logo de tu marca o elige el de Vórtice VR.";
   return "";
 }
 function check(){
-  const p=problems();
-  $("n1").classList.toggle("done",!!$("dname").value.trim()); $("n2").classList.toggle("done",S.d.obras.length>0&&!S.missing.length);
-  $("n3").classList.toggle("done",slugOk&&!!$("title").value.trim());
-  $("publish").disabled=!!p; $("pubHint").textContent=p||(S.missing.length?`Ojo: ${S.missing.length===1?"una obra no cabe y no se verá":S.missing.length+" obras no caben y no se verán"}. `:"")+`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
+  const p=problems(), tm=totalMiss();
+  $("n1").classList.toggle("done",!!$("dname").value.trim()); $("n2").classList.toggle("done",!!(S.d.salas[0].texto||"").trim());
+  $("n3").classList.toggle("done",total()>0&&!tm); $("n4").classList.toggle("done",slugOk&&!!$("title").value.trim());
+  $("publish").disabled=!!p; $("pubHint").textContent=p||(tm?`Ojo: ${tm===1?"una obra no cabe y no se verá":tm+" obras no caben y no se verán"}. `:"")+`Se publicará en ${linkFor(slugIn.value)}${$("publica").checked?" y aparecerá en Galerías Vórtice VR":""}. Te enviaremos el link y el QR a ${S.email}.`;
 }
 $("publish").addEventListener("click",async()=>{
   const p=problems(); if(p){ check(); return; }
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Preparando…"; bar.hidden=false; bar.firstElementChild.style.width="0%"; $("publish").disabled=true;
-  const galeria=dNow(), items=[], fd=new FormData();
-  for(const ob of galeria.obras){ const id=ob.model||ob.img; if(items.some(i=>i.id===id)) continue; const f=S.files.get(id), o=S.old.get(id);
+  const galeria=dNow(), items=[], fd=new FormData(); let fresh=0;
+  for(const s of galeria.salas) for(const ob of s.obras){ const id=ob.model||ob.img; if(items.some(i=>i.id===id)) continue; const f=S.files.get(id), o=S.old.get(id);
     const it=ob.model?(f||o?{id,type:"model"}:null):f?{id,type:"foto",w:f.w,h:f.h}:o?{id,type:"foto",w:o.w,h:o.h}:null;
     if(!it){ m.className="msg bad"; m.textContent="Falta uno de tus archivos: vuelve a subirlo."; bar.hidden=true; $("publish").disabled=false; return; }
-    items.push(it); if(f) fd.append("f_"+id,f.blob,id+(ob.model?".glb":".img")); }
+    items.push(it); if(f){ fd.append("f_"+id,f.blob,id+(ob.model?".glb":".img")); fresh+=f.blob.size; } }
+  if(fresh>58*1048576){ m.className="msg bad"; m.textContent=`Son ${(fresh/1048576).toFixed(0)} MB de obras nuevas: se pueden subir hasta 58 MB a la vez. Publica primero una parte (por ejemplo, una sala), luego agrega las demás y vuelve a guardar.`; bar.hidden=true; $("publish").disabled=false; return; }
   const meta={kind:"galeria",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),galeria,items,buttons:{}};
   const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
   fd.append("meta",JSON.stringify(meta));
   if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
-  try{ const shot=app&&await app.shot(); if(shot) fd.append("image",shot,"galeria.jpg"); }catch(e){ console.error(e); }   // the room from the entrance, for Mi cuenta
+  try{ const shot=app&&await app.shot(); if(shot) fd.append("image",shot,"galeria.jpg"); }catch(e){ console.error(e); }   // the first room from its entrance, for Mi cuenta and the directory
   const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc,linkFor(meta.slug).startsWith("http")?linkFor(meta.slug):"https://"+linkFor(meta.slug)+"/","Escanea y recorre la galería");
   fd.append("qr",await new Promise(r=>qrc.toBlob(r,"image/png")),"qr.png");
   m.textContent="Publicando…";
@@ -419,39 +494,42 @@ $("publish").addEventListener("click",async()=>{
 });
 
 // ---------- start: session, plan, editing ----------
+function drawAll(){ drawTabs(); drawSala(); drawObras(); }
 (async()=>{
   const ed=new URLSearchParams(location.search).get("editar");
-  const toLogin=()=>location.replace("../../cuenta/?siguiente=crear");
+  const toLogin=()=>location.replace("../../cuenta/?siguiente=crear/galeria/");
   const sess=VVR.session(); if(!sess){ toLogin(); return; }
   S.token=sess.token; S.email=sess.user&&sess.user.email;
-  drawSala(); drawObras(); preview(); check();
+  drawAll(); preview(); check();
   try{
     const r=await VVR.call("me"); S.email=r.user.email;
     const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1}, LIM=r.limit??P.exp, member=r.team&&r.team.role==="member";
-    S.plan={modelMB:P.modelMB||15};
-    if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name}`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
+    S.plan={id:P.id,modelMB:P.modelMB||15}; S.salasMax=SALAS_PLAN[P.id]||0;
+    $("paid").hidden=!!S.salasMax;
+    if(S.salasMax) $("kick").textContent=`Galerías Vórtice VR · Plan ${P.name} · ${S.salasMax} ${S.salasMax===1?"sala":"salas"} por galería`;
     const exp=ed?r.experiences.find(x=>x.slug===ed):null;
     if(window.VVRMarca){ S.marca=VVRMarca.mount($("sMarca"),{plan:P,exp,api:API,base:"../../",onChange:()=>{ check(); changed(); }}); $("sMarca").hidden=false; }
     if(exp&&exp.kind!=="galeria"){ location.replace((exp.kind==="ra"?"../":"../"+exp.kind+"/")+"?editar="+encodeURIComponent(ed)); return; }
     if(exp){
       S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza en el mismo link (tu QR sigue funcionando).`;
       for(const it of exp.items||[]) S.old.set(it.id,it);
-      const G=exp.galeria||{}, sala=SALAS[G.sala]?G.sala:"clasica";
-      S.d={sala,amb:G.amb||"noche",obras:(G.obras||[]).map(o=>o.model
-        ?{id:o.id,model:o.model,mount:o.mount==="piso"?"piso":"pedestal",s:o.s||"",gira:!!o.gira,t:o.t||"",d:o.d||""}
-        :{id:o.id,img:o.img,mount:mountOf(o,sala),frame:o.frame||"dorado",mat:!!o.mat,w:o.w||"",h:o.h||"",t:o.t||"",d:o.d||""})};
-      const last=S.d.obras.filter(o=>!o.model).pop(); if(last) S.lastFrame=last.frame;
-      $("dname").value=G.name||exp.title; $("title").value=exp.title;
+      const G=exp.galeria||{};
+      S.d={salas:salasOf(G).map(s=>{ const tipo=SALAS[s.tipo]?s.tipo:"clasica"; return {tipo,amb:s.amb||"noche",nombre:s.nombre||"",texto:s.texto||"",obras:(s.obras||[]).map(o=>o.model
+        ?{id:o.id,model:o.model,mount:o.mount==="piso"?"piso":"pedestal",frame:o.frame||"blanco",s:o.s||"",gira:!!o.gira,t:o.t||"",d:o.d||""}
+        :{id:o.id,img:o.img,mount:mountOf(o,tipo),frame:o.frame||"dorado",mat:!!o.mat,w:o.w||"",h:o.h||"",t:o.t||"",d:o.d||""})}; })};
+      const last=S.d.salas.flatMap(s=>s.obras).filter(o=>!o.model).pop(); if(last) S.lastFrame=last.frame;
+      $("dname").value=G.name||exp.title; $("autor").value=G.autor||""; $("publica").checked=!!G.publica; $("title").value=exp.title;
       slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
       $("publish").textContent="Guardar cambios";
       try{ const k=await VVR.call("clicks/"+encodeURIComponent(exp.slug)), c=k.clicks||{}, n=v=>(v||0).toLocaleString("es-MX");
         $("stats").innerHTML=`<div><b>${n(exp.views)}</b><span>visitas</span></div><div><b>${n(c.tour)}</b><span>recorridos</span></div><div><b>${n(c.share)}</b><span>la compartieron</span></div>`;
         $("statsBox").hidden=false; }catch(e){}
-      drawSala(); drawObras(); preview();
-    } else if(r.experiences.filter(x=>!x.paused).length>=LIM){
+      S.cur=0; drawAll(); preview();
+    } else if(S.salasMax&&r.experiences.filter(x=>!x.paused).length>=LIM){
       document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); document.querySelector(".side").hidden=true; $("full").hidden=false;
       $("fullText").textContent=member?"Tu equipo te asignó todas las que puedes usar. Borra una o pide más a quien administra tu equipo.":`Tu plan ${P.name} incluye ${LIM.toLocaleString("es-MX")} ${LIM===1?"experiencia":"experiencias"}. Borra una desde tu cuenta o mejora tu plan para crear tu galería.`;
     }
+    drawTabs();
   }catch(e){ if(e.status===401){ toLogin(); return; } }
   check();
 })();

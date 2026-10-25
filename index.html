@@ -404,6 +404,21 @@ header.top .brand{flex:none}
 .stbody p{margin:0;color:#ddd3f3}
 .stcard:hover .xgo .arr{transform:rotate(-45deg);background:var(--vortex)}
 @media (max-width:760px){.stcard{grid-template-columns:1fr}.stimgs{min-height:180px}.stbody{padding:24px}}
+
+/* "Galerías Vórtice VR": not one more card but its own corner (paid plans), golden and with framed pictures */
+.galx{position:relative;display:flex;align-items:center;gap:26px;margin-top:22px;padding:26px 28px;border-radius:22px;text-decoration:none;color:inherit;overflow:hidden;border:1px solid rgba(255,190,85,.55);background:radial-gradient(60% 140% at 0% 0%,rgba(255,220,160,.18),transparent 60%),linear-gradient(120deg,#1a0f2c,#0b0616 70%);box-shadow:0 24px 60px -30px rgba(255,190,85,.5)}
+.galx:hover{border-color:#ffd88a}
+.gx-fr{flex:none;display:flex;gap:10px;align-items:flex-end}
+.gx-fr i{display:block;border:5px solid;border-image:linear-gradient(135deg,#8a6420,#f2d47c 35%,#b8862f 60%,#f7dc8d) 1;box-shadow:0 10px 24px rgba(0,0,0,.6)}
+.gx-fr i:nth-child(1){width:54px;height:70px;background:linear-gradient(135deg,#3a1c5e,#8b3fd6 50%,#ffbe55)}
+.gx-fr i:nth-child(2){width:78px;height:100px;background:linear-gradient(160deg,#0f2a4f,#2f8fd6 60%,#d2b8ff)}
+.gx-fr i:nth-child(3){width:54px;height:54px;background:linear-gradient(160deg,#4f1020,#c8102e 60%,#ffbe55)}
+.gx-tx{display:flex;flex-direction:column;gap:6px;min-width:0}
+.gx-k{font:600 .72rem "Sora",system-ui,sans-serif;letter-spacing:.24em;text-transform:uppercase;color:#ffbe55}
+.galx b{font:700 clamp(1.3rem,3vw,1.8rem)/1.1 "Sora",system-ui,sans-serif;background:linear-gradient(100deg,#fff,#d2b8ff 55%,#ffbe55);-webkit-background-clip:text;background-clip:text;color:transparent}
+.gx-p{color:#b9addb;font-size:.95rem;line-height:1.5;max-width:62ch}
+.gx-go{font:600 .78rem "Sora",system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#ffbe55;margin-top:4px}
+@media (max-width:640px){.galx{flex-direction:column;align-items:flex-start;padding:22px}}
 </style>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
@@ -465,10 +480,10 @@ header.top .brand{flex:none}
       <a class="xt reveal" href="crear/memorama/"><span class="tags"><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🃏</span><h3 data-en="Memory game">Memorama</h3><p data-en="Find the pairs against the clock, with your pictures or words.">Encuentra los pares contra el reloj, con tus imágenes o palabras.</p><span class="go" data-en="Create →">Crear →</span></a>
       <a class="xt reveal" href="crear/sopa/"><span class="tags"><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🔤</span><h3 data-en="Word search">Sopa de letras</h3><p data-en="Find the words with your finger, or guess them from clues.">Encuentra las palabras con el dedo, o adivínalas con pistas.</p><span class="go" data-en="Create →">Crear →</span></a>
       <a class="xt reveal" href="crear/rompecabezas/"><span class="tags"><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🧩</span><h3 data-en="Jigsaw puzzle">Rompecabezas</h3><p data-en="Your picture in real pieces to put together on the phone.">Tu imagen en piezas de verdad para armar en el celular.</p><span class="go" data-en="Create →">Crear →</span></a>
-      <a class="xt reveal" href="crear/galeria/"><span class="tags"><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🖼️</span><h3 data-en="3D gallery">Galería en 3D</h3><p data-en="Your pictures on easels in a 3D art gallery, with the frame you choose.">Tus imágenes en caballetes de una galería de arte en 3D, con el marco que elijas.</p><span class="go" data-en="Create →">Crear →</span></a>
       <a class="xt reveal" href="crear/menu/"><span class="tags"><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🍽️</span><h3 data-en="Interactive menu">Menú interactivo</h3><p data-en="Your restaurant menu helps diners choose and shows your special dish in 3D on their table.">Tu menú ayuda a elegir y muestra tu platillo especial en 3D sobre la mesa.</p><span class="go" data-en="Create →">Crear →</span></a>
       <a class="xt reveal" href="crear/links/"><span class="tags"><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🔗</span><h3 data-en="All your links">Todos tus links</h3><p data-en="Your socials and links on one page, like Linktree. Perfect for your NFC card.">Tus redes y links en una sola página, como Linktree. Perfecta para tu tarjeta NFC.</p><span class="go" data-en="Create →">Crear →</span></a>
     </div>
+    <a class="galx reveal" href="galerias/"><span class="gx-fr" aria-hidden="true"><i></i><i></i><i></i></span><span class="gx-tx"><span class="gx-k" data-en="Vórtice VR Galleries · Pro and Premium">Galerías Vórtice VR · Pro y Premium</span><b data-en="Mount your exhibition in 3D">Monta tu exposición en 3D</b><span class="gx-p" data-en="Your artworks at their real size in a museum, a classic room or a gallery in space. Several rooms, the exhibition text and a link to share it.">Tus obras a tamaño real en un museo, una sala clásica o una galería en el espacio. Varias salas, el texto de la exposición y un link para compartirla.</span><span class="gx-go" data-en="See the galleries →">Ver las galerías →</span></span></a>
   </div></section>
   <section id="crea" class="mk"><div class="wrap">
     <div class="mkhero">
@@ -596,7 +611,7 @@ header.top .brand{flex:none}
   </section>
 </main>
 
-<footer><div class="wrap"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span>© Vórtice VR</span><nav class="explore" aria-label="Explora" data-en-aria="Explore"><a href="restaurantes/" data-en="Restaurants">Restaurantes</a> · <a href="eventos/" data-en="Events">Eventos</a> · <a href="escuelas/" data-en="Schools">Escuelas</a> · <a href="talleres/" data-en="Workshops">Talleres</a> · <a href="realidad-aumentada/" data-en="Augmented reality">Realidad aumentada</a> · <a href="filtros-para-la-cara/" data-en="Face filters">Filtros para la cara</a> · <a href="experiencias-inmersivas/" data-en="Immersive experiences">Experiencias inmersivas</a> · <a href="educacion/" data-en="Education">Educación</a></nav><span class="legal"><a href="privacidad/" data-en="Privacy">Privacidad</a> · <a href="privacidad/#cookies">Cookies</a> · <a href="terminos/" data-en="Terms">Términos</a></span></div></footer>
+<footer><div class="wrap"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span>© Vórtice VR</span><nav class="explore" aria-label="Explora" data-en-aria="Explore"><a href="restaurantes/" data-en="Restaurants">Restaurantes</a> · <a href="eventos/" data-en="Events">Eventos</a> · <a href="escuelas/" data-en="Schools">Escuelas</a> · <a href="talleres/" data-en="Workshops">Talleres</a> · <a href="realidad-aumentada/" data-en="Augmented reality">Realidad aumentada</a> · <a href="filtros-para-la-cara/" data-en="Face filters">Filtros para la cara</a> · <a href="experiencias-inmersivas/" data-en="Immersive experiences">Experiencias inmersivas</a> · <a href="educacion/" data-en="Education">Educación</a> · <a href="galerias/" data-en="Galleries">Galerías</a></nav><span class="legal"><a href="privacidad/" data-en="Privacy">Privacidad</a> · <a href="privacidad/#cookies">Cookies</a> · <a href="terminos/" data-en="Terms">Términos</a></span></div></footer>
 
 <script>
 // ---- UI effects (no dependencies) ----
