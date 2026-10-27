@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" id="vp" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <style>*{box-sizing:border-box}body{margin:0}img{max-width:100%}</style>
 </head>
 <body>
@@ -18,6 +18,7 @@
     color-scheme:light;
   }
   [hidden]{display:none!important}
+  html,body{touch-action:none;overscroll-behavior:none} .card{touch-action:pan-y} .btn{touch-action:manipulation}
   html,body{height:100%;overflow:hidden;background:#bfe9f5;color:var(--cream);
     font-family:'Fredoka',system-ui,-apple-system,sans-serif;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
   #app{position:fixed;inset:0}
@@ -62,7 +63,8 @@
   #side .btn:active{transform:translateY(2px)}
   #keys{position:fixed;left:calc(10px + env(safe-area-inset-left,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font-size:13px;padding:7px 12px;border-width:2px}
 
-  #stickzone{position:fixed;left:0;bottom:0;width:50%;height:60%;touch-action:none}
+  #stickzone{position:fixed;left:0;bottom:0;width:50%;height:60%;touch-action:none;z-index:1}
+  #side,#mbtns,#top,#keys{z-index:3} .overlay{z-index:10}
   #stick{position:fixed;width:120px;height:120px;border-radius:50%;border:3px solid rgba(255,246,234,.7);background:rgba(59,29,20,.25);transform:translate(-50%,-50%);pointer-events:none}
   #knob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(255,243,220,.95);border:3px solid var(--ink)}
   #mbtns{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:auto auto;gap:12px;align-items:end}
@@ -100,7 +102,7 @@
   .logo{width:min(400px,100%);display:block;margin:0 auto -4px}
   .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
   #dexGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-  .dc{background:#ffe3b5;border-radius:16px 12px 16px 12px;padding:6px 4px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;border:2px solid transparent}
+  .dc{cursor:pointer;background:#ffe3b5;border-radius:16px 12px 16px 12px;padding:6px 4px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;border:2px solid transparent}
   .dc img{width:100%;max-width:92px;aspect-ratio:1}
   .dc.lock img{filter:brightness(0) opacity(.35)}
   .dc b{font-size:12.5px;line-height:1.1}
@@ -135,7 +137,7 @@
   <div id="home" hidden><b></b><i></i><span>🏠</span></div>
   <div id="side">
     <button class="btn b-blue" id="bShop">🧺 Mercado</button>
-    <button class="btn b-purple" id="bReb">♻️ Renacer</button>
+    <button class="btn b-purple" id="bReb" hidden>♻️ Renacer</button>
     <button class="btn b-green" id="bUpg">🏗️ Mejoras</button>
     <button class="btn b-orange" id="bDex">📖 Piñatadex</button>
     <button class="btn b-grey" id="bTest" hidden>🧪 Prueba</button>
@@ -171,7 +173,7 @@
 <div id="upg" class="overlay" hidden>
   <div class="card panel">
     <div class="phead"><h2 class="display stroke">🏗️ Mejoras de tu base</h2><button class="btn b-pink x" data-close="upg" aria-label="Cerrar">✕</button></div>
-    <p class="small">Se compran con cacao y se quedan aunque renazcas.</p>
+    <p class="small">Se compran con el cacao que ganas jugando.</p>
     <div class="rows" id="upgRows"></div>
   </div>
 </div>
@@ -182,6 +184,18 @@
     <p id="dexTxt"></p>
     <div class="dexbar"><i id="dexBar"></i></div>
     <div id="dexGrid"></div>
+  </div>
+</div>
+
+<div id="ficha" class="overlay" hidden>
+  <div class="card panel">
+    <div class="phead"><h2 class="display stroke" id="fNom"></h2><button class="btn b-pink x" data-close="ficha" aria-label="Cerrar">✕</button></div>
+    <img id="fImg" alt="" style="width:min(220px,60%);aspect-ratio:1;margin:0 auto;display:block">
+    <div id="fRar" class="sec" style="text-align:center"></div>
+    <p class="small" style="text-align:center" id="fDat"></p>
+    <div class="sec">¿Sabías que…?</div>
+    <p id="fTxt"></p>
+    <button class="btn b-green" data-close="ficha">¡Entendido!</button>
   </div>
 </div>
 
@@ -257,6 +271,7 @@ const PIN=[
  ['Pochó Espectral','Secret',2500000,20000,'xolo',[0x1e2850,0x50ffe6,0xff8c00]],
  ['Ceiba Cósmica','Secret',7500000,55000,'cosmic',[0x3c1478,0xff78ff,0x78e6ff]],
 ].map(([id,rarity,price,income,shape,colors,hat])=>({id,rarity,price,income,shape,colors,hat}));
+const INFO={"Mazorca de Cacao":"El cacao crece en mazorcas pegadas al tronco del árbol. Olmecas y mayas lo tomaban como bebida y sus semillas llegaron a usarse como moneda. Tabasco es uno de los estados que más cacao produce en México, sobre todo en la región de la Chontalpa, donde está la Ruta del Cacao.","Pochitoque":"Es una tortuga pequeña de agua dulce que vive en los ríos, lagunas y pantanos de Tabasco. Varias tortugas de agua dulce de México están protegidas por la ley, así que hay que cuidarlas y no sacarlas de su hogar.","Plátano":"Tabasco es uno de los estados que más plátano cultiva en México: hay grandes platanares en municipios como Teapa y Cunduacán. Además de comerse, sus hojas se usan para envolver tamales.","Tamalito de Chipilín":"El chipilín es una planta de hojas pequeñas que se mezcla con la masa de maíz. El tamalito de chipilín se envuelve en hoja de plátano y es uno de los sabores más típicos de Tabasco y Chiapas.","Pejelagarto":"Es un pez con hocico largo, como de lagarto, y escamas muy duras. Sus parientes ya nadaban en la Tierra en la época de los dinosaurios, por eso le dicen \"fósil viviente\". Puede subir a la superficie a respirar aire. El pejelagarto asado es un platillo famoso de Tabasco.","Chile Amashito":"Es un chile silvestre muy pequeño y redondito, pero muy picante. En Tabasco se machaca con limón y sal para hacer una salsa que acompaña casi cualquier comida.","Danzante del Pochó":"La Danza del Pochó se baila en el Carnaval de Tenosique. Los cojóes usan máscaras de madera y se cubren con hojas secas; bailan junto a las pochoveras y los tigres. Es una de las danzas más antiguas de México.","Tamborilero":"Los tamborileros tocan música tradicional tabasqueña con una flauta de carrizo y tambores. Es una herencia de los pueblos chontales (mayas yokot'an) y se escucha en fiestas de los pueblos.","Manatí":"El manatí es un mamífero acuático que vive en ríos y lagunas de Tabasco, como los Pantanos de Centla. Come plantas acuáticas durante muchas horas al día. Está en peligro de extinción, por eso es muy importante cuidar el agua donde vive.","Cabeza Olmeca":"Los olmecas, llamados la \"cultura madre\" de Mesoamérica, tallaron cabezas gigantes de piedra que pesan varias toneladas. En La Venta, Tabasco, se encontraron varias; hoy se pueden ver en el Parque-Museo La Venta, en Villahermosa.","Garza Blanca":"Las garzas viven en humedales como la Reserva de la Biosfera Pantanos de Centla, uno de los humedales más grandes de Mesoamérica. Caminan despacio en el agua y atrapan peces con su pico largo y filoso.","Jaguar de La Venta":"El jaguar es el felino más grande de América. Para los olmecas era un animal sagrado y lo representaron en sus esculturas. Todavía vive en las selvas del sureste de México, pero está en peligro de extinción.","Flor de Oro":"Cada año, en la Feria Tabasco, se elige a la Flor de Oro entre las representantes de los 17 municipios del estado. Las tabasqueñas lucen el traje regional, con falda amplia de colores, blusa blanca bordada y flores en el cabello.","Saraguato":"El saraguato o mono aullador vive en las selvas de Tabasco. Su aullido es de los sonidos más fuertes del reino animal y se escucha a mucha distancia. Pasa casi todo el día en los árboles comiendo hojas. Está en peligro de extinción.","Pochó Espectral":"Está inspirado en los tigres de la Danza del Pochó de Tenosique, que bailan con el cuerpo pintado con manchas de jaguar. Esta versión fantasma, que brilla de noche, es un personaje inventado para este juego.","Ceiba Cósmica":"Para los mayas, la ceiba era un árbol sagrado: sus raíces llegaban al inframundo, su tronco estaba en la tierra y sus ramas sostenían el cielo. Esta versión cósmica, hecha de estrellas, es un personaje inventado para este juego."};
 const PBY=Object.fromEntries(PIN.map(p=>[p.id,p]));
 const MUTS=[
  {id:'Gold',name:'Dorada',chance:.06,mult:2},
@@ -668,7 +683,7 @@ function step(dt){
       if(!c.isBot)for(const s of c.base.slots)if((s.floor||c.up.auto)&&s.accum>=1){const a=Math.floor(s.accum);s.accum-=a;c.candy+=a;}
       if(c.isBot&&G.botsOn&&Math.random()<.2){for(const id of ['floor2','laser','turret','floor3','gold']){const u=UPG.find(x=>x.id===id),lv=c.up[id]||0;if(lv<u.cost.length&&(!u.req||c.up[u.req])&&c.candy>u.cost[lv]*3){buyUpg(c,u);break;}}}
       if(c.isBot){for(const s of c.base.slots){c.candy+=Math.floor(s.accum);s.accum-=Math.floor(s.accum);}
-        if(c.candy>=C.REB_COST*(c.rebirths+1)&&G.botsOn){for(const s of c.base.slots)if(s.pin&&s.pin.state==='placed')removePin(s.pin);c.candy=C.START;c.rebirths++;banner('♻️ '+c.name+' renació ('+c.rebirths+')');}}
+        if(false){for(const s of c.base.slots)if(s.pin&&s.pin.state==='placed')removePin(s.pin);c.candy=C.START;c.rebirths++;banner('♻️ '+c.name+' renació ('+c.rebirths+')');}}
     }
     bump();
   }
@@ -752,10 +767,10 @@ const GLOW=(()=>{const cv=document.createElement('canvas');cv.width=cv.height=12
 const SHADOW_MAT=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.22,depthWrite:false});
 const SHADOW_GEO=new THREE.CircleGeometry(.5,20).rotateX(-Math.PI/2);
 function renderDex(){
-  const n=DEX.size;$('#dexTxt').innerHTML='Descubriste <b>'+n+' de '+PIN.length+'</b> piñatas. Cada una nueva te da <b>+5% de cacao para siempre</b> (ahora +'+(n*5)+'%). Cómpralas o róbalas para descubrirlas.';
+  const n=DEX.size;$('#dexTxt').innerHTML='Descubriste <b>'+n+' de '+PIN.length+'</b> piñatas. Cada una nueva te da <b>+5% de cacao para siempre</b> (ahora +'+(n*5)+'%). Cómpralas o róbalas para descubrirlas. <b>Toca una para conocer su historia.</b>';
   $('#dexBar').style.width=(n/PIN.length*100)+'%';
   $('#dexGrid').innerHTML=PIN.map(p=>{const r=RBY[p.rarity],got=DEX.has(p.id);
-    return `<div class="dc ${got?'':'lock'}" style="border-color:${got?r.col:'transparent'}"><img src="${ART.pin[p.id]}" alt=""><b>${got?p.id:'???'}</b><small style="color:${r.col}">${r.name}</small><i>${got?'+'+fmt(p.income)+'/s':'🍫 '+fmt(p.price)}</i></div>`;}).join('');
+    return `<div class="dc ${got?'':'lock'}" data-pin="${p.id}" style="border-color:${got?r.col:'transparent'}"><img src="${ART.pin[p.id]}" alt=""><b>${got?p.id:'???'}</b><small style="color:${r.col}">${r.name}</small><i>${got?'+'+fmt(p.income)+'/s':'🍫 '+fmt(p.price)}</i></div>`;}).join('');
 }
 
 function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
@@ -1013,7 +1028,7 @@ const V={
       v.root.position.set(c.x,0,c.z);let da=c.face-v.body.rotation.y;da=Math.atan2(Math.sin(da),Math.cos(da));v.body.rotation.y+=da*Math.min(1,dt*14);
       v.body.position.y=c.moving?Math.abs(Math.sin(t*11+c.id))*.12:0;
       const stun=G.t<c.stunUntil;v.body.rotation.z=stun?Math.sin(t*20)*.25:0;
-      v.arm.rotation.x=c.swingT>0?-1.8+(.25-c.swingT)*10:0;
+      v.arm.rotation.x=c.swingT>0?Math.sin((1-c.swingT/.25)*Math.PI)*1.5:0;
       if(c.passes.GoldBat&&!v.gold){v.gold=1;v.batMesh.material=mat(0xffc828,'gold');}
     }
     for(const p of G.pins){const v=this.pinMeshes.get(p);if(!v)continue;
@@ -1098,6 +1113,12 @@ function refreshShop(){
 }
 const pay=(c,p)=>{if(c.candy<p.price){note('Te faltan 🍫 '+fmt(p.price-c.candy)+' para '+p.name,'bad');Snd.click();return false;}c.candy-=p.price;return true;};
 document.addEventListener('click',e=>{
+  const dc=e.target.closest('.dc[data-pin]');if(dc){const p=PBY[dc.dataset.pin],r=RBY[p.rarity],got=DEX.has(p.id);
+    $('#fNom').textContent=got?p.id:'¿Quién será?';$('#fImg').src=ART.pin[p.id];$('#fImg').style.filter=got?'':'brightness(0) opacity(.35)';
+    $('#fRar').textContent=r.name;$('#fRar').style.color=r.col==='#ffffff'||r.col==='#d7d7d7'?'#7a5440':r.col;
+    $('#fDat').textContent=got?'Produce 🍫 '+fmt(p.income)+' por segundo · cuesta 🍫 '+fmt(p.price):'Cuesta 🍫 '+fmt(p.price)+' en el desfile';
+    $('#fTxt').textContent=got?INFO[p.id]:'Consigue esta piñata (cómprala en el desfile o róbala) para descubrir quién es y conocer su historia.';
+    $('#ficha').hidden=false;Snd.click();return;}
   const t=e.target.closest('button');if(!t)return;
   if(t.dataset.close){$('#'+t.dataset.close).hidden=true;Snd.click();}
   if(t.dataset.pass){const c=G.player;if(!c.passes[t.dataset.pass]&&pay(c,PASSES[t.dataset.pass])){c.passes[t.dataset.pass]=true;note(PASSES[t.dataset.pass].name+' activo 🎉','gold');refreshShop();bump();}}
@@ -1121,7 +1142,6 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-upg]');if(
   if(buyUpg(G.player,u)){note('🏗️ ¡'+u.name+' construido!','gold');Snd.buy();bump();}else note('Te falta cacao para '+u.name,'bad');renderUpg();});
 $('#bUpg').onclick=()=>{renderUpg();$('#upg').hidden=false;Snd.click();};
 $('#bDex').onclick=()=>{renderDex();$('#dex').hidden=false;Snd.click();};
-if(/[?&]prueba/.test(location.search))$('#bTest').hidden=false;
 $('#bTest').onclick=()=>{$('#test').hidden=false;Snd.click();};
 $('#rebDo').onclick=()=>{const c=G.player,cost=C.REB_COST*(c.rebirths+1);if(c.candy<cost){note('Aún no te alcanza','bad');return;}
   if(c.carrying)dropCarry(c.carrying,false);for(const s of c.base.slots){if(s.pin)removePin(s.pin);s.accum=0;}
@@ -1158,7 +1178,17 @@ function stickHome(){stickEl.style.left='90px';stickEl.style.top=(innerHeight-11
 zone.addEventListener('pointerdown',e=>{const s=Input.stick;s.id=e.pointerId;s.ox=e.clientX;s.oy=e.clientY;try{zone.setPointerCapture(e.pointerId);}catch(_){}stickEl.style.left=s.ox+'px';stickEl.style.top=s.oy+'px';e.preventDefault();});
 zone.addEventListener('pointermove',e=>{const s=Input.stick;if(e.pointerId!==s.id)return;let dx=e.clientX-s.ox,dy=e.clientY-s.oy;const l=Math.hypot(dx,dy),R=55;if(l>R){dx*=R/l;dy*=R/l;}s.x=dx/R;s.z=dy/R;knob.style.transform=`translate(${dx}px,${dy}px)`;});
 const stickEnd=e=>{const s=Input.stick;if(e.pointerId!==s.id)return;s.id=null;s.x=0;s.z=0;stickHome();};
-zone.addEventListener('pointerup',stickEnd);zone.addEventListener('pointercancel',stickEnd);
+zone.addEventListener('pointerup',stickEnd);zone.addEventListener('pointercancel',stickEnd);zone.addEventListener('lostpointercapture',stickEnd);
+addEventListener('pointerup',stickEnd);addEventListener('pointercancel',stickEnd);
+function stickReset(){const s=Input.stick;s.id=null;s.x=0;s.z=0;Input.actBtn=false;if(TOUCH)stickHome();}
+document.addEventListener('visibilitychange',stickReset);addEventListener('blur',stickReset);
+new MutationObserver(()=>{if(document.querySelector('.overlay:not([hidden])'))stickReset();}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['hidden']});
+['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
+document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
+let lastTap=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lastTap<350&&!e.target.closest('input,textarea,.btn,.dc,button'))e.preventDefault();lastTap=n;},{passive:false});
+document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
+const vp=document.getElementById('vp');function unzoom(){if(window.visualViewport&&visualViewport.scale>1.01){vp.content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,minimum-scale=1';setTimeout(()=>{vp.content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover';},60);}}
+if(window.visualViewport)visualViewport.addEventListener('resize',unzoom);unzoom();
 const actB=$('#btnAct');actB.addEventListener('pointerdown',e=>{Input.actBtn=true;e.preventDefault();});
 ['pointerup','pointercancel','pointerleave'].forEach(ev=>actB.addEventListener(ev,()=>{Input.actBtn=false;}));
 $('#btnBat').addEventListener('pointerdown',e=>{Input.batPressed=true;e.preventDefault();});
@@ -1171,7 +1201,7 @@ addEventListener('resize',resize);
 function frame(now){
   requestAnimationFrame(frame);
   const raw=Math.min(.05,(now-last)/1000);last=now;clock+=raw;
-  const menusOpen=!$('#shop').hidden||!$('#reb').hidden||!$('#test').hidden||!$('#dex').hidden||!$('#upg').hidden;
+  const menusOpen=!$('#ficha').hidden||!$('#shop').hidden||!$('#reb').hidden||!$('#test').hidden||!$('#dex').hidden||!$('#upg').hidden;
   if(running&&G&&!menusOpen){const dt=raw*G.speed;const n=Math.ceil(G.speed/2);for(let i=0;i<n;i++)step(dt/n);}
   if(G){V.sync(raw,clock);updateCamera(raw);if(running)updateHUD(raw);}
   renderer.render(scene,camera);
