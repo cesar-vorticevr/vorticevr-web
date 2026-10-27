@@ -10,6 +10,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <style>
 :root{
   --void:#05020b; --panel:#120a24; --ink:#f2ecff; --mute:#a99bcb; --line:rgba(190,150,255,.18);
@@ -18,6 +26,7 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%}
 body{margin:0;background:var(--void);color:var(--ink);font-family:var(--fb);overflow:hidden;display:flex;flex-direction:column;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
@@ -70,11 +79,43 @@ h2{font-family:var(--fd);font-size:32px;font-weight:800;margin:0 0 4px;letter-sp
 .btn-ar:focus-visible{outline:3px solid var(--lav);outline-offset:2px}
 .btn-ar svg{width:22px;height:22px}
 .nota{font-size:12px;color:var(--mute);margin:10px 0 0;text-align:center}
+.brand .marca{height:40px;width:auto}
+.brand .dev{display:flex;flex-direction:column;gap:2px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.brand .dev img{height:18px;width:auto}
+@media (max-width:600px){.brand .marca{height:30px}.brand .dev{display:none}h1{display:none}}
+.visor{height:300px;margin:0 -24px 14px;position:relative;border-radius:22px 22px 0 0;overflow:hidden;background:radial-gradient(ellipse at 50% 85%,rgba(139,63,214,.4),transparent 65%),linear-gradient(180deg,var(--c,#8b3fd6)44,#05020b 80%)}
+@media (max-width:759px){.visor{margin:0 -20px 14px;height:260px}}
+.visor model-viewer{width:100%;height:100%;--poster-color:transparent;background:transparent;display:block}
+.visor model-viewer::part(default-ar-button),.visor model-viewer::part(default-progress-bar){display:none}
+.visor .prog{position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--sun);transform-origin:left;transform:scaleX(0);transition:transform .2s}
+.visor .pista{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);font-size:11px;color:var(--lav);background:rgba(5,2,11,.55);padding:5px 10px;border-radius:999px;white-space:nowrap;pointer-events:none}
+.producto{display:inline-flex;align-items:center;gap:6px;font-family:var(--fd);font-weight:700;font-size:13px;color:var(--sun);background:rgba(255,190,85,.12);border:1px solid rgba(255,190,85,.35);border-radius:999px;padding:4px 12px;margin:0 0 10px}
+.acciones{display:grid;gap:10px;margin:0 0 6px}
+.btn2{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink);font-family:var(--fd);font-weight:700;font-size:15px;cursor:pointer;text-decoration:none}
+.btn2:hover{background:rgba(255,255,255,.09)}
+.btn2:focus-visible,.btn-ar:focus-visible{outline:3px solid var(--lav);outline-offset:2px}
+.btn2 svg{width:20px;height:20px}
+.qr{display:none;align-items:center;gap:14px;border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(255,255,255,.03);margin:0 0 6px}
+.qr.on{display:flex}
+.qr canvas,.qr img{width:96px;height:96px;border-radius:8px;background:#fff;padding:4px;flex:none}
+.qr p{margin:0;font-size:13px;color:var(--mute);line-height:1.45}
+.qr b{color:var(--ink)}
+.hoja{position:fixed;inset:0;z-index:50;background:rgba(5,2,11,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px 16px}
+.hoja img{max-width:100%;max-height:62vh;border-radius:14px}
+.hoja .fila{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.hoja .fila .btn2{padding:12px 20px;border-radius:999px}
+.hoja .fila .btn-ar{width:auto;padding:12px 22px;border-radius:999px;font-size:15px}
+.flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .3s;z-index:60}
+.flash.on{opacity:.85;transition:none}
 </style>
 </head>
 <body>
 <header>
-  <a class="brand" href="../../"><img src="../../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><h1>Tabasco en <span>realidad aumentada</span></h1></a>
+  <a class="brand" href="../../" aria-label="Tierra Lila, experiencia desarrollada por Vórtice VR">
+    <img class="marca" src="tierra-lila.png" alt="Tierra Lila">
+    <span class="dev">Desarrollado por<img src="../../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></span>
+    <h1>Tabasco en <span>realidad aumentada</span></h1>
+  </a>
   <p class="hint">Toca un municipio para abrir su tarjeta.</p>
 </header>
 
@@ -127,29 +168,44 @@ h2{font-family:var(--fd);font-size:32px;font-weight:800;margin:0 0 4px;letter-sp
     <svg viewBox="0 0 420 148" preserveAspectRatio="none"><path d="M0,120 C80,80 140,160 220,110 S360,60 420,100 L420,148 L0,148 Z" fill="#fff"/><path d="M0,100 C90,60 150,140 240,90 S370,40 420,80 L420,148 L0,148 Z" fill="#fff" opacity=".5"/></svg>
     <button class="cerrar" id="cerrar" aria-label="Cerrar tarjeta">×</button>
   </div>
-  <p class="eyebrow">Municipio de Tabasco</p>
+  <div class="visor" id="visor" hidden>
+    <model-viewer id="mv" alt="" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" ar ar-modes="webxr scene-viewer quick-look" ar-scale="auto" interaction-prompt="none" loading="eager"></model-viewer>
+    <div class="prog" id="prog"></div>
+    <span class="pista">Arrástralo para girarlo</span>
+    <button class="cerrar" id="cerrar2" aria-label="Cerrar tarjeta">×</button>
+  </div>
+  <p class="eyebrow">Municipio de Tabasco · Tierra Lila</p>
   <h2 id="t-nombre">—</h2>
+  <p class="producto" id="t-producto" hidden></p>
   <p class="cabecera" id="t-cabecera"></p>
   <p class="desc" id="t-desc"></p>
   <ul class="datos">
     <li><b id="t-region">—</b><span>Región</span></li>
     <li><b id="t-icono">—</b><span>Emblema</span></li>
   </ul>
-  <a class="btn-ar" id="btn-ar" href="#" target="_blank" rel="noopener">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
-    Ver en realidad aumentada
-  </a>
+  <div class="acciones" id="acciones">
+    <button class="btn-ar" id="btn-ar" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+      <span id="btn-ar-t">Verlo en tu espacio</span>
+    </button>
+    <button class="btn2" id="btn-foto" type="button" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-3h6l2 3h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+      Tomar foto en 3D
+    </button>
+  </div>
+  <div class="qr" id="qr"><div id="qr-img"></div><p><b>En tu celular lo ves en realidad aumentada.</b><br>Escanea el código y apúntalo a una mesa o al piso para colocarlo, tomar fotos y video.</p></div>
   <p class="nota" id="t-nota">Apunta tu cámara y explora el municipio en realidad aumentada.</p>
 </aside>
+<div class="flash" id="flash"></div>
 
-<script>
+<script type="module">
 // ====== CONFIGURA AQUÍ ======
-// Cambia la URL "ar" de cada municipio por el enlace real de tu experiencia de RA (Vórtice VR).
-const BASE_AR = "../../ra/tabasco/"; // se usa cuando "ar" viene vacío (ej. ../../ra/tabasco/centro/)
+// "modelo" = GLB que sale en la tarjeta y en realidad aumentada; "cm" = ancho real al colocarlo (se puede escalar con dos dedos).
+// "ar" = enlace a otra experiencia (si no hay modelo); vacío = sin botón.
 const MUNICIPIOS = {
-  huimanguillo:{nombre:"Huimanguillo",cabecera:"Huimanguillo",region:"Chontalpa",icono:"Malpasito",desc:"El municipio más extenso de Tabasco. Zona arqueológica de Malpasito, cascadas en la sierra de Agua Selva y cultivos de piña y caña.",ar:""},
+  huimanguillo:{nombre:"Huimanguillo",cabecera:"Huimanguillo",region:"Chontalpa",icono:"Piña",desc:"El municipio más extenso de Tabasco y tierra de la piña: cultivos que bajan de la sierra de Agua Selva hasta la llanura, junto a la caña y la zona arqueológica de Malpasito.",modelo:"modelos/pina.glb",producto:"Piña de Huimanguillo",cm:30,ar:""},
   cardenas:{nombre:"Cárdenas",cabecera:"Heroica Cárdenas",region:"Chontalpa",icono:"Agroindustria",desc:"Corazón agroindustrial de la Chontalpa: caña, plátano y cacao. Puerta a las lagunas costeras y a Sánchez Magallanes.",ar:""},
-  paraiso:{nombre:"Paraíso",cabecera:"Paraíso",region:"Chontalpa",icono:"Playas",desc:"Franja costera con las playas de Tabasco y el Puerto de Dos Bocas, el principal puerto petrolero del estado.",ar:""},
+  paraiso:{nombre:"Paraíso",cabecera:"Paraíso",region:"Chontalpa",icono:"Coco",desc:"Franja costera de palmeras y playas, donde el coco crece de cara al Golfo; también el Puerto de Dos Bocas, el principal puerto petrolero del estado.",modelo:"modelos/coco.glb",producto:"Palma de coco de Paraíso",cm:120,ar:""},
   comalcalco:{nombre:"Comalcalco",cabecera:"Comalcalco",region:"Chontalpa",icono:"Cacao",desc:"La ciudad maya construida con ladrillo cocido y la ruta del cacao: haciendas, chocolate artesanal y la zona arqueológica.",ar:""},
   jalpa:{nombre:"Jalpa de Méndez",cabecera:"Jalpa de Méndez",region:"Chontalpa",icono:"Jícara",desc:"Cuna de las jícaras labradas, artesanía chontal de la jícara tallada y pintada a mano.",ar:""},
   nacajuca:{nombre:"Nacajuca",cabecera:"Nacajuca",region:"Chontalpa",icono:"Cultura chontal",desc:"Territorio de la cultura yokot'an: artesanías de palma y cestería, cocina tradicional y comunidades ribereñas.",ar:""},
@@ -157,7 +213,7 @@ const MUNICIPIOS = {
   centla:{nombre:"Centla",cabecera:"Frontera",region:"Pantanos",icono:"Humedales",desc:"Reserva de la Biosfera Pantanos de Centla, el humedal más grande de Norteamérica, en la desembocadura del Grijalva y el Usumacinta.",ar:""},
   centro:{nombre:"Centro",cabecera:"Villahermosa",region:"Centro",icono:"Cabezas olmecas",desc:"La capital. Parque Museo La Venta con cabezas olmecas, las lagunas urbanas y el centro cultural y económico del estado.",ar:""},
   jalapa:{nombre:"Jalapa",cabecera:"Jalapa",region:"Sierra",icono:"Haciendas",desc:"Haciendas ganaderas y cacaoteras entre la sierra y la llanura; balnearios y vida rural tabasqueña.",ar:""},
-  teapa:{nombre:"Teapa",cabecera:"Teapa",region:"Sierra",icono:"Grutas de Coconá",desc:"Al pie de la sierra: Grutas de Coconá, balnearios de agua sulfurosa y plantaciones de plátano.",ar:""},
+  teapa:{nombre:"Teapa",cabecera:"Teapa",region:"Sierra",icono:"Plátano",desc:"Al pie de la sierra, entre plantaciones de plátano que se exportan al mundo; también las Grutas de Coconá y balnearios de agua sulfurosa.",modelo:"modelos/platano.glb",producto:"Plátano de Teapa",cm:35,ar:""},
   tacotalpa:{nombre:"Tacotalpa",cabecera:"Tacotalpa",region:"Sierra",icono:"Tapijulapa",desc:"Pueblo Mágico de Tapijulapa, Villa Luz y Kolem Jaá: cascadas, selva y aventura en la sierra.",ar:""},
   macuspana:{nombre:"Macuspana",cabecera:"Macuspana",region:"Sierra",icono:"Agua Blanca",desc:"Parque estatal Agua Blanca con cascadas y grutas; Ciudad Pemex y la tradición ganadera.",ar:""},
   jonuta:{nombre:"Jonuta",cabecera:"Jonuta",region:"Ríos",icono:"Usumacinta",desc:"Pueblo ribereño del Usumacinta, pesca y cerámica tradicional en la región de los Ríos.",ar:""},
@@ -165,36 +221,143 @@ const MUNICIPIOS = {
   balancan:{nombre:"Balancán",cabecera:"Balancán",region:"Ríos",icono:"Moral-Reforma",desc:"Zona arqueológica de Moral-Reforma, el Museo Arqueológico José Gómez Panaco y la ganadería de la región de los Ríos.",ar:""},
   tenosique:{nombre:"Tenosique",cabecera:"Tenosique de Pino Suárez",region:"Ríos",icono:"Pomoná",desc:"Frontera con Guatemala. Zona arqueológica de Pomoná, el Cañón del Usumacinta y la Danza del Pochó.",ar:""},
 };
+const MARCA = "marca.png";                       // Tierra Lila + Vórtice VR, va en las fotos y videos
+const MODEL_LIMIT_MB = 25;
 
-const tarjeta=document.getElementById('tarjeta'),velo=document.getElementById('velo'),banda=document.getElementById('banda');
-let activo=null;
-function abrir(id,el){
-  const m=MUNICIPIOS[id]; if(!m) return;
-  document.querySelectorAll('.muni.activo').forEach(p=>p.classList.remove('activo'));
-  el.classList.add('activo'); activo=el;
-  banda.style.setProperty('--c',el.getAttribute('fill'));
-  document.getElementById('t-nombre').textContent=m.nombre;
-  document.getElementById('t-cabecera').textContent='Cabecera: '+m.cabecera;
-  document.getElementById('t-desc').textContent=m.desc;
-  document.getElementById('t-region').textContent=m.region;
-  document.getElementById('t-icono').textContent=m.icono;
-  document.getElementById('btn-ar').href=m.ar||(BASE_AR+id+'/');
+const $ = id => document.getElementById(id);
+const tarjeta=$('tarjeta'), velo=$('velo'), banda=$('banda'), visor=$('visor'), mv=$('mv'), prog=$('prog');
+const btnAR=$('btn-ar'), btnFoto=$('btn-foto'), qr=$('qr'), flash=$('flash');
+const phone = matchMedia("(hover: none)").matches;
+let activo=null, actual=null, XR=null, glbCache={};
+const marcaImg = Object.assign(new Image(), { src: MARCA });
+
+// nuestro visor de superficie (Android, WebXR): foto y video con los logos
+if (navigator.xr) navigator.xr.isSessionSupported("immersive-ar").then(ok => { if (ok) import("../../assets/superficie-xr.js").then(m => XR = m).catch(() => XR = null); }).catch(() => {});
+
+mv.addEventListener("progress", e => { prog.style.transform = `scaleX(${e.detail.totalProgress})`; if (e.detail.totalProgress >= 1) setTimeout(() => prog.style.transform = "scaleX(0)", 400); });
+mv.addEventListener("load", () => fitModel());
+function fitModel(){
+  if (!actual || !actual.cm) return;
+  try { const d = mv.getDimensions(); const k = actual.cm / 100 / Math.max(d.x, d.z, 0.001); mv.scale = `${k} ${k} ${k}`; mv.updateFraming(); } catch (e) {}
+}
+
+function pintarBotones(){
+  const m = actual; if (!m) return;
+  qr.classList.remove("on");
+  if (m.modelo) {
+    btnFoto.hidden = false;
+    if (phone) {
+      const can = !!XR || mv.canActivateAR;
+      btnAR.hidden = !can; $('btn-ar-t').textContent = "Verlo en tu espacio";
+      $('t-nota').textContent = can ? "Colócalo en una mesa o en el piso, toma fotos y video y compártelos." : "Tu navegador no permite realidad aumentada; gíralo en 3D o tómale una foto.";
+    } else {
+      btnAR.hidden = true; qr.classList.add("on"); pintarQR();
+      $('t-nota').textContent = "Gíralo con el mouse. Para verlo en tu espacio, ábrelo en tu celular.";
+    }
+  } else {
+    btnFoto.hidden = true; btnAR.hidden = !m.ar; $('btn-ar-t').textContent = "Ver en realidad aumentada";
+    $('t-nota').textContent = m.ar ? "Apunta tu cámara y explora el municipio en realidad aumentada." : "Esta experiencia viene en camino.";
+  }
+}
+function pintarQR(){
+  const url = location.href.split('#')[0] + '#' + actual.id, box = $('qr-img'); box.innerHTML = "";
+  try { const q = qrcode(0, 'M'); q.addData(url); q.make(); const img = new Image(); img.src = q.createDataURL(5, 2); img.alt = "Código QR"; box.appendChild(img); } catch (e) {}
+}
+
+function abrir(id, el){
+  const m = MUNICIPIOS[id]; if (!m) return;
+  m.id = id; actual = m;
+  document.querySelectorAll('.muni.activo').forEach(p => p.classList.remove('activo'));
+  if (el) { el.classList.add('activo'); activo = el; }
+  const color = el ? el.getAttribute('fill') : '#8b3fd6';
+  banda.style.setProperty('--c', color); visor.style.setProperty('--c', color);
+  $('t-nombre').textContent = m.nombre;
+  $('t-cabecera').textContent = 'Cabecera: ' + m.cabecera;
+  $('t-desc').textContent = m.desc;
+  $('t-region').textContent = m.region;
+  $('t-icono').textContent = m.icono;
+  $('t-producto').hidden = !m.producto; $('t-producto').textContent = m.producto ? "✦ " + m.producto + " en 3D" : "";
+  if (m.modelo) { banda.hidden = true; visor.hidden = false; mv.alt = m.producto || m.nombre; if (mv.src !== m.modelo) mv.src = m.modelo; else fitModel(); }
+  else { visor.hidden = true; banda.hidden = false; mv.src = ""; }
+  pintarBotones(); setTimeout(pintarBotones, 800); setTimeout(pintarBotones, 2500);   // canActivateAR se sabe un momento después de cargar
   tarjeta.classList.add('abierta'); velo.classList.add('abierto');
-  document.getElementById('cerrar').focus();
+  if (history.replaceState) history.replaceState(null, "", "#" + id);
+  (m.modelo ? $('cerrar2') : $('cerrar')).focus();
 }
 function cerrar(){
   tarjeta.classList.remove('abierta'); velo.classList.remove('abierto');
-  if(activo){activo.classList.remove('activo');activo.focus();activo=null;}
+  if (activo) { activo.classList.remove('activo'); activo.focus(); activo = null; }
+  actual = null; if (history.replaceState) history.replaceState(null, "", location.pathname + location.search);
 }
-document.querySelectorAll('.muni').forEach(p=>{
+document.querySelectorAll('.muni').forEach(p => {
   p.setAttribute('tabindex','0'); p.setAttribute('role','button');
-  p.setAttribute('aria-label',MUNICIPIOS[p.dataset.id].nombre);
-  p.addEventListener('click',()=>abrir(p.dataset.id,p));
-  p.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();abrir(p.dataset.id,p);}});
+  p.setAttribute('aria-label', MUNICIPIOS[p.dataset.id].nombre);
+  p.addEventListener('click', () => abrir(p.dataset.id, p));
+  p.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); abrir(p.dataset.id, p); } });
 });
-document.getElementById('cerrar').addEventListener('click',cerrar);
-velo.addEventListener('click',cerrar);
-document.addEventListener('keydown',e=>{if(e.key==='Escape')cerrar();});
+$('cerrar').addEventListener('click', cerrar); $('cerrar2').addEventListener('click', cerrar);
+velo.addEventListener('click', cerrar);
+document.addEventListener('keydown', e => { if (e.key==='Escape') cerrar(); });
+
+// ----- Realidad aumentada
+async function glbDe(url){
+  if (glbCache[url]) return glbCache[url];
+  const r = await fetch(url); if (!r.ok) throw new Error(url);
+  const b = await r.arrayBuffer(); if (b.byteLength > MODEL_LIMIT_MB * 1048576) throw new Error("grande");
+  return glbCache[url] = b;
+}
+btnAR.addEventListener('click', async () => {
+  const m = actual; if (!m) return;
+  if (!m.modelo) { if (m.ar) window.open(m.ar, "_blank", "noopener"); return; }
+  if (XR) {   // Android: nuestro visor, con foto y video; la sesión se pide dentro del toque
+    const glb = glbCache[m.modelo] || await glbDe(m.modelo);   // si ya está en caché no hay await y la sesión sale dentro del toque
+    try {
+      await XR.startXR({ glb, brand: { src: MARCA, own: true }, slug: "tierra-lila-" + m.id, title: m.producto || m.nombre, audio: null, onEnd: () => {} });
+      return;
+    } catch (e) { console.warn(e); }
+  }
+  if (mv.canActivateAR) { mv.activateAR(); return; }   // iPhone: Quick Look (tiene su propio botón de cámara)
+  $('t-nota').textContent = "Tu navegador no permite realidad aumentada aquí; prueba en Chrome (Android) o Safari (iPhone).";
+});
+// precarga el GLB para que en Android la sesión se pida sin esperar
+mv.addEventListener("load", () => { if (actual && actual.modelo && XR) glbDe(actual.modelo).catch(() => {}); });
+
+// ----- Foto en 3D (computadora y celular sin realidad aumentada): el modelo + logos + nombre
+btnFoto.addEventListener('click', async () => {
+  const m = actual; if (!m) return;
+  btnFoto.disabled = true;
+  try {
+    const blob = await mv.toBlob({ mimeType: "image/png", idealAspect: false });
+    const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = bad; i.src = URL.createObjectURL(blob); });
+    const W = 1080, H = 1350, c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
+    const col = banda.style.getPropertyValue('--c') || '#8b3fd6';
+    const grd = g.createLinearGradient(0, 0, 0, H); grd.addColorStop(0, "#05020b"); grd.addColorStop(.55, col); grd.addColorStop(1, "#05020b"); g.fillStyle = grd; g.fillRect(0, 0, W, H);
+    const rg = g.createRadialGradient(W/2, H*.6, 0, W/2, H*.6, W*.6); rg.addColorStop(0, "rgba(255,255,255,.18)"); rg.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = rg; g.fillRect(0, 0, W, H);
+    const k = Math.min(W * .86 / img.width, H * .62 / img.height), iw = img.width * k, ih = img.height * k;
+    g.drawImage(img, (W - iw) / 2, H * .5 - ih / 2, iw, ih);
+    if (marcaImg.complete && marcaImg.naturalWidth) { const lw = W * .62, lh = lw * marcaImg.naturalHeight / marcaImg.naturalWidth; g.shadowColor = "rgba(0,0,0,.5)"; g.shadowBlur = 18; g.drawImage(marcaImg, (W - lw) / 2, 56, lw, lh); g.shadowBlur = 0; }
+    g.fillStyle = "#fff"; g.textAlign = "center"; g.font = "800 64px Sora, sans-serif"; g.fillText(m.nombre, W/2, H - 150);
+    g.fillStyle = "#ffbe55"; g.font = "700 34px Sora, sans-serif"; g.fillText((m.producto || "") + " · Tabasco", W/2, H - 96);
+    g.fillStyle = "rgba(255,255,255,.75)"; g.font = "500 26px 'IBM Plex Sans', sans-serif"; g.fillText("Tabasco en realidad aumentada · Tierra Lila", W/2, H - 48);
+    flash.classList.add("on"); setTimeout(() => flash.classList.remove("on"), 60);
+    const out = await new Promise(ok => c.toBlob(ok, "image/jpeg", .92));
+    hoja(out, m);
+  } catch (e) { console.warn(e); $('t-nota').textContent = "No se pudo tomar la foto; inténtalo de nuevo."; }
+  btnFoto.disabled = false;
+});
+function hoja(blob, m){
+  const url = URL.createObjectURL(blob), file = new File([blob], `${m.id}-tierra-lila.jpg`, { type: "image/jpeg" });
+  const h = document.createElement("div"); h.className = "hoja";
+  const puede = navigator.canShare && navigator.canShare({ files: [file] });
+  h.innerHTML = `<img src="${url}" alt="Tu foto"><div class="fila">${puede ? '<button class="btn-ar" id="h-share" type="button">Compartir en redes</button>' : ''}<a class="btn2" id="h-dl" href="${url}" download="${file.name}">Descargar</a><button class="btn2" id="h-x" type="button">Cerrar</button></div>`;
+  document.body.appendChild(h);
+  if (puede) h.querySelector('#h-share').onclick = async () => { try { await navigator.share({ files: [file], title: m.producto || m.nombre, text: `${m.nombre}, Tabasco · Tierra Lila` }); } catch (e) {} };
+  h.querySelector('#h-x').onclick = () => { h.remove(); URL.revokeObjectURL(url); };
+}
+
+// abrir directo desde el link (#huimanguillo), p. ej. al escanear el QR de la computadora
+function desdeHash(){ const id = location.hash.replace('#',''); if (MUNICIPIOS[id]) abrir(id, document.querySelector(`.muni[data-id="${id}"]`)); }
+window.addEventListener('hashchange', desdeHash); desdeHash();
 </script>
 </body>
 </html>
