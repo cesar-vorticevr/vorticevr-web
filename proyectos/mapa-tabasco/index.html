@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tabasco en realidad aumentada · Vórtice VR</title>
+<meta name="description" content="Mapa interactivo de los 17 municipios de Tabasco: toca uno para abrir su tarjeta digital y vivirlo en realidad aumentada.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="../../assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --void:#05020b; --panel:#120a24; --ink:#f2ecff; --mute:#a99bcb; --line:rgba(190,150,255,.18);
+  --vortex:#8b3fd6; --lav:#d2b8ff; --sun:#ffbe55; --sun-ink:#1a0d00; --shadow:rgba(0,0,0,.55);
+  --fd:"Sora",ui-sans-serif,system-ui,sans-serif; --fb:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--void);color:var(--ink);font-family:var(--fb);overflow:hidden;display:flex;flex-direction:column;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  background-image:radial-gradient(ellipse at 50% -10%,rgba(139,63,214,.28),transparent 60%)}
+header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-block:16px 6px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+.brand img{height:34px;width:auto}
+h1{font-family:var(--fd);font-size:clamp(18px,2.6vw,28px);font-weight:800;margin:0;letter-spacing:-.02em;text-wrap:balance}
+h1 span{color:var(--sun)}
+.hint{color:var(--mute);font-size:14px;margin:0}
+.stage{flex:1;min-height:0;position:relative;display:flex}
+svg.mapa{width:100%;height:100%;display:block}
+.muni{cursor:pointer;stroke:var(--void);stroke-width:1.6;stroke-linejoin:round;transition:transform .18s ease,filter .18s ease;transform-box:fill-box;transform-origin:center}
+.muni:hover,.muni:focus-visible{filter:brightness(1.1) drop-shadow(0 0 10px rgba(255,190,85,.55));transform:scale(1.03);outline:none}
+.muni.activo{filter:brightness(1.15) drop-shadow(0 0 16px rgba(255,190,85,.8));transform:scale(1.045);stroke:var(--sun)}
+.etiqueta{font-family:var(--fd);font-weight:700;font-size:11px;fill:#1b1230;pointer-events:none;text-anchor:middle;paint-order:stroke;stroke:#ffffffb8;stroke-width:3px;stroke-linejoin:round}
+.etiqueta.chica{font-size:8.5px}
+@media (max-width:420px){.etiqueta{font-size:13px}.etiqueta.chica{font-size:10px}}
+@media (prefers-reduced-motion:reduce){.muni{transition:none}.muni:hover,.muni.activo{transform:none}}
+.velo{position:fixed;inset:0;background:rgba(5,2,11,.6);opacity:0;pointer-events:none;transition:opacity .25s;z-index:20}
+.velo.abierto{opacity:1;pointer-events:auto}
+.tarjeta{position:fixed;z-index:30;background:var(--panel);color:var(--ink);box-shadow:0 -12px 40px var(--shadow);border:1px solid var(--line);
+  left:0;right:0;bottom:0;border-radius:22px 22px 0 0;max-height:88%;overflow:auto;
+  padding:0 max(20px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));
+  transform:translateY(105%);transition:transform .32s cubic-bezier(.2,.8,.2,1)}
+.tarjeta.abierta{transform:translateY(0)}
+@media (min-width:760px){
+  .tarjeta{left:auto;right:0;top:0;bottom:0;width:min(420px,46vw);max-height:none;border-radius:22px 0 0 22px;
+    padding-right:max(24px,env(safe-area-inset-right,0px));padding-left:24px;transform:translateX(105%)}
+  .tarjeta.abierta{transform:translateX(0)}
+}
+.banda{height:148px;margin:0 -24px 18px;border-radius:22px 22px 0 0;position:relative;overflow:hidden;background:linear-gradient(135deg,var(--c,#8b3fd6),#05020b88 70%),var(--c,#8b3fd6)}
+@media (max-width:759px){.banda{margin:0 -20px 18px}}
+.banda svg{position:absolute;inset:0;width:100%;height:100%;opacity:.25}
+.cerrar{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;border:0;background:rgba(5,2,11,.7);color:var(--ink);font-size:20px;cursor:pointer;font-family:var(--fb)}
+.cerrar:focus-visible{outline:2px solid var(--sun)}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--lav);font-weight:600;margin:0 0 4px}
+h2{font-family:var(--fd);font-size:32px;font-weight:800;margin:0 0 4px;letter-spacing:-.02em;line-height:1.05;text-wrap:balance}
+.cabecera{margin:0 0 14px;color:var(--mute);font-size:14px}
+.desc{margin:0 0 18px;line-height:1.55;font-size:15px;max-width:60ch}
+.datos{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 20px;padding:0;list-style:none}
+.datos li{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.03)}
+.datos b{display:block;font-family:var(--fd);font-size:17px}
+.datos span{font-size:12px;color:var(--mute)}
+.btn-ar{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px 18px;border-radius:14px;border:0;
+  background:var(--sun);color:var(--sun-ink);font-family:var(--fd);font-weight:700;font-size:17px;text-decoration:none;cursor:pointer;
+  box-shadow:0 8px 24px rgba(255,190,85,.3)}
+.btn-ar:hover{filter:brightness(1.06)}
+.btn-ar:focus-visible{outline:3px solid var(--lav);outline-offset:2px}
+.btn-ar svg{width:22px;height:22px}
+.nota{font-size:12px;color:var(--mute);margin:10px 0 0;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="../../"><img src="../../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><h1>Tabasco en <span>realidad aumentada</span></h1></a>
+  <p class="hint">Toca un municipio para abrir su tarjeta.</p>
+</header>
+
+<div class="stage">
+<svg class="mapa" viewBox="60 60 615 370" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Mapa de los 17 municipios de Tabasco">
+  <g id="municipios">
+    <path class="muni" data-id="huimanguillo" fill="#ea748d" d="M81,185 L75,191 L79,195 L81,226 L85,236 L84,264 L90,273 L102,277 L107,282 L109,292 L113,297 L121,297 L127,304 L136,307 L141,310 L147,316 L150,324 L153,339 L156,346 L155,371 L157,378 L157,390 L161,392 L171,394 L175,390 L175,388 L181,377 L184,374 L184,372 L189,368 L190,364 L190,347 L196,341 L198,334 L208,325 L208,323 L212,319 L212,315 L214,313 L216,303 L216,271 L217,270 L217,250 L215,248 L214,241 L209,236 L202,241 L175,242 L172,238 L163,238 L160,235 L154,232 L143,232 L140,229 L137,222 L129,221 L125,217 L123,210 L123,204 L119,192 L116,188 L106,187 L102,189 L86,189 Z"/>
+    <path class="muni" data-id="cardenas" fill="#93c5eb" d="M225,243 L225,237 L228,235 L228,230 L221,225 L214,224 L211,220 L211,206 L212,205 L217,205 L218,200 L217,201 L198,201 L195,196 L195,181 L196,180 L201,180 L201,178 L206,177 L207,174 L214,174 L215,173 L206,173 L194,170 L195,136 L194,138 L180,138 L178,143 L178,149 L175,152 L159,152 L157,150 L153,152 L139,152 L138,151 L137,154 L134,154 L136,156 L136,170 L135,171 L121,171 L120,170 L120,161 L118,160 L115,163 L111,163 L110,165 L104,166 L100,170 L95,172 L90,172 L89,174 L86,174 L82,176 L80,179 L74,179 L73,180 L76,184 L94,185 L96,188 L99,188 L102,185 L116,185 L121,190 L125,201 L126,212 L128,217 L137,219 L141,223 L142,227 L144,229 L156,230 L166,237 L175,237 L177,241 L186,241 L197,238 L214,238 L217,241 L217,246 L223,245 Z"/>
+    <path class="muni" data-id="paraiso" fill="#e9c315" d="M263,165 L263,161 L260,153 L260,148 L258,146 L252,146 L251,145 L250,126 L244,125 L242,123 L239,125 L219,125 L213,128 L200,128 L181,134 L182,136 L188,137 L189,136 L203,136 L205,131 L234,132 L245,150 L247,152 L251,153 L256,158 L258,162 L261,165 Z"/>
+    <path class="muni" data-id="comalcalco" fill="#8cd7dd" d="M219,120 L217,120 L217,131 L216,132 L208,132 L207,134 L198,134 L195,137 L193,137 L191,141 L188,141 L192,141 L195,143 L194,178 L189,182 L189,186 L200,202 L212,202 L214,205 L223,193 L239,193 L241,198 L246,195 L253,195 L260,188 L263,177 L263,174 L260,167 L256,164 L250,156 L247,155 L240,148 L238,142 L230,133 L220,133 L219,132 Z"/>
+    <path class="muni" data-id="jalpa" fill="#e97d36" d="M281,138 L280,140 L270,142 L265,145 L263,155 L264,158 L264,184 L263,185 L263,190 L268,191 L270,193 L270,204 L272,212 L277,217 L280,218 L283,221 L285,226 L290,230 L293,225 L293,220 L294,219 L293,210 L291,209 L291,203 L289,202 L288,199 L285,196 L282,195 L282,178 L283,176 L281,174 L281,159 L286,151 L289,149 L290,143 L286,139 Z"/>
+    <path class="muni" data-id="nacajuca" fill="#f5cfdf" d="M291,147 L289,152 L282,161 L283,165 L283,189 L281,193 L286,194 L290,198 L294,206 L295,218 L296,218 L298,201 L309,188 L311,180 L313,177 L313,171 L309,168 L307,164 L293,147 Z"/>
+    <path class="muni" data-id="cunduacan" fill="#f7cedf" d="M293,147 L290,148 L289,152 L282,161 L283,165 L283,189 L280,194 L264,194 L260,191 L256,196 L239,196 L236,190 L231,190 L218,203 L205,203 L203,205 L205,212 L209,217 L211,217 L216,222 L223,223 L228,227 L228,241 L229,242 L243,242 L246,245 L249,245 L251,241 L273,241 L280,237 L288,237 L290,235 L289,233 L289,221 L279,221 L270,214 L270,195 L271,194 L286,194 L290,198 L294,206 L294,218 L296,218 L298,201 L309,188 L311,180 L313,177 L313,171 L309,168 L307,164 Z"/>
+    <path class="muni" data-id="centla" fill="#f2e47a" d="M426,167 L425,159 L423,157 L423,155 L421,154 L421,140 L422,139 L417,133 L415,128 L415,124 L405,124 L395,114 L395,111 L393,110 L393,107 L389,103 L389,99 L385,88 L382,73 L378,72 L376,75 L361,80 L345,82 L340,87 L331,104 L320,115 L308,122 L299,125 L270,125 L267,122 L261,122 L261,140 L255,142 L255,143 L267,143 L273,139 L289,139 L314,169 L320,170 L323,172 L330,172 L333,175 L333,186 L340,193 L341,193 L342,190 L357,190 L361,196 L373,196 L380,204 L384,206 L411,204 L413,202 L405,195 L405,181 L408,180 L411,175 L418,175 L423,173 L425,171 Z"/>
+    <path class="muni" data-id="centro" fill="#eb24ca" d="M319,173 L316,174 L316,177 L314,179 L314,183 L312,184 L312,187 L310,191 L302,199 L299,204 L297,226 L294,230 L294,236 L291,237 L289,240 L279,240 L276,242 L262,242 L257,240 L252,244 L253,247 L256,249 L259,254 L261,260 L267,265 L287,265 L288,266 L288,280 L287,281 L288,284 L294,288 L301,288 L308,296 L313,292 L313,286 L311,285 L311,267 L323,254 L332,253 L333,251 L340,249 L343,243 L344,206 L345,204 L342,198 L331,188 L331,178 L329,175 L322,175 Z"/>
+    <path class="muni" data-id="jalapa" fill="#f7cedf" d="M344,251 L339,252 L336,254 L325,256 L316,265 L312,271 L312,280 L311,281 L312,282 L312,296 L310,302 L306,308 L306,317 L305,318 L308,324 L323,324 L329,326 L331,324 L335,323 L346,312 L347,308 L353,301 L349,295 L349,285 L347,282 L347,272 L346,271 L346,253 Z"/>
+    <path class="muni" data-id="teapa" fill="#f81a08" d="M285,287 L282,294 L276,303 L276,311 L282,322 L292,332 L293,336 L292,355 L293,356 L311,356 L314,360 L316,368 L319,373 L320,369 L322,368 L322,361 L314,350 L313,344 L305,331 L305,326 L304,325 L304,306 L307,302 L307,299 L299,291 L294,291 Z"/>
+    <path class="muni" data-id="tacotalpa" fill="#f0bb4d" d="M354,309 L350,309 L349,312 L344,318 L335,326 L309,326 L308,327 L308,332 L313,337 L317,350 L323,357 L323,374 L320,379 L320,382 L324,388 L330,391 L339,387 L346,380 L354,369 L365,358 L373,352 L373,335 L371,332 L362,332 L361,331 L361,319 Z"/>
+    <path class="muni" data-id="macuspana" fill="#eb6759" d="M351,188 L348,190 L345,190 L342,195 L345,197 L346,200 L346,242 L345,243 L345,248 L346,249 L346,259 L347,260 L347,270 L348,271 L347,292 L350,292 L353,296 L353,306 L354,308 L356,308 L359,311 L359,313 L362,316 L362,330 L363,333 L371,335 L371,342 L373,343 L374,347 L377,349 L405,320 L407,315 L413,309 L434,301 L435,296 L437,295 L437,293 L435,292 L435,286 L434,285 L434,273 L433,270 L429,270 L426,266 L422,264 L422,261 L419,256 L419,240 L413,240 L412,239 L412,215 L410,213 L410,206 L398,206 L397,207 L379,206 L374,199 L359,197 L357,195 L356,190 Z"/>
+    <path class="muni" data-id="jonuta" fill="#e99968" d="M424,131 L424,137 L422,138 L420,153 L425,155 L425,170 L424,171 L413,171 L411,174 L411,179 L403,183 L404,186 L404,204 L403,205 L381,205 L385,205 L386,207 L393,207 L394,206 L410,206 L411,207 L412,229 L409,233 L409,236 L418,242 L418,246 L420,248 L420,256 L422,260 L427,264 L427,266 L429,268 L431,268 L435,271 L444,271 L452,275 L463,275 L466,272 L468,267 L482,267 L485,269 L487,266 L510,266 L511,268 L511,257 L512,256 L521,256 L519,256 L517,252 L509,252 L507,249 L496,249 L492,245 L487,245 L482,238 L482,233 L477,229 L477,227 L473,227 L467,221 L466,217 L461,212 L456,211 L454,209 L454,207 L452,206 L452,200 L444,191 L444,184 L442,183 L442,181 L440,180 L438,175 L438,167 L435,166 L435,149 L436,147 L434,146 L434,141 L431,138 L431,136 L429,135 L429,133 Z"/>
+    <path class="muni" data-id="zapata" fill="#eebc4d" d="M512,253 L509,256 L508,264 L512,268 L516,276 L517,298 L525,303 L532,304 L536,309 L538,315 L538,321 L543,336 L543,354 L540,360 L540,366 L542,368 L546,368 L551,370 L560,370 L560,363 L548,339 L545,325 L545,308 L550,304 L550,301 L553,298 L552,295 L549,291 L549,288 L546,289 L544,298 L530,298 L526,293 L524,293 L520,288 L520,274 L522,270 L520,266 L520,256 L516,252 Z"/>
+    <path class="muni" data-id="balancan" fill="#95e037" d="M549,218 L547,225 L549,232 L549,251 L546,254 L533,255 L528,260 L523,260 L522,261 L521,285 L525,291 L528,291 L531,294 L532,298 L534,298 L536,296 L552,296 L553,297 L553,307 L560,310 L569,310 L576,317 L586,324 L591,326 L596,331 L609,329 L614,325 L625,325 L628,321 L658,321 L659,320 L659,264 L654,259 L648,259 L646,256 L641,256 L630,249 L624,249 L622,245 L614,243 L608,238 L605,233 L596,224 L591,224 L585,222 L583,220 L570,216 L555,216 L553,214 Z"/>
+    <path class="muni" data-id="tenosique" fill="#ea4bb1" d="M544,311 L544,314 L549,325 L550,336 L562,360 L564,372 L572,377 L574,385 L582,387 L587,394 L587,408 L583,412 L582,416 L583,417 L659,415 L658,371 L660,368 L660,339 L659,338 L659,325 L658,324 L637,323 L635,321 L631,320 L625,328 L616,328 L614,330 L608,332 L592,332 L589,328 L584,326 L574,319 L569,313 L560,313 L551,309 L548,309 Z"/>
+  </g>
+  <g id="etiquetas" aria-hidden="true">
+    <text class="etiqueta" x="152" y="282">Huimanguillo</text>
+    <text class="etiqueta" x="150" y="197">Cárdenas</text>
+    <text class="etiqueta chica" x="228" y="124">Paraíso</text>
+    <text class="etiqueta" x="223" y="172">Comalcalco</text>
+    <text class="etiqueta chica" x="278" y="183" transform="rotate(-80 278 183)">J. Méndez</text>
+    <text class="etiqueta chica" x="298" y="177" transform="rotate(-80 298 177)">Nacajuca</text>
+    <text class="etiqueta" x="247" y="216">Cunduacán</text>
+    <text class="etiqueta" x="359" y="147">Centla</text>
+    <text class="etiqueta" x="305" y="245">Centro</text>
+    <text class="etiqueta chica" x="329" y="305">Jalapa</text>
+    <text class="etiqueta chica" x="293" y="322" transform="rotate(70 293 322)">Teapa</text>
+    <text class="etiqueta chica" x="345" y="352">Tacotalpa</text>
+    <text class="etiqueta" x="388" y="292">Macuspana</text>
+    <text class="etiqueta" x="445" y="228">Jonuta</text>
+    <text class="etiqueta chica" x="516" y="300" transform="rotate(68 516 300)">E. Zapata</text>
+    <text class="etiqueta" x="600" y="278">Balancán</text>
+    <text class="etiqueta" x="612" y="368">Tenosique</text>
+  </g>
+</svg>
+</div>
+
+<div class="velo" id="velo"></div>
+<aside class="tarjeta" id="tarjeta" aria-live="polite" role="dialog" aria-labelledby="t-nombre">
+  <div class="banda" id="banda">
+    <svg viewBox="0 0 420 148" preserveAspectRatio="none"><path d="M0,120 C80,80 140,160 220,110 S360,60 420,100 L420,148 L0,148 Z" fill="#fff"/><path d="M0,100 C90,60 150,140 240,90 S370,40 420,80 L420,148 L0,148 Z" fill="#fff" opacity=".5"/></svg>
+    <button class="cerrar" id="cerrar" aria-label="Cerrar tarjeta">×</button>
+  </div>
+  <p class="eyebrow">Municipio de Tabasco</p>
+  <h2 id="t-nombre">—</h2>
+  <p class="cabecera" id="t-cabecera"></p>
+  <p class="desc" id="t-desc"></p>
+  <ul class="datos">
+    <li><b id="t-region">—</b><span>Región</span></li>
+    <li><b id="t-icono">—</b><span>Emblema</span></li>
+  </ul>
+  <a class="btn-ar" id="btn-ar" href="#" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+    Ver en realidad aumentada
+  </a>
+  <p class="nota" id="t-nota">Apunta tu cámara y explora el municipio en realidad aumentada.</p>
+</aside>
+
+<script>
+// ====== CONFIGURA AQUÍ ======
+// Cambia la URL "ar" de cada municipio por el enlace real de tu experiencia de RA (Vórtice VR).
+const BASE_AR = "../../ra/tabasco/"; // se usa cuando "ar" viene vacío (ej. ../../ra/tabasco/centro/)
+const MUNICIPIOS = {
+  huimanguillo:{nombre:"Huimanguillo",cabecera:"Huimanguillo",region:"Chontalpa",icono:"Malpasito",desc:"El municipio más extenso de Tabasco. Zona arqueológica de Malpasito, cascadas en la sierra de Agua Selva y cultivos de piña y caña.",ar:""},
+  cardenas:{nombre:"Cárdenas",cabecera:"Heroica Cárdenas",region:"Chontalpa",icono:"Agroindustria",desc:"Corazón agroindustrial de la Chontalpa: caña, plátano y cacao. Puerta a las lagunas costeras y a Sánchez Magallanes.",ar:""},
+  paraiso:{nombre:"Paraíso",cabecera:"Paraíso",region:"Chontalpa",icono:"Playas",desc:"Franja costera con las playas de Tabasco y el Puerto de Dos Bocas, el principal puerto petrolero del estado.",ar:""},
+  comalcalco:{nombre:"Comalcalco",cabecera:"Comalcalco",region:"Chontalpa",icono:"Cacao",desc:"La ciudad maya construida con ladrillo cocido y la ruta del cacao: haciendas, chocolate artesanal y la zona arqueológica.",ar:""},
+  jalpa:{nombre:"Jalpa de Méndez",cabecera:"Jalpa de Méndez",region:"Chontalpa",icono:"Jícara",desc:"Cuna de las jícaras labradas, artesanía chontal de la jícara tallada y pintada a mano.",ar:""},
+  nacajuca:{nombre:"Nacajuca",cabecera:"Nacajuca",region:"Chontalpa",icono:"Cultura chontal",desc:"Territorio de la cultura yokot'an: artesanías de palma y cestería, cocina tradicional y comunidades ribereñas.",ar:""},
+  cunduacan:{nombre:"Cunduacán",cabecera:"Cunduacán",region:"Chontalpa",icono:"Río Mezcalapa",desc:"Ciudad universitaria a orillas del Mezcalapa, con tradición cacaotera y el cerro de Cucuyulapa.",ar:""},
+  centla:{nombre:"Centla",cabecera:"Frontera",region:"Pantanos",icono:"Humedales",desc:"Reserva de la Biosfera Pantanos de Centla, el humedal más grande de Norteamérica, en la desembocadura del Grijalva y el Usumacinta.",ar:""},
+  centro:{nombre:"Centro",cabecera:"Villahermosa",region:"Centro",icono:"Cabezas olmecas",desc:"La capital. Parque Museo La Venta con cabezas olmecas, las lagunas urbanas y el centro cultural y económico del estado.",ar:""},
+  jalapa:{nombre:"Jalapa",cabecera:"Jalapa",region:"Sierra",icono:"Haciendas",desc:"Haciendas ganaderas y cacaoteras entre la sierra y la llanura; balnearios y vida rural tabasqueña.",ar:""},
+  teapa:{nombre:"Teapa",cabecera:"Teapa",region:"Sierra",icono:"Grutas de Coconá",desc:"Al pie de la sierra: Grutas de Coconá, balnearios de agua sulfurosa y plantaciones de plátano.",ar:""},
+  tacotalpa:{nombre:"Tacotalpa",cabecera:"Tacotalpa",region:"Sierra",icono:"Tapijulapa",desc:"Pueblo Mágico de Tapijulapa, Villa Luz y Kolem Jaá: cascadas, selva y aventura en la sierra.",ar:""},
+  macuspana:{nombre:"Macuspana",cabecera:"Macuspana",region:"Sierra",icono:"Agua Blanca",desc:"Parque estatal Agua Blanca con cascadas y grutas; Ciudad Pemex y la tradición ganadera.",ar:""},
+  jonuta:{nombre:"Jonuta",cabecera:"Jonuta",region:"Ríos",icono:"Usumacinta",desc:"Pueblo ribereño del Usumacinta, pesca y cerámica tradicional en la región de los Ríos.",ar:""},
+  zapata:{nombre:"Emiliano Zapata",cabecera:"Emiliano Zapata",region:"Ríos",icono:"Cañón del Usumacinta",desc:"Paso del Usumacinta hacia Chiapas; puerto fluvial y entrada al cañón del río.",ar:""},
+  balancan:{nombre:"Balancán",cabecera:"Balancán",region:"Ríos",icono:"Moral-Reforma",desc:"Zona arqueológica de Moral-Reforma, el Museo Arqueológico José Gómez Panaco y la ganadería de la región de los Ríos.",ar:""},
+  tenosique:{nombre:"Tenosique",cabecera:"Tenosique de Pino Suárez",region:"Ríos",icono:"Pomoná",desc:"Frontera con Guatemala. Zona arqueológica de Pomoná, el Cañón del Usumacinta y la Danza del Pochó.",ar:""},
+};
+
+const tarjeta=document.getElementById('tarjeta'),velo=document.getElementById('velo'),banda=document.getElementById('banda');
+let activo=null;
+function abrir(id,el){
+  const m=MUNICIPIOS[id]; if(!m) return;
+  document.querySelectorAll('.muni.activo').forEach(p=>p.classList.remove('activo'));
+  el.classList.add('activo'); activo=el;
+  banda.style.setProperty('--c',el.getAttribute('fill'));
+  document.getElementById('t-nombre').textContent=m.nombre;
+  document.getElementById('t-cabecera').textContent='Cabecera: '+m.cabecera;
+  document.getElementById('t-desc').textContent=m.desc;
+  document.getElementById('t-region').textContent=m.region;
+  document.getElementById('t-icono').textContent=m.icono;
+  document.getElementById('btn-ar').href=m.ar||(BASE_AR+id+'/');
+  tarjeta.classList.add('abierta'); velo.classList.add('abierto');
+  document.getElementById('cerrar').focus();
+}
+function cerrar(){
+  tarjeta.classList.remove('abierta'); velo.classList.remove('abierto');
+  if(activo){activo.classList.remove('activo');activo.focus();activo=null;}
+}
+document.querySelectorAll('.muni').forEach(p=>{
+  p.setAttribute('tabindex','0'); p.setAttribute('role','button');
+  p.setAttribute('aria-label',MUNICIPIOS[p.dataset.id].nombre);
+  p.addEventListener('click',()=>abrir(p.dataset.id,p));
+  p.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();abrir(p.dataset.id,p);}});
+});
+document.getElementById('cerrar').addEventListener('click',cerrar);
+velo.addEventListener('click',cerrar);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')cerrar();});
+</script>
+</body>
+</html>
