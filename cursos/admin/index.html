@@ -39,7 +39,8 @@ form.set input{width:100%}
   <div class="kick">Admin de cursos</div><h1 style="font-size:clamp(1.8rem,5vw,2.4rem)">Plataforma de cursos</h1>
   <div class="chips tabs" id="tabs">
     <button class="chip on" data-t="pending">Por revisar</button><button class="chip" data-t="approved">Aprobados</button><button class="chip" data-t="rejected">Rechazados</button>
-    <button class="chip" data-t="ventas">Ventas</button><button class="chip" data-t="ajustes">Ajustes</button>
+    <button class="chip" data-t="cursos">Cursos por revisar</button><button class="chip" data-t="publicados">Publicados</button>
+    <button class="chip" data-t="ventas">Ventas</button><button class="chip" data-t="consumo">Consumo de IA</button><button class="chip" data-t="ajustes">Ajustes</button>
   </div>
   <div id="view"><div class="empty">Cargando…</div></div>
 </main>
@@ -56,6 +57,8 @@ async function show(t) {
   try {
     if (t === "ventas") return ventas(await VC.call("admin/ventas"));
     if (t === "ajustes") return ajustes(await VC.call("admin/ajustes"));
+    if (t === "cursos" || t === "publicados") return cursos(await VC.call("admin/cursos?estado=" + (t === "cursos" ? "in_review" : "published")));
+    if (t === "consumo") return consumo(await VC.call("admin/consumo"));
     instructores(await VC.call("admin/instructores?estado=" + t));
   } catch (e) {
     if (e.status === 401) { location.href = VC.loginUrl("cursos/admin"); return; }
@@ -97,6 +100,31 @@ function ventas(r) {
       ${r.list.map(o => `<tr><td>${date(o.paid_at)}</td><td>${E(o.course)}</td><td>${E(o.student)}<div class="mute">${E(o.email)}</div></td><td>${mx(o.amount)}</td><td>${mx(o.commission)}</td><td>${mx(o.net)}</td>
         <td>${o.status === "paid" ? "Pagada" : o.status === "refunded" ? "Reembolsada" : E(o.status)}${o.mode === "test" ? ' <span class="tag gold">prueba</span>' : ""}</td>
         <td>${o.cfdi ? `${E(o.cfdi.rfc)}<div class="mute">${E(o.cfdi.name)} · CP ${E(o.cfdi.cp)} · Rég. ${E(o.cfdi.regimen)} · Uso ${E(o.cfdi.uso)}</div>` : "—"}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">Todavía no hay ventas.</div>`}</div>`;
+}
+// courses sent to review: open the sales page, the player and the manual as the students will see them (admins see drafts), then publish or ask for changes
+function cursos(r) {
+  const review = tab === "cursos";
+  $("view").innerHTML = r.list.length ? r.list.map(c => `<div class="panel card"><div class="head">${c.cover_url ? `<img src="${E(c.cover_url)}" alt="" style="width:120px;aspect-ratio:16/9;object-fit:cover;border-radius:10px">` : ""}
+      <div><h3 style="margin:0">${E(c.title)}</h3><div class="mute">${E(c.subtitle || "")}</div><div class="mono" style="margin-top:4px">${E(c.name || "")} · ${E(c.email || "")}</div></div></div>
+      <dl class="kv"><dt>Precio</dt><dd>${mx(c.price_mxn)}</dd><dt>Modalidad</dt><dd>${E(VC.MODALITY[c.modality] || "")} · ${VC.hours(c.duration_hours)}</dd><dt>Contenido</dt><dd>${c.lessons} lecciones · ${c.questions} preguntas${c.certificate_kind === "dc3" ? " · constancia DC-3" : ""}</dd>
+        <dt>${review ? "Enviado" : "Publicado"}</dt><dd>${date(review ? c.submitted_at : c.published_at)}</dd></dl>
+      <div class="docs"><a class="btn ghost" style="min-height:36px;padding:6px 12px;font-size:.82rem" href="/cursos/${E(c.slug)}/" target="_blank">Página de venta</a><a class="btn ghost" style="min-height:36px;padding:6px 12px;font-size:.82rem" href="/cursos/aprender/${E(c.slug)}/" target="_blank">Reproductor y examen</a><a class="btn ghost" style="min-height:36px;padding:6px 12px;font-size:.82rem" href="/cursos/manual/${E(c.slug)}/" target="_blank">Manual</a></div>
+      ${review ? `<textarea id="cn-${E(c.id)}" placeholder="Comentarios para el instructor (obligatorios si pides cambios: le llegan por correo)"></textarea>
+        <div class="acts"><button class="btn sun" data-ca="approve" data-c="${E(c.id)}">Aprobar y publicar</button><button class="btn no" data-ca="reject" data-c="${E(c.id)}">Pedir cambios</button></div>` : ""}</div>`).join("")
+    : `<div class="empty">${review ? "No hay cursos por revisar." : "Todavía no hay cursos de instructores publicados."}</div>`;
+  document.querySelectorAll("[data-ca]").forEach(b => b.onclick = async () => {
+    const note = $("cn-" + b.dataset.c).value;
+    if (b.dataset.ca === "reject" && note.trim().length < 5) { VC.toast("Escribe qué necesita corregir."); return; }
+    b.disabled = true;
+    try { await VC.call("admin/cursos/" + b.dataset.c, { json: { action: b.dataset.ca, note } }); VC.toast(b.dataset.ca === "approve" ? "Publicado. Le avisamos por correo." : "Le pedimos los cambios por correo."); show(tab); }
+    catch (e) { VC.toast(e.message); b.disabled = false; }
+  });
+}
+function consumo(r) {
+  const total = r.list.reduce((a, x) => a + (x.cost || 0), 0);
+  $("view").innerHTML = `<div class="panel" style="margin-bottom:16px">Costo estimado total: <b>${mx(Math.round(total * 100))}</b> <span class="mute">(precio de la API × tipo de cambio de Ajustes)</span></div>
+    <div class="panel tw">${r.list.length ? `<table><thead><tr><th>Mes</th><th>Instructor</th><th>Generaciones completas</th><th>Llamadas</th><th>Tokens (entrada / salida)</th><th>Costo</th></tr></thead><tbody>
+      ${r.list.map(x => `<tr><td>${E(x.month)}</td><td>${E(x.name || "—")}<div class="mute">${E(x.email || "")}</div></td><td>${x.fulls}</td><td>${x.calls}</td><td>${(x.tin || 0).toLocaleString("es-MX")} / ${(x.tout || 0).toLocaleString("es-MX")}</td><td>${mx(Math.round((x.cost || 0) * 100))}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">Todavía no hay generaciones.</div>`}</div>`;
 }
 function ajustes(s) {
   $("view").innerHTML = `<div class="panel"><form class="set" id="set">

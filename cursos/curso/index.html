@@ -43,6 +43,9 @@ dialog{background:var(--surface-solid);color:var(--ink);border:1px solid var(--l
 dialog::backdrop{background:rgba(5,2,11,.75)}
 dialog .in{padding:22px;overflow:auto;max-height:calc(100vh - 40px)}
 dialog .x{float:right}
+.cov{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:20px;border:1px solid var(--line);margin-bottom:22px}
+.clogo{max-height:56px;width:auto;margin-bottom:14px}
+.aval img[data-logo]{height:16px}
 .cf{display:grid;gap:14px;margin-top:8px}
 .cf label{display:flex;flex-direction:column;gap:6px;color:var(--mute);font-size:.9rem}
 .cf label.ck{flex-direction:row;align-items:center;gap:10px;color:var(--ink);font-size:1rem}
@@ -73,6 +76,7 @@ dialog .x{float:right}
 <dialog id="pv"><div class="in"><button class="btn ghost x" id="pvx" aria-label="Cerrar">Cerrar</button><h2 id="pvt"></h2><div id="pvb"></div></div></dialog>
 <footer class="bot"></footer>
 <script src="/cursos/cursos.js"></script>
+<script src="/cursos/temas.js"></script>
 <script src="/assets/magia.js" defer></script>
 <script>
 VC.header(); VC.footer();
@@ -92,7 +96,7 @@ function buyBox() {
     <ul><li><b>${VC.MODALITY[c.modality] || ""}</b>${c.duration_hours ? " · " + VC.hours(c.duration_hours) : ""}</li><li><b>${D.modules.length}</b> módulos · <b>${nLess}</b> lecciones</li>
     ${D.exam ? `<li>Examen final de <b>${D.exam.questions}</b> preguntas (aprueba con ${D.exam.passing_score})</li>` : ""}
     <li>Constancia ${c.certificate_kind === "dc3" ? "con los datos de la <b>DC-3</b>" : "<b>Vórtice VR</b>"}, con folio y QR</li></ul>
-    <div class="aval"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span>Avalado por Vórtice VR</span></div></aside>`;
+    <div class="aval"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR" data-logo><span>Avalado por Vórtice VR</span></div></aside>`;
 }
 function render() {
   const c = D.course, L = c.landing || {}, i = D.instructor;
@@ -102,6 +106,8 @@ function render() {
   $("main").innerHTML = `
   ${c.status !== "published" ? `<div class="panel" style="margin-top:20px;border-color:var(--sun)">Vista previa: este curso todavía no está publicado.</div>` : ""}
   <section class="hero"><div>
+    ${c.cover_url ? `<img class="cov" src="${E(c.cover_url)}" alt="">` : ""}
+    ${c.logo_url ? `<img class="clogo" src="${E(c.logo_url)}" alt="">` : ""}
     <div class="kick">${E(c.category || "Curso")}${c.level ? " · " + E(c.level) : ""}</div>
     <h1>${E(L.headline || c.title)}</h1><p class="sub">${E(L.subheadline || c.subtitle || "")}</p>
     <div class="facts"><span class="tag">${E(VC.MODALITY[c.modality] || "")}</span>${c.duration_hours ? `<span class="tag">${VC.hours(c.duration_hours)}</span>` : ""}<span class="tag gold">Con constancia</span></div>
@@ -126,6 +132,7 @@ function render() {
 
   ${L.faq && L.faq.length ? `<section class="blk faq"><h2>Preguntas frecuentes</h2>${L.faq.map(f => `<details><summary>${E(f.q)}</summary><div class="md mute" style="margin-top:8px">${VC.md(f.a)}</div></details>`).join("")}</section>` : ""}
   <section class="blk" style="text-align:center"><a class="btn sun" href="#main" onclick="scrollTo({top:0,behavior:'smooth'});return false">${D.enrolled ? "Ir al curso" : L.cta_text ? E(L.cta_text) : "Quiero tomar este curso"}</a></section>`;
+  VC_TEMAS.apply(c.brand_theme);   // after the page is drawn: it also swaps the logo on light styles
   const en = $("enroll");
   if (en) en.onclick = async () => {
     en.disabled = true; en.textContent = "Inscribiendo…";

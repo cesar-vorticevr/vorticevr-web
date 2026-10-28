@@ -94,4 +94,14 @@ select,input[type=text],input[type=search]{background:var(--surface-solid);color
 footer.bot{margin-top:70px;border-top:1px solid var(--line);padding:26px 0 calc(26px + env(safe-area-inset-bottom,0px));color:var(--mute);font-size:.85rem}
 footer.bot .wrap{display:flex;flex-wrap:wrap;gap:10px 22px;justify-content:space-between}
 footer.bot a{color:var(--mute)}
+/* a course page in the instructor's style (cursos/temas.js) */
+.themed body::before{display:none}
+.themed .btn.sun{background:var(--sun);border-color:var(--sun);color:var(--on-sun);box-shadow:none}
+.themed .btn.sun:hover{filter:brightness(1.07);background:var(--sun)}
+.themed .tag{background:color-mix(in srgb,var(--lav) 14%,transparent);color:var(--lav)}
+.themed .tag.gold{background:color-mix(in srgb,var(--sun) 16%,transparent);color:var(--sun)}
+.theme-light header.top{background:color-mix(in srgb,var(--void) 88%,transparent)}
+.theme-light .btn{background:color-mix(in srgb,var(--vortex) 10%,transparent);color:var(--ink)}
+.theme-light .md strong{color:var(--ink)}
+.theme-light .pill{background:color-mix(in srgb,var(--vortex) 10%,transparent)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

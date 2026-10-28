@@ -69,7 +69,7 @@
   function header(active) {
     const el = document.querySelector("header.top"); if (!el) return;
     const s = session();
-    el.innerHTML = `<div class="wrap"><a class="brand" href="/cursos/" aria-label="Cursos Vórtice VR"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span>Cursos</span></a>
+    el.innerHTML = `<div class="wrap"><a class="brand" href="/cursos/" aria-label="Cursos Vórtice VR"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR" data-logo><span>Cursos</span></a>
       <nav><a href="/cursos/" class="${active === "catalogo" ? "on" : ""}">Catálogo</a><a href="/cursos/mi-aprendizaje/" class="${active === "mis" ? "on" : ""}">Mi aprendizaje</a><a href="/cursos/instructor/" class="hide-sm ${active === "instructor" ? "on" : ""}">Dar cursos</a>
       ${s ? `<a class="pill hide-sm" href="/cuenta/">${esc((s.user && s.user.name || "Mi cuenta").split(" ")[0])}</a>` : `<a class="pill" href="${loginUrl(location.pathname.replace(/^\/|\/$/g, ""))}">Entrar</a>`}</nav></div>`;
   }

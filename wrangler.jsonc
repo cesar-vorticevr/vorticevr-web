@@ -21,6 +21,8 @@
   "triggers": { "crons": ["0 9 * * *"] },
   // Worker in front of every request: Range for videos, nombre.vorticevr.mx experiences, /api and /m (AR platform).
   "main": "worker.js",
+  // the course generator's prompts (_cursos/prompts/*.md) are imported as text
+  "rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }],
   // Needed by `wrangler preview`, which Cloudflare runs for non-production branches (rama preview).
   "previews": {
     // previews do not inherit bindings: same D1 and R2 as production

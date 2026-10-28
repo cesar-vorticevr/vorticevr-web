@@ -141,10 +141,10 @@ function subdomainOf(host, root) {
   return sub;
 }
 
-// pages of the courses with a name in the address: /cursos/<curso>/ (sales page), /cursos/aprender/<curso>/, /cursos/verificar/<token>/
-const CURSOS_PAGES = new Set(["aprender", "verificar", "mi-aprendizaje", "curso", "instructor", "admin"]);
+// pages of the courses with a name in the address: /cursos/<curso>/ (sales page), /cursos/aprender/<curso>/, /cursos/manual/<curso>/, /cursos/verificar/<token>/
+const CURSOS_PAGES = new Set(["aprender", "verificar", "mi-aprendizaje", "curso", "instructor", "admin", "crear", "manual"]);
 function cursosPage(p) {
-  let m = p.match(/^\/cursos\/(aprender|verificar)\/([A-Za-z0-9_-]+)\/?$/);
+  let m = p.match(/^\/cursos\/(aprender|verificar|manual)\/([A-Za-z0-9_-]+)\/?$/);
   if (m) return `/cursos/${m[1]}/`;
   m = p.match(/^\/cursos\/([a-z0-9-]+)\/?$/);
   return m && !CURSOS_PAGES.has(m[1]) ? "/cursos/curso/" : null;

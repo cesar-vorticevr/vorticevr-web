@@ -1,0 +1,1 @@
+Propón 5 nombres para un curso a partir de lo que dijo su instructor. Cada propuesta lleva un título (máximo 8 palabras, claro y específico, sin promesas exageradas ni signos de admiración) y un subtítulo (máximo 15 palabras) que diga qué logra el alumno. Español de México. Varía el estilo: uno directo, uno con el resultado, uno con el público, uno con el método y uno breve.

@@ -116,9 +116,21 @@ function afterApproval(p) {
   else if (!price) prem = `<p>Premier todavía no tiene precio. Escríbenos a <a href="mailto:hola@vorticevr.mx">hola@vorticevr.mx</a>.</p>`;
   else prem = `<p>Premier cuesta <b>${VC.money(price)} al mes</b> (IVA incluido). Puedes cancelar cuando quieras.${D.premier.test ? " <span class='tag gold'>Modo de prueba</span>" : ""}</p><button class="btn sun" id="prem">Activar Premier</button>`;
   return `<section class="s panel"><h2>Premier</h2>${prem}</section>
-    <section class="s panel ${D.canCreate ? "good" : ""}"><h2>Crear curso</h2>${D.canCreate ? `<p>¡Ya cumples todo! La entrevista guiada para crear tu curso llega muy pronto; te avisaremos por correo.</p><button class="btn sun" disabled>Crear curso · muy pronto</button>` : `<p class="mute">Se habilita cuando tengas los tres requisitos.</p><button class="btn" disabled>Crear curso</button>`}</section>`;
+    <section class="s panel ${D.canCreate ? "good" : ""}"><h2>Mis cursos</h2>${D.canCreate ? `<p>Responde una entrevista guiada y la plataforma arma tu curso, el manual, el examen, la página de venta y el kit de marketing.</p><a class="btn sun" href="/cursos/crear/">+ Crear curso</a>` : `<p class="mute">Se habilita cuando tengas los tres requisitos.</p><button class="btn" disabled>+ Crear curso</button>`}<div id="mycourses" style="margin-top:16px"></div></section>`;
+}
+const ST = { draft: "Borrador", generating: "Generando", in_review: "En revisión", published: "Publicado", archived: "Archivado" };
+async function myCourses() {
+  const el = $("mycourses"); if (!el) return;
+  try {
+    const r = await VC.call("estudio");
+    el.innerHTML = r.courses.length ? `<ul class="docs">${r.courses.map(c => `<li><span><b>${E(c.title)}</b> · <span class="tag ${c.status === "published" ? "gold" : ""}">${ST[c.status] || c.status}</span>
+        ${c.status === "published" ? ` <span class="mute">${c.students} alumnos · ${VC.money(c.net)} para ti</span>` : c.status === "draft" ? ` <span class="mute">${c.pieces} de 5 piezas</span>` : ""}</span>
+        <a class="btn ghost" style="min-height:36px;padding:6px 14px" href="${c.status === "published" ? "/cursos/" + E(c.slug) + "/" : "/cursos/crear/?id=" + E(c.id)}">${c.status === "draft" || c.status === "generating" ? "Continuar" : "Ver"}</a></li>`).join("")}</ul>
+      <p class="mute" style="font-size:.86rem">Generaciones completas este mes: ${r.limits.month.left} de ${r.limits.month.max} disponibles.</p>` : "";
+  } catch (e) {}
 }
 function bind() {
+  myCourses();
   const pf = $("pf");
   if (pf) {
     pf.can_invoice.onchange = () => { $("noinv").hidden = pf.can_invoice.checked; };

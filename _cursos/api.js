@@ -7,6 +7,7 @@
 import { COURSE, MODULES, EXAM, SEED_VERSION, ONBOARDING_SLUG } from "./induccion.js";
 import { certificatePdf } from "./pdf.js";
 import { pagosApi, migratePagos, cursosWebhook, sellable, billingOn } from "./pagos.js";
+import { estudioApi, migrateEstudio } from "./estudio.js";
 
 let ready = false;
 async function schema(env) {
@@ -33,6 +34,7 @@ async function schema(env) {
     t("CREATE INDEX IF NOT EXISTS c_attempts_enrollment ON c_exam_attempts (enrollment_id)"),
   ]);
   await migratePagos(env);
+  await migrateEstudio(env);
   await seed(env);
   ready = true;
 }
@@ -104,6 +106,8 @@ export async function cursosApi(request, env, ctx, url, path, h) {
   await schema(env);
   const M = request.method, user = await h.auth(request, env);
   const { json } = h;
+  const done3 = await estudioApi(request, env, ctx, url, path, h, user, LIB);   // block 3: the course studio, the manual, course review
+  if (done3) return done3;
   const done2 = await pagosApi(request, env, ctx, url, path, h, user, LIB);   // block 2: instructors, Premier, buying, admin
   if (done2) return done2;
   const body = async () => { try { return await request.json(); } catch { return {}; } };
@@ -124,7 +128,7 @@ export async function cursosApi(request, env, ctx, url, path, h) {
     const exam = await env.DB.prepare("SELECT e.passing_score, (SELECT COUNT(*) FROM c_questions q WHERE q.exam_id = e.id) AS n FROM c_exams e WHERE e.course_id = ?").bind(c.id).first();
     const en = await enrollmentOf(env, user, c.id);
     return json({
-      course: { ...courseCard(c), description_md: c.description_md, objectives_md: c.objectives_md, target_audience_md: c.target_audience_md, prerequisites_md: c.prerequisites_md, promo_video_url: c.promo_video_url, status: c.status, landing: landingOf(c) },
+      course: { ...courseCard(c), description_md: c.description_md, objectives_md: c.objectives_md, target_audience_md: c.target_audience_md, prerequisites_md: c.prerequisites_md, promo_video_url: c.promo_video_url, status: c.status, landing: landingOf(c), brand_theme: c.brand_theme || "vortice", logo_url: c.logo_url || "" },
       instructor: instructorOf(c),
       modules: mods.map(md => ({ title: md.title, description_md: md.description_md, lessons: less.filter(l => l.module_id === md.id).map(l => ({ id: l.id, title: l.title, kind: l.kind, duration_minutes: l.duration_minutes, preview: !!l.is_preview, ...(l.is_preview ? { body_md: l.body_md, video_url: l.video_url } : {}) })) })),
       exam: exam && exam.n ? { questions: exam.n, passing_score: exam.passing_score } : null,
@@ -182,6 +186,7 @@ export async function cursosApi(request, env, ctx, url, path, h) {
         exam: exam ? { title: exam.title, passing_score: exam.passing_score, max_attempts: exam.max_attempts, time_limit_minutes: exam.time_limit_minutes, available: allDone, used: sub.length, passed,
           best: sub.reduce((b, a) => Math.max(b, a.score || 0), 0) } : null,
         certificate: cert ? { folio: cert.folio, token: cert.verify_token, revoked: !!cert.revoked } : null,
+        manual: /"manual":\{/.test(c.generation_json || ""),
       });
     }
 

@@ -69,7 +69,7 @@ function shell() {
 }
 function side() {
   const s = $("side"); let i = 0;
-  s.innerHTML = `<h2>${E(D.course.title)}</h2><div class="bar" aria-label="Avance"><i style="width:${D.progress}%"></i></div><div class="mute" style="font-size:.82rem;margin-top:6px">${D.progress}% completado</div>` +
+  s.innerHTML = `<h2>${E(D.course.title)}</h2>${D.manual ? `<a class="mono" href="/cursos/manual/${E(slug)}/" style="display:inline-block;margin-bottom:10px;text-decoration:none">Manual del curso →</a>` : ""}<div class="bar" aria-label="Avance"><i style="width:${D.progress}%"></i></div><div class="mute" style="font-size:.82rem;margin-top:6px">${D.progress}% completado</div>` +
     D.modules.map((m, k) => `<div class="mtitle">Módulo ${k + 1} · ${E(m.title)}</div>` + m.lessons.map(l => { const j = i++; return `<button class="li ${l.done ? "done" : ""} ${cur === l.id ? "cur" : ""}" data-i="${j}" ${isLocked(j) ? "disabled title='Completa las lecciones anteriores'" : ""}><span class="ic">${l.done ? "✓" : ""}</span><span>${E(l.title)}</span></button>`; }).join("")).join("") +
     (D.exam ? `<div class="mtitle">Final</div><button class="li exam ${cur === "exam" ? "cur" : ""} ${D.exam.passed ? "done" : ""}" data-i="exam"><span class="ic">${D.exam.passed ? "✓" : "★"}</span><span>${E(D.exam.title || "Examen final")}</span></button>` : "");
   s.querySelectorAll("[data-i]").forEach(b => b.onclick = () => { b.dataset.i === "exam" ? showExam() : showLesson(flat[+b.dataset.i].id); s.classList.remove("open"); });
