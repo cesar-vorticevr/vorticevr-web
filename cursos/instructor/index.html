@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Da cursos · Cursos Vórtice VR</title>
+<meta name="description" content="Conviértete en instructor de la plataforma de cursos de Vórtice VR: perfil revisado, curso de inducción y Premier.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="/assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/cursos/cursos.css">
+<style>
+/* instructor panel (/cursos/instructor/): profile, documents, review, onboarding course and Premier — the three requirements to create courses */
+.steps{display:grid;gap:12px;margin:22px 0 30px}
+@media (min-width:760px){.steps{grid-template-columns:repeat(3,1fr)}}
+.st{display:flex;gap:12px;align-items:flex-start;padding:16px;border-radius:16px;border:1px solid var(--line);background:var(--surface)}
+.st .n{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:700 .9rem var(--fd);border:1.5px solid var(--line2)}
+.st.ok .n{background:var(--ok);border-color:var(--ok);color:#05200f}
+.st.now{border-color:var(--sun)}
+.st.now .n{border-color:var(--sun);color:var(--sun)}
+.st b{display:block}
+.st small{color:var(--mute)}
+form.grid2{display:grid;gap:14px}
+@media (min-width:760px){form.grid2{grid-template-columns:1fr 1fr}form.grid2 .full{grid-column:1/-1}}
+label.f{display:flex;flex-direction:column;gap:6px;font-size:.9rem;color:var(--mute)}
+label.f input,label.f textarea,label.f select{width:100%}
+textarea{background:var(--surface-solid);color:var(--ink);border:1px solid var(--line2);border-radius:12px;padding:10px 12px;font:inherit;font-size:.95rem;min-height:140px;resize:vertical}
+input[type=tel],input[type=email],input[type=number]{background:var(--surface-solid);color:var(--ink);border:1px solid var(--line2);border-radius:12px;padding:10px 12px;font:inherit;font-size:.95rem;min-height:44px}
+.ex{font-size:.82rem;color:var(--mute);font-style:italic}
+label.f.check{flex-direction:row;gap:10px;align-items:flex-start;color:var(--ink);font-size:.95rem}
+label.f.check input{width:20px;height:20px;accent-color:#8b3fd6;flex:none;margin-top:2px}
+.av{display:flex;gap:16px;align-items:center}
+.av .img{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,var(--vortex),var(--sun));overflow:hidden;flex:none;display:grid;place-items:center;font:700 1.8rem var(--fd)}
+.av .img img{width:100%;height:100%;object-fit:cover}
+.docs{list-style:none;padding:0;margin:0 0 14px}
+.docs li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line);font-size:.92rem}
+.docs li span{overflow-wrap:anywhere}
+.up{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.warn{border-color:var(--sun);background:rgba(255,190,85,.08)}
+.bad{border-color:var(--bad);background:rgba(255,122,138,.08)}
+.good{border-color:rgba(95,227,161,.5);background:rgba(95,227,161,.07)}
+section.s{margin-top:22px}
+.lnk{background:none;border:0;color:var(--bad);cursor:pointer;font:600 .85rem var(--fb)}
+</style>
+</head>
+<body>
+<header class="top"></header>
+<main class="wrap" style="padding-top:34px" id="main"><div class="empty">Cargando…</div></main>
+<footer class="bot"></footer>
+<script src="/cursos/cursos.js"></script>
+<script src="/assets/magia.js" defer></script>
+<script>
+VC.header("instructor"); VC.footer();
+const E = VC.esc, $ = id => document.getElementById(id), Q = new URLSearchParams(location.search);
+let D;
+const ESTADOS = ["Aguascalientes","Baja California","Baja California Sur","Campeche","Chiapas","Chihuahua","Ciudad de México","Coahuila","Colima","Durango","Estado de México","Guanajuato","Guerrero","Hidalgo","Jalisco","Michoacán","Morelos","Nayarit","Nuevo León","Oaxaca","Puebla","Querétaro","Quintana Roo","San Luis Potosí","Sinaloa","Sonora","Tabasco","Tamaulipas","Tlaxcala","Veracruz","Yucatán","Zacatecas"];
+
+async function load() {
+  try { D = await VC.call("instructor"); }
+  catch (e) { if (e.status === 401) { location.href = VC.loginUrl("cursos/instructor"); return; } $("main").innerHTML = `<div class="empty">${E(e.message)}</div>`; return; }
+  render();
+}
+function steps(p) {
+  const a = p.status === "approved", o = p.onboarding_passed, pr = p.premier.active;
+  const cls = (done, now) => done ? "ok" : now ? "now" : "";
+  return `<div class="steps">
+    <div class="st ${cls(a, !a)}"><span class="n">${a ? "✓" : 1}</span><span><b>Perfil aprobado</b><small>${{ none: "Llena tu perfil y sube tus documentos", pending: "En revisión por Vórtice VR", rejected: "Necesita cambios", approved: "Aprobado" }[p.status]}</small></span></div>
+    <div class="st ${cls(o, a && !o)}"><span class="n">${o ? "✓" : 2}</span><span><b>Curso de inducción</b><small>${o ? "Aprobado" : "Gratis, unas 4 horas de lectura"}</small></span></div>
+    <div class="st ${cls(pr, a && o && !pr)}"><span class="n">${pr ? "✓" : 3}</span><span><b>Premier activo</b><small>${pr ? "Activo" : p.premier.status === "past_due" ? "Pago pendiente" : "Suscripción mensual"}</small></span></div></div>`;
+}
+function render() {
+  const p = D.profile, edit = p.status !== "pending";
+  const statusBox = {
+    none: `<div class="panel">Para dar cursos con el aval de Vórtice VR primero revisamos tu perfil. Llénalo, sube tus documentos y envíalo.</div>`,
+    pending: `<div class="panel warn"><b>Tu perfil está en revisión.</b> Te avisaremos por correo cuando terminemos. Mientras tanto ya puedes tomar el <a href="/cursos/${E(D.onboarding)}/">curso de inducción</a>.</div>`,
+    rejected: `<div class="panel bad"><b>Tu perfil necesita cambios:</b><div style="margin-top:6px">${E(p.review_note)}</div><div class="mute" style="margin-top:6px;font-size:.9rem">Corrige lo que se pide y vuelve a enviarlo.</div></div>`,
+    approved: `<div class="panel good"><b>¡Tu perfil está aprobado!</b> ${p.review_note ? E(p.review_note) : ""}</div>`,
+  }[p.status];
+  $("main").innerHTML = `<div class="kick">Panel de instructor</div><h1 style="font-size:clamp(1.8rem,5vw,2.6rem)">Da cursos con el aval de Vórtice VR</h1>
+    <p class="mute" style="max-width:700px">Para crear cursos necesitas tres cosas: tu perfil aprobado, el curso de inducción aprobado y Premier activo. Tú recibes el 80 % de cada venta.</p>
+    ${steps(p)}${statusBox}
+    ${p.status === "approved" ? afterApproval(p) : ""}
+    <section class="s panel"><h2>Tu perfil público</h2><p class="mute" style="margin-top:-6px">Es lo que ven los alumnos en la página de venta de tus cursos.</p>
+      <div class="av" style="margin:14px 0 18px"><div class="img" id="avimg">${p.avatar ? `<img src="${E(p.avatar)}" alt="Tu foto">` : E((D.name || "?")[0])}</div>
+        <div>${edit ? `<label class="btn ghost" style="min-height:40px">Subir foto<input type="file" id="foto" accept="image/jpeg,image/png,image/webp" hidden></label>` : ""}<div class="ex" style="margin-top:6px">De frente, bien iluminada y con fondo limpio.</div></div></div>
+      <form class="grid2" id="pf">
+        <label class="f full">Titular (una línea: qué haces y para quién)<input type="text" name="headline" maxlength="140" value="${E(p.headline)}" ${edit ? "" : "disabled"}><span class="ex">Ejemplo: "Contadora pública, 12 años llevando la contabilidad de pequeños negocios"</span></label>
+        <label class="f full">Biografía<textarea name="bio" maxlength="2000" ${edit ? "" : "disabled"}>${E(p.bio)}</textarea><span class="ex">Tu experiencia real, a quién has ayudado y con qué resultados. En primera persona y con datos que puedas comprobar.</span></label>
+        <label class="f">Ciudad<input type="text" name="city" maxlength="60" value="${E(p.city)}" ${edit ? "" : "disabled"}></label>
+        <label class="f">Estado<select name="state" ${edit ? "" : "disabled"}><option value="">Elige tu estado</option>${ESTADOS.map(s => `<option ${s === p.state ? "selected" : ""}>${s}</option>`).join("")}</select></label>
+        <label class="f">Teléfono (privado)<input type="tel" name="phone" maxlength="20" value="${E(p.phone)}" ${edit ? "" : "disabled"}></label>
+        <label class="f">RFC (privado)<input type="text" name="rfc" maxlength="13" value="${E(p.rfc)}" style="text-transform:uppercase" ${edit ? "" : "disabled"}></label>
+        <label class="f check full"><input type="checkbox" name="can_invoice" ${p.can_invoice ? "checked" : ""} ${edit ? "" : "disabled"}><span>Puedo emitir facturas (CFDI) por mis servicios. <span class="mute">Vórtice VR te paga cada quincena contra tu factura; es requisito para Premier.</span></span></label>
+        <div class="full" id="noinv" ${p.can_invoice ? "hidden" : ""}><div class="panel warn" style="padding:12px 16px;font-size:.92rem">Sin poder facturar no podemos pagarte tus ventas. Date de alta en el SAT con un régimen que te permita emitir CFDI (por ejemplo, RESICO o actividad empresarial y profesional) y regresa: tu avance se queda guardado.</div></div>
+        ${edit ? `<div class="full"><button class="btn" type="submit">Guardar perfil</button></div>` : ""}
+      </form></section>
+    <section class="s panel"><h2>Tus documentos</h2><p class="mute" style="margin-top:-6px">Privados: solo los ve el equipo de Vórtice VR para verificar tu perfil. Necesitamos al menos tu <b>CV</b> y tu <b>identificación oficial</b>; suma tu título o cédula y comprobantes de experiencia si los tienes.</p>
+      <ul class="docs">${p.documents.length ? p.documents.map(d => `<li><span><b>${E(d.label)}</b> · ${E(d.name)} <span class="mute">(${(d.bytes / 1048576).toFixed(1)} MB)</span></span>${edit && p.status !== "approved" ? `<button class="lnk" data-del="${E(d.id)}">Quitar</button>` : ""}</li>`).join("") : `<li class="mute">Todavía no subes documentos.</li>`}</ul>
+      ${edit && p.status !== "approved" ? `<div class="up"><select id="dkind">${Object.entries(D.kinds).map(([k, v]) => `<option value="${k}">${E(v)}</option>`).join("")}</select>
+        <label class="btn ghost" style="min-height:44px">Subir archivo<input type="file" id="dfile" accept="application/pdf,image/jpeg,image/png,image/webp" hidden></label><span class="ex">PDF, JPG o PNG de hasta 10 MB.</span></div>` : ""}
+    </section>
+    ${p.status === "none" || p.status === "rejected" ? `<section class="s panel"><h2>Enviar a revisión</h2>
+      ${D.missing.length ? `<p>Te falta: <b>${D.missing.map(E).join(", ")}</b>.</p>` : `<p>Todo listo. Al enviarlo, el equipo de Vórtice VR revisa tu perfil y te avisa por correo.</p>`}
+      <button class="btn sun" id="send" ${D.missing.length ? "disabled" : ""}>Enviar mi perfil a revisión</button></section>` : ""}`;
+  bind();
+}
+function afterApproval(p) {
+  const pr = p.premier, price = D.premier.price_mxn;
+  let prem;
+  if (!p.onboarding_passed) prem = `<p>Primero aprueba el <a href="/cursos/${E(D.onboarding)}/">curso de inducción</a>; al terminarlo se habilita Premier.</p><a class="btn sun" href="/cursos/aprender/${E(D.onboarding)}/">Tomar la inducción</a>`;
+  else if (pr.active) prem = `<p>Premier está <b>${pr.status === "past_due" ? "con un pago pendiente: actualiza tu tarjeta para que tus cursos sigan a la venta" : "activo"}</b>${pr.until ? ` · vigente hasta el ${new Date(pr.until).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}` : ""}.</p><button class="btn" id="prem">Administrar mi suscripción</button>`;
+  else if (!D.premier.billing) prem = `<p>El pago de Premier en línea llega muy pronto. Te avisaremos por correo.</p>`;
+  else if (!price) prem = `<p>Premier todavía no tiene precio. Escríbenos a <a href="mailto:hola@vorticevr.mx">hola@vorticevr.mx</a>.</p>`;
+  else prem = `<p>Premier cuesta <b>${VC.money(price)} al mes</b> (IVA incluido). Puedes cancelar cuando quieras.${D.premier.test ? " <span class='tag gold'>Modo de prueba</span>" : ""}</p><button class="btn sun" id="prem">Activar Premier</button>`;
+  return `<section class="s panel"><h2>Premier</h2>${prem}</section>
+    <section class="s panel ${D.canCreate ? "good" : ""}"><h2>Crear curso</h2>${D.canCreate ? `<p>¡Ya cumples todo! La entrevista guiada para crear tu curso llega muy pronto; te avisaremos por correo.</p><button class="btn sun" disabled>Crear curso · muy pronto</button>` : `<p class="mute">Se habilita cuando tengas los tres requisitos.</p><button class="btn" disabled>Crear curso</button>`}</section>`;
+}
+function bind() {
+  const pf = $("pf");
+  if (pf) {
+    pf.can_invoice.onchange = () => { $("noinv").hidden = pf.can_invoice.checked; };
+    pf.onsubmit = async e => {
+      e.preventDefault(); const b = pf.querySelector("[type=submit]"); b.disabled = true;
+      try { await VC.call("instructor/perfil", { json: { headline: pf.headline.value, bio: pf.bio.value, city: pf.city.value, state: pf.state.value, phone: pf.phone.value, rfc: pf.rfc.value, can_invoice: pf.can_invoice.checked } }); VC.toast("Perfil guardado."); await load(); }
+      catch (err) { VC.toast(err.message); b.disabled = false; }
+    };
+  }
+  if ($("foto")) $("foto").onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try { const blob = await square(f, 480); await upload("instructor/foto", blob, "foto.jpg"); VC.toast("Foto lista."); await load(); }
+    catch (err) { VC.toast(err.message); }
+  };
+  if ($("dfile")) $("dfile").onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    if (f.size > 10 * 1048576) { VC.toast("El archivo pesa más de 10 MB."); return; }
+    VC.toast("Subiendo…", 1500);
+    try { await upload("instructor/documento", f, f.name, { kind: $("dkind").value }); VC.toast("Documento subido."); await load(); }
+    catch (err) { VC.toast(err.message); }
+  };
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
+    if (!confirm("¿Quitar este documento?")) return;
+    try { await VC.call("instructor/documento/" + b.dataset.del, { method: "DELETE" }); await load(); } catch (err) { VC.toast(err.message); }
+  });
+  if ($("send")) $("send").onclick = async e => {
+    e.target.disabled = true;
+    try { await VC.call("instructor/enviar", { json: {} }); VC.toast("¡Enviado! Te avisaremos por correo."); await load(); }
+    catch (err) { VC.toast(err.message); e.target.disabled = false; }
+  };
+  if ($("prem")) $("prem").onclick = async e => {
+    e.target.disabled = true;
+    try { const r = await VC.call("instructor/premier", { json: {} }); location.href = r.url; }
+    catch (err) { VC.toast(err.message); e.target.disabled = false; }
+  };
+}
+async function upload(path, blob, name, fields = {}) {
+  const fd = new FormData(); fd.append("file", blob, name); for (const [k, v] of Object.entries(fields)) fd.append(k, v);
+  const s = VC.session(), r = await fetch("/api/cursos/" + path, { method: "POST", headers: s ? { Authorization: "Bearer " + s.token } : {}, body: fd });
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || "No se pudo subir.");
+  return j;
+}
+// the photo: centered square, 480 px JPEG (well under the 1 MB limit)
+function square(file, size) {
+  return new Promise((res, rej) => {
+    const img = new Image(); img.onerror = () => rej(new Error("No pudimos leer esa imagen."));
+    img.onload = () => {
+      const s = Math.min(img.naturalWidth, img.naturalHeight), c = document.createElement("canvas"); c.width = c.height = size;
+      c.getContext("2d").drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, size, size);
+      c.toBlob(b => b ? res(b) : rej(new Error("No pudimos preparar la foto.")), "image/jpeg", .86); URL.revokeObjectURL(img.src);
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
+(async () => {
+  if (!VC.session()) { location.href = VC.loginUrl("cursos/instructor"); return; }
+  if (Q.get("premier") === "ok") { try { await VC.call("instructor/premier/sync", { json: {} }); } catch (e) {} history.replaceState(null, "", location.pathname); VC.toast("¡Gracias! Estamos activando tu Premier."); }
+  load();
+})();
+</script>
+</body>
+</html>

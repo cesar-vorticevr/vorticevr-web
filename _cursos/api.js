@@ -6,6 +6,7 @@
 // Las respuestas correctas del examen nunca salen de este archivo mientras el alumno puede volver a intentarlo.
 import { COURSE, MODULES, EXAM, SEED_VERSION, ONBOARDING_SLUG } from "./induccion.js";
 import { certificatePdf } from "./pdf.js";
+import { pagosApi, migratePagos, cursosWebhook, sellable, billingOn } from "./pagos.js";
 
 let ready = false;
 async function schema(env) {
@@ -31,6 +32,7 @@ async function schema(env) {
     t("CREATE INDEX IF NOT EXISTS c_enrollments_student ON c_enrollments (student_id)"),
     t("CREATE INDEX IF NOT EXISTS c_attempts_enrollment ON c_exam_attempts (enrollment_id)"),
   ]);
+  await migratePagos(env);
   await seed(env);
   ready = true;
 }
@@ -77,7 +79,7 @@ const baseUrl = (env, url) => /^(localhost|127\.)/.test(url.hostname) ? url.orig
 
 async function settings(env) { return (await env.DB.prepare("SELECT * FROM c_settings WHERE id = 1").first()) || {}; }
 async function courseBySlug(env, slug) {
-  return SLUG.test(slug) ? env.DB.prepare("SELECT c.*, u.name AS instructor_name, p.headline AS instructor_headline, p.bio AS instructor_bio, p.avatar_url AS instructor_avatar FROM c_courses c LEFT JOIN users u ON u.id = c.instructor_id LEFT JOIN c_profiles p ON p.user_id = c.instructor_id WHERE c.slug = ?").bind(slug).first() : null;
+  return SLUG.test(slug) ? env.DB.prepare("SELECT c.*, u.name AS instructor_name, p.headline AS instructor_headline, p.bio AS instructor_bio, p.avatar_url AS instructor_avatar, p.premier_status, p.premier_until FROM c_courses c LEFT JOIN users u ON u.id = c.instructor_id LEFT JOIN c_profiles p ON p.user_id = c.instructor_id WHERE c.slug = ?").bind(slug).first() : null;
 }
 // can this user see a course that is not published yet (its instructor or an admin)
 const canPreview = (h, env, user, c) => !!user && (c.instructor_id === user.id || h.isAdmin(env, user));
@@ -94,16 +96,23 @@ async function enrollmentOf(env, user, courseId) {
   return user ? env.DB.prepare("SELECT * FROM c_enrollments WHERE student_id = ? AND course_id = ?").bind(user.id, courseId).first() : null;
 }
 
+const LIB = { uid, settings, courseBySlug, ready: schema, onboardingSlug: ONBOARDING_SLUG };
+// Stripe events of the courses (worker.js's webhook asks first; true = it was ours)
+export const cursosStripeEvent = (env, ctx, ev, h) => cursosWebhook(env, ctx, ev, h, LIB);
+
 export async function cursosApi(request, env, ctx, url, path, h) {
   await schema(env);
   const M = request.method, user = await h.auth(request, env);
   const { json } = h;
+  const done2 = await pagosApi(request, env, ctx, url, path, h, user, LIB);   // block 2: instructors, Premier, buying, admin
+  if (done2) return done2;
   const body = async () => { try { return await request.json(); } catch { return {}; } };
   let m;
 
   // catalog: every published course
   if (path === "/api/cursos/catalogo" && M === "GET") {
-    const { results } = await env.DB.prepare("SELECT c.*, u.name AS instructor_name, (SELECT COUNT(*) FROM c_lessons l WHERE l.course_id = c.id) AS lessons FROM c_courses c LEFT JOIN users u ON u.id = c.instructor_id WHERE c.status = 'published' ORDER BY c.published_at DESC LIMIT 300").all();
+    const { results } = await env.DB.prepare("SELECT c.*, u.name AS instructor_name, p.premier_status, p.premier_until, (SELECT COUNT(*) FROM c_lessons l WHERE l.course_id = c.id) AS lessons FROM c_courses c LEFT JOIN users u ON u.id = c.instructor_id LEFT JOIN c_profiles p ON p.user_id = c.instructor_id WHERE c.status = 'published' ORDER BY c.published_at DESC LIMIT 300").all();
+    results.splice(0, results.length, ...results.filter(sellable));   // an instructor without Premier (past the 7 days of grace) is not listed; enrolled students keep their course
     return json({ courses: results.map(c => ({ ...courseCard(c), instructor: c.instructor_name || "Vórtice VR", lessons: c.lessons })) }, 200, { "Cache-Control": "public, max-age=60" });
   }
 
@@ -119,7 +128,7 @@ export async function cursosApi(request, env, ctx, url, path, h) {
       instructor: instructorOf(c),
       modules: mods.map(md => ({ title: md.title, description_md: md.description_md, lessons: less.filter(l => l.module_id === md.id).map(l => ({ id: l.id, title: l.title, kind: l.kind, duration_minutes: l.duration_minutes, preview: !!l.is_preview, ...(l.is_preview ? { body_md: l.body_md, video_url: l.video_url } : {}) })) })),
       exam: exam && exam.n ? { questions: exam.n, passing_score: exam.passing_score } : null,
-      enrolled: !!(en && en.status !== "refunded"), signedIn: !!user,
+      enrolled: !!(en && en.status !== "refunded"), signedIn: !!user, sellable: sellable(c), billing: !!user && billingOn(env, h, user),
     });
   }
 
@@ -130,7 +139,7 @@ export async function cursosApi(request, env, ctx, url, path, h) {
     if (!c || c.status !== "published") return json({ error: "Este curso no está disponible." }, 404);
     const en = await enrollmentOf(env, user, c.id);
     if (en && en.status !== "refunded") return json({ ok: true, already: true });
-    if (c.price_mxn > 0) return json({ error: "La compra con tarjeta llega muy pronto.", soon: true }, 402);
+    if (c.price_mxn > 0) return json({ error: "Este curso es de pago: cómpralo desde su página.", buy: true }, 402);
     const now = Date.now();
     if (en) await env.DB.prepare("UPDATE c_enrollments SET status = 'active', updated_at = ? WHERE id = ?").bind(now, en.id).run();
     else await env.DB.prepare("INSERT INTO c_enrollments (id, student_id, course_id, status, progress_pct, created_at, updated_at) VALUES (?, ?, ?, 'active', 0, ?, ?)").bind(uid(), user.id, c.id, now, now).run();

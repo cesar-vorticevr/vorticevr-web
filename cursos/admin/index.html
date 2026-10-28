@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Admin de cursos · Vórtice VR</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="/assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/cursos/cursos.css">
+<style>
+/* admin of the courses platform (ADMIN_EMAILS): instructors to review, sales and settings. Course review and payouts come later. */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 22px}
+.card{margin-bottom:14px}
+.head{display:flex;gap:14px;align-items:flex-start}
+.head .img{width:64px;height:64px;border-radius:50%;flex:none;overflow:hidden;background:linear-gradient(135deg,var(--vortex),var(--sun));display:grid;place-items:center;font:700 1.4rem var(--fd)}
+.head .img img{width:100%;height:100%;object-fit:cover}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.92rem;margin:12px 0}
+.kv dt{color:var(--mute)}.kv dd{margin:0;overflow-wrap:anywhere}
+.docs a{display:inline-block;margin:4px 8px 4px 0}
+textarea{width:100%;background:var(--surface-solid);color:var(--ink);border:1px solid var(--line2);border-radius:12px;padding:10px 12px;font:inherit;font-size:.92rem;min-height:70px}
+.acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.btn.no{border-color:var(--bad);color:var(--bad)}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mute);font-weight:500}
+.tw{overflow-x:auto}
+form.set{display:grid;gap:14px;max-width:560px}
+form.set label{display:flex;flex-direction:column;gap:6px;color:var(--mute);font-size:.9rem}
+form.set input{width:100%}
+</style>
+</head>
+<body>
+<header class="top"></header>
+<main class="wrap" style="padding-top:30px">
+  <div class="kick">Admin de cursos</div><h1 style="font-size:clamp(1.8rem,5vw,2.4rem)">Plataforma de cursos</h1>
+  <div class="chips tabs" id="tabs">
+    <button class="chip on" data-t="pending">Por revisar</button><button class="chip" data-t="approved">Aprobados</button><button class="chip" data-t="rejected">Rechazados</button>
+    <button class="chip" data-t="ventas">Ventas</button><button class="chip" data-t="ajustes">Ajustes</button>
+  </div>
+  <div id="view"><div class="empty">Cargando…</div></div>
+</main>
+<footer class="bot"></footer>
+<script src="/cursos/cursos.js"></script>
+<script>
+VC.header(); VC.footer();
+const E = VC.esc, $ = id => document.getElementById(id);
+let tab = "pending";
+const date = t => t ? new Date(t).toLocaleString("es-MX", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+async function show(t) {
+  tab = t; document.querySelectorAll("#tabs .chip").forEach(b => b.classList.toggle("on", b.dataset.t === t));
+  $("view").innerHTML = `<div class="empty">Cargando…</div>`;
+  try {
+    if (t === "ventas") return ventas(await VC.call("admin/ventas"));
+    if (t === "ajustes") return ajustes(await VC.call("admin/ajustes"));
+    instructores(await VC.call("admin/instructores?estado=" + t));
+  } catch (e) {
+    if (e.status === 401) { location.href = VC.loginUrl("cursos/admin"); return; }
+    $("view").innerHTML = `<div class="empty">${E(e.message)}</div>`;
+  }
+}
+function instructores(r) {
+  document.querySelectorAll("#tabs .chip").forEach(b => { const n = r.counts[b.dataset.t]; if (n !== undefined) b.textContent = b.textContent.replace(/ \(\d+\)$/, "") + ` (${n})`; });
+  $("view").innerHTML = r.list.length ? r.list.map(i => `<div class="panel card"><div class="head"><div class="img">${i.avatar ? `<img src="${E(i.avatar)}" alt="">` : E((i.name || "?")[0])}</div>
+      <div><h3 style="margin:0">${E(i.name)}</h3><div class="mute">${E(i.headline)}</div><div class="mono" style="margin-top:4px">${E(i.email)}</div></div></div>
+      <dl class="kv"><dt>Ciudad</dt><dd>${E(i.city)}, ${E(i.state)}</dd><dt>Teléfono</dt><dd>${E(i.phone || "—")}</dd><dt>RFC</dt><dd>${E(i.rfc || "—")}</dd><dt>Factura</dt><dd>${i.can_invoice ? "Sí puede facturar" : "No puede facturar"}</dd>
+        <dt>Enviado</dt><dd>${date(i.submitted_at)}</dd><dt>Inducción</dt><dd>${i.onboarding_passed ? "Aprobada" : "Pendiente"}</dd><dt>Premier</dt><dd>${E({ inactive: "Sin Premier", active: "Activo", past_due: "Pago pendiente", canceled: "Cancelado" }[i.premier.status] || i.premier.status)}${i.premier.until ? " · hasta " + date(i.premier.until) : ""}</dd>
+        ${i.review_note ? `<dt>Nota</dt><dd>${E(i.review_note)}</dd>` : ""}</dl>
+      <details><summary class="mono" style="cursor:pointer">Biografía</summary><div class="md" style="margin-top:8px">${VC.md(i.bio)}</div></details>
+      <div class="docs" style="margin-top:10px">${i.documents.map(d => `<a class="btn ghost" style="min-height:36px;padding:6px 12px;font-size:.82rem" href="#" data-doc="${E(d.id)}">${E(d.label)} · ${E(d.name)}</a>`).join("") || `<span class="mute">Sin documentos</span>`}</div>
+      ${tab !== "approved" ? `<textarea id="n-${i.id}" placeholder="Nota para el instructor (obligatoria si rechazas: le llega por correo)"></textarea>
+        <div class="acts"><button class="btn sun" data-a="approve" data-u="${i.id}">Aprobar</button>${tab === "pending" ? `<button class="btn no" data-a="reject" data-u="${i.id}">Pedir cambios</button>` : ""}</div>` : ""}</div>`).join("")
+    : `<div class="empty">No hay instructores en esta lista.</div>`;
+  document.querySelectorAll("[data-doc]").forEach(a => a.onclick = async e => {   // documents are private: fetched with the session, opened as a blob
+    e.preventDefault();
+    const s = VC.session(), w = window.open("", "_blank");
+    const r = await fetch("/api/cursos/admin/documento/" + a.dataset.doc, { headers: { Authorization: "Bearer " + s.token } });
+    if (!r.ok) { w && w.close(); VC.toast("No se pudo abrir."); return; }
+    const u = URL.createObjectURL(await r.blob()); if (w) w.location = u; else location.href = u;
+  });
+  document.querySelectorAll("[data-a]").forEach(b => b.onclick = async () => {
+    const note = $("n-" + b.dataset.u).value;
+    if (b.dataset.a === "reject" && note.trim().length < 5) { VC.toast("Escribe qué necesita corregir."); return; }
+    b.disabled = true;
+    try { await VC.call("admin/instructores/" + b.dataset.u, { json: { action: b.dataset.a, note } }); VC.toast(b.dataset.a === "approve" ? "Aprobado. Le avisamos por correo." : "Le pedimos los cambios por correo."); show(tab); }
+    catch (e) { VC.toast(e.message); b.disabled = false; }
+  });
+}
+const mx = c => "$" + ((c || 0) / 100).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " MXN";
+function ventas(r) {
+  const paid = r.list.filter(o => o.status === "paid"), sum = k => paid.reduce((a, o) => a + (o[k] || 0), 0);
+  $("view").innerHTML = `<div class="panel" style="margin-bottom:16px">Pagadas: <b>${paid.length}</b> · Cobrado <b>${mx(sum("amount"))}</b> · Comisión <b>${mx(sum("commission"))}</b> · A instructores <b>${mx(sum("net"))}</b></div>
+    <div class="panel tw">${r.list.length ? `<table><thead><tr><th>Fecha</th><th>Curso</th><th>Alumno</th><th>Monto</th><th>Comisión</th><th>Instructor</th><th>Estado</th><th>Factura</th></tr></thead><tbody>
+      ${r.list.map(o => `<tr><td>${date(o.paid_at)}</td><td>${E(o.course)}</td><td>${E(o.student)}<div class="mute">${E(o.email)}</div></td><td>${mx(o.amount)}</td><td>${mx(o.commission)}</td><td>${mx(o.net)}</td>
+        <td>${o.status === "paid" ? "Pagada" : o.status === "refunded" ? "Reembolsada" : E(o.status)}${o.mode === "test" ? ' <span class="tag gold">prueba</span>' : ""}</td>
+        <td>${o.cfdi ? `${E(o.cfdi.rfc)}<div class="mute">${E(o.cfdi.name)} · CP ${E(o.cfdi.cp)} · Rég. ${E(o.cfdi.regimen)} · Uso ${E(o.cfdi.uso)}</div>` : "—"}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">Todavía no hay ventas.</div>`}</div>`;
+}
+function ajustes(s) {
+  $("view").innerHTML = `<div class="panel"><form class="set" id="set">
+    <label>Precio de Premier al mes (MXN, IVA incluido)<input type="number" name="premier_price_mxn" min="10" step="1" value="${E(s.premier_price_mxn)}" placeholder="Sin precio: Premier no se puede contratar"></label>
+    <label>Comisión de la plataforma (%)<input type="number" name="commission_pct" min="0" max="90" value="${E(s.commission_pct)}"></label>
+    <label>Número de registro ACE ante la STPS (sale en las constancias)<input type="text" name="ace_registration_number" maxlength="40" value="${E(s.ace_registration_number)}"></label>
+    <label>Quién firma las constancias por Vórtice VR<input type="text" name="certificate_signer_name" maxlength="80" value="${E(s.certificate_signer_name)}" placeholder="Vacío: Vórtice VR"></label>
+    <label>Su cargo<input type="text" name="certificate_signer_title" maxlength="80" value="${E(s.certificate_signer_title)}" placeholder="Ej. Dirección académica"></label>
+    <p class="mute" style="margin:0;font-size:.88rem">Stripe: ${s.stripe ? (s.stripe === "live" ? "claves reales" : "claves de prueba (solo los admins pueden pagar)") : "sin configurar"}. Si cambias el precio de Premier, las suscripciones nuevas usan el precio nuevo.</p>
+    <div><button class="btn sun" type="submit">Guardar ajustes</button></div></form></div>`;
+  $("set").onsubmit = async e => {
+    e.preventDefault(); const f = e.target;
+    try { ajustes(await VC.call("admin/ajustes", { json: Object.fromEntries(new FormData(f)) })); VC.toast("Ajustes guardados."); } catch (err) { VC.toast(err.message); }
+  };
+}
+$("tabs").onclick = e => { const b = e.target.closest(".chip"); if (b) show(b.dataset.t); };
+if (!VC.session()) location.href = VC.loginUrl("cursos/admin"); else show("pending");
+</script>
+</body>
+</html>

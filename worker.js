@@ -8,7 +8,7 @@
 //    Requiere bindings DB (D1) y MEDIA (R2); secretos RESEND_API_KEY y SESSION_SECRET.
 //    Sin bindings, el sitio funciona igual y la API responde 503.
 //  - Plataforma de cursos (_cursos/): cursos.vorticevr.mx → vorticevr.mx/cursos/…, /api/cursos/* → _cursos/api.js.
-import { cursosApi } from "./_cursos/api.js";
+import { cursosApi, cursosStripeEvent } from "./_cursos/api.js";
 
 const ROOT_DEFAULT = "vorticevr.mx";
 const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear","create","ra","x","e","m","preview","app","apps","static","assets","cdn","dev","test","staging","beta","demo","vorticevr","vortice","soporte","support","help","ayuda","blog","shop","tienda","login","cuenta","account","johara","tarjeta","proyectos","status","docs","cursos"]);
@@ -226,13 +226,17 @@ async function deleteMedia(env, slug, data) {
 }
 
 // ---------- API ----------
+// what the courses platform (_cursos/) uses from here: accounts, mail, Stripe
+// (a function: several of these are consts defined further down)
+const cursosH = () => ({ auth, json, isAdmin, sendMail, shell, esc, btnMail, fecha, stripe, stripeMode, limit, siteUrl });
+
 async function api(request, env, ctx, url) {
   if (!env.DB || !env.MEDIA) return json({ error: "La plataforma todavía se está configurando." }, 503);
   await schema(env);
   const path = url.pathname.replace(/\/+$/, "");
   const ip = request.headers.get("CF-Connecting-IP") || "local";
   const M = request.method;
-  if (path.startsWith("/api/cursos/")) return cursosApi(request, env, ctx, url, path, { auth, json, isAdmin, sendMail, shell, esc, btnMail, fecha });
+  if (path.startsWith("/api/cursos/")) return cursosApi(request, env, ctx, url, path, cursosH());
 
   // public: one experience's settings
   let m = path.match(/^\/api\/exp\/([a-z0-9-]+)$/);
@@ -416,6 +420,7 @@ async function api(request, env, ctx, url) {
     const raw = await request.text();
     if (!(await stripeVerify(env, raw, request.headers.get("Stripe-Signature")))) return json({ error: "Firma inválida" }, 400);
     const ev = JSON.parse(raw), o = (ev.data && ev.data.object) || {};
+    if (await cursosStripeEvent(env, ctx, ev, cursosH())) return json({ received: true });   // Premier and course purchases (metadata.vvr)
     let sub = null;
     if (ev.type === "checkout.session.completed" && o.mode === "subscription") sub = o.subscription;
     else if (/^customer\.subscription\./.test(ev.type)) sub = o.id;
@@ -2033,6 +2038,7 @@ async function stripeVerify(env, raw, header) {
 // Reads the subscription from Stripe (never trusts the event's copy) and applies its plan to the account.
 async function stripeSync(env, ctx, subId) {
   const sub = await stripe(env, "GET", `subscriptions/${subId}`);
+  if (sub.metadata && sub.metadata.vvr === "premier") return;   // Cursos Premier: _cursos/pagos.js
   const uid = Number(sub.metadata && sub.metadata.user_id);
   let user = uid ? await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(uid).first() : null;
   if (!user) user = await env.DB.prepare("SELECT * FROM users WHERE stripe_customer = ?").bind(sub.customer).first();

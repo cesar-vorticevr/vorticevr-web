@@ -39,10 +39,17 @@ details.mod[open] summary::after{content:"–"}
 .inst{display:flex;gap:16px;align-items:flex-start}
 .inst .av{flex:none;width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--vortex),var(--sun));display:grid;place-items:center;font:700 1.6rem var(--fd);overflow:hidden}
 .inst .av img{width:100%;height:100%;object-fit:cover}
-dialog{background:var(--surface-solid);color:var(--ink);border:1px solid var(--line2);border-radius:20px;padding:0;width:min(820px,calc(100vw - 24px));max-height:calc(100vh - 40px)}
+dialog{background:var(--surface-solid);color:var(--ink);border:1px solid var(--line2);border-radius:20px;padding:0;width:min(820px,calc(100vw - 24px));max-height:calc(100vh - 40px);overflow:hidden}
 dialog::backdrop{background:rgba(5,2,11,.75)}
 dialog .in{padding:22px;overflow:auto;max-height:calc(100vh - 40px)}
 dialog .x{float:right}
+.cf{display:grid;gap:14px;margin-top:8px}
+.cf label{display:flex;flex-direction:column;gap:6px;color:var(--mute);font-size:.9rem}
+.cf label.ck{flex-direction:row;align-items:center;gap:10px;color:var(--ink);font-size:1rem}
+.cf .ck input{width:20px;height:20px;accent-color:#8b3fd6}
+.cf input[type=text],.cf select{width:100%}
+#fx{display:grid;gap:14px}
+#fx[hidden]{display:none}
 .faq details{border-top:1px solid var(--line);padding:12px 0}
 .faq summary{cursor:pointer;font-weight:600}
 </style>
@@ -50,6 +57,19 @@ dialog .x{float:right}
 <body>
 <header class="top"></header>
 <main class="wrap" id="main"><div class="empty">Cargando el curso…</div></main>
+<dialog id="bx"><div class="in"><button class="btn ghost x" id="bxx" aria-label="Cerrar">Cerrar</button><h2>Antes de pagar</h2>
+  <form id="cf" class="cf">
+    <label class="ck"><input type="checkbox" name="inv"><span>Necesito factura (CFDI)</span></label>
+    <div id="fx" hidden>
+      <label>RFC<input type="text" name="rfc" maxlength="13" autocomplete="off" style="text-transform:uppercase"></label>
+      <label>Razón social o nombre (como en tu constancia del SAT)<input type="text" name="rs" maxlength="200"></label>
+      <label>Código postal fiscal<input type="text" name="cp" maxlength="5" inputmode="numeric"></label>
+      <label>Régimen fiscal<select name="reg"><option value="">Elige tu régimen</option><option value="601">601 · General de Ley Personas Morales</option><option value="603">603 · Personas Morales con Fines no Lucrativos</option><option value="605">605 · Sueldos y Salarios</option><option value="606">606 · Arrendamiento</option><option value="612">612 · Actividades Empresariales y Profesionales</option><option value="616">616 · Sin obligaciones fiscales</option><option value="621">621 · Incorporación Fiscal</option><option value="626">626 · Régimen Simplificado de Confianza</option></select></label>
+      <label>Uso del CFDI<select name="uso"><option value="G03">G03 · Gastos en general</option><option value="D10">D10 · Pagos por servicios educativos (colegiaturas)</option><option value="G01">G01 · Adquisición de mercancías</option><option value="S01">S01 · Sin efectos fiscales</option><option value="CP01">CP01 · Pagos</option></select></label>
+      <p class="mute" style="font-size:.85rem;margin:0">Te enviamos la factura por correo en los días siguientes a tu compra.</p>
+    </div>
+    <button class="btn sun block" type="submit">Ir a pagar</button>
+  </form></div></dialog>
 <dialog id="pv"><div class="in"><button class="btn ghost x" id="pvx" aria-label="Cerrar">Cerrar</button><h2 id="pvt"></h2><div id="pvb"></div></div></dialog>
 <footer class="bot"></footer>
 <script src="/cursos/cursos.js"></script>
@@ -64,7 +84,9 @@ function buyBox() {
   if (D.enrolled) btn = `<a class="btn sun block" href="/cursos/aprender/${E(c.slug)}/">Ir al curso</a>`;
   else if (!D.signedIn) btn = `<a class="btn sun block" href="${VC.loginUrl("cursos/" + c.slug)}">${free ? "Inscribirme gratis" : "Comprar"}</a><p class="mute" style="font-size:.85rem;margin:8px 0 0">Entra o crea tu cuenta de Vórtice VR para continuar.</p>`;
   else if (free) btn = `<button class="btn sun block" id="enroll">Inscribirme gratis</button>`;
-  else btn = `<button class="btn sun block" disabled>Compra muy pronto</button><p class="mute" style="font-size:.85rem;margin:8px 0 0">El pago con tarjeta se está activando.</p>`;
+  else if (!D.sellable) btn = `<button class="btn sun block" disabled>No disponible por ahora</button>`;
+  else if (!D.billing) btn = `<button class="btn sun block" disabled>Compra muy pronto</button><p class="mute" style="font-size:.85rem;margin:8px 0 0">El pago con tarjeta se está activando.</p>`;
+  else btn = `<button class="btn sun block" id="buy">Comprar</button><p class="mute" style="font-size:.85rem;margin:8px 0 0">Pago seguro con tarjeta a través de Stripe. IVA incluido.</p>`;
   const nLess = D.modules.reduce((a, m) => a + m.lessons.length, 0);
   return `<aside class="panel buy"><span class="mono">Precio</span><span class="price">${VC.money(c.price_mxn)}</span>${btn}
     <ul><li><b>${VC.MODALITY[c.modality] || ""}</b>${c.duration_hours ? " · " + VC.hours(c.duration_hours) : ""}</li><li><b>${D.modules.length}</b> módulos · <b>${nLess}</b> lecciones</li>
@@ -110,6 +132,8 @@ function render() {
     try { await VC.call(`curso/${slug}/inscribir`, { json: {} }); location.href = `/cursos/aprender/${slug}/`; }
     catch (e) { VC.toast(e.message); en.disabled = false; en.textContent = "Inscribirme gratis"; }
   };
+  const buy = $("buy");
+  if (buy) buy.onclick = () => { $("fx").hidden = true; $("cf").reset(); $("bx").showModal(); };
   $("main").querySelectorAll("[data-l]").forEach(b => b.onclick = () => {
     const l = D.modules.flatMap(m => m.lessons).find(x => x.id === b.dataset.l);
     $("pvt").textContent = l.title;
@@ -117,9 +141,33 @@ function render() {
     $("pv").showModal();
   });
 }
+// buying: "¿Necesitas factura?" (the data is kept with the order; Vórtice VR invoices from its own system), then Stripe Checkout
+$("cf").inv.onchange = e => { $("fx").hidden = !e.target.checked; };
+$("bxx").onclick = () => $("bx").close();
+$("cf").onsubmit = async e => {
+  e.preventDefault(); const f = e.target, b = f.querySelector("[type=submit]");
+  const cfdi = f.inv.checked ? { rfc: f.rfc.value, name: f.rs.value, cp: f.cp.value, regimen: f.reg.value, uso: f.uso.value } : null;
+  b.disabled = true; b.textContent = "Abriendo el pago…";
+  try { const r = await VC.call(`curso/${slug}/comprar`, { json: { cfdi } }); location.href = r.url; }
+  catch (err) { VC.toast(err.message); b.disabled = false; b.textContent = "Ir a pagar"; if (err.data && err.data.enrolled) location.href = `/cursos/aprender/${slug}/`; }
+};
 $("pvx").onclick = () => { $("pv").close(); $("pvb").innerHTML = ""; };
 $("pv").addEventListener("close", () => { $("pvb").innerHTML = ""; });
-VC.call("curso/" + encodeURIComponent(slug)).then(r => { D = r; render(); })
+// back from Stripe: confirm the payment here (without waiting for the webhook) and go to the course
+const QS = new URLSearchParams(location.search);
+async function afterPay() {
+  const s = QS.get("s");
+  if (QS.get("pago") === "cancelado") { history.replaceState(null, "", location.pathname); VC.toast("Cancelaste el pago. No se hizo ningún cargo."); return; }
+  if (QS.get("pago") !== "ok" || !s) return;
+  $("main").innerHTML = `<div class="empty"><h2>Confirmando tu pago…</h2></div>`;
+  for (let i = 0; i < 6; i++) {
+    try { const r = await VC.call("pago/" + encodeURIComponent(s), { json: {} }); if (r.paid) { location.href = `/cursos/aprender/${slug}/`; return new Promise(() => {}); } } catch (e) {}
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  history.replaceState(null, "", location.pathname);
+  VC.toast("Tu pago se está procesando. En cuanto se confirme te llega un correo con el acceso.", 6000);
+}
+afterPay().then(() => VC.call("curso/" + encodeURIComponent(slug))).then(r => { D = r; render(); })
   .catch(e => { $("main").innerHTML = `<div class="empty"><h2>${E(e.message)}</h2><a class="btn" href="/cursos/">Ver el catálogo</a></div>`; });
 </script>
 </body>
