@@ -430,11 +430,13 @@ const nina = (() => {
   const mezclador = new THREE.AnimationMixer(raiz);
   const acciones = {};
   for (const clip of ninaGltf.animations) {
-    // quitamos el avance horizontal de la cadera: el juego mueve a la niña
+    // quitamos el avance horizontal de la cadera: el juego mueve a la niña.
+    // El esqueleto viene de Blender (Z arriba): avanza en Y y la altura es Z,
+    // así que se fijan X y Y y se deja Z para el rebote del paso.
     for (const pista of clip.tracks) {
       if (!/Hips.position$/.test(pista.name)) continue;
-      const v = pista.values, x0 = v[0], z0 = v[2];
-      for (let i = 0; i < v.length; i += 3) { v[i] = x0; v[i + 2] = z0; }
+      const v = pista.values, x0 = v[0], y0 = v[1];
+      for (let i = 0; i < v.length; i += 3) { v[i] = x0; v[i + 1] = y0; }
     }
     acciones[clip.name] = mezclador.clipAction(clip);
   }
