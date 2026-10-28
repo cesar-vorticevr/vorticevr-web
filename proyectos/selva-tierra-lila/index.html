@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>La cosecha de Tierra Lila · Vórtice VR</title>
+<meta name="description" content="Recorre una selva en 3D, vuélvete mariposa y responde preguntas sobre las subregiones de Tabasco. Una actividad educativa de Tierra Lila con Vórtice VR.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --morado: #6b2a9e;
+    --morado-claro: #b67cff;
+    --tinta: #1d0f2b;
+    --vidrio: rgba(24, 10, 38, 0.55);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0d1a14; font-family: 'Outfit', system-ui, sans-serif; color: #fff; }
+  canvas#mundo { display: block; position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; }
+
+  /* ---------- HUD ---------- */
+  .hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; opacity: 0; transition: opacity .8s; }
+  .hud.on { opacity: 1; }
+  .contador {
+    position: absolute; top: max(16px, env(safe-area-inset-top)); left: 16px;
+    display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 10px;
+    background: var(--vidrio); backdrop-filter: blur(8px); border: 1px solid rgba(182,124,255,.35);
+    border-radius: 999px; font-weight: 800; font-size: 18px; letter-spacing: .02em;
+  }
+  .contador { gap: 6px; padding: 6px 8px; }
+  .chip { display: flex; align-items: center; gap: 4px; padding: 4px 10px 4px 6px; border-radius: 999px; background: rgba(255,255,255,.08); }
+  .chip b { font-size: 20px; line-height: 1; }
+  .chip span { font-size: 15px; font-variant-numeric: tabular-nums; }
+  .chip.gano { animation: gano .7s ease-out; }
+  @keyframes gano { 0% { transform: scale(1); background: rgba(127,224,138,.8); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+  .reloj {
+    position: absolute; top: calc(max(16px, env(safe-area-inset-top)) + 64px); left: 16px; width: 190px; padding: 8px 12px;
+    border-radius: 14px; background: var(--vidrio); backdrop-filter: blur(8px); border: 1px solid rgba(182,124,255,.45);
+    font-size: 13px; opacity: 0; transform: translateY(-6px); transition: opacity .4s, transform .4s;
+  }
+  .reloj.on { opacity: 1; transform: none; }
+  .reloj div { display: flex; justify-content: space-between; margin-bottom: 6px; font-weight: 600; }
+  .reloj .barra { height: 6px; border-radius: 3px; background: rgba(255,255,255,.15); overflow: hidden; margin: 0; }
+  .reloj i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #ffd36e, #d9b8ff, #b67cff); }
+  .reloj.poco { animation: parpadeo .5s infinite alternate; border-color: #ffd36e; }
+  @keyframes parpadeo { to { box-shadow: 0 0 18px rgba(255,211,110,.7); } }
+  .narracion {
+    position: absolute; left: 50%; bottom: calc(max(20px, env(safe-area-inset-bottom)) + 8px); transform: translate(-50%, 10px);
+    width: min(560px, calc(100% - 32px)); display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px;
+    border-radius: 18px; background: rgba(40,16,62,.78); backdrop-filter: blur(10px); border: 1px solid rgba(217,184,255,.4);
+    box-shadow: 0 10px 40px rgba(0,0,0,.35); opacity: 0; transition: opacity .5s, transform .5s;
+  }
+  .narracion.on { opacity: 1; transform: translate(-50%, 0); }
+  .narracion .cara { font-size: 28px; line-height: 1; }
+  .narracion small { display: block; color: #d9b8ff; font-weight: 800; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 2px; }
+  .narracion p { margin: 0; font-size: 16px; line-height: 1.4; }
+  .narracion.nueva p { animation: entra .5s ease-out; }
+  @keyframes entra { from { opacity: 0; transform: translateY(4px); } }
+  .es-tactil .narracion { bottom: auto; top: calc(max(16px, env(safe-area-inset-top)) + 120px); }
+
+  /* ---------- Trivia ---------- */
+  .trivia .tarjeta { background: rgba(30,14,46,.92); border: 1px solid rgba(217,184,255,.35); border-radius: 22px; padding: 24px 20px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .trivia .marca-lila { width: min(220px, 60%); display: block; margin: 0 auto 6px; filter: drop-shadow(0 0 10px rgba(150,80,220,.8)); }
+  .trivia .premio { display: inline-block; padding: 4px 12px; border-radius: 999px; background: rgba(127,224,138,.16); color: #b9f5c0; font-weight: 600; font-size: 14px; margin-bottom: 10px; }
+  .trivia h2 { font-size: clamp(19px, 4.6vw, 24px); margin: 0 0 16px; line-height: 1.3; text-wrap: balance; }
+  .opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .opcion { display: flex; align-items: center; gap: 10px; text-align: left; padding: 12px 14px; border-radius: 14px; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.07); color: #fff; font: 600 15px 'Outfit', sans-serif; transition: background .2s, transform .1s; }
+  .opcion:hover:not(:disabled) { background: rgba(182,124,255,.3); }
+  .opcion:active:not(:disabled) { transform: scale(.98); }
+  .opcion kbd { flex: none; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 7px; background: rgba(255,255,255,.14); font: 600 12px 'Outfit', sans-serif; }
+  .opcion.correcta { background: rgba(80,190,100,.55); border-color: #9ef0aa; }
+  .opcion.incorrecta { background: rgba(220,70,90,.5); border-color: #ff9aa8; }
+  .trivia .nota { min-height: 22px; margin: 14px 0 0; font-weight: 600; }
+  @media (max-width: 480px) { .opciones { grid-template-columns: 1fr; } }
+  .marcas { display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; }
+  .marcas .marca img { width: min(190px, 38vw); }
+  .marcas .marca.lila { background: linear-gradient(135deg, #8a5bc4, #5b3a8a); }
+  .brujula {
+    position: absolute; top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .brujula .flecha {
+    width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--vidrio); backdrop-filter: blur(8px); border: 1px solid rgba(182,124,255,.45);
+    box-shadow: 0 0 18px rgba(182,124,255,.35);
+  }
+  .brujula .flecha svg { width: 22px; height: 22px; transition: transform .08s linear; }
+  .brujula span { font-size: 12px; text-shadow: 0 1px 4px #000; opacity: .9; }
+  .boton-redondo {
+    position: absolute; top: max(16px, env(safe-area-inset-top)); right: 16px; pointer-events: auto;
+    width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(182,124,255,.45);
+    background: var(--vidrio); backdrop-filter: blur(8px); color: #fff; font-size: 18px; cursor: pointer;
+  }
+  .ayuda {
+    position: absolute; left: 16px; bottom: 16px; padding: 12px 16px; border-radius: 14px;
+    background: var(--vidrio); backdrop-filter: blur(8px); font-size: 13px; line-height: 1.6;
+    transition: opacity 1.2s; border: 1px solid rgba(255,255,255,.12);
+  }
+  .ayuda kbd { display: inline-block; min-width: 22px; padding: 0 5px; text-align: center; border-radius: 5px;
+    background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.25); font-family: inherit; font-size: 12px; }
+  .aviso {
+    position: absolute; top: 26%; left: 50%; transform: translate(-50%, -10px); opacity: 0;
+    padding: 12px 22px; border-radius: 999px; font-weight: 600; font-size: 18px; white-space: nowrap;
+    background: linear-gradient(90deg, rgba(107,42,158,.85), rgba(160,80,230,.85));
+    box-shadow: 0 0 30px rgba(182,124,255,.6); transition: opacity .4s, transform .4s;
+  }
+  .aviso.on { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- Controles táctiles ---------- */
+  .tactil { display: none; }
+  .es-tactil .tactil { display: block; }
+  .es-tactil .ayuda { display: none; }
+  .zona-joy { position: absolute; left: 0; bottom: 0; width: 50%; height: 55%; pointer-events: auto; touch-action: none; }
+  .joy-base {
+    position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.35); background: rgba(24,10,38,.3); left: 90px; top: calc(100% - 110px);
+  }
+  .joy-perilla {
+    position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #d9b8ff, #7a35b5); box-shadow: 0 0 16px rgba(182,124,255,.7);
+  }
+  .botones-vuelo { position: absolute; right: 18px; bottom: 26px; display: flex; flex-direction: column; gap: 14px; pointer-events: auto; }
+  .botones-vuelo button {
+    width: 74px; height: 74px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4); color: #fff;
+    background: rgba(24,10,38,.45); font: 600 13px 'Outfit', sans-serif; touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+  .botones-vuelo button.activo { background: rgba(140,70,210,.75); }
+  .botones-vuelo button b { display: block; font-size: 22px; line-height: 1; }
+
+  /* ---------- Pantallas ---------- */
+  .pantalla {
+    position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px;
+    background: radial-gradient(ellipse at 50% 30%, rgba(60,25,90,.82), rgba(8,14,10,.94));
+    transition: opacity .9s;
+  }
+  .pantalla.oculta { opacity: 0; pointer-events: none; }
+  .tarjeta { width: min(520px, 100%); text-align: center; }
+  .tarjeta .marca { background: #fff; border-radius: 18px; padding: 14px 22px; display: inline-block; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
+  .tarjeta .marca img { width: min(300px, 64vw); display: block; }
+  .tarjeta h1 { font-size: clamp(28px, 7vw, 44px); margin: 22px 0 6px; font-weight: 800; letter-spacing: -.01em; }
+  .tarjeta h1 em { font-style: normal; color: var(--morado-claro); }
+  .tarjeta p { margin: 0 auto 18px; max-width: 420px; opacity: .85; line-height: 1.5; }
+  .instrucciones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 0 22px; text-align: left; font-size: 13px; }
+  .instrucciones div { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 10px 12px; }
+  .instrucciones b { display: block; color: var(--morado-claro); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 2px; }
+  .boton-oro {
+    position: relative; overflow: hidden; border: 0; cursor: pointer; padding: 16px 34px; border-radius: 999px;
+    font: 800 17px 'Outfit', sans-serif; color: #fff; letter-spacing: .02em;
+    background: linear-gradient(135deg, #8d3fd0, #5a1f8a); box-shadow: 0 0 0 1px rgba(255,255,255,.2) inset, 0 8px 30px rgba(140,60,220,.55);
+  }
+  .boton-oro::after {
+    content: ''; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent); transform: skewX(-20deg);
+    animation: brillo 2.6s infinite;
+  }
+  @keyframes brillo { 0% { left: -60%; } 60%, 100% { left: 130%; } }
+  .boton-oro:disabled { opacity: .5; cursor: wait; }
+  .carga { height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); margin: 0 auto 18px; width: 220px; overflow: hidden; }
+  .carga i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #b67cff, #fff); transition: width .2s; }
+  @media (max-width: 480px) { .instrucciones { grid-template-columns: 1fr; } }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="mundo"></canvas>
+
+<div class="hud" id="hud">
+  <div class="contador" title="Tu canasta">
+    <div class="chip"><b>🥥</b><span id="cuenta-coco">0/4</span></div>
+    <div class="chip"><b>🍌</b><span id="cuenta-platano">0/4</span></div>
+    <div class="chip"><b>🍍</b><span id="cuenta-pina">0/4</span></div>
+  </div>
+  <div class="reloj" id="reloj"><div>🦋 Mariposa <span>30 s</span></div><div class="barra"><i></i></div></div>
+  <div class="narracion" id="narracion"><div class="cara">🦋</div><div><small>Lila, la mariposa</small><p id="narracionTexto"></p></div></div>
+  <div class="brujula"><div class="flecha"><svg id="flecha" viewBox="0 0 24 24"><path d="M12 2 L19 20 L12 16 L5 20 Z" fill="#d9b8ff"/></svg></div><span id="distancia">—</span></div>
+  <button class="boton-redondo" id="sonido" title="Sonido">🔊</button>
+  <div class="ayuda" id="ayuda">
+    <kbd>W</kbd><kbd>↑</kbd> avanzar &nbsp; <kbd>S</kbd><kbd>↓</kbd> atrás<br>
+    <kbd>A</kbd><kbd>D</kbd> <kbd>←</kbd><kbd>→</kbd> girar<br>
+    <kbd>Espacio</kbd> saltar / subir &nbsp; <kbd>Shift</kbd> bajar
+  </div>
+  <div class="aviso" id="aviso"></div>
+  <div class="tactil">
+    <div class="zona-joy" id="zonaJoy"><div class="joy-base" id="joyBase"><div class="joy-perilla" id="joyPerilla"></div></div></div>
+    <div class="botones-vuelo">
+      <button id="btnSubir"><b>▲</b>Saltar</button>
+      <button id="btnBajar"><b>▼</b>Bajar</button>
+    </div>
+  </div>
+</div>
+
+<div class="pantalla" id="inicio">
+  <div class="tarjeta">
+    <div class="marcas"><div class="marca lila"><img src="assets/tierralila.png" alt="Tierra Lila"></div><div class="marca"><img src="assets/logo.png" alt="Vórtice VR"></div></div>
+    <h1>La <em>cosecha</em> de Tierra Lila</h1>
+    <p>Recorre la selva y llena tu canasta: 4 cocos, 4 plátanos y 4 piñas. Cada logo de Tierra Lila te hace una pregunta sobre Tabasco; si aciertas, ganas su fruta. Pisa un logo de Vórtice VR y vuélvete mariposa por 30 segundos: ella te contará la historia que necesitas para responder.</p>
+    <div class="instrucciones">
+      <div><b>Computadora</b>WASD o flechas para caminar · Espacio salta (y sube volando) · Shift baja</div>
+      <div><b>Celular</b>Joystick para caminar y girar · ▲ salta o sube · ▼ baja</div>
+    </div>
+    <div class="carga"><i id="barra"></i></div>
+    <button class="boton-oro" id="comenzar" disabled>Cargando selva…</button>
+  </div>
+</div>
+
+<div class="pantalla oculta" id="final">
+  <div class="tarjeta">
+    <div class="marcas"><div class="marca lila"><img src="assets/tierralila.png" alt="Tierra Lila"></div><div class="marca"><img src="assets/logo.png" alt="Vórtice VR"></div></div>
+    <h1>¡Canasta <em>completa</em>!</h1>
+    <p>🥥 4 · 🍌 4 · 🍍 4 — Respondiste 12 preguntas sobre las subregiones de Tabasco. Una actividad de Tierra Lila con Vórtice VR.</p>
+    <button class="boton-oro" id="otraVez">Jugar de nuevo</button>
+  </div>
+</div>
+
+<div class="pantalla trivia oculta" id="trivia">
+  <div class="tarjeta">
+    <img class="marca-lila" src="assets/tierralila.png" alt="Tierra Lila">
+    <div class="premio" id="triviaPremio"></div>
+    <h2 id="triviaPregunta"></h2>
+    <div class="opciones" id="triviaOpciones"></div>
+    <p class="nota" id="triviaNota"></p>
+  </div>
+</div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
