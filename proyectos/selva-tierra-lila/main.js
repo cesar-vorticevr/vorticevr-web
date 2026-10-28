@@ -23,7 +23,7 @@ const POR_FRUTA = 4;            // 4 de cada fruta = 12 logos de Tierra Lila
 const TOTAL_LILA = FRUTAS.length * POR_FRUTA;
 const TIEMPO_MARIPOSA = 30;
 const ALTURA_MAX = 70;
-const VEL_MAX = 15;
+const VEL_MAX = 19;            // vuelo normal; con «Correr» va 1.5 veces más rápido
 // Giro extra del modelo: la cabeza de la mariposa del .blend ya apunta a +Z.
 const GIRO_MARIPOSA = 0;
 
@@ -49,6 +49,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const escena = new THREE.Scene();
 const COLOR_NIEBLA = new THREE.Color(0x9fc9b4);
 escena.fog = new THREE.FogExp2(COLOR_NIEBLA, 0.0055);
+escena.background = COLOR_NIEBLA; // si algo no alcanza a dibujarse, se ve niebla y no negro
 
 const camara = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 900);
 
@@ -73,10 +74,11 @@ const uCentro = { value: new THREE.Vector3() };
 const uPx = { value: renderer.getPixelRatio() };
 
 // ---------------------------------------------------------------------------
-// Cielo
+// Cielo (sigue a la cámara para que nunca quede fuera de su alcance y se vea negro)
 // ---------------------------------------------------------------------------
+let cielo;
 {
-  const cielo = new THREE.Mesh(
+  cielo = new THREE.Mesh(
     new THREE.SphereGeometry(800, 32, 16),
     new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false,
@@ -472,7 +474,7 @@ const teclas = {};
 const MAPA = {
   KeyW: 'adelante', ArrowUp: 'adelante', KeyS: 'atras', ArrowDown: 'atras',
   KeyA: 'izq', ArrowLeft: 'izq', KeyD: 'der', ArrowRight: 'der',
-  Space: 'subir', KeyE: 'subir', ShiftLeft: 'bajar', ShiftRight: 'bajar', KeyQ: 'bajar', KeyC: 'bajar',
+  Space: 'subir', KeyE: 'subir', ShiftLeft: 'correr', ShiftRight: 'correr', KeyQ: 'bajar', KeyC: 'bajar',
 };
 addEventListener('keydown', (e) => { if (MAPA[e.code]) { teclas[MAPA[e.code]] = true; e.preventDefault(); } });
 addEventListener('keyup', (e) => { if (MAPA[e.code]) teclas[MAPA[e.code]] = false; });
@@ -513,7 +515,7 @@ const joy = { x: 0, y: 0, id: null, ox: 0, oy: 0 };
     b.addEventListener('contextmenu', (e) => e.preventDefault());
   };
   boton('btnSubir', 'subir');
-  boton('btnBajar', 'bajar');
+  boton('btnCorrer', 'correr');
 }
 
 const amortiguar = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
@@ -523,16 +525,18 @@ function moverJugador(dt) {
   const libre = !j.quieto;
   const giro = libre ? (teclas.izq ? 1 : 0) - (teclas.der ? 1 : 0) - joy.x : 0;
   const empuje = libre ? THREE.MathUtils.clamp((teclas.adelante ? 1 : 0) - (teclas.atras ? 1 : 0) - joy.y, -0.35, 1) : 0;
-  const elevar = libre ? (teclas.subir ? 1 : 0) - (teclas.bajar ? 1 : 0) : 0;
   const volando = j.modo === 'mariposa';
+  const rapido = libre && teclas.correr;
+  // volando: ▲ sube, Q/C bajan y sin tocar nada planea despacio hacia abajo
+  const elevar = !libre ? 0 : teclas.subir ? 1 : teclas.bajar ? -1 : volando ? -0.3 : 0;
 
   j.vGiro = amortiguar(j.vGiro, THREE.MathUtils.clamp(giro, -1, 1) * (volando ? 1.9 : 2.4), 6, dt);
   j.rumbo += j.vGiro * dt;
   if (volando) {
-    j.vel = amortiguar(j.vel, empuje * VEL_MAX, 2.2, dt);
+    j.vel = amortiguar(j.vel, empuje * VEL_MAX * (rapido && empuje > 0 ? 1.5 : 1), 2.2, dt);
     j.vy = amortiguar(j.vy, elevar * 8, 3, dt);
   } else {
-    j.vel = amortiguar(j.vel, empuje * (empuje > 0 ? 9 : 6), 5, dt);
+    j.vel = amortiguar(j.vel, empuje * (empuje > 0 ? (rapido ? 15 : 9) : 6), 5, dt);
     if (j.enSuelo && elevar > 0) { j.vy = 8.5; j.enSuelo = false; nina.poner('saltar', 0.1); sonidos.salto(); }
     j.vy -= 22 * dt;
   }
@@ -576,7 +580,7 @@ function moverJugador(dt) {
     else if (rapidez > 5.5) nina.poner('correr');
     else if (rapidez > 0.6) nina.poner('caminar');
     else nina.poner('idle', 0.35);
-    if (nina.acciones.correr) nina.acciones.correr.timeScale = THREE.MathUtils.clamp(rapidez / 8, 0.7, 1.3);
+    if (nina.acciones.correr) nina.acciones.correr.timeScale = THREE.MathUtils.clamp(rapidez / 8, 0.7, 1.7);
     if (nina.acciones.caminar) nina.acciones.caminar.timeScale = j.vel < 0 ? -1 : THREE.MathUtils.clamp(rapidez / 3, 0.7, 1.4);
     nina.mezclador.update(dt);
     nina.pivote.position.copy(j.pos);
@@ -625,7 +629,6 @@ function convertir(modo) {
   const centro = j.pos.clone();
   centro.y += 1.2;
   explotar(centro, 0.45);
-  sonidos.transformar(modo === 'mariposa');
   j.modo = modo;
   if (modo === 'mariposa') {
     j.tiempo = TIEMPO_MARIPOSA;
@@ -634,7 +637,6 @@ function convertir(modo) {
     nina.pivote.visible = false;
     j.pivote.visible = true;
     $('reloj').classList.add('on');
-    narrador.contar();
   } else {
     j.vy = 0;
     j.enSuelo = false;
@@ -642,8 +644,6 @@ function convertir(modo) {
     nina.pivote.visible = true;
     nina.poner('saltar', 0.1);
     $('reloj').classList.remove('on');
-    narrador.callar();
-    avisar('Volviste a ser niña · busca otro logo de Vórtice VR 🦋', 2600);
   }
 }
 
@@ -1259,7 +1259,6 @@ function actualizarLogos(dt) {
       if (jugando && !jugador.quieto && dentro) {
         if (l.tipo === 'vortice') {
           activarLogo(l);
-          avisar(jugador.modo === 'mariposa' ? '✨ ¡Más tiempo de mariposa!' : '✨ ¡Vórtice VR! Prepárate para volar', 1800);
         } else {
           l.estado = 'pregunta';
           abrirTrivia(l);
@@ -1325,7 +1324,6 @@ function actualizarLogos(dt) {
 function recargarMariposa() {
   jugador.tiempo = TIEMPO_MARIPOSA;
   explotar(jugador.pos.clone(), 0.35);
-  narrador.contar();
 }
 
 // Brújula hacia el logo de Tierra Lila más cercano
@@ -1458,6 +1456,7 @@ function cuadro() {
   if (jugando) { moverJugador(dt); actualizarTiempoMariposa(dt); }
   else { nina.mezclador.update(dt); jugador.rumbo += dt * 0.15; nina.pivote.position.copy(jugador.pos); nina.pivote.rotation.y = jugador.rumbo; }
   moverCamara(dt);
+  cielo.position.copy(camara.position);
   moverCompaneras(dt);
   actualizarLogos(dt);
   actualizarExplosiones(dt);
@@ -1493,7 +1492,6 @@ botonComenzar.addEventListener('click', () => {
   $('hud').classList.add('on');
   jugando = true;
   setTimeout(() => ($('ayuda').style.opacity = 0), 12000);
-  avisar('Busca el logo de Vórtice VR para volverte mariposa 🦋', 3500);
 });
 $('otraVez').addEventListener('click', () => {
   $('final').classList.add('oculta');
