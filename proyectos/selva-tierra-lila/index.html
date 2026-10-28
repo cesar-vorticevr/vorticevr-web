@@ -40,6 +40,8 @@
     font-size: 13px; opacity: 0; transform: translateY(-6px); transition: opacity .4s, transform .4s;
   }
   .reloj.on { opacity: 1; transform: none; }
+  .reloj.gigante { top: calc(max(16px, env(safe-area-inset-top)) + 124px); border-color: rgba(255,170,110,.55); }
+  .reloj.gigante i { background: linear-gradient(90deg, #ff6b6b, #ffd36e, #fff1a0); }
   .reloj div { display: flex; justify-content: space-between; margin-bottom: 6px; font-weight: 600; }
   .reloj .barra { height: 6px; border-radius: 3px; background: rgba(255,255,255,.15); overflow: hidden; margin: 0; }
   .reloj i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #ffd36e, #d9b8ff, #b67cff); }
@@ -179,6 +181,7 @@
     <div class="chip"><b>🍌</b><span id="cuenta-platano">0/4</span></div>
     <div class="chip"><b>🍍</b><span id="cuenta-pina">0/4</span></div>
   </div>
+  <div class="reloj gigante" id="relojGigante"><div>🍄 Gigante <span>30 s</span></div><div class="barra"><i></i></div></div>
   <div class="reloj" id="reloj"><div>🦋 Mariposa <span>30 s</span></div><div class="barra"><i></i></div></div>
   <div class="narracion" id="narracion"><div class="cara">🦋</div><div><small>Lila, la mariposa</small><p id="narracionTexto"></p></div></div>
   <div class="brujula"><div class="flecha"><svg id="flecha" viewBox="0 0 24 24"><path d="M12 2 L19 20 L12 16 L5 20 Z" fill="#d9b8ff"/></svg></div><span id="distancia">—</span></div>
@@ -202,7 +205,7 @@
   <div class="tarjeta">
     <div class="marcas"><div class="marca lila"><img src="assets/tierralila.png" alt="Tierra Lila"></div><div class="marca"><img src="assets/logo.png" alt="Vórtice VR"></div></div>
     <h1>La <em>cosecha</em> de Tierra Lila</h1>
-    <p>Recorre la selva y llena tu canasta: 4 cocos, 4 plátanos y 4 piñas. Cada logo de Tierra Lila te hace una pregunta sobre Tabasco; si aciertas, ganas su fruta. Pisa un logo de Vórtice VR y vuélvete mariposa por 30 segundos para volar sobre la selva.</p>
+    <p>Recorre la selva y llena tu canasta: 4 cocos, 4 plátanos y 4 piñas. Cada logo de Tierra Lila te hace una pregunta sobre Tabasco; si aciertas, ganas su fruta. Pisa un logo de Vórtice VR y vuélvete mariposa por 30 segundos para volar sobre la selva. Y si tocas un hongo mágico, ¡creces al doble por 30 segundos!</p>
     <div class="instrucciones">
       <div><b>Computadora</b>WASD o flechas para caminar · Espacio salta (y sube volando) · Shift corre (y vuela más rápido) · Q baja</div>
       <div><b>Celular</b>Joystick para caminar y girar · ▲ salta o sube · » corre o vuela más rápido</div>

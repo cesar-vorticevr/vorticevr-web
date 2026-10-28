@@ -23,6 +23,8 @@ const POR_FRUTA = 4;            // 4 de cada fruta = 12 logos de Tierra Lila
 const TOTAL_LILA = FRUTAS.length * POR_FRUTA;
 const TIEMPO_MARIPOSA = 30;
 const ALTURA_MAX = 70;
+const TIEMPO_GIGANTE = 30;     // segundos que dura el tamaño doble al comer un hongo
+const TOTAL_HONGOS = 8;
 const VEL_MAX = 19;            // vuelo normal; con «Correr» va 1.5 veces más rápido
 // Giro extra del modelo: la cabeza de la mariposa del .blend ya apunta a +Z.
 const GIRO_MARIPOSA = 0;
@@ -156,7 +158,7 @@ const cargador = new GLTFLoader(gestor);
 const cargar = (url) => new Promise((ok, mal) => cargador.load(url, ok, undefined, mal));
 const cargarImagen = (url) => new Promise((ok, mal) => { const im = new Image(); im.onload = () => ok(im); im.onerror = mal; im.src = url; });
 
-const [selvaGltf, mariposaGltf, imgLogo, ninaGltf, palmaGltf, platanoGltf, pinaGltf, imgLila] = await Promise.all([
+const [selvaGltf, mariposaGltf, imgLogo, ninaGltf, palmaGltf, platanoGltf, pinaGltf, imgLila, hongoGltf] = await Promise.all([
   cargar('assets/tropical.gltf.json'),
   cargar('assets/butterfly.gltf.json'),
   cargarImagen('assets/logo.png'),
@@ -165,6 +167,7 @@ const [selvaGltf, mariposaGltf, imgLogo, ninaGltf, palmaGltf, platanoGltf, pinaG
   cargar('assets/platano.glb'),
   cargar('assets/pina.glb'),
   cargarImagen('assets/tierralila.png'),
+  cargar('assets/hongo.glb'),
 ]);
 
 // ---------------------------------------------------------------------------
@@ -467,6 +470,8 @@ const jugador = {
   tiempo: 0,               // segundos de mariposa que quedan
   enSuelo: true,
   quieto: false,           // true mientras contesta la trivia
+  gigante: 0,              // segundos de tamaño doble que quedan
+  escala: 1,               // tamaño actual (1 normal, 2 gigante; cambia suave)
 };
 jugador.pivote.visible = false;
 
@@ -533,11 +538,11 @@ function moverJugador(dt) {
   j.vGiro = amortiguar(j.vGiro, THREE.MathUtils.clamp(giro, -1, 1) * (volando ? 1.9 : 2.4), 6, dt);
   j.rumbo += j.vGiro * dt;
   if (volando) {
-    j.vel = amortiguar(j.vel, empuje * VEL_MAX * (rapido && empuje > 0 ? 1.5 : 1), 2.2, dt);
+    j.vel = amortiguar(j.vel, empuje * VEL_MAX * (rapido && empuje > 0 ? 1.5 : 1) * (j.gigante > 0 ? 1.3 : 1), 2.2, dt);
     j.vy = amortiguar(j.vy, elevar * 8, 3, dt);
   } else {
-    j.vel = amortiguar(j.vel, empuje * (empuje > 0 ? (rapido ? 15 : 9) : 6), 5, dt);
-    if (j.enSuelo && elevar > 0) { j.vy = 8.5; j.enSuelo = false; nina.poner('saltar', 0.1); sonidos.salto(); }
+    j.vel = amortiguar(j.vel, empuje * (empuje > 0 ? (rapido ? 15 : 9) : 6) * (j.gigante > 0 ? 1.4 : 1), 5, dt);
+    if (j.enSuelo && elevar > 0) { j.vy = j.gigante > 0 ? 11 : 8.5; j.enSuelo = false; nina.poner('saltar', 0.1); sonidos.salto(); }
     j.vy -= 22 * dt;
   }
 
@@ -548,7 +553,7 @@ function moverJugador(dt) {
   for (const t of troncos) {
     const dx = j.pos.x - t.x, dz = j.pos.z - t.z;
     if (Math.abs(dx) > 4 || Math.abs(dz) > 4 || j.pos.y > t.alto) continue;
-    const d = Math.hypot(dx, dz), minimo = t.r + 0.6;
+    const d = Math.hypot(dx, dz), minimo = t.r + 0.6 * j.escala;
     if (d < minimo && d > 0.0001) { j.pos.x = t.x + (dx / d) * minimo; j.pos.z = t.z + (dz / d) * minimo; }
   }
 
@@ -560,7 +565,7 @@ function moverJugador(dt) {
 
   const suelo = alturaEn(j.pos.x, j.pos.z);
   if (volando) {
-    j.pos.y = THREE.MathUtils.clamp(j.pos.y, suelo + 1.0, ALTURA_MAX);
+    j.pos.y = THREE.MathUtils.clamp(j.pos.y, suelo + j.escala, ALTURA_MAX);
     const ritmo = 1.1 + Math.abs(j.vel) / 7 + Math.abs(j.vy) / 5;
     j.mezclador.timeScale = ritmo;
     j.mezclador.update(dt);
@@ -577,11 +582,13 @@ function moverJugador(dt) {
     const rapidez = Math.abs(j.vel);
     if (j.quieto) nina.poner('hablar', 0.4);
     else if (!j.enSuelo) { /* deja terminar el salto */ }
-    else if (rapidez > 5.5) nina.poner('correr');
+    else if (rapidez > 5.5 * j.escala) nina.poner('correr');
     else if (rapidez > 0.6) nina.poner('caminar');
     else nina.poner('idle', 0.35);
-    if (nina.acciones.correr) nina.acciones.correr.timeScale = THREE.MathUtils.clamp(rapidez / 8, 0.7, 1.7);
-    if (nina.acciones.caminar) nina.acciones.caminar.timeScale = j.vel < 0 ? -1 : THREE.MathUtils.clamp(rapidez / 3, 0.7, 1.4);
+    // de gigante da pasos más largos: la animación va más lenta para que no patine
+    const paso = rapidez / j.escala;
+    if (nina.acciones.correr) nina.acciones.correr.timeScale = THREE.MathUtils.clamp(paso / 8, 0.7, 1.7);
+    if (nina.acciones.caminar) nina.acciones.caminar.timeScale = j.vel < 0 ? -1 : THREE.MathUtils.clamp(paso / 3, 0.7, 1.4);
     nina.mezclador.update(dt);
     nina.pivote.position.copy(j.pos);
     nina.pivote.rotation.y = j.rumbo;
@@ -600,13 +607,15 @@ function moverCamara(dt, primera = false) {
   mezclaMagia = amortiguar(mezclaMagia, focoMagia ? 1 : 0, 2.5, dt);
   const vuelo = j.modo === 'mariposa' ? 1 : 0;
   mezclaVuelo = primera ? vuelo : amortiguar(mezclaVuelo, vuelo, 2, dt);
-  const lejos = THREE.MathUtils.lerp(5.2, 6, mezclaVuelo) + Math.max(j.vel, 0) * 0.12 + mezclaMagia * 16;
-  const alto = THREE.MathUtils.lerp(2.6, 3.3, mezclaVuelo);
+  // de gigante la cámara se aleja solo la mitad, para que se note más grande
+  const zoom = 1 + (j.escala - 1) * 0.5;
+  const lejos = THREE.MathUtils.lerp(5.2, 6, mezclaVuelo) * zoom + Math.max(j.vel, 0) * 0.12 + mezclaMagia * 16;
+  const alto = THREE.MathUtils.lerp(2.6, 3.3, mezclaVuelo) * zoom;
   camObjetivo.set(j.pos.x - fx * lejos, j.pos.y + alto + mezclaMagia * 4, j.pos.z - fz * lejos);
   camObjetivo.y = Math.max(camObjetivo.y, alturaEn(camObjetivo.x, camObjetivo.z) + 0.8);
   if (primera) camara.position.copy(camObjetivo);
   else camara.position.lerp(camObjetivo, 1 - Math.exp(-4 * dt));
-  camMira.set(j.pos.x + fx * 2, j.pos.y + THREE.MathUtils.lerp(1.5, 0.5, mezclaVuelo), j.pos.z + fz * 2);
+  camMira.set(j.pos.x + fx * 2, j.pos.y + THREE.MathUtils.lerp(1.5, 0.5, mezclaVuelo) * j.escala, j.pos.z + fz * 2);
   if (focoMagia) camMira.lerp(focoMagia, mezclaMagia);
   if (primera) miraSuave.copy(camMira);
   else miraSuave.lerp(camMira, 1 - Math.exp(-6 * dt));
@@ -1185,6 +1194,143 @@ const narrador = (() => {
 })();
 
 // ---------------------------------------------------------------------------
+// Hongos mágicos: brillan con destellos; al tocarlos creces al doble por TIEMPO_GIGANTE segundos
+// ---------------------------------------------------------------------------
+const plantillaHongo = (() => {
+  hongoGltf.scene.traverse((o) => {
+    if (!o.isMesh) return;
+    o.castShadow = true;
+    o.frustumCulled = false;
+    o.material.emissive = new THREE.Color(0x3a0d08); // un poco de brillo propio para que se vean en la sombra
+  });
+  // se mide ya con su animación puesta: la animación encoge los huesos y la malla sola mide de más
+  const raiz = hongoGltf.scene;
+  const clip = hongoGltf.animations.find((a) => a.name === 'Idle') || hongoGltf.animations[0];
+  if (clip) { const m = new THREE.AnimationMixer(raiz); m.clipAction(clip).play(); m.update(0); }
+  raiz.updateMatrixWorld(true);
+  const caja = new THREE.Box3();
+  raiz.traverse((o) => {
+    if (!o.isSkinnedMesh) return;
+    o.skeleton.update();
+    o.computeBoundingBox();
+    caja.union(o.boundingBox.clone().applyMatrix4(o.matrixWorld));
+  });
+  const k = 1.7 / (caja.max.y - caja.min.y), centro = caja.getCenter(new THREE.Vector3());
+  return { raiz, clip, k, offset: new THREE.Vector3(-centro.x * k, -caja.min.y * k, -centro.z * k) };
+})();
+const materialDestellosHongo = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  uniforms: { uTiempo, uPx },
+  vertexShader: `
+    uniform float uTiempo, uPx; attribute vec4 aDatos; varying float vBrillo; varying float vTono;
+    void main(){
+      float ang = aDatos.x + uTiempo * aDatos.z;
+      float alto = mod(aDatos.w + uTiempo * 0.5, 3.2);
+      vec3 p = vec3(cos(ang) * aDatos.y, alto, sin(ang) * aDatos.y);
+      vec4 mv = modelViewMatrix * vec4(p, 1.0);
+      vBrillo = pow(0.5 + 0.5 * sin(uTiempo * 5.0 + aDatos.x * 9.0), 2.0) * smoothstep(3.2, 2.2, alto);
+      vTono = fract(aDatos.x * 2.3);
+      gl_PointSize = (3.0 + 5.0 * vBrillo) * uPx * (18.0 / -mv.z);
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `
+    varying float vBrillo; varying float vTono;
+    void main(){ vec2 q = gl_PointCoord - 0.5; float d = length(q); if (d > 0.5) discard;
+      float estrella = max(0.0, 1.0 - abs(q.x) * abs(q.y) * 60.0) * smoothstep(0.5, 0.0, d);
+      vec3 c = mix(vec3(1.0, 0.85, 0.4), vec3(1.0, 0.6, 0.9), vTono) * 2.2;
+      gl_FragColor = vec4(c, (smoothstep(0.5, 0.0, d) * 0.4 + estrella) * vBrillo); }`,
+});
+const COLORES_HONGO = [0xffd36e, 0xffffff, 0xff6b6b, 0xff9ae6, 0xfff1a0].map((c) => new THREE.Color(c));
+const hongos = [];
+function crearHongo(x, z) {
+  const g = new THREE.Group();
+  g.position.set(x, alturaEn(x, z) - 0.05, z);
+  const raiz = SkeletonUtils.clone(plantillaHongo.raiz);
+  raiz.scale.multiplyScalar(plantillaHongo.k);
+  raiz.position.copy(plantillaHongo.offset);
+  const modelo = new THREE.Group();
+  modelo.add(raiz);
+  modelo.rotation.y = Math.random() * Math.PI * 2;
+  const mezclador = new THREE.AnimationMixer(raiz);
+  const clip = plantillaHongo.clip;
+  if (clip) { const a = mezclador.clipAction(clip); a.play(); a.time = Math.random() * clip.duration; }
+  const brillo = new THREE.Sprite(new THREE.SpriteMaterial({ map: texResplandor, color: 0xffc070, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.4, toneMapped: false }));
+  brillo.scale.setScalar(4);
+  brillo.position.y = 1.3;
+  const N = 60, datos = new Float32Array(N * 4);
+  for (let i = 0; i < N; i++) datos.set([Math.random() * 6.28, 0.5 + Math.random() * 1.4, 0.3 + Math.random() * 0.9, Math.random() * 3.2], i * 4);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
+  geo.setAttribute('aDatos', new THREE.BufferAttribute(datos, 4));
+  const destellos = new THREE.Points(geo, materialDestellosHongo);
+  destellos.frustumCulled = false;
+  g.add(modelo, brillo, destellos);
+  escena.add(g);
+  hongos.push({ g, mezclador, brillo, fase: Math.random() * 6 });
+}
+// lugar libre: lejos de los claros (logos), de los troncos, de otros hongos y, si se pide, del jugador
+function lugarHongo(lejosDe, minimo) {
+  for (let k = 0; k < 200; k++) {
+    const x = (Math.random() * 2 - 1) * (MUNDO - 15), z = (Math.random() * 2 - 1) * (MUNDO - 15);
+    if (!libreDeClaros(x, z, 10)) continue;
+    if (troncos.some((t) => Math.hypot(t.x - x, t.z - z) < t.r + 2)) continue;
+    if (hongos.some((h) => Math.hypot(h.g.position.x - x, h.g.position.z - z) < 40)) continue;
+    if (lejosDe && Math.hypot(lejosDe.x - x, lejosDe.z - z) < minimo) continue;
+    return { x, z };
+  }
+  return null;
+}
+function ponerHongos() {
+  hongos.splice(0).forEach((h) => escena.remove(h.g));
+  // uno cerca del inicio, para que se descubra pronto
+  for (let k = 0; k < 40; k++) {
+    const a = Math.random() * Math.PI * 2, r = 16 + Math.random() * 10;
+    const x = Math.cos(a) * r, z = Math.sin(a) * r;
+    if (troncos.some((t) => Math.hypot(t.x - x, t.z - z) < t.r + 2)) continue;
+    crearHongo(x, z);
+    break;
+  }
+  while (hongos.length < TOTAL_HONGOS) {
+    const p = lugarHongo(null, 0);
+    if (!p) break;
+    crearHongo(p.x, p.z);
+  }
+}
+function comerHongo(h) {
+  escena.remove(h.g);
+  hongos.splice(hongos.indexOf(h), 1);
+  explotar(h.g.position.clone().setY(h.g.position.y + 1.2), 0.5, COLORES_HONGO);
+  sonidos.crecer();
+  jugador.gigante = TIEMPO_GIGANTE;
+  $('relojGigante').classList.add('on');
+  // otro hongo sale lejos, más tarde
+  setTimeout(() => { const p = lugarHongo(jugador.pos, 80); if (p) crearHongo(p.x, p.z); }, 25000);
+}
+function actualizarHongos(dt) {
+  const j = jugador;
+  for (const h of [...hongos]) {
+    h.mezclador.update(dt);
+    h.brillo.material.opacity = 0.32 + Math.sin(uTiempo.value * 2.5 + h.fase) * 0.12;
+    const p = h.g.position;
+    if (jugando && !j.quieto && Math.hypot(j.pos.x - p.x, j.pos.z - p.z) < 1.4 + j.escala * 0.6 && j.pos.y - p.y < 2.5 * j.escala) comerHongo(h);
+  }
+  if (j.gigante > 0 && !j.quieto) {
+    j.gigante -= dt;
+    const r = $('relojGigante');
+    r.querySelector('i').style.width = `${Math.max(0, j.gigante / TIEMPO_GIGANTE) * 100}%`;
+    r.querySelector('span').textContent = `${Math.ceil(Math.max(0, j.gigante))} s`;
+    r.classList.toggle('poco', j.gigante < 6);
+    if (j.gigante <= 0) { j.gigante = 0; r.classList.remove('on', 'poco'); }
+  }
+  // crece y se encoge suave, con un pequeño rebote
+  const meta = j.gigante > 0 ? 2 : 1;
+  j.escala = amortiguar(j.escala, meta, 3, dt);
+  const k = j.escala + Math.sin(uTiempo.value * 18) * Math.abs(meta - j.escala) * 0.08;
+  nina.pivote.scale.setScalar(k);
+  j.pivote.scale.setScalar(k);
+}
+
+// ---------------------------------------------------------------------------
 // Partida
 // ---------------------------------------------------------------------------
 const cosecha = { coco: 0, platano: 0, pina: 0 };
@@ -1201,6 +1347,9 @@ function nuevaPartida() {
   FRUTAS.forEach((f) => (cosecha[f] = 0));
   mazo = [];
   narrador.reiniciar();
+  jugador.gigante = 0;
+  $('relojGigante').classList.remove('on', 'poco');
+  ponerHongos();
   if (jugador.modo === 'mariposa') { jugador.modo = 'nina'; jugador.pivote.visible = false; $('reloj').classList.remove('on'); }
   nina.pivote.visible = true;
   const elegidos = [...claros].sort(() => Math.random() - 0.5).slice(0, TOTAL_LILA + TOTAL_VORTICE);
@@ -1409,6 +1558,15 @@ const sonidos = (() => {
       const t = ctx.currentTime, notas = [659, 784, 988, 1319, 1568, 1976];
       (aMariposa ? notas : [...notas].reverse()).forEach((f, i) => tono(f, t + i * 0.07, 0.6, 0.06));
     },
+    crecer() {
+      if (!ctx) return;
+      const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(880, t + 0.5);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.07, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+      o.connect(g).connect(salida); o.start(t); o.stop(t + 0.65);
+      [784, 988, 1319].forEach((f, i) => tono(f, t + 0.45 + i * 0.06, 0.35, 0.04));
+    },
     pregunta() { if (ctx) [784, 1047].forEach((f, i) => tono(f, ctx.currentTime + i * 0.12, 0.3, 0.06, 'triangle')); },
     acierto() { if (ctx) [784, 988, 1175, 1568].forEach((f, i) => tono(f, ctx.currentTime + i * 0.09, 0.45, 0.07, 'triangle')); },
     error() { if (ctx) [330, 262].forEach((f, i) => tono(f, ctx.currentTime + i * 0.18, 0.35, 0.06, 'square')); },
@@ -1459,6 +1617,7 @@ function cuadro() {
   cielo.position.copy(camara.position);
   moverCompaneras(dt);
   actualizarLogos(dt);
+  actualizarHongos(dt);
   actualizarExplosiones(dt);
   actualizarBrujula();
   uCentro.value.copy(jugador.pos);
