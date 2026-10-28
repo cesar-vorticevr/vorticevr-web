@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mi aprendizaje · Cursos Vórtice VR</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="/assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/cursos/cursos.css">
+<style>
+.list{display:flex;flex-direction:column;gap:14px}
+.row{display:grid;gap:14px;align-items:center}
+@media (min-width:760px){.row{grid-template-columns:200px minmax(0,1fr) auto}.row.crow{grid-template-columns:minmax(0,1fr) auto}}
+.row .cover{border-radius:14px}
+.row h3{margin:0 0 4px}
+.acts{display:flex;flex-wrap:wrap;gap:8px}
+.certs{margin-top:40px}
+</style>
+</head>
+<body>
+<header class="top"></header>
+<main class="wrap" style="padding-top:36px">
+  <div class="kick">Mi aprendizaje</div>
+  <h1 id="hi" style="font-size:clamp(1.8rem,5vw,2.6rem)">Tus cursos</h1>
+  <div class="list" id="list"><div class="empty">Cargando…</div></div>
+  <section class="certs" id="certs" hidden><h2>Tus constancias</h2><div class="list" id="clist"></div></section>
+</main>
+<footer class="bot"></footer>
+<script src="/cursos/cursos.js"></script>
+<script src="/assets/magia.js" defer></script>
+<script>
+VC.header("mis"); VC.footer();
+const E = VC.esc, $ = id => document.getElementById(id);
+if (!VC.session()) location.href = VC.loginUrl("cursos/mi-aprendizaje");
+else VC.call("mis").then(r => {
+  if (r.name) $("hi").textContent = "Hola, " + r.name.split(" ")[0];
+  $("list").innerHTML = r.courses.length ? r.courses.map(c => `<div class="panel row">
+      <div class="cover">${c.cover_url ? `<img src="${E(c.cover_url)}" alt="">` : `<div class="ph" style="font-size:1rem">${E(c.title)}</div>`}</div>
+      <div><h3>${E(c.title)}</h3><div class="mute" style="font-size:.9rem;margin-bottom:10px">${E(VC.MODALITY[c.modality] || "")}${c.duration_hours ? " · " + VC.hours(c.duration_hours) : ""}</div>
+        <div class="bar"><i style="width:${c.progress}%"></i></div><div class="mute" style="font-size:.82rem;margin-top:4px">${c.completed ? "Completado" : c.progress + "% completado"}</div></div>
+      <div class="acts"><a class="btn ${c.completed ? "" : "sun"}" href="/cursos/aprender/${E(c.slug)}/">${c.completed ? "Repasar" : c.progress ? "Continuar" : "Empezar"}</a></div></div>`).join("")
+    : `<div class="panel empty">Todavía no tienes cursos.<div style="margin-top:14px"><a class="btn sun" href="/cursos/">Ver el catálogo</a></div></div>`;
+  const certs = r.courses.filter(c => c.certificate);
+  if (certs.length) {
+    $("certs").hidden = false;
+    $("clist").innerHTML = certs.map(c => `<div class="panel row crow"><div><h3>${E(c.title)}</h3><div class="mono">Folio ${E(c.certificate.folio)}${c.certificate.revoked ? " · revocada" : ""}</div></div>
+      <div class="acts"><a class="btn sun" href="/api/cursos/constancia/${E(c.certificate.token)}.pdf" target="_blank" rel="noopener">PDF</a><a class="btn" href="/cursos/verificar/${E(c.certificate.token)}/">Verificación</a></div></div>`).join("");
+  }
+}).catch(e => {
+  if (e.status === 401) location.href = VC.loginUrl("cursos/mi-aprendizaje");
+  else $("list").innerHTML = `<div class="empty">${E(e.message)}</div>`;
+});
+</script>
+</body>
+</html>

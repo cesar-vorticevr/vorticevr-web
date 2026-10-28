@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cursos · Vórtice VR</title>
+<meta name="description" content="Cursos en línea y en vivo con constancia avalada por Vórtice VR: folio, código QR y verificación pública. Aprende de instructores verificados.">
+<link rel="canonical" href="https://vorticevr.mx/cursos/">
+<meta property="og:title" content="Cursos Vórtice VR">
+<meta property="og:description" content="Cursos con constancia avalada por Vórtice VR, verificable con código QR.">
+<meta property="og:url" content="https://vorticevr.mx/cursos/">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="/assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/cursos/cursos.css">
+<style>
+.hero{padding:56px 0 30px}
+.hero p{max-width:640px;color:var(--mute);font-size:1.08rem}
+.trust{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:22px;color:var(--mute);font-size:.9rem}
+.trust b{color:var(--ink)}
+.filters{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:26px 0 22px}
+.filters input{flex:1 1 220px}
+.teach{margin-top:60px;display:grid;gap:18px;align-items:center;background:linear-gradient(135deg,rgba(255,190,85,.12),rgba(139,63,214,.18));border:1px solid rgba(255,190,85,.45)}
+@media (min-width:800px){.teach{grid-template-columns:1.4fr 1fr}}
+.teach ul{margin:10px 0 0;padding-left:20px;color:var(--mute)}
+</style>
+</head>
+<body>
+<header class="top"></header>
+<main class="wrap">
+  <section class="hero">
+    <div class="kick">Cursos Vórtice VR</div>
+    <h1>Aprende con constancia que se puede verificar</h1>
+    <p>Cursos grabados y en vivo de instructores verificados. Al aprobar recibes una constancia avalada por Vórtice VR, con folio y código QR para comprobar que es auténtica.</p>
+    <div class="trust"><span><b>Instructores</b> revisados</span><span><b>Cursos</b> revisados antes de publicarse</span><span><b>Constancia</b> con folio y QR</span></div>
+  </section>
+
+  <div class="filters" role="search">
+    <input type="search" id="q" placeholder="Buscar un curso" aria-label="Buscar un curso">
+    <select id="cat" aria-label="Categoría"><option value="">Todas las categorías</option></select>
+    <div class="chips" id="mod" aria-label="Modalidad">
+      <button class="chip on" data-v="">Todos</button><button class="chip" data-v="recorded">Grabado</button><button class="chip" data-v="live">En vivo</button><button class="chip" data-v="mixed">Mixto</button>
+    </div>
+    <div class="chips" id="price" aria-label="Precio">
+      <button class="chip on" data-v="">Cualquier precio</button><button class="chip" data-v="free">Gratis</button><button class="chip" data-v="paid">De pago</button>
+    </div>
+  </div>
+  <div class="grid" id="grid" aria-live="polite"><div class="empty">Cargando cursos…</div></div>
+
+  <section class="panel teach">
+    <div>
+      <div class="kick">¿Das cursos?</div>
+      <h2>Convierte lo que sabes en un curso listo para vender</h2>
+      <p class="mute">Responde una entrevista guiada y la plataforma arma tu curso, el manual, el examen, la constancia, la página de venta y el kit de marketing. Tú recibes el 80 % de cada venta.</p>
+      <ul><li>Perfil revisado por Vórtice VR</li><li>Curso de inducción gratuito</li><li>Constancias avaladas para tus alumnos</li></ul>
+    </div>
+    <div><a class="btn sun block" href="/cursos/induccion-instructores/">Empieza con la inducción gratis</a></div>
+  </section>
+</main>
+<footer class="bot"></footer>
+<script src="/cursos/cursos.js"></script>
+<script src="/assets/magia.js" defer></script>
+<script>
+VC.header("catalogo"); VC.footer();
+const $ = id => document.getElementById(id);
+let all = [], f = { q: "", cat: "", mod: "", price: "" };
+function card(c) {
+  return `<a class="ccard" href="/cursos/${VC.esc(c.slug)}/">
+    <div class="cover">${c.cover_url ? `<img src="${VC.esc(c.cover_url)}" alt="" loading="lazy">` : `<div class="ph">${VC.esc(c.title)}</div>`}</div>
+    <div class="body"><div class="chips"><span class="tag">${VC.esc(VC.MODALITY[c.modality] || "")}</span>${c.category ? `<span class="tag gold">${VC.esc(c.category)}</span>` : ""}</div>
+      <h3>${VC.esc(c.title)}</h3><div class="mute" style="font-size:.92rem">${VC.esc(c.subtitle || "")}</div>
+      <div class="meta"><span>${VC.esc(c.instructor)}${c.duration_hours ? " · " + VC.hours(c.duration_hours) : ""}</span><span class="price">${VC.money(c.price_mxn)}</span></div></div></a>`;
+}
+function render() {
+  const n = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const list = all.filter(c => (!f.q || n(c.title + " " + c.subtitle + " " + c.instructor).includes(n(f.q))) && (!f.cat || c.category === f.cat) && (!f.mod || c.modality === f.mod)
+    && (!f.price || (f.price === "free" ? !c.price_mxn : c.price_mxn > 0)));
+  $("grid").innerHTML = list.length ? list.map(card).join("") : `<div class="empty">No hay cursos con esos filtros.</div>`;
+}
+for (const id of ["mod", "price"]) $(id).addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  $(id).querySelectorAll(".chip").forEach(x => x.classList.toggle("on", x === b)); f[id] = b.dataset.v; render();
+});
+$("q").addEventListener("input", e => { f.q = e.target.value; render(); });
+$("cat").addEventListener("change", e => { f.cat = e.target.value; render(); });
+VC.call("catalogo").then(r => {
+  all = r.courses;
+  [...new Set(all.map(c => c.category).filter(Boolean))].sort().forEach(c => $("cat").insertAdjacentHTML("beforeend", `<option>${VC.esc(c)}</option>`));
+  render();
+}).catch(e => { $("grid").innerHTML = `<div class="empty">${VC.esc(e.message)}</div>`; });
+</script>
+</body>
+</html>

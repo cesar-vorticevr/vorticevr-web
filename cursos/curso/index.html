@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Curso · Vórtice VR</title>
+<meta name="description" content="Curso con constancia avalada por Vórtice VR.">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="/assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/cursos/cursos.css">
+<style>
+/* sales page (/cursos/<curso>/): the worker serves this same file for every course; the course comes from the address */
+.hero{padding:44px 0 10px;display:grid;gap:26px}
+@media (min-width:900px){.hero{grid-template-columns:1.5fr 1fr;align-items:start}}
+.hero .sub{color:var(--mute);font-size:1.12rem;max-width:640px}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.buy{position:sticky;top:76px}
+.buy .price{font-size:1.9rem;display:block;margin:4px 0 14px}
+.buy ul{list-style:none;padding:0;margin:16px 0 0;color:var(--mute);font-size:.92rem}
+.buy li{padding:5px 0;border-top:1px solid var(--line)}
+.buy li b{color:var(--ink)}
+.aval{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:.82rem;color:var(--mute)}
+.aval img{height:16px;width:auto}
+section.blk{margin-top:44px}
+.two{display:grid;gap:18px}
+@media (min-width:800px){.two{grid-template-columns:1fr 1fr}}
+.mods{display:flex;flex-direction:column;gap:10px}
+details.mod{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:0 18px}
+details.mod summary{cursor:pointer;list-style:none;padding:16px 0;display:flex;justify-content:space-between;gap:12px;font-family:var(--fd);font-weight:600}
+details.mod summary::-webkit-details-marker{display:none}
+details.mod summary::after{content:"+";color:var(--sun);font-size:1.3rem;line-height:1}
+details.mod[open] summary::after{content:"–"}
+.less{list-style:none;margin:0 0 14px;padding:0}
+.less li{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:.95rem}
+.less button{background:none;border:0;color:var(--sun);font:600 .85rem var(--fb);cursor:pointer;padding:0;white-space:nowrap}
+.inst{display:flex;gap:16px;align-items:flex-start}
+.inst .av{flex:none;width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--vortex),var(--sun));display:grid;place-items:center;font:700 1.6rem var(--fd);overflow:hidden}
+.inst .av img{width:100%;height:100%;object-fit:cover}
+dialog{background:var(--surface-solid);color:var(--ink);border:1px solid var(--line2);border-radius:20px;padding:0;width:min(820px,calc(100vw - 24px));max-height:calc(100vh - 40px)}
+dialog::backdrop{background:rgba(5,2,11,.75)}
+dialog .in{padding:22px;overflow:auto;max-height:calc(100vh - 40px)}
+dialog .x{float:right}
+.faq details{border-top:1px solid var(--line);padding:12px 0}
+.faq summary{cursor:pointer;font-weight:600}
+</style>
+</head>
+<body>
+<header class="top"></header>
+<main class="wrap" id="main"><div class="empty">Cargando el curso…</div></main>
+<dialog id="pv"><div class="in"><button class="btn ghost x" id="pvx" aria-label="Cerrar">Cerrar</button><h2 id="pvt"></h2><div id="pvb"></div></div></dialog>
+<footer class="bot"></footer>
+<script src="/cursos/cursos.js"></script>
+<script src="/assets/magia.js" defer></script>
+<script>
+VC.header(); VC.footer();
+const slug = VC.slugFromPath(), $ = id => document.getElementById(id), E = VC.esc;
+let D;
+function buyBox() {
+  const c = D.course, free = !c.price_mxn;
+  let btn;
+  if (D.enrolled) btn = `<a class="btn sun block" href="/cursos/aprender/${E(c.slug)}/">Ir al curso</a>`;
+  else if (!D.signedIn) btn = `<a class="btn sun block" href="${VC.loginUrl("cursos/" + c.slug)}">${free ? "Inscribirme gratis" : "Comprar"}</a><p class="mute" style="font-size:.85rem;margin:8px 0 0">Entra o crea tu cuenta de Vórtice VR para continuar.</p>`;
+  else if (free) btn = `<button class="btn sun block" id="enroll">Inscribirme gratis</button>`;
+  else btn = `<button class="btn sun block" disabled>Compra muy pronto</button><p class="mute" style="font-size:.85rem;margin:8px 0 0">El pago con tarjeta se está activando.</p>`;
+  const nLess = D.modules.reduce((a, m) => a + m.lessons.length, 0);
+  return `<aside class="panel buy"><span class="mono">Precio</span><span class="price">${VC.money(c.price_mxn)}</span>${btn}
+    <ul><li><b>${VC.MODALITY[c.modality] || ""}</b>${c.duration_hours ? " · " + VC.hours(c.duration_hours) : ""}</li><li><b>${D.modules.length}</b> módulos · <b>${nLess}</b> lecciones</li>
+    ${D.exam ? `<li>Examen final de <b>${D.exam.questions}</b> preguntas (aprueba con ${D.exam.passing_score})</li>` : ""}
+    <li>Constancia ${c.certificate_kind === "dc3" ? "con los datos de la <b>DC-3</b>" : "<b>Vórtice VR</b>"}, con folio y QR</li></ul>
+    <div class="aval"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span>Avalado por Vórtice VR</span></div></aside>`;
+}
+function render() {
+  const c = D.course, L = c.landing || {}, i = D.instructor;
+  document.title = c.title + " · Cursos Vórtice VR";
+  document.querySelector('meta[name="description"]').content = c.subtitle || c.title;
+  const list = a => a && a.length ? "<ul>" + a.map(x => "<li>" + VC.inline(x) + "</li>").join("") + "</ul>" : "";
+  $("main").innerHTML = `
+  ${c.status !== "published" ? `<div class="panel" style="margin-top:20px;border-color:var(--sun)">Vista previa: este curso todavía no está publicado.</div>` : ""}
+  <section class="hero"><div>
+    <div class="kick">${E(c.category || "Curso")}${c.level ? " · " + E(c.level) : ""}</div>
+    <h1>${E(L.headline || c.title)}</h1><p class="sub">${E(L.subheadline || c.subtitle || "")}</p>
+    <div class="facts"><span class="tag">${E(VC.MODALITY[c.modality] || "")}</span>${c.duration_hours ? `<span class="tag">${VC.hours(c.duration_hours)}</span>` : ""}<span class="tag gold">Con constancia</span></div>
+    ${c.promo_video_url && VC.embed(c.promo_video_url) ? VC.embed(c.promo_video_url) : ""}
+    <div class="md" style="margin-top:18px">${L.promise_md ? VC.md(L.promise_md) : VC.md(c.description_md)}</div>
+  </div>${buyBox()}</section>
+
+  <section class="blk two">
+    <div class="panel"><div class="kick">Al terminar vas a poder</div><div class="md" style="margin-top:10px">${L.outcomes ? list(L.outcomes) : VC.md(c.objectives_md)}</div></div>
+    <div class="panel"><div class="kick">Para quién es</div><div class="md" style="margin-top:10px">${L.for_whom ? list(L.for_whom) : VC.md(c.target_audience_md)}</div>
+      ${L.not_for_whom && L.not_for_whom.length ? `<div class="kick" style="margin-top:14px">No es para ti si</div><div class="md">${list(L.not_for_whom)}</div>` : ""}
+      ${c.prerequisites_md ? `<div class="kick" style="margin-top:14px">Requisitos</div><div class="md">${VC.md(c.prerequisites_md)}</div>` : ""}</div>
+  </section>
+
+  <section class="blk"><h2>Temario</h2><div class="mods">${D.modules.map((m, k) => `<details class="mod" ${k ? "" : "open"}><summary><span>${k + 1}. ${E(m.title)}</span></summary>
+    ${m.description_md ? `<div class="mute md" style="font-size:.92rem">${VC.md(m.description_md)}</div>` : ""}
+    <ul class="less">${m.lessons.map(l => `<li><span>${E(l.title)}</span><span>${l.preview ? `<button data-l="${E(l.id)}">Ver gratis</button> · ` : ""}<span class="mute">${l.duration_minutes ? l.duration_minutes + " min" : ""}</span></span></li>`).join("")}</ul></details>`).join("")}</div></section>
+
+  <section class="blk panel"><div class="kick">Tu instructor</div><div class="inst" style="margin-top:12px">
+    <div class="av">${i.avatar ? `<img src="${E(i.avatar)}" alt="">` : E((i.name || "V")[0])}</div>
+    <div><h3 style="margin:0">${E(i.name)}</h3><div class="mute">${E(i.headline || "")}</div>${i.bio ? `<div class="md" style="margin-top:10px">${VC.md(i.bio)}</div>` : ""}</div></div></section>
+
+  ${L.faq && L.faq.length ? `<section class="blk faq"><h2>Preguntas frecuentes</h2>${L.faq.map(f => `<details><summary>${E(f.q)}</summary><div class="md mute" style="margin-top:8px">${VC.md(f.a)}</div></details>`).join("")}</section>` : ""}
+  <section class="blk" style="text-align:center"><a class="btn sun" href="#main" onclick="scrollTo({top:0,behavior:'smooth'});return false">${D.enrolled ? "Ir al curso" : L.cta_text ? E(L.cta_text) : "Quiero tomar este curso"}</a></section>`;
+  const en = $("enroll");
+  if (en) en.onclick = async () => {
+    en.disabled = true; en.textContent = "Inscribiendo…";
+    try { await VC.call(`curso/${slug}/inscribir`, { json: {} }); location.href = `/cursos/aprender/${slug}/`; }
+    catch (e) { VC.toast(e.message); en.disabled = false; en.textContent = "Inscribirme gratis"; }
+  };
+  $("main").querySelectorAll("[data-l]").forEach(b => b.onclick = () => {
+    const l = D.modules.flatMap(m => m.lessons).find(x => x.id === b.dataset.l);
+    $("pvt").textContent = l.title;
+    $("pvb").innerHTML = (l.video_url && VC.embed(l.video_url) || "") + `<div class="md" style="margin-top:16px">${VC.md(l.body_md)}</div>`;
+    $("pv").showModal();
+  });
+}
+$("pvx").onclick = () => { $("pv").close(); $("pvb").innerHTML = ""; };
+$("pv").addEventListener("close", () => { $("pvb").innerHTML = ""; });
+VC.call("curso/" + encodeURIComponent(slug)).then(r => { D = r; render(); })
+  .catch(e => { $("main").innerHTML = `<div class="empty"><h2>${E(e.message)}</h2><a class="btn" href="/cursos/">Ver el catálogo</a></div>`; });
+</script>
+</body>
+</html>

@@ -7,9 +7,11 @@
 //                                              (video, imagen o GLB). video y model: experiencias de antes de los elementos.
 //    Requiere bindings DB (D1) y MEDIA (R2); secretos RESEND_API_KEY y SESSION_SECRET.
 //    Sin bindings, el sitio funciona igual y la API responde 503.
+//  - Plataforma de cursos (_cursos/): cursos.vorticevr.mx → vorticevr.mx/cursos/…, /api/cursos/* → _cursos/api.js.
+import { cursosApi } from "./_cursos/api.js";
 
 const ROOT_DEFAULT = "vorticevr.mx";
-const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear","create","ra","x","e","m","preview","app","apps","static","assets","cdn","dev","test","staging","beta","demo","vorticevr","vortice","soporte","support","help","ayuda","blog","shop","tienda","login","cuenta","account","johara","tarjeta","proyectos","status","docs"]);
+const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear","create","ra","x","e","m","preview","app","apps","static","assets","cdn","dev","test","staging","beta","demo","vorticevr","vortice","soporte","support","help","ayuda","blog","shop","tienda","login","cuenta","account","johara","tarjeta","proyectos","status","docs","cursos"]);
 const LIMITS = { imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, codeMinutes: 10, codeTries: 5, sessionDays: 30, pausedDays: 30 };
 // Plans. exp = active experiences; days = how long each one lasts (0 = while the plan is active);
 // views = most times each experience can be opened (Gratis only, so a viral free QR cannot run up costs);
@@ -91,6 +93,8 @@ async function route(request, env, ctx) {
   const url = new URL(request.url);
   const root = env.ROOT_DOMAIN || ROOT_DEFAULT;
   try {
+    // cursos.vorticevr.mx is only a short address: the courses live at vorticevr.mx/cursos/ (same session and account)
+    if (url.hostname === "cursos." + root) return Response.redirect(`https://${root}/cursos${url.pathname}${url.search}`, 301);
     if (url.pathname.startsWith("/api/")) return await api(request, env, ctx, url);
     if (url.pathname.startsWith("/m/")) return await media(request, env, url);
     const sub = subdomainOf(url.hostname, root);
@@ -103,6 +107,11 @@ async function route(request, env, ctx) {
     if (e) {
       if (!url.pathname.endsWith("/")) return Response.redirect(url.origin + url.pathname + "/" + url.search, 301);
       return viewerPage(request, env, url);
+    }
+    const cp = cursosPage(url.pathname);
+    if (cp) {
+      if (!url.pathname.endsWith("/")) return Response.redirect(url.origin + url.pathname + "/" + url.search, 301);
+      return env.ASSETS.fetch(new Request(new URL(cp, url), request));
     }
     return assets(request, env, url);
   } catch (err) {
@@ -130,6 +139,15 @@ function subdomainOf(host, root) {
   const sub = host.slice(0, -root.length - 1);
   if (!sub || sub.includes(".") || RESERVED.has(sub)) return null;
   return sub;
+}
+
+// pages of the courses with a name in the address: /cursos/<curso>/ (sales page), /cursos/aprender/<curso>/, /cursos/verificar/<token>/
+const CURSOS_PAGES = new Set(["aprender", "verificar", "mi-aprendizaje", "curso", "instructor", "admin"]);
+function cursosPage(p) {
+  let m = p.match(/^\/cursos\/(aprender|verificar)\/([A-Za-z0-9_-]+)\/?$/);
+  if (m) return `/cursos/${m[1]}/`;
+  m = p.match(/^\/cursos\/([a-z0-9-]+)\/?$/);
+  return m && !CURSOS_PAGES.has(m[1]) ? "/cursos/curso/" : null;
 }
 
 function viewerPage(request, env, url) {
@@ -214,6 +232,7 @@ async function api(request, env, ctx, url) {
   const path = url.pathname.replace(/\/+$/, "");
   const ip = request.headers.get("CF-Connecting-IP") || "local";
   const M = request.method;
+  if (path.startsWith("/api/cursos/")) return cursosApi(request, env, ctx, url, path, { auth, json, isAdmin, sendMail, shell, esc, btnMail, fecha });
 
   // public: one experience's settings
   let m = path.match(/^\/api\/exp\/([a-z0-9-]+)$/);

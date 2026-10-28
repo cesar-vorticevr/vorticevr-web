@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Aprender · Cursos Vórtice VR</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="/assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/cursos/cursos.css">
+<style>
+/* the player (/cursos/aprender/<curso>/): lessons in order, progress, the final exam (graded by the server) and the certificate */
+.layout{display:grid;gap:22px;padding-top:18px}
+@media (min-width:960px){.layout{grid-template-columns:320px minmax(0,1fr);align-items:start}}
+.side{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px}
+@media (min-width:960px){.side{position:sticky;top:76px;max-height:calc(100vh - 96px);overflow:auto}}
+@media (max-width:959px){.side{display:none}.side.open{display:block}}
+.side h2{font-size:1.05rem;margin:0 0 8px}
+.mtitle{font:600 .72rem var(--fm);letter-spacing:.12em;text-transform:uppercase;color:var(--lav);margin:16px 0 6px}
+.li{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:8px;color:var(--ink);font:inherit;font-size:.92rem;cursor:pointer}
+.li:hover:not(:disabled){background:rgba(139,63,214,.16)}
+.li.cur{background:rgba(139,63,214,.3)}
+.li:disabled{color:var(--mute);cursor:not-allowed}
+.li .ic{flex:none;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line2);display:grid;place-items:center;font-size:.7rem;margin-top:2px}
+.li.done .ic{background:var(--ok);border-color:var(--ok);color:#05200f}
+.li.exam .ic{border-color:var(--sun);color:var(--sun)}
+.topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:6px}
+@media (min-width:960px){#toc{display:none}}
+.lesson h1{font-size:clamp(1.5rem,4.5vw,2.2rem);margin-top:6px}
+.nav{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;margin-top:28px;padding-top:18px;border-top:1px solid var(--line)}
+.q{margin:0 0 16px}
+.q fieldset{border:0;margin:0;padding:0}
+.q legend{font-weight:600;margin-bottom:10px;padding:0}
+.q .hint{font-size:.82rem;color:var(--mute);margin:-4px 0 8px}
+.opt{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--line);border-radius:12px;margin:8px 0;cursor:pointer;background:rgba(5,2,11,.35)}
+.opt:has(input:checked){border-color:var(--lav);background:rgba(139,63,214,.22)}
+.opt input{margin-top:5px;accent-color:#8b3fd6;width:18px;height:18px;flex:none}
+.opt.ok{border-color:var(--ok)}
+.opt.bad{border-color:var(--bad)}
+.fb{font-size:.88rem;color:var(--mute);margin-top:4px}
+.qhead{display:flex;justify-content:space-between;gap:10px;align-items:center;position:sticky;top:62px;z-index:5;background:rgba(5,2,11,.9);padding:10px 0;margin-bottom:10px}
+.timer{font:600 1rem var(--fm);color:var(--sun)}
+.score{font:700 3.4rem var(--fd);line-height:1}
+.res{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.mark{font-weight:700}
+.mark.ok{color:var(--ok)}.mark.bad{color:var(--bad)}
+.cert{margin-top:20px;border-color:rgba(255,190,85,.5);background:linear-gradient(135deg,rgba(255,190,85,.12),rgba(139,63,214,.16))}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+</style>
+</head>
+<body>
+<header class="top"></header>
+<main class="wrap" id="main"><div class="empty">Cargando tu curso…</div></main>
+<footer class="bot"></footer>
+<script src="/cursos/cursos.js"></script>
+<script>
+VC.header("mis"); VC.footer();
+const slug = VC.slugFromPath(), E = VC.esc, $ = id => document.getElementById(id);
+let D, flat = [], cur = null, attempt = null, timerT = 0;
+const isLocked = i => D.course.sequential && flat.slice(0, i).some(l => !l.done);
+const allDone = () => flat.every(l => l.done);
+
+function shell() {
+  $("main").innerHTML = `<div class="layout"><aside class="side" id="side"></aside><section id="view"></section></div>`;
+  side();
+}
+function side() {
+  const s = $("side"); let i = 0;
+  s.innerHTML = `<h2>${E(D.course.title)}</h2><div class="bar" aria-label="Avance"><i style="width:${D.progress}%"></i></div><div class="mute" style="font-size:.82rem;margin-top:6px">${D.progress}% completado</div>` +
+    D.modules.map((m, k) => `<div class="mtitle">Módulo ${k + 1} · ${E(m.title)}</div>` + m.lessons.map(l => { const j = i++; return `<button class="li ${l.done ? "done" : ""} ${cur === l.id ? "cur" : ""}" data-i="${j}" ${isLocked(j) ? "disabled title='Completa las lecciones anteriores'" : ""}><span class="ic">${l.done ? "✓" : ""}</span><span>${E(l.title)}</span></button>`; }).join("")).join("") +
+    (D.exam ? `<div class="mtitle">Final</div><button class="li exam ${cur === "exam" ? "cur" : ""} ${D.exam.passed ? "done" : ""}" data-i="exam"><span class="ic">${D.exam.passed ? "✓" : "★"}</span><span>${E(D.exam.title || "Examen final")}</span></button>` : "");
+  s.querySelectorAll("[data-i]").forEach(b => b.onclick = () => { b.dataset.i === "exam" ? showExam() : showLesson(flat[+b.dataset.i].id); s.classList.remove("open"); });
+}
+function topbar() {
+  return `<div class="topbar"><a class="mono" href="/cursos/${E(slug)}/" style="text-decoration:none">← ${E(D.course.title)}</a><button class="btn ghost" id="toc" style="min-height:38px;padding:6px 14px">Temario</button></div>
+    ${D.preview ? `<div class="panel" style="border-color:var(--sun);padding:12px 16px;margin-bottom:12px;font-size:.9rem">Vista previa del instructor: tu avance no se guarda y no puedes presentar el examen.</div>` : ""}`;
+}
+function bindTop() { const t = $("toc"); if (t) t.onclick = () => { $("side").classList.toggle("open"); $("side").scrollIntoView({ behavior: "smooth" }); }; }
+
+function showLesson(id) {
+  clearInterval(timerT);
+  const i = flat.findIndex(l => l.id === id), l = flat[i]; cur = id; history.replaceState(null, "", "#" + id); side();
+  const mod = D.modules.find(m => m.lessons.includes(l)), next = flat[i + 1], prev = flat[i - 1];
+  $("view").innerHTML = topbar() + `<article class="lesson"><div class="kick">${E(mod.title)}</div><h1>${E(l.title)}</h1>
+    ${l.duration_minutes ? `<div class="mute" style="font-size:.88rem;margin-bottom:16px">${l.duration_minutes} min</div>` : ""}
+    ${l.video_url ? VC.embed(l.video_url) || `<p><a href="${E(l.video_url)}" target="_blank" rel="noopener">Abrir el video de la lección</a></p>` : ""}
+    <div class="md" style="margin-top:18px">${VC.md(l.body_md)}</div>
+    <div class="nav"><span>${prev ? `<button class="btn ghost" id="prev">← Anterior</button>` : ""}</span>
+      ${l.done ? (next ? `<button class="btn" id="next">Siguiente →</button>` : D.exam ? `<button class="btn sun" id="toexam">Ir al examen final</button>` : "")
+        : `<button class="btn sun" id="done">${next ? "Completar y seguir →" : "Completar lección"}</button>`}</div></article>`;
+  bindTop(); scrollTo({ top: 0 });
+  if ($("prev")) $("prev").onclick = () => showLesson(prev.id);
+  if ($("next")) $("next").onclick = () => isLocked(i + 1) ? VC.toast("Completa esta lección primero.") : showLesson(next.id);
+  if ($("toexam")) $("toexam").onclick = showExam;
+  if ($("done")) $("done").onclick = async e => {
+    e.target.disabled = true;
+    try {
+      const r = await VC.call(`aprender/${slug}/leccion`, { json: { lesson: l.id } });
+      l.done = true;
+      if (!r.preview) D.progress = r.progress; else D.progress = Math.round(100 * flat.filter(x => x.done).length / flat.length);
+      if (D.exam) D.exam.available = allDone();
+      next ? showLesson(next.id) : D.exam ? showExam() : showLesson(l.id);
+    } catch (err) { VC.toast(err.message); e.target.disabled = false; }
+  };
+}
+
+function certBox(c) {
+  return `<div class="panel cert"><div class="kick">Tu constancia</div><h2 style="margin-top:6px">¡Felicidades! Ya tienes tu constancia</h2>
+    <p class="mute">Folio <b style="color:var(--ink)">${E(c.folio)}</b>. También te la enviamos por correo. Cualquiera puede verificarla con su código QR.</p>
+    <div class="btns"><a class="btn sun" href="/api/cursos/constancia/${E(c.token)}.pdf" target="_blank" rel="noopener">Descargar PDF</a><a class="btn" href="/cursos/verificar/${E(c.token)}/">Ver verificación</a></div></div>`;
+}
+function showExam() {
+  clearInterval(timerT); cur = "exam"; history.replaceState(null, "", "#examen"); side();
+  const x = D.exam, left = x.max_attempts - x.used;
+  let body;
+  if (D.certificate) body = certBox(D.certificate);
+  else if (D.preview) body = `<p class="mute">En la vista previa no se presenta el examen.</p>`;
+  else if (!x.available) { const n = flat.filter(l => l.done).length; body = `<p>Completa todas las lecciones para presentar el examen.</p><div class="bar"><i style="width:${Math.round(100 * n / flat.length)}%"></i></div><p class="mute">${n} de ${flat.length} lecciones completadas.</p>`; }
+  else if (x.passed) body = `<p>Ya aprobaste este examen.</p>`;
+  else if (left <= 0) body = `<p>Usaste tus ${x.max_attempts} intentos sin alcanzar ${x.passing_score}. Tu mejor calificación fue <b>${x.best}</b>. Escríbenos desde <a href="/cuenta/">Ayuda y soporte</a> si necesitas otra oportunidad.</p>`;
+  else body = `<ul class="mute"><li>Para aprobar necesitas <b style="color:var(--ink)">${x.passing_score} de 100</b>.</li><li>Te quedan <b style="color:var(--ink)">${left} de ${x.max_attempts}</b> intentos.</li>
+    ${x.time_limit_minutes ? `<li>Tienes <b style="color:var(--ink)">${x.time_limit_minutes} minutos</b> desde que empiezas.</li>` : "<li>Sin límite de tiempo.</li>"}<li>Al terminar verás tu calificación y la retroalimentación de cada pregunta.</li></ul>
+    <button class="btn sun" id="start">${x.used ? "Intentar de nuevo" : "Empezar el examen"}</button>`;
+  $("view").innerHTML = topbar() + `<div class="kick">Final</div><h1 style="font-size:clamp(1.5rem,4.5vw,2.2rem)">${E(x.title || "Examen final")}</h1><div class="panel">${body}</div>`;
+  bindTop(); scrollTo({ top: 0 });
+  if ($("start")) $("start").onclick = startExam;
+}
+
+const saveKey = () => `vvr-examen-${attempt && attempt.attempt}`;
+function answersNow() {
+  const a = {};
+  for (const q of attempt.questions) a[q.id] = [...document.querySelectorAll(`[name="q-${q.id}"]:checked`)].map(i => i.value);
+  return a;
+}
+async function startExam(e) {
+  e && (e.target.disabled = true);
+  try { attempt = await VC.call(`aprender/${slug}/examen`, { json: {} }); }
+  catch (err) { VC.toast(err.message); e && (e.target.disabled = false); return; }
+  let saved = {}; try { saved = JSON.parse(localStorage.getItem(saveKey()) || "{}"); } catch (_) {}
+  const N = attempt.questions.length;
+  $("view").innerHTML = topbar() + `<div class="qhead"><span><b id="answered">0</b> de ${N} respondidas · intento ${attempt.number} de ${attempt.max_attempts}</span><span class="timer" id="timer"></span></div>
+    <form id="exam">${attempt.questions.map((q, k) => `<div class="panel q"><fieldset><legend>${k + 1}. <span class="md">${VC.inline(q.prompt_md)}</span></legend>
+      ${q.kind === "multiple" ? `<div class="hint">Marca todas las correctas.</div>` : ""}
+      ${q.options.map(o => `<label class="opt"><input type="${q.kind === "multiple" ? "checkbox" : "radio"}" name="q-${E(q.id)}" value="${E(o.id)}" ${(saved[q.id] || []).includes(o.id) ? "checked" : ""}><span>${VC.inline(o.text)}</span></label>`).join("")}
+    </fieldset></div>`).join("")}
+    <button class="btn sun block" type="submit">Enviar respuestas</button></form>`;
+  bindTop(); scrollTo({ top: 0 });
+  const count = () => { const a = answersNow(); $("answered").textContent = Object.values(a).filter(v => v.length).length; try { localStorage.setItem(saveKey(), JSON.stringify(a)); } catch (_) {} };
+  $("exam").addEventListener("change", count); count();
+  $("exam").onsubmit = ev => {
+    ev.preventDefault();
+    const missing = N - Object.values(answersNow()).filter(v => v.length).length;
+    if (missing && !confirm(`Te faltan ${missing} ${missing === 1 ? "pregunta" : "preguntas"}. ¿Enviar de todos modos?`)) return;
+    submitExam();
+  };
+  if (attempt.ends_at) {
+    const skew = Date.now() - attempt.now;
+    const tick = () => {
+      const ms = attempt.ends_at - (Date.now() - skew), t = $("timer"); if (!t) return clearInterval(timerT);
+      if (ms <= 0) { clearInterval(timerT); t.textContent = "0:00"; VC.toast("Se acabó el tiempo: enviamos tus respuestas."); submitExam(); return; }
+      t.textContent = `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
+    };
+    tick(); timerT = setInterval(tick, 1000);
+  }
+}
+async function submitExam() {
+  clearInterval(timerT);
+  const btn = document.querySelector("#exam [type=submit]"); if (btn) { btn.disabled = true; btn.textContent = "Calificando…"; }
+  let r;
+  try { r = await VC.call(`aprender/${slug}/examen/enviar`, { json: { attempt: attempt.attempt, answers: answersNow() } }); }
+  catch (err) { VC.toast(err.message); if (btn) { btn.disabled = false; btn.textContent = "Enviar respuestas"; } return; }
+  try { localStorage.removeItem(saveKey()); } catch (_) {}
+  D.exam.used++; D.exam.best = Math.max(D.exam.best, r.score);
+  if (r.passed) { D.exam.passed = true; D.progress = 100; D.certificate = r.certificate; }
+  side();
+  $("view").innerHTML = topbar() + `<div class="panel"><div class="res"><div class="score" style="color:${r.passed ? "var(--ok)" : "var(--bad)"}">${r.score}</div>
+      <div><h2 style="margin:0">${r.passed ? "¡Aprobaste!" : "Esta vez no alcanzó"}</h2><div class="mute">${r.right} de ${r.total} correctas · necesitas ${r.passing_score}${r.passed ? "" : ` · te ${r.attempts_left === 1 ? "queda 1 intento" : `quedan ${r.attempts_left} intentos`}`}</div></div></div>
+      ${r.late ? `<p class="mute">El intento se envió después del tiempo límite.</p>` : ""}
+      ${!r.passed && r.attempts_left ? `<div class="btns"><button class="btn sun" id="again">Intentar de nuevo</button></div><p class="mute" style="font-size:.88rem">Repasa las lecciones de las preguntas que fallaste antes de volver a intentarlo.</p>` : ""}</div>
+    ${r.passed && r.certificate ? certBox(r.certificate) : ""}
+    <h2 style="margin-top:30px">Revisión</h2>
+    ${r.review.map((q, k) => `<div class="panel q"><div style="display:flex;gap:10px;justify-content:space-between"><b>${k + 1}. <span class="md">${VC.inline(q.prompt_md)}</span></b><span class="mark ${q.ok ? "ok" : "bad"}">${q.ok ? "✓ Correcta" : "✗ Incorrecta"}</span></div>
+      ${q.options.filter(o => o.chosen || o.correct).map(o => `<div class="opt ${o.correct ? "ok" : o.chosen && !q.ok ? "bad" : ""}" style="cursor:default"><span>${o.chosen ? "Tu respuesta: " : "Correcta: "}${VC.inline(o.text)}${o.feedback ? `<div class="fb">${VC.inline(o.feedback)}</div>` : ""}</span></div>`).join("") || `<div class="fb">Sin responder.</div>`}
+      ${q.explanation_md ? `<div class="fb md">${VC.md(q.explanation_md)}</div>` : ""}</div>`).join("")}`;
+  bindTop(); scrollTo({ top: 0 });
+  if ($("again")) $("again").onclick = startExam;
+}
+
+VC.call("aprender/" + encodeURIComponent(slug)).then(r => {
+  D = r; flat = D.modules.flatMap(m => m.lessons);
+  document.title = D.course.title + " · Aprender";
+  shell();
+  const h = location.hash.slice(1);
+  if (h === "examen" || (D.certificate && !h)) return showExam();
+  const firstOpen = flat.findIndex(l => !l.done), want = flat.findIndex(l => l.id === h);
+  if (want >= 0 && !isLocked(want)) showLesson(flat[want].id);
+  else if (firstOpen >= 0) showLesson(flat[firstOpen].id);
+  else D.exam ? showExam() : showLesson(flat[0].id);
+}).catch(e => {
+  if (e.status === 401) { location.href = VC.loginUrl("cursos/aprender/" + slug); return; }
+  if (e.data && e.data.enroll) { location.href = `/cursos/${encodeURIComponent(slug)}/`; return; }
+  $("main").innerHTML = `<div class="empty"><h2>${E(e.message)}</h2><a class="btn" href="/cursos/">Ver el catálogo</a></div>`;
+});
+</script>
+</body>
+</html>
