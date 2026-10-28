@@ -23,6 +23,10 @@ const POR_FRUTA = 4;            // 4 de cada fruta = 12 logos de Tierra Lila
 const TOTAL_LILA = FRUTAS.length * POR_FRUTA;
 const TIEMPO_MARIPOSA = 30;
 const ALTURA_MAX = 70;
+// Templo olmeca (modelo Meshy): lugar, escala (la puerta queda de ~3 m) y su puerta en coordenadas del modelo
+const TEMPLO = { x: 40, z: -125 };
+const ESCALA_TEMPLO = 12.5;
+const PUERTA_TEMPLO = { y: -0.145, z: 0.38 };
 const TIEMPO_GIGANTE = 30;     // segundos que dura el tamaño doble al comer un hongo
 const TOTAL_HONGOS = 8;
 const VEL_MAX = 19;            // vuelo normal; con «Correr» va 1.5 veces más rápido
@@ -143,10 +147,11 @@ const claros = [];
 while (claros.length < 30) {
   const x = entre(-MUNDO + 25, MUNDO - 25), z = entre(-MUNDO + 25, MUNDO - 25);
   if (Math.hypot(x, z) < 45) continue;
+  if (Math.hypot(x - TEMPLO.x, z - TEMPLO.z) < 55) continue;
   if (claros.some((p) => Math.hypot(p.x - x, p.z - z) < 48)) continue;
   claros.push({ x, z });
 }
-const libreDeClaros = (x, z, r) => claros.every((p) => Math.hypot(p.x - x, p.z - z) > r);
+const libreDeClaros = (x, z, r) => claros.every((p) => Math.hypot(p.x - x, p.z - z) > r) && Math.hypot(TEMPLO.x - x, TEMPLO.z - z) > r + 18;
 const troncos = []; // { x, z, r, alto } para que la mariposa no atraviese los árboles
 
 // ---------------------------------------------------------------------------
@@ -158,7 +163,7 @@ const cargador = new GLTFLoader(gestor);
 const cargar = (url) => new Promise((ok, mal) => cargador.load(url, ok, undefined, mal));
 const cargarImagen = (url) => new Promise((ok, mal) => { const im = new Image(); im.onload = () => ok(im); im.onerror = mal; im.src = url; });
 
-const [selvaGltf, mariposaGltf, imgLogo, ninaGltf, palmaGltf, platanoGltf, pinaGltf, imgLila, hongoGltf] = await Promise.all([
+const [selvaGltf, mariposaGltf, imgLogo, ninaGltf, palmaGltf, platanoGltf, pinaGltf, imgLila, hongoGltf, temploGltf] = await Promise.all([
   cargar('assets/tropical.gltf.json'),
   cargar('assets/butterfly.gltf.json'),
   cargarImagen('assets/logo.png'),
@@ -168,6 +173,7 @@ const [selvaGltf, mariposaGltf, imgLogo, ninaGltf, palmaGltf, platanoGltf, pinaG
   cargar('assets/pina.glb'),
   cargarImagen('assets/tierralila.png'),
   cargar('assets/hongo.glb'),
+  cargar('assets/templo.glb'),
 ]);
 
 // ---------------------------------------------------------------------------
@@ -556,6 +562,7 @@ function moverJugador(dt) {
     const d = Math.hypot(dx, dz), minimo = t.r + 0.6 * j.escala;
     if (d < minimo && d > 0.0001) { j.pos.x = t.x + (dx / d) * minimo; j.pos.z = t.z + (dz / d) * minimo; }
   }
+  chocarTemplo(j);
 
   if (Math.abs(j.pos.x) > MUNDO || Math.abs(j.pos.z) > MUNDO) {
     j.pos.x = THREE.MathUtils.clamp(j.pos.x, -MUNDO, MUNDO);
@@ -602,6 +609,7 @@ let focoMagia = null;   // punto del logo que se está activando
 let mezclaMagia = 0;    // 0 = cámara normal, 1 = cámara alejada mirando el logo
 let mezclaVuelo = 0;    // 0 = cámara de la niña, 1 = cámara de la mariposa
 function moverCamara(dt, primera = false) {
+  if (fin.activo) return camaraFinal(dt);
   const j = jugador;
   const fx = Math.sin(j.rumbo), fz = Math.cos(j.rumbo);
   mezclaMagia = amortiguar(mezclaMagia, focoMagia ? 1 : 0, 2.5, dt);
@@ -1331,6 +1339,328 @@ function actualizarHongos(dt) {
 }
 
 // ---------------------------------------------------------------------------
+// Templo olmeca: siempre brilla; se abre al completar la canasta y adentro está el final
+// ---------------------------------------------------------------------------
+const templo = (() => {
+  const raiz = temploGltf.scene;
+  raiz.traverse((o) => {
+    if (!o.isMesh) return;
+    o.castShadow = true;
+    o.receiveShadow = true;
+    // Meshy lo marca como metal: sin mapa de entorno se vería negro
+    o.material.metalness = 0;
+    o.material.metalnessMap = null;
+    o.material.needsUpdate = true;
+  });
+  const caja = new THREE.Box3().setFromObject(raiz);
+  const c0 = caja.getCenter(new THREE.Vector3());
+  const k = ESCALA_TEMPLO;
+  raiz.scale.setScalar(k);
+  raiz.position.set(-c0.x * k, -caja.min.y * k, -c0.z * k);
+  const g = new THREE.Group();
+  g.add(raiz);
+  const mx = (caja.max.x - caja.min.x) / 2 * k, frente = (caja.max.z - c0.z) * k, atras = (caja.min.z - c0.z) * k;
+  const alto = (caja.max.y - caja.min.y) * k;
+  // se asienta en lo más bajo del terreno que pisa, para que no flote
+  const rot = Math.atan2(-TEMPLO.x, -TEMPLO.z); // la escalinata mira hacia el inicio
+  const cr = Math.cos(rot), sr = Math.sin(rot);
+  let y = Infinity;
+  for (const [lx, lz] of [[-mx, atras], [mx, atras], [-mx, frente], [mx, frente], [0, 0]]) {
+    y = Math.min(y, alturaEn(TEMPLO.x + lx * cr + lz * sr, TEMPLO.z - lx * sr + lz * cr));
+  }
+  y -= 0.3;
+  g.position.set(TEMPLO.x, y, TEMPLO.z);
+  g.rotation.y = rot;
+  escena.add(g);
+  const puertaL = new THREE.Vector3(0, (PUERTA_TEMPLO.y - caja.min.y) * k, (PUERTA_TEMPLO.z - c0.z) * k);
+
+  // luz de la puerta, resplandor, haz al cielo y chispas que suben
+  const resplandor = new THREE.Sprite(new THREE.SpriteMaterial({ map: texResplandor, color: 0xb67cff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.8, toneMapped: false }));
+  resplandor.scale.setScalar(9);
+  resplandor.position.copy(puertaL).add(new THREE.Vector3(0, 1.6, -0.3)); // en el marco: brilla detrás de quien entra
+  const luz = new THREE.PointLight(0xb67cff, 60, 40, 1.6);
+  luz.position.copy(puertaL).add(new THREE.Vector3(0, 2, 3));
+  const matHaz = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+    uniforms: { uTiempo, uOpacidad: { value: 0.6 }, uColor: { value: new THREE.Color(0xb67cff) } },
+    vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+    fragmentShader: `
+      uniform float uTiempo, uOpacidad; uniform vec3 uColor; varying vec2 vUv;
+      void main(){
+        float a = pow(1.0 - vUv.y, 1.6) * (0.7 + 0.3 * sin(vUv.y * 40.0 - uTiempo * 5.0));
+        gl_FragColor = vec4(uColor * a * uOpacidad, 1.0);
+      }`,
+  });
+  const haz = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 1.6, 90, 24, 1, true), matHaz);
+  haz.position.set(0, alto + 44, 0);
+  const N = 260, datos = new Float32Array(N * 4);
+  for (let i = 0; i < N; i++) datos.set([Math.random() * 6.28, 4 + Math.random() * 12, 0.3 + Math.random() * 0.8, Math.random() * 16], i * 4);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
+  geo.setAttribute('aDatos', new THREE.BufferAttribute(datos, 4));
+  const orbita = new THREE.Points(geo, materialOrbita(0xb67cff, 0xffe6a8));
+  orbita.frustumCulled = false;
+  orbita.scale.set(1, 1.3, 1);
+  g.add(resplandor, luz, haz, orbita);
+
+  const aMundo = (l) => new THREE.Vector3(l.x * cr + l.z * sr, l.y, -l.x * sr + l.z * cr).add(g.position);
+  return {
+    g, rot, cr, sr, mx, frente, atras, alto, y, resplandor, luz, matHaz, orbita, abierto: false, mezcla: 0,
+    puerta: aMundo(puertaL),
+    pie: aMundo(new THREE.Vector3(0, 0, frente + 2.5)).setY(0),
+    meta: aMundo(puertaL.clone().add(new THREE.Vector3(0, 0, 1.2))),
+    afuera: new THREE.Vector3(Math.sin(rot), 0, Math.cos(rot)), // hacia donde mira la escalinata
+    aLocal(p) { const dx = p.x - g.position.x, dz = p.z - g.position.z; return { x: dx * cr - dz * sr, z: dx * sr + dz * cr }; },
+  };
+})();
+templo.pie.y = alturaEn(templo.pie.x, templo.pie.z);
+const ORO = new THREE.Color(0xffc45a), VIOLETA = new THREE.Color(0xb67cff);
+function abrirTemplo() {
+  templo.abierto = true;
+  sonidos.templo();
+}
+function actualizarTemplo(dt) {
+  const T = templo;
+  T.mezcla = amortiguar(T.mezcla, T.abierto ? 1 : 0, 1.5, dt);
+  const pulso = 0.5 + 0.5 * Math.sin(uTiempo.value * (T.abierto ? 3.5 : 1.6));
+  const color = VIOLETA.clone().lerp(ORO, T.mezcla);
+  T.resplandor.material.color.copy(color);
+  T.resplandor.material.opacity = 0.55 + pulso * 0.3 + T.mezcla * 0.2;
+  T.resplandor.scale.setScalar(8 + pulso * 2 + T.mezcla * 5);
+  T.luz.color.copy(color);
+  T.luz.intensity = 40 + pulso * 30 + T.mezcla * 80;
+  T.matHaz.uniforms.uColor.value.copy(color);
+  T.matHaz.uniforms.uOpacidad.value = 0.45 + pulso * 0.15 + T.mezcla * 0.5;
+  T.orbita.material.uniforms.uCarga.value = T.mezcla * 0.3;
+  // en el final la luz baja para que se vea su carita
+  if (fin.activo && fin.t > 3.6) { T.resplandor.material.opacity *= 0.3; T.luz.intensity = 14; T.matHaz.uniforms.uOpacidad.value *= 0.6; }
+}
+// el templo es sólido; frente a la escalinata está la entrada
+function chocarTemplo(j) {
+  const T = templo;
+  if (j.pos.y > T.y + T.alto) return;
+  const l = T.aLocal(j.pos), m = 0.6 * j.escala;
+  if (jugando && !fin.activo && Math.abs(l.x) < 4.5 && l.z > T.frente && l.z < T.frente + 6 && j.pos.y < T.y + 8) {
+    if (T.abierto) { iniciarFinal(); return; }
+    avisar('🔒 El templo olmeca se abre cuando llenes tu canasta', 2200);
+  }
+  if (Math.abs(l.x) >= T.mx + m || l.z <= T.atras - m || l.z >= T.frente + m) return;
+  const px = T.mx + m - Math.abs(l.x), pf = T.frente + m - l.z, pa = l.z - (T.atras - m);
+  if (px < pf && px < pa) l.x = Math.sign(l.x) * (T.mx + m);
+  else if (pf < pa) l.z = T.frente + m;
+  else l.z = T.atras - m;
+  j.pos.x = T.g.position.x + l.x * T.cr + l.z * T.sr;
+  j.pos.z = T.g.position.z - l.x * T.sr + l.z * T.cr;
+}
+
+// ---------------------------------------------------------------------------
+// Final épico: sube la escalinata, el templo estalla en luz y se ve su carita
+// ---------------------------------------------------------------------------
+const fin = { activo: false, t: 0, desde: new THREE.Vector3(), estallo: false, foto: null, cara: null, capturar: null, mostrado: false, segundos: 0 };
+let inicioPartida = performance.now();
+const COLORES_ORO = [0xffc45a, 0xffffff, 0xfff1a0, 0xffe08a, 0xd9b8ff, 0x7fe08a].map((c) => new THREE.Color(c));
+function iniciarFinal() {
+  if (jugador.modo === 'mariposa') convertir('nina');
+  fin.activo = true;
+  fin.t = 0;
+  fin.estallo = fin.mostrado = false;
+  fin.foto = fin.cara = null;
+  fin.segundos = Math.round((performance.now() - inicioPartida) / 1000);
+  fin.desde.copy(jugador.pos);
+  jugador.quieto = true;
+  jugador.gigante = 0;
+  jugador.vel = jugador.vy = 0;
+  $('relojGigante').classList.remove('on', 'poco');
+  $('hud').classList.remove('on');
+  narrador.callar();
+}
+const suave = (x) => x * x * (3 - 2 * x);
+const cabeza = () => jugador.pos.clone().add(new THREE.Vector3(0, 1.75 * jugador.escala, 0));
+function actualizarFinal(dt) {
+  const T = templo, j = jugador;
+  fin.t += dt;
+  const t = fin.t, adentro = T.rot + Math.PI;
+  if (t < 1.4) {
+    // camina al pie de la escalinata
+    const f = suave(t / 1.4);
+    j.pos.lerpVectors(fin.desde, T.pie, f);
+    j.pos.y = alturaEn(j.pos.x, j.pos.z);
+    j.rumbo = Math.atan2(T.pie.x - fin.desde.x, T.pie.z - fin.desde.z);
+    nina.poner('caminar');
+  } else if (t < 4.4) {
+    // sube hasta la puerta
+    const f = suave((t - 1.4) / 3);
+    j.pos.lerpVectors(T.pie, T.meta, f);
+    j.rumbo = adentro;
+    nina.poner('caminar');
+  } else {
+    j.pos.copy(T.meta);
+    if (!fin.estallo) {
+      fin.estallo = true;
+      // estallidos arriba del techo, para que no deslumbren la cámara
+      const p = T.puerta.clone().add(new THREE.Vector3(0, T.alto * 0.6, 0)).addScaledVector(T.afuera, -3);
+      explotar(p, 0.7, COLORES_ORO);
+      setTimeout(() => explotar(p.clone().add(new THREE.Vector3(0, 5, 0)), 0.8, COLORES_ORO), 450);
+      setTimeout(() => explotar(p.clone().add(new THREE.Vector3(0, 11, 0)), 0.9, COLORES_LILA), 900);
+      sacudida = 1.2;
+      sonidos.epico();
+      nina.poner('saltar', 0.1);
+    }
+    // se voltea hacia afuera, hacia nosotros
+    const giro = Math.min(1, (t - 4.4) / 0.8);
+    j.rumbo = adentro + Math.PI * suave(giro);
+    if (t > 5.6) nina.poner('idle', 0.5);
+    if (!fin.foto && t > 6.2) fin.capturar = capturarFoto;
+    if (!fin.cara && t > 8.4) fin.capturar = capturarCara;
+    if (!fin.mostrado && t > 8.8) { fin.mostrado = true; mostrarFinal(); }
+  }
+  bloom.strength = fin.estallo ? 0.55 + Math.max(0, 1 - (t - 4.4) / 2) * 0.3 : 0.7;
+  if (nina.acciones.caminar) nina.acciones.caminar.timeScale = 1;
+  nina.mezclador.update(dt);
+  nina.pivote.position.copy(j.pos);
+  nina.pivote.rotation.y = j.rumbo;
+}
+const camFinal = new THREE.Vector3(), miraFinal = new THREE.Vector3();
+function camaraFinal(dt) {
+  const T = templo, j = jugador, t = fin.t;
+  if (t < 4.4) {
+    // detrás de ella, subiendo, mirando la puerta que brilla
+    const atrasX = -Math.sin(j.rumbo), atrasZ = -Math.cos(j.rumbo);
+    camFinal.set(j.pos.x + atrasX * 9, j.pos.y + 4 + t * 0.6, j.pos.z + atrasZ * 9);
+    miraFinal.copy(T.puerta).add(new THREE.Vector3(0, 2, 0));
+  } else {
+    // da la vuelta y se acerca a su carita, con el templo encendido detrás
+    const f = suave(Math.min(1, (t - 4.4) / 4));
+    const dist = THREE.MathUtils.lerp(11, 2.6, f), alto = THREE.MathUtils.lerp(5, 1.8, f);
+    const ang = Math.sin(t * 0.35) * 0.25 * f;
+    const ax = T.afuera.x * Math.cos(ang) - T.afuera.z * Math.sin(ang), az = T.afuera.x * Math.sin(ang) + T.afuera.z * Math.cos(ang);
+    camFinal.set(j.pos.x + ax * dist, j.pos.y + alto, j.pos.z + az * dist);
+    miraFinal.copy(cabeza()).add(new THREE.Vector3(0, THREE.MathUtils.lerp(2.5, -0.1, f), 0));
+  }
+  camara.position.lerp(camFinal, 1 - Math.exp(-3 * dt));
+  miraSuave.lerp(miraFinal, 1 - Math.exp(-4 * dt));
+  camara.lookAt(miraSuave);
+  if (sacudida > 0) {
+    sacudida = Math.max(0, sacudida - dt * 1.5);
+    camara.position.x += (Math.random() - 0.5) * sacudida * 0.6;
+    camara.position.y += (Math.random() - 0.5) * sacudida * 0.6;
+  }
+  sol.target.position.copy(j.pos);
+  sol.position.copy(j.pos).addScaledVector(DIR_SOL, 120);
+}
+// fotos del lienzo justo después de dibujar (el lienzo no guarda el cuadro)
+function capturarFoto() {
+  const src = renderer.domElement, c = Object.assign(document.createElement('canvas'), { width: 1080, height: 1350 });
+  const k = Math.max(c.width / src.width, c.height / src.height), w = src.width * k, h = src.height * k;
+  c.getContext('2d').drawImage(src, (c.width - w) / 2, (c.height - h) / 2, w, h);
+  fin.foto = c;
+}
+function capturarCara() {
+  // el retrato va sin destellos ni polen, para que ninguno le tape la cara
+  const ocultos = [];
+  escena.traverse((o) => { if (o.isPoints && o.visible) { o.visible = false; ocultos.push(o); } });
+  composer.render();
+  ocultos.forEach((o) => (o.visible = true));
+  const src = renderer.domElement;
+  const p = cabeza().project(camara);
+  const cx = (p.x * 0.5 + 0.5) * src.width, cy = (1 - (p.y * 0.5 + 0.5)) * src.height;
+  const lado = Math.min(src.width, src.height) * 0.42;
+  const c = Object.assign(document.createElement('canvas'), { width: 512, height: 512 });
+  c.getContext('2d').drawImage(src, cx - lado / 2, cy - lado / 2, lado, lado, 0, 0, 512, 512);
+  fin.cara = c;
+}
+const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+function mostrarFinal() {
+  $('finalCara').src = (fin.cara || fin.foto).toDataURL('image/jpeg', 0.9);
+  $('finalTiempo').textContent = mmss(fin.segundos);
+  $('final').classList.remove('oculta');
+}
+
+// Foto del logro: 1080 × 1350 (formato de publicación) para compartir o descargar
+let fotoArchivo = null;
+function dibujarLogro() {
+  const c = Object.assign(document.createElement('canvas'), { width: 1080, height: 1350 });
+  const g = c.getContext('2d');
+  const W = c.width, H = c.height;
+  if (fin.foto) g.drawImage(fin.foto, 0, 0);
+  let gr = g.createLinearGradient(0, 0, 0, H);
+  gr.addColorStop(0, 'rgba(20,6,40,.55)'); gr.addColorStop(0.3, 'rgba(20,6,40,.05)'); gr.addColorStop(0.55, 'rgba(20,6,40,.45)'); gr.addColorStop(1, 'rgba(12,4,26,.96)');
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  g.textAlign = 'center';
+  g.fillStyle = '#ffe6a8';
+  g.font = '700 30px Outfit, sans-serif';
+  g.letterSpacing = '8px';
+  g.fillText('LA COSECHA DE TIERRA LILA', W / 2, 86);
+  g.letterSpacing = '0px';
+  // retrato en círculo con aro dorado
+  const R = 190, cx = W / 2, cy = 640;
+  g.save();
+  g.shadowColor = 'rgba(255,196,90,.9)'; g.shadowBlur = 60;
+  gr = g.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+  gr.addColorStop(0, '#fff1a0'); gr.addColorStop(0.5, '#ffc45a'); gr.addColorStop(1, '#b67cff');
+  g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, R + 14, 0, Math.PI * 2); g.fill();
+  g.restore();
+  g.save(); g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.clip();
+  if (fin.cara) g.drawImage(fin.cara, cx - R, cy - R, R * 2, R * 2);
+  g.restore();
+  // texto
+  g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 18;
+  gr = g.createLinearGradient(0, 860, 0, 960);
+  gr.addColorStop(0, '#fff6d0'); gr.addColorStop(1, '#ffb83d');
+  g.fillStyle = gr;
+  g.font = '800 104px Outfit, sans-serif';
+  g.fillText('¡Lo logré!', W / 2, 960);
+  g.fillStyle = '#fff';
+  g.font = '700 46px Outfit, sans-serif';
+  g.fillText('Abrí el Templo Olmeca de Tabasco', W / 2, 1035);
+  g.fillStyle = '#e6d4ff';
+  g.font = '600 38px Outfit, sans-serif';
+  g.fillText(`🥥 4   🍌 4   🍍 4   ·   ⏱ ${mmss(fin.segundos)}`, W / 2, 1102);
+  g.shadowBlur = 0;
+  // marcas: Tierra Lila sobre morado y Vórtice VR sobre blanco (su color original)
+  const pill = (x, y, w, h, color) => { g.fillStyle = color; g.beginPath(); g.roundRect(x, y, w, h, h / 2); g.fill(); };
+  const hL = 74, wL = hL * (imgLila.naturalWidth / imgLila.naturalHeight), hV = 50, wV = hV * (imgLogo.naturalWidth / imgLogo.naturalHeight);
+  const total = wL + 60 + 28 + wV + 60, x0 = (W - total) / 2, yB = 1170;
+  pill(x0, yB, wL + 60, 104, '#7a45b8');
+  g.drawImage(imgLila, x0 + 30, yB + 15, wL, hL);
+  pill(x0 + wL + 60 + 28, yB, wV + 60, 104, '#ffffff');
+  g.drawImage(imgLogo, x0 + wL + 60 + 28 + 30, yB + 27, wV, hV);
+  g.fillStyle = 'rgba(255,255,255,.75)';
+  g.font = '500 28px Outfit, sans-serif';
+  g.fillText('vorticevr.mx', W / 2, 1318);
+  return c;
+}
+function abrirFoto() {
+  const c = dibujarLogro();
+  $('fotoLogro').src = c.toDataURL('image/jpeg', 0.92);
+  fotoArchivo = null;
+  // el archivo se prepara antes del toque en «Compartir» (el iPhone lo pide así)
+  c.toBlob((b) => { fotoArchivo = new File([b], 'mi-logro-tierra-lila.jpg', { type: 'image/jpeg' }); }, 'image/jpeg', 0.92);
+  $('pantallaFoto').classList.remove('oculta');
+}
+function descargarFoto() {
+  const a = document.createElement('a');
+  a.href = $('fotoLogro').src;
+  a.download = 'mi-logro-tierra-lila.jpg';
+  a.click();
+}
+const TEXTO_LOGRO = '¡Abrí el Templo Olmeca en La cosecha de Tierra Lila! 🌿🦋 Juega tú también:';
+async function compartirFoto() {
+  const url = location.href.split(/[?#]/)[0];
+  try {
+    if (fotoArchivo && navigator.canShare?.({ files: [fotoArchivo] })) {
+      await navigator.share({ files: [fotoArchivo], title: 'Mi logro en Tierra Lila', text: `${TEXTO_LOGRO} ${url}` });
+    } else if (navigator.share) {
+      await navigator.share({ title: 'Mi logro en Tierra Lila', text: TEXTO_LOGRO, url });
+    } else {
+      descargarFoto();
+      navigator.clipboard?.writeText(`${TEXTO_LOGRO} ${url}`);
+      avisar('Se descargó tu foto y se copió el texto para tus redes', 2600);
+    }
+  } catch (e) { /* canceló */ }
+}
+
+// ---------------------------------------------------------------------------
 // Partida
 // ---------------------------------------------------------------------------
 const cosecha = { coco: 0, platano: 0, pina: 0 };
@@ -1347,6 +1677,10 @@ function nuevaPartida() {
   FRUTAS.forEach((f) => (cosecha[f] = 0));
   mazo = [];
   narrador.reiniciar();
+  templo.abierto = false;
+  fin.activo = false;
+  bloom.strength = 0.7;
+  inicioPartida = performance.now();
   jugador.gigante = 0;
   $('relojGigante').classList.remove('on', 'poco');
   ponerHongos();
@@ -1456,8 +1790,8 @@ function actualizarLogos(dt) {
         chip.classList.remove('gano'); void chip.offsetWidth; chip.classList.add('gano');
         sonidos.fruta();
         const faltan = TOTAL_LILA - totalCosecha();
-        avisar(faltan ? `${PREMIOS[l.fruta].emoji} ¡A la canasta! Te faltan ${faltan}` : '¡Canasta completa!', 2400);
-        if (!faltan) setTimeout(terminar, 2600);
+        avisar(faltan ? `${PREMIOS[l.fruta].emoji} ¡A la canasta! Te faltan ${faltan}` : '¡Canasta completa! El templo olmeca se abrió: sigue la flecha 🏛️', faltan ? 2400 : 5000);
+        if (!faltan) abrirTemplo();
         quitarLogo(l); logos.splice(k, 1);
       }
     } else if (l.estado === 'desvaneciendo') {
@@ -1478,6 +1812,14 @@ function recargarMariposa() {
 // Brújula hacia el logo de Tierra Lila más cercano
 const flecha = $('flecha'), textoDistancia = $('distancia');
 function actualizarBrujula() {
+  if (templo.abierto) {
+    const d = Math.hypot(templo.pie.x - jugador.pos.x, templo.pie.z - jugador.pos.z);
+    const ang = Math.atan2(templo.pie.x - jugador.pos.x, templo.pie.z - jugador.pos.z) - jugador.rumbo;
+    flecha.style.opacity = 1;
+    flecha.style.transform = `rotate(${-ang}rad)`;
+    textoDistancia.textContent = `🏛️ ${Math.round(d)} m`;
+    return;
+  }
   let mejor = null, dist = Infinity;
   for (const l of logos) {
     if (l.tipo !== 'lila' || (l.estado !== 'flotando' && l.estado !== 'esperando')) continue;
@@ -1499,12 +1841,6 @@ function avisar(texto, ms) {
   a.classList.add('on');
   clearTimeout(temporizadorAviso);
   temporizadorAviso = setTimeout(() => a.classList.remove('on'), ms);
-}
-
-function terminar() {
-  jugando = false;
-  narrador.callar();
-  $('final').classList.remove('oculta');
 }
 
 // ---------------------------------------------------------------------------
@@ -1557,6 +1893,23 @@ const sonidos = (() => {
       if (!ctx) return;
       const t = ctx.currentTime, notas = [659, 784, 988, 1319, 1568, 1976];
       (aMariposa ? notas : [...notas].reverse()).forEach((f, i) => tono(f, t + i * 0.07, 0.6, 0.06));
+    },
+    templo() {
+      if (!ctx) return;
+      const t = ctx.currentTime;
+      [523, 659, 784, 1047, 1319].forEach((f, i) => tono(f, t + i * 0.11, 0.9, 0.06, 'triangle'));
+    },
+    epico() {
+      if (!ctx) return;
+      const t = ctx.currentTime;
+      // golpe grave y un acorde que crece
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(40, t + 1.2);
+      g.gain.setValueAtTime(0.25, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+      o.connect(g).connect(salida); o.start(t); o.stop(t + 1.5);
+      [262, 330, 392, 523].forEach((f) => tono(f, t + 0.1, 3.2, 0.05, 'sawtooth'));
+      [523, 659, 784, 1047, 1319, 1568, 2093].forEach((f, i) => tono(f, t + 0.3 + i * 0.09, 1.6, 0.05, 'triangle'));
+      for (let i = 0; i < 24; i++) tono(1800 + Math.random() * 3200, t + 0.5 + Math.random() * 2.5, 0.3, 0.025);
     },
     crecer() {
       if (!ctx) return;
@@ -1611,18 +1964,21 @@ const reloj = new THREE.Clock();
 function cuadro() {
   const dt = Math.min(reloj.getDelta(), 0.05);
   uTiempo.value += dt;
-  if (jugando) { moverJugador(dt); actualizarTiempoMariposa(dt); }
+  if (fin.activo) actualizarFinal(dt);
+  else if (jugando) { moverJugador(dt); actualizarTiempoMariposa(dt); }
   else { nina.mezclador.update(dt); jugador.rumbo += dt * 0.15; nina.pivote.position.copy(jugador.pos); nina.pivote.rotation.y = jugador.rumbo; }
   moverCamara(dt);
   cielo.position.copy(camara.position);
   moverCompaneras(dt);
   actualizarLogos(dt);
   actualizarHongos(dt);
+  actualizarTemplo(dt);
   actualizarExplosiones(dt);
   actualizarBrujula();
   uCentro.value.copy(jugador.pos);
   revisarTamano();
   composer.render();
+  if (fin.capturar) { fin.capturar(); fin.capturar = null; }
   requestAnimationFrame(cuadro);
 }
 
@@ -1650,13 +2006,21 @@ botonComenzar.addEventListener('click', () => {
   $('inicio').classList.add('oculta');
   $('hud').classList.add('on');
   jugando = true;
+  inicioPartida = performance.now();
   setTimeout(() => ($('ayuda').style.opacity = 0), 12000);
 });
 $('otraVez').addEventListener('click', () => {
   $('final').classList.add('oculta');
+  $('pantallaFoto').classList.add('oculta');
   nuevaPartida();
+  moverCamara(0, true);
+  $('hud').classList.add('on');
   jugando = true;
 });
+$('tomarFoto').addEventListener('click', abrirFoto);
+$('compartirFoto').addEventListener('click', compartirFoto);
+$('descargarFoto').addEventListener('click', descargarFoto);
+$('cerrarFoto').addEventListener('click', () => $('pantallaFoto').classList.add('oculta'));
 
 // para depurar desde la consola
-window.selva = { jugador, nina, logos, camara, escena, renderer, composer, bloom, cosecha, convertir, abrirTrivia };
+window.selva = { jugador, nina, logos, camara, escena, renderer, composer, bloom, cosecha, convertir, abrirTrivia, templo, fin, iniciarFinal, abrirTemplo, hongos };

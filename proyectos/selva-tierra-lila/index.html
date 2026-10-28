@@ -162,6 +162,46 @@
   .carga { height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); margin: 0 auto 18px; width: 220px; overflow: hidden; }
   .carga i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #b67cff, #fff); transition: width .2s; }
   @media (max-width: 480px) { .instrucciones { grid-template-columns: 1fr; } }
+  /* en el celular la brújula va a la derecha, bajo la bocina, para no tapar las piñas */
+  @media (max-width: 600px) {
+    .brujula { left: auto; right: 16px; transform: none; top: calc(max(16px, env(safe-area-inset-top)) + 54px); }
+  }
+
+  /* ---------- Final épico ---------- */
+  .pantalla.epica { background: radial-gradient(ellipse at 50% 35%, rgba(40,14,70,.15), rgba(10,4,22,.88) 75%); overflow-y: auto; align-items: start; }
+  .epica .tarjeta { padding: 28px 0 24px; margin: auto; }
+  .epica .tarjeta > * { opacity: 0; transform: translateY(18px); }
+  .epica:not(.oculta) .tarjeta > * { animation: subir .8s cubic-bezier(.2,.9,.3,1.2) forwards; }
+  .epica:not(.oculta) .tarjeta > :nth-child(2) { animation-delay: .15s; }
+  .epica:not(.oculta) .tarjeta > :nth-child(3) { animation-delay: .45s; }
+  .epica:not(.oculta) .tarjeta > :nth-child(4) { animation-delay: .65s; }
+  .epica:not(.oculta) .tarjeta > :nth-child(5) { animation-delay: .85s; }
+  .epica:not(.oculta) .tarjeta > :nth-child(6) { animation-delay: 1.05s; }
+  .epica:not(.oculta) .tarjeta > :nth-child(7) { animation-delay: 1.25s; }
+  .epica:not(.oculta) .tarjeta > :nth-child(8) { animation-delay: 1.45s; }
+  @keyframes subir { to { opacity: 1; transform: none; } }
+  .kicker { font-size: 13px; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: #ffe6a8; text-shadow: 0 0 18px rgba(255,196,90,.8); }
+  .retrato { position: relative; width: 168px; height: 168px; margin: 22px auto 6px; border-radius: 50%; padding: 7px;
+    background: conic-gradient(from 0deg, #fff1a0, #ffc45a, #b67cff, #ffc45a, #fff1a0); animation: girar 6s linear infinite;
+    box-shadow: 0 0 40px rgba(255,196,90,.75), 0 0 90px rgba(182,124,255,.55); }
+  .retrato img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; background: #1a0b2e; animation: girar 6s linear infinite reverse; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+  .titulo-oro { font-size: clamp(40px, 11vw, 64px) !important; margin: 14px 0 0 !important;
+    background: linear-gradient(100deg, #fff6d0 20%, #ffc45a 40%, #fff 50%, #ffc45a 60%, #fff6d0 80%); background-size: 250% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 20px rgba(255,170,60,.55));
+    animation: subir .8s forwards, destello 3s linear infinite !important; }
+  @keyframes destello { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+  .nombre-heroe { font-size: clamp(18px, 4.8vw, 24px); font-weight: 800; color: #e6d4ff; margin: 4px 0 14px; }
+  .logros { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 22px; }
+  .logros span { padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.09); border: 1px solid rgba(255,214,140,.35); font-weight: 600; font-size: 14px; }
+  .acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 22px; }
+  .boton-oro.dorado { color: #3a1d00; background: linear-gradient(135deg, #fff1a0, #ffc45a 55%, #f39a1e); box-shadow: 0 0 0 1px rgba(255,255,255,.4) inset, 0 8px 34px rgba(255,170,50,.6); }
+  .boton-claro { border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.08); color: #fff; padding: 15px 26px; border-radius: 999px; font: 700 16px 'Outfit', sans-serif; cursor: pointer; }
+  .boton-texto { border: 0; background: none; color: rgba(255,255,255,.75); font: 600 15px 'Outfit', sans-serif; cursor: pointer; text-decoration: underline; }
+  .epica .marcas .marca img { width: min(130px, 30vw); }
+  .pantalla.foto { z-index: 12; background: rgba(8,4,18,.92); overflow-y: auto; }
+  .foto img { display: block; width: min(380px, 82vw, calc((100vh - 170px) * .8)); margin: 0 auto 18px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(255,214,140,.4); }
+  @media (prefers-reduced-motion: reduce) { .retrato, .retrato img, .titulo-oro { animation: none !important; } }
 </style>
 <script type="importmap">
 {
@@ -205,7 +245,7 @@
   <div class="tarjeta">
     <div class="marcas"><div class="marca lila"><img src="assets/tierralila.png" alt="Tierra Lila"></div><div class="marca"><img src="assets/logo.png" alt="Vórtice VR"></div></div>
     <h1>La <em>cosecha</em> de Tierra Lila</h1>
-    <p>Recorre la selva y llena tu canasta: 4 cocos, 4 plátanos y 4 piñas. Cada logo de Tierra Lila te hace una pregunta sobre Tabasco; si aciertas, ganas su fruta. Pisa un logo de Vórtice VR y vuélvete mariposa por 30 segundos para volar sobre la selva. Y si tocas un hongo mágico, ¡creces al doble por 30 segundos!</p>
+    <p>Recorre la selva y llena tu canasta: 4 cocos, 4 plátanos y 4 piñas. Cada logo de Tierra Lila te hace una pregunta sobre Tabasco; si aciertas, ganas su fruta. Pisa un logo de Vórtice VR y vuélvete mariposa por 30 segundos para volar sobre la selva. Y si tocas un hongo mágico, ¡creces al doble por 30 segundos! Con la canasta llena, entra al Templo Olmeca.</p>
     <div class="instrucciones">
       <div><b>Computadora</b>WASD o flechas para caminar · Espacio salta (y sube volando) · Shift corre (y vuela más rápido) · Q baja</div>
       <div><b>Celular</b>Joystick para caminar y girar · ▲ salta o sube · » corre o vuela más rápido</div>
@@ -215,12 +255,30 @@
   </div>
 </div>
 
-<div class="pantalla oculta" id="final">
+<div class="pantalla epica oculta" id="final">
   <div class="tarjeta">
+    <div class="kicker">Templo Olmeca · Tierra Lila</div>
+    <div class="retrato"><img id="finalCara" alt="Tu personaje"></div>
+    <h1 class="titulo-oro">¡Lo lograste!</h1>
+    <div class="nombre-heroe">Guardiana de la Selva de Tabasco</div>
+    <p>Llenaste tu canasta con los frutos de Tabasco y el Templo Olmeca abrió sus puertas solo para ti. Ya conoces sus cinco subregiones: Centro, Chontalpa, Sierra, Pantanos y Los Ríos. La selva guarda tu nombre.</p>
+    <div class="logros"><span>🥥 4</span><span>🍌 4</span><span>🍍 4</span><span>🧠 12 respuestas</span><span>⏱ <b id="finalTiempo">0:00</b></span></div>
+    <div class="acciones">
+      <button class="boton-oro dorado" id="tomarFoto">📸 Tomar foto de mi logro</button>
+      <button class="boton-claro" id="otraVez">Jugar de nuevo</button>
+    </div>
     <div class="marcas"><div class="marca lila"><img src="assets/tierralila.png" alt="Tierra Lila"></div><div class="marca"><img src="assets/logo.png" alt="Vórtice VR"></div></div>
-    <h1>¡Canasta <em>completa</em>!</h1>
-    <p>🥥 4 · 🍌 4 · 🍍 4 — Respondiste 12 preguntas sobre las subregiones de Tabasco. Una actividad de Tierra Lila con Vórtice VR.</p>
-    <button class="boton-oro" id="otraVez">Jugar de nuevo</button>
+  </div>
+</div>
+
+<div class="pantalla foto oculta" id="pantallaFoto">
+  <div class="tarjeta">
+    <img id="fotoLogro" alt="Foto de tu logro">
+    <div class="acciones">
+      <button class="boton-oro dorado" id="compartirFoto">Compartir en redes</button>
+      <button class="boton-claro" id="descargarFoto">⬇ Descargar</button>
+    </div>
+    <button class="boton-texto" id="cerrarFoto">Cerrar</button>
   </div>
 </div>
 
