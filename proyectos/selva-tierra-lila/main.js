@@ -27,7 +27,8 @@ const ALTURA_MAX = 70;
 const TEMPLO = { x: 40, z: -125 };
 const ESCALA_TEMPLO = 12.5;
 const PUERTA_TEMPLO = { y: -0.145, z: 0.38 };
-const TIEMPO_GIGANTE = 30;     // segundos que dura el tamaño doble al comer un hongo
+const TIEMPO_GIGANTE = 30;     // segundos que dura el tamaño gigante al comer un hongo
+const ESCALA_GIGANTE = 3;      // cuántas veces crece
 const TOTAL_HONGOS = 8;
 const VEL_MAX = 19;            // vuelo normal; con «Correr» va 1.5 veces más rápido
 // Giro extra del modelo: la cabeza de la mariposa del .blend ya apunta a +Z.
@@ -476,7 +477,7 @@ const jugador = {
   tiempo: 0,               // segundos de mariposa que quedan
   enSuelo: true,
   quieto: false,           // true mientras contesta la trivia
-  gigante: 0,              // segundos de tamaño doble que quedan
+  gigante: 0,              // segundos de tamaño gigante que quedan
   escala: 1,               // tamaño actual (1 normal, 2 gigante; cambia suave)
 };
 jugador.pivote.visible = false;
@@ -544,11 +545,11 @@ function moverJugador(dt) {
   j.vGiro = amortiguar(j.vGiro, THREE.MathUtils.clamp(giro, -1, 1) * (volando ? 1.9 : 2.4), 6, dt);
   j.rumbo += j.vGiro * dt;
   if (volando) {
-    j.vel = amortiguar(j.vel, empuje * VEL_MAX * (rapido && empuje > 0 ? 1.5 : 1) * (j.gigante > 0 ? 1.3 : 1), 2.2, dt);
+    j.vel = amortiguar(j.vel, empuje * VEL_MAX * (rapido && empuje > 0 ? 1.5 : 1) * (j.gigante > 0 ? 1.5 : 1), 2.2, dt);
     j.vy = amortiguar(j.vy, elevar * 8, 3, dt);
   } else {
-    j.vel = amortiguar(j.vel, empuje * (empuje > 0 ? (rapido ? 15 : 9) : 6) * (j.gigante > 0 ? 1.4 : 1), 5, dt);
-    if (j.enSuelo && elevar > 0) { j.vy = j.gigante > 0 ? 11 : 8.5; j.enSuelo = false; nina.poner('saltar', 0.1); sonidos.salto(); }
+    j.vel = amortiguar(j.vel, empuje * (empuje > 0 ? (rapido ? 15 : 9) : 6) * (j.gigante > 0 ? 1.8 : 1), 5, dt);
+    if (j.enSuelo && elevar > 0) { j.vy = j.gigante > 0 ? 13 : 8.5; j.enSuelo = false; nina.poner('saltar', 0.1); sonidos.salto(); }
     j.vy -= 22 * dt;
   }
 
@@ -1202,7 +1203,7 @@ const narrador = (() => {
 })();
 
 // ---------------------------------------------------------------------------
-// Hongos mágicos: brillan con destellos; al tocarlos creces al doble por TIEMPO_GIGANTE segundos
+// Hongos mágicos: brillan con destellos; al tocarlos creces ESCALA_GIGANTE veces por TIEMPO_GIGANTE segundos
 // ---------------------------------------------------------------------------
 const plantillaHongo = (() => {
   hongoGltf.scene.traverse((o) => {
@@ -1331,7 +1332,7 @@ function actualizarHongos(dt) {
     if (j.gigante <= 0) { j.gigante = 0; r.classList.remove('on', 'poco'); }
   }
   // crece y se encoge suave, con un pequeño rebote
-  const meta = j.gigante > 0 ? 2 : 1;
+  const meta = j.gigante > 0 ? ESCALA_GIGANTE : 1;
   j.escala = amortiguar(j.escala, meta, 3, dt);
   const k = j.escala + Math.sin(uTiempo.value * 18) * Math.abs(meta - j.escala) * 0.08;
   nina.pivote.scale.setScalar(k);
