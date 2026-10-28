@@ -17,8 +17,8 @@
   "r2_buckets": [
     { "binding": "MEDIA", "bucket_name": "vorticevr-ar" }
   ],
-  // daily cleanup of experiences older than 30 days
-  "triggers": { "crons": ["0 9 * * *"] },
+  // daily cleanup of experiences older than 30 days; every 15 min: reminders before live course sessions
+  "triggers": { "crons": ["0 9 * * *", "*/15 * * * *"] },
   // Worker in front of every request: Range for videos, nombre.vorticevr.mx experiences, /api and /m (AR platform).
   "main": "worker.js",
   // the course generator's prompts (_cursos/prompts/*.md) are imported as text

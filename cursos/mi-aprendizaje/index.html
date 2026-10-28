@@ -26,6 +26,7 @@
 <main class="wrap" style="padding-top:36px">
   <div class="kick">Mi aprendizaje</div>
   <h1 id="hi" style="font-size:clamp(1.8rem,5vw,2.6rem)">Tus cursos</h1>
+  <section id="next" hidden style="margin-bottom:26px"><h2>Próximas sesiones en vivo</h2><div class="list" id="nlist"></div></section>
   <div class="list" id="list"><div class="empty">Cargando…</div></div>
   <section class="certs" id="certs" hidden><h2>Tus constancias</h2><div class="list" id="clist"></div></section>
 </main>
@@ -38,6 +39,12 @@ const E = VC.esc, $ = id => document.getElementById(id);
 if (!VC.session()) location.href = VC.loginUrl("cursos/mi-aprendizaje");
 else VC.call("mis").then(r => {
   if (r.name) $("hi").textContent = "Hola, " + r.name.split(" ")[0];
+  if (r.upcoming && r.upcoming.length) {   // the link to enter is in the course, 30 minutes before
+    const when = t => new Date(t).toLocaleString("es-MX", { timeZone: "America/Mexico_City", weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" });
+    $("next").hidden = false;
+    $("nlist").innerHTML = r.upcoming.map(s => `<div class="panel row crow"><div><h3>${E(s.title)} · ${E(s.course)}</h3><div class="mute">${when(s.starts_at)} (hora del centro de México)</div></div>
+      <div class="acts"><a class="btn ${Date.now() >= s.starts_at - 30 * 60e3 ? "sun" : ""}" href="/cursos/aprender/${E(s.slug)}/#vivo">${Date.now() >= s.starts_at - 30 * 60e3 ? "Entrar a la sesión" : "Ver sesiones"}</a></div></div>`).join("");
+  }
   $("list").innerHTML = r.courses.length ? r.courses.map(c => `<div class="panel row">
       <div class="cover">${c.cover_url ? `<img src="${E(c.cover_url)}" alt="">` : `<div class="ph" style="font-size:1rem">${E(c.title)}</div>`}</div>
       <div><h3>${E(c.title)}</h3><div class="mute" style="font-size:.9rem;margin-bottom:10px">${E(VC.MODALITY[c.modality] || "")}${c.duration_hours ? " · " + VC.hours(c.duration_hours) : ""}</div>

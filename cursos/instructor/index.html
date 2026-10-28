@@ -125,8 +125,10 @@ async function myCourses() {
     const r = await VC.call("estudio");
     el.innerHTML = r.courses.length ? `<ul class="docs">${r.courses.map(c => `<li><span><b>${E(c.title)}</b> · <span class="tag ${c.status === "published" ? "gold" : ""}">${ST[c.status] || c.status}</span>
         ${c.status === "published" ? ` <span class="mute">${c.students} alumnos · ${VC.money(c.net)} para ti</span>` : c.status === "draft" ? ` <span class="mute">${c.pieces} de 5 piezas</span>` : ""}</span>
-        <a class="btn ghost" style="min-height:36px;padding:6px 14px" href="${c.status === "published" ? "/cursos/" + E(c.slug) + "/" : "/cursos/crear/?id=" + E(c.id)}">${c.status === "draft" || c.status === "generating" ? "Continuar" : "Ver"}</a></li>`).join("")}</ul>
-      <p class="mute" style="font-size:.86rem">Generaciones completas este mes: ${r.limits.month.left} de ${r.limits.month.max} disponibles.</p>` : "";
+        <span style="display:flex;gap:8px;flex-wrap:wrap">${c.modality !== "recorded" && c.status !== "generating" ? `<a class="btn ghost" style="min-height:36px;padding:6px 14px" href="/cursos/ediciones/?curso=${E(c.id)}">Ediciones</a>` : ""}
+        <a class="btn ghost" style="min-height:36px;padding:6px 14px" href="${c.status === "published" ? "/cursos/" + E(c.slug) + "/" : "/cursos/crear/?id=" + E(c.id)}">${c.status === "draft" || c.status === "generating" ? "Continuar" : "Ver"}</a></span></li>`).join("")}</ul>
+      <p class="mute" style="font-size:.86rem">Generaciones completas este mes: ${r.limits.month.left} de ${r.limits.month.max} disponibles.</p>
+      <div class="bar2" style="margin-top:6px"><a class="btn" href="/cursos/ventas/">Ventas, cupones y pagos</a></div>` : "";
   } catch (e) {}
 }
 function bind() {

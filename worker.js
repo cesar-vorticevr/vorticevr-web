@@ -8,7 +8,7 @@
 //    Requiere bindings DB (D1) y MEDIA (R2); secretos RESEND_API_KEY y SESSION_SECRET.
 //    Sin bindings, el sitio funciona igual y la API responde 503.
 //  - Plataforma de cursos (_cursos/): cursos.vorticevr.mx → vorticevr.mx/cursos/…, /api/cursos/* → _cursos/api.js.
-import { cursosApi, cursosStripeEvent } from "./_cursos/api.js";
+import { cursosApi, cursosStripeEvent, cursosTick } from "./_cursos/api.js";
 
 const ROOT_DEFAULT = "vorticevr.mx";
 const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear","create","ra","x","e","m","preview","app","apps","static","assets","cdn","dev","test","staging","beta","demo","vorticevr","vortice","soporte","support","help","ayuda","blog","shop","tienda","login","cuenta","account","johara","tarjeta","proyectos","status","docs","cursos"]);
@@ -66,6 +66,7 @@ export default {
   // daily: delete expired experiences and their files
   async scheduled(event, env, ctx) {
     if (!env.DB || !env.MEDIA) return;
+    if (event.cron === "*/15 * * * *") { await cursosTick(env, cursosH()).catch(e => console.error("cursos cron", e.message)); return; }   // live-session reminders (_cursos/vivo.js)
     await schema(env);
     // paid plans whose "paid until" date passed go back to free (extra experiences are paused 30 days, then deleted)
     const { results: lapsed } = await env.DB.prepare("SELECT * FROM users WHERE plan != 'gratis' AND plan_until IS NOT NULL AND plan_until < ? LIMIT 20").bind(Date.now()).all();
@@ -142,7 +143,7 @@ function subdomainOf(host, root) {
 }
 
 // pages of the courses with a name in the address: /cursos/<curso>/ (sales page), /cursos/aprender/<curso>/, /cursos/manual/<curso>/, /cursos/verificar/<token>/
-const CURSOS_PAGES = new Set(["aprender", "verificar", "mi-aprendizaje", "curso", "instructor", "admin", "crear", "manual"]);
+const CURSOS_PAGES = new Set(["aprender", "verificar", "mi-aprendizaje", "curso", "instructor", "admin", "crear", "manual", "ediciones", "ventas"]);
 function cursosPage(p) {
   let m = p.match(/^\/cursos\/(aprender|verificar|manual)\/([A-Za-z0-9_-]+)\/?$/);
   if (m) return `/cursos/${m[1]}/`;
@@ -228,7 +229,7 @@ async function deleteMedia(env, slug, data) {
 // ---------- API ----------
 // what the courses platform (_cursos/) uses from here: accounts, mail, Stripe
 // (a function: several of these are consts defined further down)
-const cursosH = () => ({ auth, json, isAdmin, sendMail, shell, esc, btnMail, fecha, stripe, stripeMode, limit, siteUrl });
+const cursosH = () => ({ auth, json, isAdmin, sendMail, shell, esc, btnMail, fecha, stripe, stripeMode, limit, siteUrl, clabeOk, CLABE_BANKS });
 
 async function api(request, env, ctx, url) {
   if (!env.DB || !env.MEDIA) return json({ error: "La plataforma todavía se está configurando." }, 503);

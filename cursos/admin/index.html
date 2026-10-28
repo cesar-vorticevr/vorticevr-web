@@ -40,7 +40,7 @@ form.set input{width:100%}
   <div class="chips tabs" id="tabs">
     <button class="chip on" data-t="pending">Por revisar</button><button class="chip" data-t="approved">Aprobados</button><button class="chip" data-t="rejected">Rechazados</button>
     <button class="chip" data-t="cursos">Cursos por revisar</button><button class="chip" data-t="publicados">Publicados</button>
-    <button class="chip" data-t="ventas">Ventas</button><button class="chip" data-t="consumo">Consumo de IA</button><button class="chip" data-t="ajustes">Ajustes</button>
+    <button class="chip" data-t="ventas">Ventas</button><button class="chip" data-t="cortes">Cortes</button><button class="chip" data-t="constancias">Constancias</button><button class="chip" data-t="consumo">Consumo de IA</button><button class="chip" data-t="ajustes">Ajustes</button>
   </div>
   <div id="view"><div class="empty">Cargando…</div></div>
 </main>
@@ -59,6 +59,8 @@ async function show(t) {
     if (t === "ajustes") return ajustes(await VC.call("admin/ajustes"));
     if (t === "cursos" || t === "publicados") return cursos(await VC.call("admin/cursos?estado=" + (t === "cursos" ? "in_review" : "published")));
     if (t === "consumo") return consumo(await VC.call("admin/consumo"));
+    if (t === "cortes") return cortes(await VC.call("admin/cortes"));
+    if (t === "constancias") return constancias(await VC.call("admin/constancias?q=" + encodeURIComponent(cq)));
     instructores(await VC.call("admin/instructores?estado=" + t));
   } catch (e) {
     if (e.status === 401) { location.href = VC.loginUrl("cursos/admin"); return; }
@@ -118,6 +120,52 @@ function cursos(r) {
     b.disabled = true;
     try { await VC.call("admin/cursos/" + b.dataset.c, { json: { action: b.dataset.ca, note } }); VC.toast(b.dataset.ca === "approve" ? "Publicado. Le avisamos por correo." : "Le pedimos los cambios por correo."); show(tab); }
     catch (e) { VC.toast(e.message); b.disabled = false; }
+  });
+}
+// half-month payouts: generate the cut, see each instructor's invoice and account, mark as paid with the transfer reference
+const PST = { pending: "Esperando factura", invoice_received: "Factura recibida", paid: "Pagado" };
+function cortes(r) {
+  $("view").innerHTML = `<div class="panel" style="margin-bottom:16px"><b>Por cortar:</b> ${r.pending.n} ventas · ${mx(r.pending.net)} para instructores
+      <div class="acts"><button class="btn sun" id="cut">Generar corte de la ${E(r.next.label)}</button></div>
+      <p class="mute" style="font-size:.86rem;margin:8px 0 0">Junta las ventas pagadas de esa quincena que no estén en otro corte, por instructor, y descuenta los reembolsos de ventas ya pagadas. A cada instructor le llega un correo para subir su factura.</p></div>
+    <div class="panel tw">${r.list.length ? `<table><thead><tr><th>Periodo</th><th>Instructor</th><th>Ventas</th><th>Comisión</th><th>Ajustes</th><th>A pagar</th><th>Cuenta</th><th>Estado</th><th></th></tr></thead><tbody>
+      ${r.list.map(p => `<tr><td>${E(p.label)}</td><td>${E(p.name)}<div class="mute">${E(p.email)}</div></td><td>${p.orders} · ${mx(p.gross)}</td><td>${mx(p.commission)}</td><td>${p.adjust ? mx(p.adjust) : "—"}</td><td><b>${mx(p.net)}</b></td>
+        <td>${p.account ? `${E(p.account.banco || "")}<div class="mono" style="color:var(--ink)">${E(p.account.clabe || "")}</div><div class="mute">${E(p.account.titular || "")}</div>` : '<span style="color:var(--bad)">Sin cuenta</span>'}</td>
+        <td>${PST[p.status] || E(p.status)}${p.status === "paid" ? `<div class="mute">${date(p.paid_at)} · ${E(p.reference || "")}</div>` : ""}</td>
+        <td>${p.invoice ? `<a href="#" data-inv="${E(p.id)}">Factura</a>` : ""}${p.status !== "paid" && p.net > 0 ? `<div><input type="text" id="ref-${E(p.id)}" placeholder="Referencia" style="min-height:36px;margin-top:6px;width:150px"><button class="btn" data-pay="${E(p.id)}" style="min-height:36px;margin-top:6px">Marcar pagado</button></div>` : ""}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">Todavía no hay cortes.</div>`}</div>`;
+  $("cut").onclick = async e => {
+    if (!confirm(`¿Generar el corte de la ${r.next.label}?`)) return;
+    e.target.disabled = true;
+    try { const x = await VC.call("admin/cortes", { json: { period: r.next.period } }); VC.toast(x.made.length ? `Corte listo: ${x.made.length} instructores.` : "No había ventas nuevas en ese periodo."); show("cortes"); }
+    catch (err) { VC.toast(err.message, 6000); e.target.disabled = false; }
+  };
+  document.querySelectorAll("[data-inv]").forEach(a => a.onclick = async ev => {
+    ev.preventDefault(); const s = VC.session(), w = window.open("", "_blank");
+    const res = await fetch(`/api/cursos/admin/cortes/${a.dataset.inv}/factura`, { headers: { Authorization: "Bearer " + s.token } });
+    if (!res.ok) { w && w.close(); VC.toast("No se pudo abrir."); return; }
+    const u = URL.createObjectURL(await res.blob()); if (w) w.location = u; else location.href = u;
+  });
+  document.querySelectorAll("[data-pay]").forEach(b => b.onclick = async () => {
+    const ref = $("ref-" + b.dataset.pay).value.trim(); if (ref.length < 3) { VC.toast("Escribe la referencia de la transferencia."); return; }
+    b.disabled = true;
+    try { await VC.call(`admin/cortes/${b.dataset.pay}/pagado`, { json: { reference: ref } }); VC.toast("Marcado como pagado; le avisamos por correo."); show("cortes"); }
+    catch (e) { VC.toast(e.message); b.disabled = false; }
+  });
+}
+// certificates: find by folio, name or course; revoke with a reason (shown on the public verification page)
+let cq = "";
+function constancias(r) {
+  $("view").innerHTML = `<div class="panel" style="margin-bottom:14px"><input type="search" id="cq" value="${E(cq)}" placeholder="Folio, alumno o curso" style="width:100%;max-width:420px"></div>
+    <div class="panel tw">${r.list.length ? `<table><thead><tr><th>Folio</th><th>Alumno</th><th>Curso</th><th>Emitida</th><th>Estado</th><th></th></tr></thead><tbody>
+      ${r.list.map(k => `<tr><td class="mono" style="color:var(--ink)">${E(k.folio)}</td><td>${E(k.student_name)}</td><td>${E(k.course_title)}</td><td>${date(k.issued_at)}</td>
+        <td>${k.revoked ? `<span style="color:var(--bad)">Revocada</span><div class="mute">${E(k.revoked_reason || "")}</div>` : "Válida"}</td>
+        <td><a href="/cursos/verificar/${E(k.verify_token)}/" target="_blank">Ver</a>${k.revoked ? "" : ` · <a href="#" data-rv="${E(k.folio)}" style="color:var(--bad)">Revocar</a>`}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">No hay constancias${cq ? " con esa búsqueda" : ""}.</div>`}</div>`;
+  if (cq) { $("cq").focus(); $("cq").setSelectionRange(cq.length, cq.length); }
+  let t; $("cq").oninput = e => { clearTimeout(t); t = setTimeout(() => { cq = e.target.value.trim(); show("constancias"); }, 400); };
+  document.querySelectorAll("[data-rv]").forEach(a => a.onclick = async ev => {
+    ev.preventDefault();
+    const reason = prompt(`Motivo para revocar ${a.dataset.rv} (se muestra en la verificación pública):`, ""); if (reason === null) return;
+    try { await VC.call(`admin/constancias/${a.dataset.rv}/revocar`, { json: { reason } }); VC.toast("Constancia revocada."); show("constancias"); } catch (e) { VC.toast(e.message); }
   });
 }
 function consumo(r) {

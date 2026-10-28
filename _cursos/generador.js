@@ -15,6 +15,7 @@ import P_LANDING from "./prompts/landing.md";
 import P_MARKETING from "./prompts/marketing.md";
 import P_RESUMEN from "./prompts/resumen.md";
 import P_TITULOS from "./prompts/titulos.md";
+import P_EDICION from "./prompts/edicion.md";
 
 export const MODEL = "claude-sonnet-5-5";   // generation (the spec names it)
 export const SMALL = "claude-haiku-5-5";    // small tasks: titles, summarizing long material
@@ -40,6 +41,8 @@ export const SCHEMAS = {
   }),
 };
 const TITLES = O({ options: A(O({ title: S, subtitle: S })) });
+const MAIL = O({ subject: S, body_md: S });
+export const EDITION_SCHEMA = O({ instagram_posts: A(O({ caption: S, image_headline: S, image_subline: S })), facebook_posts: A(O({ text: S })), whatsapp_message: O({ text: S }), reminder_7d: MAIL, reminder_1d: MAIL, reminder_1h: MAIL });
 export const PIECES = {
   course: { prompt: P_CURSO, max: 32000, effort: "high", label: "Curso" },
   manual: { prompt: P_MANUAL, max: 64000, effort: "medium", label: "Manual" },
@@ -159,6 +162,18 @@ export async function generatePiece(env, { piece, context, outline, note, onProg
   stream.on("text", d => { chars += d.length; onProgress && onProgress(chars); });
   const msg = await stream.finalMessage();
   return { data: finish(msg, schema), usage: msg.usage, model: msg.model };
+}
+
+// the dated pieces of a live edition (edition_assets): short, so one streamed call at low effort
+export async function generateEdition(env, { context, outline, edition }) {
+  const stream = client(env).beta.messages.stream({
+    model: MODEL, max_tokens: 12000, betas: [FALLBACK_BETA], fallbacks: "default",
+    output_config: { effort: "low", format: { type: "json_schema", schema: EDITION_SCHEMA } },
+    system: [{ type: "text", text: SISTEMA }, { type: "text", text: context, cache_control: { type: "ephemeral" } }],
+    messages: [{ role: "user", content: `${P_EDICION}\n\n${outline}\n\n## La edición\n${edition}` }],
+  });
+  const msg = await stream.finalMessage();
+  return { data: finish(msg, EDITION_SCHEMA), usage: msg.usage, model: msg.model };
 }
 
 // small task: title ideas (Haiku 5.5, structured)

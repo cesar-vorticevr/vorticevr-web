@@ -49,6 +49,11 @@
 .mark.ok{color:var(--ok)}.mark.bad{color:var(--bad)}
 .cert{margin-top:20px;border-color:rgba(255,190,85,.5);background:linear-gradient(135deg,rgba(255,190,85,.12),rgba(139,63,214,.16))}
 .btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.ses{display:grid;gap:10px}
+.se{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.se.now{border-color:var(--ok);box-shadow:0 0 0 1px var(--ok) inset}
+.se.past{opacity:.6}
+.li.live .ic{border-color:var(--ok);color:var(--ok)}
 </style>
 </head>
 <body>
@@ -69,10 +74,10 @@ function shell() {
 }
 function side() {
   const s = $("side"); let i = 0;
-  s.innerHTML = `<h2>${E(D.course.title)}</h2>${D.manual ? `<a class="mono" href="/cursos/manual/${E(slug)}/" style="display:inline-block;margin-bottom:10px;text-decoration:none">Manual del curso →</a>` : ""}<div class="bar" aria-label="Avance"><i style="width:${D.progress}%"></i></div><div class="mute" style="font-size:.82rem;margin-top:6px">${D.progress}% completado</div>` +
+  s.innerHTML = `<h2>${E(D.course.title)}</h2>${D.live ? `<button class="li live ${cur === "live" ? "cur" : ""}" data-i="live"><span class="ic">●</span><span>Sesiones en vivo${D.live.sessions.some(x => x.open) ? " · ahora" : ""}</span></button>` : ""}${D.manual ? `<a class="mono" href="/cursos/manual/${E(slug)}/" style="display:inline-block;margin-bottom:10px;text-decoration:none">Manual del curso →</a>` : ""}<div class="bar" aria-label="Avance"><i style="width:${D.progress}%"></i></div><div class="mute" style="font-size:.82rem;margin-top:6px">${D.progress}% completado</div>` +
     D.modules.map((m, k) => `<div class="mtitle">Módulo ${k + 1} · ${E(m.title)}</div>` + m.lessons.map(l => { const j = i++; return `<button class="li ${l.done ? "done" : ""} ${cur === l.id ? "cur" : ""}" data-i="${j}" ${isLocked(j) ? "disabled title='Completa las lecciones anteriores'" : ""}><span class="ic">${l.done ? "✓" : ""}</span><span>${E(l.title)}</span></button>`; }).join("")).join("") +
     (D.exam ? `<div class="mtitle">Final</div><button class="li exam ${cur === "exam" ? "cur" : ""} ${D.exam.passed ? "done" : ""}" data-i="exam"><span class="ic">${D.exam.passed ? "✓" : "★"}</span><span>${E(D.exam.title || "Examen final")}</span></button>` : "");
-  s.querySelectorAll("[data-i]").forEach(b => b.onclick = () => { b.dataset.i === "exam" ? showExam() : showLesson(flat[+b.dataset.i].id); s.classList.remove("open"); });
+  s.querySelectorAll("[data-i]").forEach(b => b.onclick = () => { b.dataset.i === "exam" ? showExam() : b.dataset.i === "live" ? showLive() : showLesson(flat[+b.dataset.i].id); s.classList.remove("open"); });
 }
 function topbar() {
   return `<div class="topbar"><a class="mono" href="/cursos/${E(slug)}/" style="text-decoration:none">← ${E(D.course.title)}</a><button class="btn ghost" id="toc" style="min-height:38px;padding:6px 14px">Temario</button></div>
@@ -82,7 +87,7 @@ function bindTop() { const t = $("toc"); if (t) t.onclick = () => { $("side").cl
 
 function showLesson(id) {
   clearInterval(timerT);
-  const i = flat.findIndex(l => l.id === id), l = flat[i]; cur = id; history.replaceState(null, "", "#" + id); side();
+  const i = flat.findIndex(l => l.id === id), l = flat[i]; cur = id;   // (cur = "live" for the sessions view) history.replaceState(null, "", "#" + id); side();
   const mod = D.modules.find(m => m.lessons.includes(l)), next = flat[i + 1], prev = flat[i - 1];
   $("view").innerHTML = topbar() + `<article class="lesson"><div class="kick">${E(mod.title)}</div><h1>${E(l.title)}</h1>
     ${l.duration_minutes ? `<div class="mute" style="font-size:.88rem;margin-bottom:16px">${l.duration_minutes} min</div>` : ""}
@@ -107,6 +112,25 @@ function showLesson(id) {
   };
 }
 
+// live sessions: dates in Mexico City time; "Entrar" asks the server for the link (only 30 minutes before, only for this edition)
+const when = t => new Date(t).toLocaleString("es-MX", { timeZone: "America/Mexico_City", weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" });
+const hour = t => new Date(t).toLocaleTimeString("es-MX", { timeZone: "America/Mexico_City", hour: "numeric", minute: "2-digit" });
+function showLive() {
+  clearInterval(timerT); cur = "live"; history.replaceState(null, "", "#vivo"); side();
+  const L = D.live, e = L.edition;
+  $("view").innerHTML = topbar() + `<div class="kick">En vivo</div><h1 style="font-size:clamp(1.5rem,4.5vw,2.2rem)">${E(e.name)}</h1>
+    ${e.canceled ? `<div class="panel" style="border-color:var(--bad)">Esta edición se canceló. Te escribiremos por correo.</div>` : ""}
+    <p class="mute">Hora del centro de México. El botón para entrar se activa 30 minutos antes de cada sesión.</p>
+    ${L.recording_url ? `<div class="panel" style="margin-bottom:14px"><b>Grabación de la edición</b>${VC.embed(L.recording_url) ? `<div style="margin-top:10px">${VC.embed(L.recording_url)}</div>` : ` · <a href="${E(L.recording_url)}" target="_blank" rel="noopener">Ver la grabación</a>`}</div>` : ""}
+    <div class="ses">${L.sessions.map(x => `<div class="se ${x.open ? "now" : x.past ? "past" : ""}"><div><b>${E(x.title)}</b><div class="mute" style="font-size:.9rem">${when(x.starts_at)} a ${hour(x.ends_at)}</div></div>
+      ${x.past ? '<span class="mute">Terminó</span>' : `<button class="btn ${x.open ? "sun" : "ghost"}" data-join="${E(x.id)}" ${x.open || D.preview ? "" : "disabled"}>${x.open ? "Entrar a la sesión" : "Se abre 30 min antes"}</button>`}</div>`).join("")}</div>`;
+  bindTop(); scrollTo({ top: 0 });
+  document.querySelectorAll("[data-join]").forEach(b => b.onclick = async () => {
+    const w = window.open("", "_blank");   // opened inside the tap, so the browser does not block it
+    try { const r = await VC.call(`sesion/${b.dataset.join}/entrar`, { json: {} }); if (w) w.location = r.url; else location.href = r.url; }
+    catch (err) { if (w) w.close(); VC.toast(err.message, 5000); }
+  });
+}
 function certBox(c) {
   return `<div class="panel cert"><div class="kick">Tu constancia</div><h2 style="margin-top:6px">¡Felicidades! Ya tienes tu constancia</h2>
     <p class="mute">Folio <b style="color:var(--ink)">${E(c.folio)}</b>. También te la enviamos por correo. Cualquiera puede verificarla con su código QR.</p>
@@ -194,6 +218,7 @@ VC.call("aprender/" + encodeURIComponent(slug)).then(r => {
   document.title = D.course.title + " · Aprender";
   shell();
   const h = location.hash.slice(1);
+  if (D.live && (h === "vivo" || (!h && D.live.sessions.some(x => x.open)))) return showLive();
   if (h === "examen" || (D.certificate && !h)) return showExam();
   const firstOpen = flat.findIndex(l => !l.done), want = flat.findIndex(l => l.id === h);
   if (want >= 0 && !isLocked(want)) showLesson(flat[want].id);

@@ -4,6 +4,8 @@
 // todo lo de cursos lleva metadata.vvr = "premier" | "curso" y Premier tiene su propio cliente de Stripe
 // (c_profiles.stripe_customer_id), así nunca se mezcla con users.stripe_* ni con las comisiones de "Recomienda y gana".
 
+import { editionCheck, couponFor, useCoupon } from "./vivo.js";
+
 const DOC_KINDS = { cv: "CV", degree: "Título o cédula", id: "Identificación oficial", proof_experience: "Comprobante de experiencia", other: "Otro" };
 const DOC_TYPES = { "application/pdf": "pdf", "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const LIM = { docBytes: 10 * 1024 * 1024, docs: 12, avatarBytes: 1024 * 1024, bio: 2000, headline: 140 };
@@ -133,6 +135,7 @@ async function fulfill(env, ctx, h, lib, sessionId) {
   await env.DB.prepare(`INSERT INTO c_enrollments (id, student_id, course_id, edition_id, order_id, status, progress_pct, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'active', 0, ?, ?)
     ON CONFLICT(student_id, course_id) DO UPDATE SET status = CASE WHEN c_enrollments.status = 'completed' THEN 'completed' ELSE 'active' END, order_id = excluded.order_id, updated_at = excluded.updated_at`)
     .bind(lib.uid(), o.student_id, o.course_id, o.edition_id, o.id, now, now).run();
+  await useCoupon(env, o.coupon_id);
   const u = await env.DB.prepare("SELECT email, name FROM users WHERE id = ?").bind(o.student_id).first();
   if (u && c) ctx.waitUntil(h.sendMail(env, u.email, `Ya tienes acceso a "${c.title}"`, h.shell(`<h1 style="font-size:20px">¡Gracias por tu compra, ${h.esc((u.name || "").split(" ")[0])}!</h1>
     <p>Ya puedes tomar <b>${h.esc(c.title)}</b>. Pagaste <b>$${(amount / 100).toLocaleString("es-MX")} MXN</b>.${o.cfdi_requested ? " Recibimos tus datos para la factura; te la enviaremos por correo." : ""}</p>
@@ -299,11 +302,27 @@ export async function pagosApi(request, env, ctx, url, path, h, user, lib) {
     if (!c || c.status !== "published") return json({ error: "Este curso no está disponible." }, 404);
     if (!(c.price_mxn > 0)) return json({ error: "Este curso es gratis: inscríbete directo." }, 400);
     if (!sellable(c)) return json({ error: "Este curso no está a la venta por ahora." }, 409);
-    if (!billingOn(env, h, user)) return json({ error: "La compra con tarjeta llega muy pronto.", soon: true }, 503);
     const en = await env.DB.prepare("SELECT status FROM c_enrollments WHERE student_id = ? AND course_id = ?").bind(user.id, c.id).first();
     if (en && en.status !== "refunded") return json({ error: "Ya tienes este curso.", enrolled: true }, 409);
     if (!(await h.limit(env, `cbuy:${user.id}`, 20, 3600e3))) return json({ error: "Demasiados intentos. Intenta en una hora." }, 429);
     const b = await body();
+    const ec = await editionCheck(env, c, b.edition);   // live and mixed: the edition (dates) with seats
+    if (ec.error) return json({ error: ec.error, edition: true }, 400);
+    let price = c.price_mxn, coupon = null;
+    if (b.coupon) { const r = await couponFor(env, c, b.coupon); if (r.error) return json({ error: r.error, coupon: true }, 400); price = r.price; coupon = r.coupon; }
+    if (price === 0) {   // a 100 % coupon: enrolled without going through Stripe (a $0 order, no commission)
+      const id = lib.uid(), now = Date.now();
+      await env.DB.batch([
+        env.DB.prepare("INSERT INTO c_orders (id, student_id, course_id, instructor_id, edition_id, amount_mxn, commission_pct, commission_mxn, instructor_net_mxn, coupon_id, status, paid_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 0, 0, 0, 0, ?, 'paid', ?, ?, ?)")
+          .bind(id, user.id, c.id, c.instructor_id, ec.edition ? ec.edition.id : null, coupon.id, now, now, now),
+        env.DB.prepare(`INSERT INTO c_enrollments (id, student_id, course_id, edition_id, order_id, status, progress_pct, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'active', 0, ?, ?)
+          ON CONFLICT(student_id, course_id) DO UPDATE SET status = 'active', edition_id = excluded.edition_id, order_id = excluded.order_id, updated_at = excluded.updated_at`).bind(lib.uid(), user.id, c.id, ec.edition ? ec.edition.id : null, id, now, now),
+      ]);
+      await useCoupon(env, coupon.id);
+      return json({ free: true, slug: c.slug });
+    }
+    if (price < 1000) return json({ error: "Con ese descuento el precio queda debajo de $10, el mínimo para pagar con tarjeta.", coupon: true }, 400);
+    if (!billingOn(env, h, user)) return json({ error: "La compra con tarjeta llega muy pronto.", soon: true }, 503);
     let cfdi = null;
     if (b.cfdi) {
       const rfc = cut(b.cfdi.rfc, 13).toUpperCase().replace(/\s/g, ""), cp = cut(b.cfdi.cp, 5);
@@ -316,13 +335,13 @@ export async function pagosApi(request, env, ctx, url, path, h, user, lib) {
     const id = lib.uid(), now = Date.now(), mode = h.stripeMode(env);
     const s = await h.stripe(env, "POST", "checkout/sessions", {
       mode: "payment", customer_email: user.email, client_reference_id: user.id, locale: "es-419",
-      line_items: [{ quantity: 1, price_data: { currency: "mxn", unit_amount: c.price_mxn, tax_behavior: "inclusive", product_data: { name: c.title, description: (c.subtitle || "Curso con constancia avalada por Vórtice VR").slice(0, 300) } } }],
+      line_items: [{ quantity: 1, price_data: { currency: "mxn", unit_amount: price, tax_behavior: "inclusive", product_data: { name: c.title + (ec.edition ? ` · ${ec.edition.name}` : ""), description: ((coupon ? `Con el cupón ${coupon.code}. ` : "") + (c.subtitle || "Curso con constancia avalada por Vórtice VR")).slice(0, 300) } } }],
       metadata: { vvr: "curso", order_id: id, user_id: user.id, course_id: c.id },
       payment_intent_data: { metadata: { vvr: "curso", order_id: id }, description: `Curso: ${c.title}`.slice(0, 200) },
       success_url: `${origin}/cursos/${c.slug}/?pago=ok&s={CHECKOUT_SESSION_ID}`, cancel_url: `${origin}/cursos/${c.slug}/?pago=cancelado`,
     }, `vvr-curso-${id}`);
-    await env.DB.prepare("INSERT INTO c_orders (id, student_id, course_id, instructor_id, amount_mxn, stripe_checkout_session_id, stripe_mode, status, cfdi_requested, cfdi_data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)")
-      .bind(id, user.id, c.id, c.instructor_id, c.price_mxn, s.id, mode, cfdi ? 1 : 0, cfdi ? JSON.stringify(cfdi) : null, now, now).run();
+    await env.DB.prepare("INSERT INTO c_orders (id, student_id, course_id, instructor_id, edition_id, coupon_id, amount_mxn, stripe_checkout_session_id, stripe_mode, status, cfdi_requested, cfdi_data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)")
+      .bind(id, user.id, c.id, c.instructor_id, ec.edition ? ec.edition.id : null, coupon ? coupon.id : null, price, s.id, mode, cfdi ? 1 : 0, cfdi ? JSON.stringify(cfdi) : null, now, now).run();
     return json({ url: s.url });
   }
   // back from Checkout: enroll right away if it is paid (the webhook does the same; only one of them counts)

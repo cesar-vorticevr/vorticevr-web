@@ -180,13 +180,13 @@ export async function estudioApi(request, env, ctx, url, path, h, user, lib) {
 
   // my courses
   if (path === "/api/cursos/estudio" && M === "GET") {
-    const { results } = await env.DB.prepare(`SELECT c.id, c.slug, c.title, c.status, c.updated_at, c.cover_url, c.review_note, c.generation_json, c.interview_json,
+    const { results } = await env.DB.prepare(`SELECT c.id, c.slug, c.title, c.status, c.modality, c.updated_at, c.cover_url, c.review_note, c.generation_json, c.interview_json,
         (SELECT COUNT(*) FROM c_enrollments e WHERE e.course_id = c.id AND e.status != 'refunded') AS students,
         (SELECT COALESCE(SUM(o.instructor_net_mxn), 0) FROM c_orders o WHERE o.course_id = c.id AND o.status = 'paid') AS net
       FROM c_courses c WHERE c.instructor_id = ? ORDER BY c.updated_at DESC LIMIT 100`).bind(user.id).all();
     return json({ canCreate: await canCreate(env, h, user), limits: await limits(env, lib, user), courses: results.map(c => {
       const g = J(c.generation_json, {}), iv = J(c.interview_json, {});
-      return { id: c.id, slug: c.slug, title: (g.course && g.course.title) || iv.nombre || iv.tema || "Curso sin nombre", status: c.status, updated_at: c.updated_at, cover: c.cover_url, review_note: c.review_note,
+      return { id: c.id, slug: c.slug, title: (g.course && g.course.title) || iv.nombre || iv.tema || "Curso sin nombre", status: c.status, modality: c.modality, updated_at: c.updated_at, cover: c.cover_url, review_note: c.review_note,
         pieces: PIECE_ORDER.filter(p => g[p]).length, students: c.students, net: c.net };
     }) });
   }
@@ -387,7 +387,7 @@ export async function estudioApi(request, env, ctx, url, path, h, user, lib) {
       const base = slugify(g.course.title);
       for (let i = 1; i < 50; i++) {
         const s = i === 1 ? base : `${base}-${i}`;
-        if (["aprender", "verificar", "mi-aprendizaje", "curso", "instructor", "admin", "crear", "manual"].includes(s)) continue;
+        if (["aprender", "verificar", "mi-aprendizaje", "curso", "instructor", "admin", "crear", "manual", "ediciones", "ventas"].includes(s)) continue;
         if (!(await env.DB.prepare("SELECT 1 FROM c_courses WHERE slug = ? AND id != ?").bind(s, c.id).first())) { slug = s; break; }
       }
     }

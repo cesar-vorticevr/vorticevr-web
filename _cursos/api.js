@@ -8,6 +8,7 @@ import { COURSE, MODULES, EXAM, SEED_VERSION, ONBOARDING_SLUG } from "./induccio
 import { certificatePdf } from "./pdf.js";
 import { pagosApi, migratePagos, cursosWebhook, sellable, billingOn } from "./pagos.js";
 import { estudioApi, migrateEstudio } from "./estudio.js";
+import { vivoApi, migrateVivo, cursosCron, publicEditions, editionCheck, liveFor, periodText } from "./vivo.js";
 
 let ready = false;
 async function schema(env) {
@@ -35,6 +36,7 @@ async function schema(env) {
   ]);
   await migratePagos(env);
   await migrateEstudio(env);
+  await migrateVivo(env);
   await seed(env);
   ready = true;
 }
@@ -101,11 +103,15 @@ async function enrollmentOf(env, user, courseId) {
 const LIB = { uid, settings, courseBySlug, ready: schema, onboardingSlug: ONBOARDING_SLUG };
 // Stripe events of the courses (worker.js's webhook asks first; true = it was ours)
 export const cursosStripeEvent = (env, ctx, ev, h) => cursosWebhook(env, ctx, ev, h, LIB);
+// the 15-minute cron of worker.js: reminders before live sessions
+export async function cursosTick(env, h) { await schema(env); return cursosCron(env, h); }
 
 export async function cursosApi(request, env, ctx, url, path, h) {
   await schema(env);
   const M = request.method, user = await h.auth(request, env);
   const { json } = h;
+  const done4 = await vivoApi(request, env, ctx, url, path, h, user, LIB);   // block 4: editions, live sessions, coupons, payouts, sales
+  if (done4) return done4;
   const done3 = await estudioApi(request, env, ctx, url, path, h, user, LIB);   // block 3: the course studio, the manual, course review
   if (done3) return done3;
   const done2 = await pagosApi(request, env, ctx, url, path, h, user, LIB);   // block 2: instructors, Premier, buying, admin
@@ -133,6 +139,7 @@ export async function cursosApi(request, env, ctx, url, path, h) {
       modules: mods.map(md => ({ title: md.title, description_md: md.description_md, lessons: less.filter(l => l.module_id === md.id).map(l => ({ id: l.id, title: l.title, kind: l.kind, duration_minutes: l.duration_minutes, preview: !!l.is_preview, ...(l.is_preview ? { body_md: l.body_md, video_url: l.video_url } : {}) })) })),
       exam: exam && exam.n ? { questions: exam.n, passing_score: exam.passing_score } : null,
       enrolled: !!(en && en.status !== "refunded"), signedIn: !!user, sellable: sellable(c), billing: !!user && billingOn(env, h, user),
+      editions: c.modality !== "recorded" ? await publicEditions(env, c.id) : [],
     });
   }
 
@@ -144,9 +151,11 @@ export async function cursosApi(request, env, ctx, url, path, h) {
     const en = await enrollmentOf(env, user, c.id);
     if (en && en.status !== "refunded") return json({ ok: true, already: true });
     if (c.price_mxn > 0) return json({ error: "Este curso es de pago: cómpralo desde su página.", buy: true }, 402);
-    const now = Date.now();
-    if (en) await env.DB.prepare("UPDATE c_enrollments SET status = 'active', updated_at = ? WHERE id = ?").bind(now, en.id).run();
-    else await env.DB.prepare("INSERT INTO c_enrollments (id, student_id, course_id, status, progress_pct, created_at, updated_at) VALUES (?, ?, ?, 'active', 0, ?, ?)").bind(uid(), user.id, c.id, now, now).run();
+    const ec = await editionCheck(env, c, (await body()).edition);   // live and mixed courses: the edition (dates) the student joins
+    if (ec.error) return json({ error: ec.error, edition: true }, 400);
+    const now = Date.now(), ed = ec.edition ? ec.edition.id : null;
+    if (en) await env.DB.prepare("UPDATE c_enrollments SET status = 'active', edition_id = COALESCE(?, edition_id), updated_at = ? WHERE id = ?").bind(ed, now, en.id).run();
+    else await env.DB.prepare("INSERT INTO c_enrollments (id, student_id, course_id, edition_id, status, progress_pct, created_at, updated_at) VALUES (?, ?, ?, ?, 'active', 0, ?, ?)").bind(uid(), user.id, c.id, ed, now, now).run();
     return json({ ok: true });
   }
 
@@ -155,7 +164,10 @@ export async function cursosApi(request, env, ctx, url, path, h) {
     if (!user) return json({ error: "Inicia sesión." }, 401);
     const { results } = await env.DB.prepare(`SELECT e.status, e.progress_pct, e.completed_at, e.created_at, c.slug, c.title, c.subtitle, c.cover_url, c.modality, c.duration_hours, k.folio, k.verify_token, k.revoked
       FROM c_enrollments e JOIN c_courses c ON c.id = e.course_id LEFT JOIN c_certificates k ON k.enrollment_id = e.id WHERE e.student_id = ? AND e.status != 'refunded' ORDER BY e.updated_at DESC`).bind(user.id).all();
-    return json({ name: user.name, courses: results.map(r => ({ slug: r.slug, title: r.title, subtitle: r.subtitle, cover_url: r.cover_url, modality: r.modality, duration_hours: r.duration_hours, progress: r.progress_pct, completed: !!r.completed_at,
+    // the next live sessions of the editions this student is in (the link itself is only given by "Entrar a la sesión")
+    const { results: up } = await env.DB.prepare(`SELECT s.id, s.title, s.starts_at, s.ends_at, c.slug, c.title AS course FROM c_enrollments e JOIN c_edition_sessions s ON s.edition_id = e.edition_id JOIN c_editions ed ON ed.id = e.edition_id JOIN c_courses c ON c.id = e.course_id
+      WHERE e.student_id = ? AND e.status IN ('active', 'completed') AND ed.status = 'open' AND s.ends_at > ? ORDER BY s.starts_at LIMIT 8`).bind(user.id, Date.now()).all();
+    return json({ name: user.name, upcoming: up, courses: results.map(r => ({ slug: r.slug, title: r.title, subtitle: r.subtitle, cover_url: r.cover_url, modality: r.modality, duration_hours: r.duration_hours, progress: r.progress_pct, completed: !!r.completed_at,
       certificate: r.folio ? { folio: r.folio, token: r.verify_token, revoked: !!r.revoked } : null })) });
   }
 
@@ -187,6 +199,7 @@ export async function cursosApi(request, env, ctx, url, path, h) {
           best: sub.reduce((b, a) => Math.max(b, a.score || 0), 0) } : null,
         certificate: cert ? { folio: cert.folio, token: cert.verify_token, revoked: !!cert.revoked } : null,
         manual: /"manual":\{/.test(c.generation_json || ""),
+        live: c.modality !== "recorded" ? await liveFor(env, c, en, canPreview(h, env, user, c)) : null,
       });
     }
 
@@ -295,16 +308,17 @@ async function issueCertificate(env, ctx, url, h, user, c, en) {
   const old = await env.DB.prepare("SELECT folio, verify_token FROM c_certificates WHERE enrollment_id = ?").bind(en.id).first();
   if (old) return { folio: old.folio, token: old.verify_token };
   const now = Date.now(), year = Number(new Date(now - 6 * 3600e3).toISOString().slice(0, 4));   // Mexico (UTC−6)
+  const ed = en.edition_id ? await env.DB.prepare("SELECT starts_at, ends_at FROM c_editions WHERE id = ?").bind(en.edition_id).first() : null;   // live: the edition's dates
   const row = await env.DB.prepare("INSERT INTO c_folios (year, n) VALUES (?, 1) ON CONFLICT(year) DO UPDATE SET n = n + 1 RETURNING n").bind(year).first();
   const folio = `VVR-${year}-${String(row.n).padStart(6, "0")}`, tk = token();
   const objectives = String(c.objectives_md || "").replace(/^[-*]\s*/gm, "").split("\n").map(s => s.trim()).filter(Boolean).join("; ").slice(0, 300);
   const k = { id: uid(), enrollment_id: en.id, student_id: user.id, course_id: c.id, kind: c.certificate_kind || "vortice", folio, issued_at: now, verify_token: tk,
-    student_name: user.name || user.email, course_title: c.title, hours: c.duration_hours, modality: c.modality, period: h.fecha(now), instructor_name: c.instructor_name || "Vórtice VR",
+    student_name: user.name || user.email, course_title: c.title, hours: c.duration_hours, modality: c.modality, period: ed ? periodText(ed.starts_at, ed.ends_at) : h.fecha(now), edition_id: en.edition_id || null, instructor_name: c.instructor_name || "Vórtice VR",
     course_key: c.stps_course_key || "", objectives, revoked: 0 };
   const base = baseUrl(env, url);
   await env.DB.batch([
-    env.DB.prepare(`INSERT INTO c_certificates (id, enrollment_id, student_id, course_id, kind, folio, issued_at, pdf_url, verify_token, student_name, course_title, hours, modality, period, instructor_name, course_key, objectives, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(k.id, en.id, user.id, c.id, k.kind, folio, now, `/api/cursos/constancia/${tk}.pdf`, tk, k.student_name, k.course_title, k.hours, k.modality, k.period, k.instructor_name, k.course_key, k.objectives, now, now),
+    env.DB.prepare(`INSERT INTO c_certificates (id, enrollment_id, student_id, course_id, edition_id, kind, folio, issued_at, pdf_url, verify_token, student_name, course_title, hours, modality, period, instructor_name, course_key, objectives, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(k.id, en.id, user.id, c.id, k.edition_id, k.kind, folio, now, `/api/cursos/constancia/${tk}.pdf`, tk, k.student_name, k.course_title, k.hours, k.modality, k.period, k.instructor_name, k.course_key, k.objectives, now, now),
     env.DB.prepare("UPDATE c_enrollments SET status = 'completed', progress_pct = 100, completed_at = ?, updated_at = ? WHERE id = ?").bind(now, now, en.id),
     // the onboarding course unlocks "Crear curso" (with the approved profile and Premier)
     ...(c.slug === ONBOARDING_SLUG ? [env.DB.prepare("INSERT INTO c_profiles (user_id, onboarding_passed, created_at, updated_at) VALUES (?, 1, ?, ?) ON CONFLICT(user_id) DO UPDATE SET onboarding_passed = 1, updated_at = excluded.updated_at").bind(user.id, now, now)] : []),
