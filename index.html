@@ -890,5 +890,6 @@ document.addEventListener("click",e=>{
 (()=>{ const hoy=new Date().toLocaleDateString("sv-SE",{timeZone:"America/Mexico_City"});
   document.querySelectorAll(".tag.new[data-hasta]").forEach(t=>{ if(hoy>t.dataset.hasta) t.remove(); }); })();
 </script>
+<script src="assets/menu-movil.js" defer></script>
 </body>
 </html>
