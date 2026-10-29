@@ -87,7 +87,7 @@ function bindTop() { const t = $("toc"); if (t) t.onclick = () => { $("side").cl
 
 function showLesson(id) {
   clearInterval(timerT);
-  const i = flat.findIndex(l => l.id === id), l = flat[i]; cur = id;   // (cur = "live" for the sessions view) history.replaceState(null, "", "#" + id); side();
+  const i = flat.findIndex(l => l.id === id), l = flat[i]; cur = id; history.replaceState(null, "", "#" + id); side();
   const mod = D.modules.find(m => m.lessons.includes(l)), next = flat[i + 1], prev = flat[i - 1];
   $("view").innerHTML = topbar() + `<article class="lesson"><div class="kick">${E(mod.title)}</div><h1>${E(l.title)}</h1>
     ${l.duration_minutes ? `<div class="mute" style="font-size:.88rem;margin-bottom:16px">${l.duration_minutes} min</div>` : ""}

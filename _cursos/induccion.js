@@ -1,7 +1,7 @@
 // Curso de inducción para instructores (seed de la plataforma de cursos, PLATAFORMA-CURSOS.md §9).
 // Gratis, de Vórtice VR, 5 módulos de lecciones de texto y un examen de 20 preguntas (80 para aprobar).
 // Los ids son fijos: al cambiar el contenido, subir SEED_VERSION y se actualiza sin perder el avance de nadie.
-export const SEED_VERSION = 1;
+export const SEED_VERSION = 2;   // 2: preguntas 6 y 14 reescritas sobre la plataforma (antes usaban un ejemplo de fondas)
 export const ONBOARDING_SLUG = "induccion-instructores";
 
 export const COURSE = {
@@ -384,12 +384,12 @@ export const EXAM = {
       ["Número de seguidores del instructor en redes", 0, "No tiene nada que ver con la DC-3."],
       ["Agente capacitador y su registro", 1, "Sí, lo pide."],
     ], "La DC-3 pide nombre, duración, periodo, área temática y agente capacitador, entre otros datos."),
-    q("ind-q06", "single", "Al responder **qué podrá hacer el alumno al terminar**, ¿cuál es la mejor respuesta?", [
-      ["Calcular el costo real de un platillo y fijar su precio de venta", 1, "Correcto: es concreto y se puede evaluar."],
-      ["Conocer la importancia de los costos", 0, "\"Conocer la importancia\" no se puede comprobar en un examen."],
-      ["Transformar su negocio para siempre", 0, "Es una promesa exagerada y no medible."],
-      ["Entender muchos temas de finanzas", 0, "Es vago: no dice qué podrá hacer."],
-    ], "Los resultados se escriben con verbos comprobables; de ellos sale el examen."),
+    q("ind-q06", "single", "En el paso 3 de la entrevista guiada escribes **qué podrá hacer el alumno al terminar**. ¿Cómo conviene escribirlo?", [
+      ["Con verbos que se puedan comprobar, como calcular, elaborar, identificar o aplicar", 1, "Correcto: así la plataforma puede armar un examen que los evalúe."],
+      ["Con verbos generales como conocer o entender", 0, "\"Conocer\" o \"entender\" no se pueden comprobar en un examen."],
+      ["Como promesas atractivas para vender más", 0, "La revisión de Vórtice VR no aprueba promesas exageradas."],
+      ["No importa cómo: el generador los corrige solo", 0, "El generador usa lo que tú escribes; de ahí sale el examen."],
+    ], "De los resultados de aprendizaje sale el examen, por eso se escriben con verbos comprobables."),
     q("ind-q07", "single", "Si en tu entrevista no diste un dato que el curso necesita, ¿qué hace el generador?", [
       ["Deja un marcador [COMPLETAR: …] para que tú lo llenes", 1, "Correcto: nunca inventa datos."],
       ["Lo busca en internet y lo agrega", 0, "El generador solo usa lo que aportas tú y tu material."],
@@ -428,11 +428,11 @@ export const EXAM = {
       ["100 para aprobar y 1 intento", 0, "No es la configuración por defecto."],
       ["70 para aprobar y 5 intentos", 0, "No es la configuración por defecto."],
     ], "Se aprueba con 80 y hay 3 intentos; el instructor puede ajustarlos."),
-    q("ind-q14", "single", "¿Cuál pregunta de examen evalúa mejor un resultado de aprendizaje?", [
-      ["Un caso: \"Un platillo se vende en $80 y sus ingredientes cuestan $38. ¿Qué falta para saber si deja ganancia?\"", 1, "Correcto: pide aplicar lo aprendido."],
-      ["\"¿En qué año se publicó el libro que cita el instructor?\"", 0, "Es un dato de memoria, no una habilidad."],
-      ["\"¿Cómo se llama el módulo 3?\"", 0, "No evalúa nada útil."],
-      ["\"¿Te gustó el curso?\"", 0, "Es una encuesta, no una evaluación."],
+    q("ind-q14", "single", "Al revisar el examen que generó la plataforma para tu curso, ¿qué tipo de preguntas debes conservar?", [
+      ["Casos y situaciones que evalúan lo que el alumno debe poder hacer", 1, "Correcto: evalúan los resultados de aprendizaje."],
+      ["Datos para memorizar, como fechas o nombres", 0, "Evalúan memoria, no lo que el alumno sabe hacer."],
+      ["Preguntas sobre cómo se llaman los módulos", 0, "No evalúan nada útil."],
+      ["Preguntas de opinión, como \"¿te gustó el curso?\"", 0, "Eso es una encuesta, no una evaluación."],
     ], "Las preguntas deben evaluar lo que el alumno puede hacer, no detalles triviales."),
     q("ind-q15", "single", "¿Qué formato tiene el folio de una constancia?", [
       ["VVR-AAAA-NNNNNN", 1, "Correcto: año y número consecutivo."],
