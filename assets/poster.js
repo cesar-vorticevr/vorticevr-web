@@ -47,10 +47,10 @@
     const picSrc = kind === "trivia" && !(d.logo) ? base + "trivia.svg" : `${api}/m/${exp.slug}/image?v=${v}`;
     await Promise.all(["700 100px Sora", "600 100px Sora", "500 100px 'IBM Plex Sans'", "600 100px 'IBM Plex Sans'", "500 100px 'IBM Plex Mono'"].map(f => document.fonts ? document.fonts.load(f).catch(() => {}) : 0));
     // "superficie": the 3D objects themselves, rendered clean (assets/poster-3d.js), instead of the editor's shot with its grid
-    const hero = kind === "superficie" ? import(new URL(base + "poster-3d.js", location.href).href).then(m => m.render(exp, api)).catch(() => null) : null;
+    const hero = kind === "superficie" ? import(new URL(base + "poster-3d.js?v=3", location.href).href).then(m => m.render(exp, api)).catch(() => null) : null;
     const [pic3d, pic2d, top, logo, icon] = await Promise.all([hero, hero ? null : img(picSrc),img(brand === "own" ? `${api}/m/${exp.slug}/logo?v=${v}` : brand === "vortice" ? base + "logo-vorticevr-blanco.png" : null), img(base + "logo-vorticevr.png"), img(base + "icono.png")]);
     const pic = pic3d || pic2d || (hero ? await img(picSrc) : null), stage = !!pic3d;
-    const big = K[3] === "scan", band = big ? 1150 : BAND;   // AR with an image: the image is what gets scanned, so it takes most of the page
+    const big = K[3] === "scan", band = big ? 1000 : BAND;   // AR with an image: its own layout (scanLayout)
 
     canvas.width = W; canvas.height = H; const x = canvas.getContext("2d");
     x.fillStyle = "#fff"; x.fillRect(0, 0, W, H);
@@ -69,22 +69,25 @@
     if (top) { const h = brand === "own" ? (big ? 160 : 220) : (big ? 100 : 130), w = Math.min(1100, h * top.naturalWidth / top.naturalHeight), hh = w * top.naturalHeight / top.naturalWidth;
       if (brand === "own") { x.save(); x.shadowColor = "rgba(0,0,0,.45)"; x.shadowBlur = 30; x.drawImage(top, (W - w) / 2, y, w, hh); x.restore(); } else x.drawImage(top, (W - w) / 2, y, w, hh);
       y += hh + (big ? 60 : 90); } else y += 60;
+    const steps = K[2].slice();
+    if (kind === "dispara" && d.prize && d.prize.min) steps[2] += ` y llega a ${d.prize.min} puntos para ganar un premio`;
+    if (big) return scanLayout(x, { pic, name, accent, url: exp.url, brand, logo, icon, steps, y });
     // kind pill
     x.font = "700 58px Sora"; const label = K[0].toUpperCase(); if ("letterSpacing" in x) x.letterSpacing = "8px";
     const pw = x.measureText(label).width + 120; x.fillStyle = "#ffbe55"; rr(x, (W - pw) / 2, y, pw, 110, 55); x.fill();
     x.fillStyle = "#1a0d00"; x.fillText(label, W / 2 + 4, y + 76); if ("letterSpacing" in x) x.letterSpacing = "0px";
-    y += 110 + (big ? 40 : 60);
+    y += 110 + 60;
     // name: as big as fits in 3 lines
-    let fs = big ? 140 : 200, tl;
-    for (; fs >= 96; fs -= 8) { x.font = `700 ${fs}px Sora`; tl = lines(x, name, 2200); if (tl.length <= (fs > 150 || big ? 2 : 3)) break; }
-    const maxL = big ? 2 : 3; if (tl.length > maxL) { tl = tl.slice(0, maxL); tl[maxL - 1] = tl[maxL - 1].replace(/\s*\S*$/, "") + "…"; }
+    let fs = 200, tl;
+    for (; fs >= 96; fs -= 8) { x.font = `700 ${fs}px Sora`; tl = lines(x, name, 2200); if (tl.length <= (fs > 150 ? 2 : 3)) break; }
+    const maxL = 3; if (tl.length > maxL) { tl = tl.slice(0, maxL); tl[maxL - 1] = tl[maxL - 1].replace(/\s*\S*$/, "") + "…"; }
     x.fillStyle = "#fff"; x.save(); x.shadowColor = "rgba(0,0,0,.35)"; x.shadowBlur = 24;
     for (const l of tl) { y += fs * 1.02; x.fillText(l, W / 2, y); } x.restore();
-    x.font = `500 ${big ? 62 : 76}px 'IBM Plex Sans'`; x.fillStyle = mix(accent, "#ffffff", .75); const sl = lines(x, sub, 2100).slice(0, big ? 1 : 2);
-    y += big ? 20 : 40; for (const l of sl) { y += big ? 80 : 96; x.fillText(l, W / 2, y); }
-    y += big ? 70 : 80;
+    x.font = "500 76px 'IBM Plex Sans'"; x.fillStyle = mix(accent, "#ffffff", .75); const sl = lines(x, sub, 2100).slice(0, 2);
+    y += 40; for (const l of sl) { y += 96; x.fillText(l, W / 2, y); }
+    y += 80;
     // the picture, on a white card that crosses the edge of the band
-    const below = stage ? 290 : (K[3] === "scan" ? 190 : 130) + 26, maxW = stage ? 1500 : big ? 2250 : 1900, maxH = Math.max(520, (big ? 2250 : 2200) - below - y);   // the steps and the QR need from 2200 down
+    const below = stage ? 290 : 156, maxW = stage ? 1500 : 1900, maxH = Math.max(520, 2200 - below - y);   // the steps and the QR need from 2200 down
     let pr = pic ? (pic.naturalWidth || pic.width) / (pic.naturalHeight || pic.height) : 1.6, iw = maxW, ih = iw / pr; if (ih > maxH) { ih = maxH; iw = ih * pr; }
     const ix = (W - iw) / 2, iy = y, pad = 26;
     if (stage) { // the object on a glowing golden stage, with its sparkles: no card
@@ -118,43 +121,80 @@
       x.font = "700 120px Sora"; x.fillStyle = "#fff"; x.fillText(K[0], W / 2, iy + ih / 2 + 40); }
     x.restore();
     }
-    if (K[3] === "scan") { // AR: gold scan corners and "point here"
-      const c = 120, m = pad + 34; x.strokeStyle = "#ffbe55"; x.lineWidth = 22; x.lineCap = "round";
-      for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const px = sx < 0 ? ix - m : ix + iw + m, py = sy < 0 ? iy - m : iy + ih + m; x.beginPath(); x.moveTo(px, py - sy * c); x.lineTo(px, py); x.lineTo(px - sx * c, py); x.stroke(); }
-      x.font = "700 54px Sora"; const t = "APUNTA TU CÁMARA AQUÍ", tw = x.measureText(t).width + 90, ty = iy + ih + pad - 10;
-      x.fillStyle = INK; rr(x, (W - tw) / 2, ty - 10, tw, 100, 50); x.fill(); x.fillStyle = "#ffbe55"; x.fillText(t, W / 2, ty + 58);
-    }
     // bottom: how it works (left) and the QR (right)
-    const foot = brand === "vortice" ? 3110 : 3200;
-    let by = Math.max(iy + ih + below, big ? 0 : 2000);
-    const qs = big ? Math.max(500, Math.min(640, foot - by - 300)) : Math.max(540, Math.min(900, foot - by - 330)), qx = W - 170 - qs, lx = 190, lw = qx - lx - 130;
-    x.textAlign = "left"; x.fillStyle = INK; x.font = `700 ${big ? 80 : 96}px Sora`; x.fillText("¿Cómo funciona?", lx, by + 90);
-    let sy = by + (big ? 170 : 200); const st = big ? { r: 52, f: 54, lh: 66, n: 60 } : { r: 62, f: 62, lh: 78, n: 70 }; const steps = K[2].slice();
-    if (kind === "dispara" && d.prize && d.prize.min) steps[2] += ` y llega a ${d.prize.min} puntos para ganar un premio`;
-    for (let i = 0; i < 3; i++) {
-      x.fillStyle = accent; x.beginPath(); x.arc(lx + 60, sy + 52, st.r, 0, Math.PI * 2); x.fill();
-      x.fillStyle = "#fff"; x.font = `700 ${st.n}px Sora`; x.textAlign = "center"; x.fillText(String(i + 1), lx + 60, sy + 52 + st.n * .36); x.textAlign = "left";
-      x.fillStyle = "#2d1b4e"; x.font = `500 ${st.f}px 'IBM Plex Sans'`; const L = lines(x, steps[i], lw - 170);
-      L.forEach((l, j) => x.fillText(l, lx + 170, sy + 52 + st.f * .33 + j * st.lh)); sy += Math.max(st.r * 2 + 26, (L.length - 1) * st.lh + st.r * 2 + 30);
+    const foot = brand === "vortice" ? 3110 : 3200, by = Math.max(iy + ih + below, 2000);
+    const qs = Math.max(540, Math.min(900, foot - by - 330)), qx = W - 170 - qs, lx = 190;
+    x.textAlign = "left"; x.fillStyle = INK; x.font = "700 96px Sora"; x.fillText("¿Cómo funciona?", lx, by + 90);
+    drawSteps(x, steps, lx, by + 200, qx - lx - 130, accent, { r: 62, f: 62, lh: 78 });
+    drawQR(x, exp.url, qx, by + 110, qs, accent, icon, 44);
+    drawFooter(x, foot, brand, logo);
+  }
+
+  // AR with an image: the printed image is what the camera looks for, so it is as big as the page allows. No kind label
+  // or subtitle. A tall image gets the QR and the steps in a column at its right; a wide one, in a strip below.
+  function scanLayout(x, o) {
+    const { pic, accent, brand } = o, foot = brand === "vortice" ? 3110 : 3200, pad = 26, m = 64;   // m: room for the scan corners
+    let y = o.y, fs = 150, tl;
+    for (; fs >= 84; fs -= 6) { x.font = `700 ${fs}px Sora`; tl = lines(x, o.name, 2250); if (tl.length <= (fs > 110 ? 1 : 2)) break; }
+    if (tl.length > 2) { tl = tl.slice(0, 2); tl[1] = tl[1].replace(/\s*\S*$/, "") + "…"; }
+    x.fillStyle = "#fff"; x.save(); x.shadowColor = "rgba(0,0,0,.35)"; x.shadowBlur = 24;
+    for (const l of tl) { y += fs * 1.02; x.fillText(l, W / 2, y); } x.restore();
+    y += 60 + m;
+    const pr = pic ? (pic.naturalWidth || pic.width) / (pic.naturalHeight || pic.height) : .75, side = pr < .95, col = 600;
+    const left = 130 + m, right = side ? W - 130 - col - 70 - m : W - 130 - m, bottom = side ? foot - 70 - m : foot - 760;
+    let iw = right - left, ih = iw / pr; if (ih > bottom - y) { ih = bottom - y; iw = ih * pr; }
+    const ix = left + (right - left - iw) / 2, iy = y + (side ? (bottom - y - ih) / 2 : 0);
+    x.save(); x.shadowColor = "rgba(20,5,40,.5)"; x.shadowBlur = 80; x.shadowOffsetY = 30; x.fillStyle = "#fff"; rr(x, ix - pad, iy - pad, iw + pad * 2, ih + pad * 2, 44); x.fill(); x.restore();
+    x.save(); rr(x, ix, iy, iw, ih, 26); x.clip();
+    if (pic) x.drawImage(pic, ix, iy, iw, ih); else { x.fillStyle = accent; x.fillRect(ix, iy, iw, ih); }
+    x.restore();
+    const c = 130, k = pad + 30; x.strokeStyle = "#ffbe55"; x.lineWidth = 22; x.lineCap = "round";   // gold scan corners
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const px = sx < 0 ? ix - k : ix + iw + k, py = sy < 0 ? iy - k : iy + ih + k; x.beginPath(); x.moveTo(px, py - sy * c); x.lineTo(px, py); x.lineTo(px - sx * c, py); x.stroke(); }
+    x.textAlign = "center"; x.font = "700 54px Sora"; const t = "APUNTA TU CÁMARA AQUÍ", tw = x.measureText(t).width + 90, ty = iy + ih + pad - 50;   // on the card's lower edge
+    x.fillStyle = INK; rr(x, ix + iw / 2 - tw / 2, ty, tw, 100, 50); x.fill(); x.fillStyle = "#ffbe55"; x.fillText(t, ix + iw / 2, ty + 68);
+    if (side) {   // column at the right: QR on top, steps under it
+      const cx = W - 130 - col, qs = col - 80, qy = Math.max(iy + 150, 1000);
+      drawQR(x, o.url, cx + 40, qy, qs, accent, o.icon, 34);
+      x.textAlign = "left"; x.fillStyle = INK; x.font = "700 64px Sora"; x.fillText("¿Cómo funciona?", cx, qy + qs + 210);
+      drawSteps(x, o.steps, cx - 20, qy + qs + 270, col + 20, accent, { r: 40, f: 44, lh: 54 });
+    } else {      // strip below: steps at the left, QR at the right
+      const qs = 520, qx = W - 170 - qs, by = iy + ih + pad + 110;
+      drawQR(x, o.url, qx, by + 130, qs, accent, o.icon, 36);
+      x.textAlign = "left"; x.fillStyle = INK; x.font = "700 76px Sora"; x.fillText("¿Cómo funciona?", 190, by + 90);
+      drawSteps(x, o.steps, 190, by + 170, qx - 190 - 120, accent, { r: 50, f: 54, lh: 66 });
     }
-    // QR: deep purple modules, the Vórtice VR mark in the middle, "¡Escanéame!" on top
-    const qy = by + 110;
+    drawFooter(x, foot, brand, o.logo);
+  }
+
+  // numbered steps; st: circle radius, font size, line height
+  function drawSteps(x, steps, lx, sy, w, accent, st) {
+    const cx = lx + st.r + 2, tx = lx + st.r * 2 + 44;
+    for (let i = 0; i < steps.length; i++) {
+      x.fillStyle = accent; x.beginPath(); x.arc(cx, sy + st.r, st.r, 0, Math.PI * 2); x.fill();
+      x.fillStyle = "#fff"; x.font = `700 ${Math.round(st.r * 1.12)}px Sora`; x.textAlign = "center"; x.fillText(String(i + 1), cx, sy + st.r * 1.4); x.textAlign = "left";
+      x.fillStyle = "#2d1b4e"; x.font = `500 ${st.f}px 'IBM Plex Sans'`; const L = lines(x, steps[i], lx + w - tx);
+      L.forEach((l, j) => x.fillText(l, tx, sy + st.r + st.f * .33 + j * st.lh)); sy += Math.max(st.r * 2 + 26, (L.length - 1) * st.lh + st.r * 2 + 30);
+    }
+  }
+  // QR: deep purple modules, the Vórtice VR mark in the middle, "¡Escanéame!" on top and the link under it
+  function drawQR(x, url, qx, qy, qs, accent, icon, urlPx) {
     x.fillStyle = "#fff"; x.strokeStyle = accent; x.lineWidth = 14; rr(x, qx - 40, qy - 40, qs + 80, qs + 80, 50); x.fill(); x.stroke();
-    const qr = qrcode(0, "H"); qr.addData(exp.url); qr.make(); const n = qr.getModuleCount(), cell = qs / n;
+    const qr = qrcode(0, "H"); qr.addData(url); qr.make(); const n = qr.getModuleCount(), cell = qs / n;
     x.fillStyle = INK; for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) x.fillRect(qx + c * cell, qy + r * cell, Math.ceil(cell), Math.ceil(cell));
     if (icon) { const s = qs * .2, p = qx + (qs - s) / 2, q = qy + (qs - s) / 2; x.fillStyle = "#fff"; rr(x, p - 18, q - 18, s + 36, s + 36, 28); x.fill(); x.drawImage(icon, p, q, s, s); }
     x.textAlign = "center"; x.font = "700 64px Sora"; const et = "¡ESCANÉAME!", ew = x.measureText(et).width + 100;
     x.fillStyle = accent; rr(x, qx + qs / 2 - ew / 2, qy - 150, ew, 104, 52); x.fill(); x.fillStyle = "#fff"; x.fillText(et, qx + qs / 2, qy - 76);
-    x.fillStyle = "#5b4a7a"; x.font = "500 44px 'IBM Plex Mono'"; let u = String(exp.url).replace(/^https?:\/\//, "").replace(/\/$/, "");
-    while (x.measureText(u).width > qs + 120 && u.length > 10) u = u.slice(0, -2) + "…";
-    x.fillText(u, qx + qs / 2, qy + qs + 112);
-    // footer: made with Vórtice VR (not with the brand's own logo or none)
-    if (brand === "vortice") {
-      x.fillStyle = "#eadff8"; x.fillRect(190, foot, W - 380, 4);
-      x.fillStyle = "#6b279b"; x.font = "500 48px 'IBM Plex Sans'"; x.textAlign = "left"; const ft = "Crea la tuya en vorticevr.mx";
-      const lw2 = logo ? 300 : 0, lh = logo ? lw2 * logo.naturalHeight / logo.naturalWidth : 0, tw = x.measureText(ft).width, gx = (W - (tw + lw2 + 60)) / 2;
-      x.fillText(ft, gx, foot + 115); if (logo) x.drawImage(logo, gx + tw + 60, foot + 100 - lh / 2, lw2, lh);
-    }
+    x.fillStyle = "#5b4a7a"; x.font = `500 ${urlPx}px 'IBM Plex Mono'`; let u = String(url).replace(/^https?:\/\//, "").replace(/\/$/, "");
+    while (x.measureText(u).width > qs + 100 && u.length > 10) u = u.slice(0, -2) + "…";
+    x.fillText(u, qx + qs / 2, qy + qs + 40 + urlPx * 1.6);
+  }
+  // footer: made with Vórtice VR (not with the brand's own logo or none)
+  function drawFooter(x, foot, brand, logo) {
+    if (brand !== "vortice") return;
+    x.fillStyle = "#eadff8"; x.fillRect(190, foot, W - 380, 4);
+    x.fillStyle = "#6b279b"; x.font = "500 48px 'IBM Plex Sans'"; x.textAlign = "left"; const ft = "Crea la tuya en vorticevr.mx";
+    const lw = logo ? 300 : 0, lh = logo ? lw * logo.naturalHeight / logo.naturalWidth : 0, tw = x.measureText(ft).width, gx = (W - (tw + lw + 60)) / 2;
+    x.fillText(ft, gx, foot + 115); if (logo) x.drawImage(logo, gx + tw + 60, foot + 100 - lh / 2, lw, lh);
   }
 
   // one-page letter PDF with the canvas as a JPEG (DCTDecode): no library needed
