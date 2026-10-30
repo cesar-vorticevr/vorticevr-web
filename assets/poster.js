@@ -50,40 +50,41 @@
     const hero = kind === "superficie" ? import(new URL(base + "poster-3d.js", location.href).href).then(m => m.render(exp, api)).catch(() => null) : null;
     const [pic3d, pic2d, top, logo, icon] = await Promise.all([hero, hero ? null : img(picSrc),img(brand === "own" ? `${api}/m/${exp.slug}/logo?v=${v}` : brand === "vortice" ? base + "logo-vorticevr-blanco.png" : null), img(base + "logo-vorticevr.png"), img(base + "icono.png")]);
     const pic = pic3d || pic2d || (hero ? await img(picSrc) : null), stage = !!pic3d;
+    const big = K[3] === "scan", band = big ? 1150 : BAND;   // AR with an image: the image is what gets scanned, so it takes most of the page
 
     canvas.width = W; canvas.height = H; const x = canvas.getContext("2d");
     x.fillStyle = "#fff"; x.fillRect(0, 0, W, H);
     // band: the experience's color into deep night, with glows, rings and sparkles
-    const g = x.createLinearGradient(0, 0, W * .3, BAND); g.addColorStop(0, mix(accent, INK, .25)); g.addColorStop(1, mix(accent, "#05020b", .82));
-    x.fillStyle = g; x.beginPath(); x.moveTo(0, 0); x.lineTo(W, 0); x.lineTo(W, BAND - 120); x.quadraticCurveTo(W / 2, BAND + 120, 0, BAND - 120); x.closePath(); x.fill();
+    const g = x.createLinearGradient(0, 0, W * .3, band); g.addColorStop(0, mix(accent, INK, .25)); g.addColorStop(1, mix(accent, "#05020b", .82));
+    x.fillStyle = g; x.beginPath(); x.moveTo(0, 0); x.lineTo(W, 0); x.lineTo(W, band - 120); x.quadraticCurveTo(W / 2, band + 120, 0, band - 120); x.closePath(); x.fill();
     x.save(); x.clip();
-    for (const [cx, cy, r, a] of [[W * .1, 260, 900, .45], [W * .95, BAND * .8, 1000, .35]]) { const rg = x.createRadialGradient(cx, cy, 0, cx, cy, r); rg.addColorStop(0, mix(accent, "#ffffff", .25) + Math.round(a * 255).toString(16).padStart(2, "0")); rg.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = rg; x.fillRect(0, 0, W, BAND); }
+    for (const [cx, cy, r, a] of [[W * .1, 260, 900, .45], [W * .95, band * .8, 1000, .35]]) { const rg = x.createRadialGradient(cx, cy, 0, cx, cy, r); rg.addColorStop(0, mix(accent, "#ffffff", .25) + Math.round(a * 255).toString(16).padStart(2, "0")); rg.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = rg; x.fillRect(0, 0, W, band); }
     x.strokeStyle = "rgba(255,255,255,.08)"; x.lineWidth = 6;
-    for (let i = 0; i < 4; i++) { x.beginPath(); x.arc(W / 2, BAND * 1.6, 1500 + i * 260, 0, Math.PI * 2); x.stroke(); }
-    for (let i = 0; i < 46; i++) { x.fillStyle = R() < .3 ? "#ffbe55" : `rgba(255,255,255,${.35 + R() * .6})`; star(x, R() * W, R() * (BAND - 150), 8 + R() * R() * 46); }
+    for (let i = 0; i < 4; i++) { x.beginPath(); x.arc(W / 2, band * 1.6, 1500 + i * 260, 0, Math.PI * 2); x.stroke(); }
+    for (let i = 0; i < 46; i++) { x.fillStyle = R() < .3 ? "#ffbe55" : `rgba(255,255,255,${.35 + R() * .6})`; star(x, R() * W, R() * (band - 150), 8 + R() * R() * 46); }
     x.restore();
     x.textAlign = "center"; x.textBaseline = "alphabetic";
     // logo: Vórtice VR in white, the brand's own (Premium) or none
-    let y = 150;
-    if (top) { const h = brand === "own" ? 220 : 130, w = Math.min(1100, h * top.naturalWidth / top.naturalHeight), hh = w * top.naturalHeight / top.naturalWidth;
+    let y = big ? 110 : 150;
+    if (top) { const h = brand === "own" ? (big ? 160 : 220) : (big ? 100 : 130), w = Math.min(1100, h * top.naturalWidth / top.naturalHeight), hh = w * top.naturalHeight / top.naturalWidth;
       if (brand === "own") { x.save(); x.shadowColor = "rgba(0,0,0,.45)"; x.shadowBlur = 30; x.drawImage(top, (W - w) / 2, y, w, hh); x.restore(); } else x.drawImage(top, (W - w) / 2, y, w, hh);
-      y += hh + 90; } else y += 60;
+      y += hh + (big ? 60 : 90); } else y += 60;
     // kind pill
     x.font = "700 58px Sora"; const label = K[0].toUpperCase(); if ("letterSpacing" in x) x.letterSpacing = "8px";
     const pw = x.measureText(label).width + 120; x.fillStyle = "#ffbe55"; rr(x, (W - pw) / 2, y, pw, 110, 55); x.fill();
     x.fillStyle = "#1a0d00"; x.fillText(label, W / 2 + 4, y + 76); if ("letterSpacing" in x) x.letterSpacing = "0px";
-    y += 110 + 60;
+    y += 110 + (big ? 40 : 60);
     // name: as big as fits in 3 lines
-    let fs = 200, tl;
-    for (; fs >= 96; fs -= 8) { x.font = `700 ${fs}px Sora`; tl = lines(x, name, 2200); if (tl.length <= (fs > 150 ? 2 : 3)) break; }
-    if (tl.length > 3) { tl = tl.slice(0, 3); tl[2] = tl[2].replace(/\s*\S*$/, "") + "…"; }
+    let fs = big ? 140 : 200, tl;
+    for (; fs >= 96; fs -= 8) { x.font = `700 ${fs}px Sora`; tl = lines(x, name, 2200); if (tl.length <= (fs > 150 || big ? 2 : 3)) break; }
+    const maxL = big ? 2 : 3; if (tl.length > maxL) { tl = tl.slice(0, maxL); tl[maxL - 1] = tl[maxL - 1].replace(/\s*\S*$/, "") + "…"; }
     x.fillStyle = "#fff"; x.save(); x.shadowColor = "rgba(0,0,0,.35)"; x.shadowBlur = 24;
     for (const l of tl) { y += fs * 1.02; x.fillText(l, W / 2, y); } x.restore();
-    x.font = "500 76px 'IBM Plex Sans'"; x.fillStyle = mix(accent, "#ffffff", .75); const sl = lines(x, sub, 2100).slice(0, 2);
-    y += 40; for (const l of sl) { y += 96; x.fillText(l, W / 2, y); }
-    y += 80;
+    x.font = `500 ${big ? 62 : 76}px 'IBM Plex Sans'`; x.fillStyle = mix(accent, "#ffffff", .75); const sl = lines(x, sub, 2100).slice(0, big ? 1 : 2);
+    y += big ? 20 : 40; for (const l of sl) { y += big ? 80 : 96; x.fillText(l, W / 2, y); }
+    y += big ? 70 : 80;
     // the picture, on a white card that crosses the edge of the band
-    const below = stage ? 290 : (K[3] === "scan" ? 190 : 130) + 26, maxW = stage ? 1500 : 1900, maxH = Math.max(520, 2200 - below - y);   // the steps and the QR need from 2200 down
+    const below = stage ? 290 : (K[3] === "scan" ? 190 : 130) + 26, maxW = stage ? 1500 : big ? 2250 : 1900, maxH = Math.max(520, (big ? 2250 : 2200) - below - y);   // the steps and the QR need from 2200 down
     let pr = pic ? (pic.naturalWidth || pic.width) / (pic.naturalHeight || pic.height) : 1.6, iw = maxW, ih = iw / pr; if (ih > maxH) { ih = maxH; iw = ih * pr; }
     const ix = (W - iw) / 2, iy = y, pad = 26;
     if (stage) { // the object on a glowing golden stage, with its sparkles: no card
@@ -125,16 +126,16 @@
     }
     // bottom: how it works (left) and the QR (right)
     const foot = brand === "vortice" ? 3110 : 3200;
-    let by = Math.max(iy + ih + below, 2000);
-    const qs = Math.max(540, Math.min(900, foot - by - 330)), qx = W - 170 - qs, lx = 190, lw = qx - lx - 130;
-    x.textAlign = "left"; x.fillStyle = INK; x.font = "700 96px Sora"; x.fillText("¿Cómo funciona?", lx, by + 90);
-    let sy = by + 200; const steps = K[2].slice();
+    let by = Math.max(iy + ih + below, big ? 0 : 2000);
+    const qs = big ? Math.max(500, Math.min(640, foot - by - 300)) : Math.max(540, Math.min(900, foot - by - 330)), qx = W - 170 - qs, lx = 190, lw = qx - lx - 130;
+    x.textAlign = "left"; x.fillStyle = INK; x.font = `700 ${big ? 80 : 96}px Sora`; x.fillText("¿Cómo funciona?", lx, by + 90);
+    let sy = by + (big ? 170 : 200); const st = big ? { r: 52, f: 54, lh: 66, n: 60 } : { r: 62, f: 62, lh: 78, n: 70 }; const steps = K[2].slice();
     if (kind === "dispara" && d.prize && d.prize.min) steps[2] += ` y llega a ${d.prize.min} puntos para ganar un premio`;
     for (let i = 0; i < 3; i++) {
-      x.fillStyle = accent; x.beginPath(); x.arc(lx + 60, sy + 52, 62, 0, Math.PI * 2); x.fill();
-      x.fillStyle = "#fff"; x.font = "700 70px Sora"; x.textAlign = "center"; x.fillText(String(i + 1), lx + 60, sy + 77); x.textAlign = "left";
-      x.fillStyle = "#2d1b4e"; x.font = "500 62px 'IBM Plex Sans'"; const L = lines(x, steps[i], lw - 170);
-      L.forEach((l, j) => x.fillText(l, lx + 170, sy + 72 + j * 78)); sy += Math.max(150, L.length * 78 + 70);
+      x.fillStyle = accent; x.beginPath(); x.arc(lx + 60, sy + 52, st.r, 0, Math.PI * 2); x.fill();
+      x.fillStyle = "#fff"; x.font = `700 ${st.n}px Sora`; x.textAlign = "center"; x.fillText(String(i + 1), lx + 60, sy + 52 + st.n * .36); x.textAlign = "left";
+      x.fillStyle = "#2d1b4e"; x.font = `500 ${st.f}px 'IBM Plex Sans'`; const L = lines(x, steps[i], lw - 170);
+      L.forEach((l, j) => x.fillText(l, lx + 170, sy + 52 + st.f * .33 + j * st.lh)); sy += Math.max(st.r * 2 + 26, (L.length - 1) * st.lh + st.r * 2 + 30);
     }
     // QR: deep purple modules, the Vórtice VR mark in the middle, "¡Escanéame!" on top
     const qy = by + 110;
