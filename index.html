@@ -487,8 +487,9 @@ header.top .brand{flex:none}
       <h2 data-en="What the community is creating.">Lo que la comunidad está creando.</h2>
       <p data-en="Experiences people made with Vórtice VR and chose to show. Open them on your phone, download their poster or make your own: no coding, with a link and a QR code.">Experiencias que la gente hizo con Vórtice VR y eligió mostrar. Ábrelas en tu celular, descarga su póster o crea la tuya: sin programar, con un link y un código QR.</p>
     </div>
+    <div id="xkinds"></div>
     <div class="xgrid" id="xlist"></div>
-    <div class="xempty reveal" id="xempty" hidden><b data-en="The first ones are coming">Muy pronto, las primeras</b><span data-en="Make an experience and, in My account, turn on «Show in Explore» so it appears here.">Crea una experiencia y, en Mi cuenta, activa «Mostrar en Explora» para que aparezca aquí.</span></div>
+    <div class="xempty reveal" id="xempty" hidden><b data-en="The first ones are coming">Muy pronto, las primeras</b><span id="xemptyT" data-en="Make an experience and, in My account, turn on «Show in Explore» so it appears here.">Crea una experiencia y, en Mi cuenta, activa «Mostrar en Explora» para que aparezca aquí.</span></div>
     <div class="xmore reveal"><a class="btn primary mag" href="explora/" data-en="See all in Explore →">Ver todas en Explora →</a><a class="btn sun mag" href="crear/" data-en="Create mine">Crear la mía</a></div>
     <a class="galx reveal" href="galerias/"><span class="gx-fr" aria-hidden="true"><i></i><i></i><i></i></span><span class="gx-tx"><span class="gx-k" data-en="Vórtice VR Galleries · Pro and Premium">Galerías Vórtice VR · Pro y Premium</span><b data-en="Mount your exhibition in 3D">Monta tu exposición en 3D</b><span class="gx-p" data-en="Your artworks at their real size in a museum, a classic room or a gallery in space. Several rooms, the exhibition text and a link to share it.">Tus obras a tamaño real en un museo, una sala clásica o una galería en el espacio. Varias salas, el texto de la exposición y un link para compartirla.</span><span class="gx-go" data-en="See the galleries →">Ver las galerías →</span></span></a>
   </div></section>
@@ -889,11 +890,14 @@ document.addEventListener("click",e=>{
 <script src="assets/menu-movil.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="assets/poster.js?v=4"></script>
-<script src="assets/explora.js?v=1"></script>
+<script src="assets/explora.js?v=7"></script>
 <script>
-// #explora: the 8 newest public experiences
-VVRExplora.load("?n=8").then(j=>{ VVRExplora.render(document.getElementById("xlist"),j.experiences); document.getElementById("xempty").hidden=!!j.experiences.length; })
-  .catch(()=>{ document.getElementById("xempty").hidden=false; });
+// #explora: the 8 newest public experiences, by type if one is picked; "Ver todas" keeps the type
+function xload(k){ const all=document.querySelector("#explora .xmore a[href^=\"explora/\"]"); if(all) all.href="explora/"+(k?"?tipo="+k:"");
+  VVRExplora.load("?n=8"+(k?"&tipo="+k:"")).then(j=>{ VVRExplora.render(document.getElementById("xlist"),j.experiences); const e=document.getElementById("xempty"); e.hidden=!!j.experiences.length;
+      e.querySelector("b").textContent=k?"Todavía no hay de este tipo":"Muy pronto, las primeras"; document.getElementById("xemptyT").textContent=k?"¡Crea la primera y muéstrala aquí!":"Crea una experiencia y, en Mi cuenta, activa «Mostrar en Explora» para que aparezca aquí."; })
+    .catch(()=>{ document.getElementById("xlist").replaceChildren(); document.getElementById("xempty").hidden=false; }); }
+VVRExplora.kinds(document.getElementById("xkinds"),"",xload); xload("");
 </script>
 </body>
 </html>
