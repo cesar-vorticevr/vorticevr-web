@@ -45,9 +45,9 @@
     const brand = plan.brand && (exp.brand === "own" || exp.brand === "none") ? exp.brand : "vortice";
     const v = exp.updated || exp.created || "";
     const picSrc = kind === "trivia" && !(d.logo) ? base + "trivia.svg" : `${api}/m/${exp.slug}/image?v=${v}`;
-    await Promise.all(["700 100px Sora", "600 100px Sora", "500 100px 'IBM Plex Sans'", "600 100px 'IBM Plex Sans'", "500 100px 'IBM Plex Mono'"].map(f => document.fonts ? document.fonts.load(f).catch(() => {}) : 0));
+    await Promise.all(["700 100px Sora", "600 100px Sora", "500 100px 'IBM Plex Sans'", "600 100px 'IBM Plex Sans'"].map(f => document.fonts ? document.fonts.load(f).catch(() => {}) : 0));
     // "superficie": the 3D objects themselves, rendered clean (assets/poster-3d.js), instead of the editor's shot with its grid
-    const hero = kind === "superficie" ? import(new URL(base + "poster-3d.js?v=3", location.href).href).then(m => m.render(exp, api)).catch(() => null) : null;
+    const hero = kind === "superficie" ? import(new URL(base + "poster-3d.js?v=4", location.href).href).then(m => m.render(exp, api)).catch(() => null) : null;
     const [pic3d, pic2d, top, logo, icon] = await Promise.all([hero, hero ? null : img(picSrc),img(brand === "own" ? `${api}/m/${exp.slug}/logo?v=${v}` : brand === "vortice" ? base + "logo-vorticevr-blanco.png" : null), img(base + "logo-vorticevr.png"), img(base + "icono.png")]);
     const pic = pic3d || pic2d || (hero ? await img(picSrc) : null), stage = !!pic3d;
     const big = K[3] === "scan", band = big ? 1000 : BAND;   // AR with an image: its own layout (scanLayout)
@@ -126,7 +126,7 @@
     const qs = Math.max(540, Math.min(900, foot - by - 330)), qx = W - 170 - qs, lx = 190;
     x.textAlign = "left"; x.fillStyle = INK; x.font = "700 96px Sora"; x.fillText("¿Cómo funciona?", lx, by + 90);
     drawSteps(x, steps, lx, by + 200, qx - lx - 130, accent, { r: 62, f: 62, lh: 78 });
-    drawQR(x, exp.url, qx, by + 110, qs, accent, icon, 44);
+    drawQR(x, exp.url, qx, by + 110, qs, accent, icon);
     drawFooter(x, foot, brand, logo);
   }
 
@@ -154,12 +154,12 @@
     x.fillStyle = INK; rr(x, ix + iw / 2 - tw / 2, ty, tw, 100, 50); x.fill(); x.fillStyle = "#ffbe55"; x.fillText(t, ix + iw / 2, ty + 68);
     if (side) {   // column at the right: QR on top, steps under it
       const cx = W - 130 - col, qs = col - 80, qy = Math.max(iy + 150, 1000);
-      drawQR(x, o.url, cx + 40, qy, qs, accent, o.icon, 34);
-      x.textAlign = "left"; x.fillStyle = INK; x.font = "700 64px Sora"; x.fillText("¿Cómo funciona?", cx, qy + qs + 210);
-      drawSteps(x, o.steps, cx - 20, qy + qs + 270, col + 20, accent, { r: 40, f: 44, lh: 54 });
+      drawQR(x, o.url, cx + 40, qy, qs, accent, o.icon);
+      x.textAlign = "left"; x.fillStyle = INK; x.font = "700 64px Sora"; x.fillText("¿Cómo funciona?", cx, qy + qs + 170);
+      drawSteps(x, o.steps, cx - 20, qy + qs + 230, col + 20, accent, { r: 40, f: 44, lh: 54 });
     } else {      // strip below: steps at the left, QR at the right
       const qs = 520, qx = W - 170 - qs, by = iy + ih + pad + 110;
-      drawQR(x, o.url, qx, by + 130, qs, accent, o.icon, 36);
+      drawQR(x, o.url, qx, by + 130, qs, accent, o.icon);
       x.textAlign = "left"; x.fillStyle = INK; x.font = "700 76px Sora"; x.fillText("¿Cómo funciona?", 190, by + 90);
       drawSteps(x, o.steps, 190, by + 170, qx - 190 - 120, accent, { r: 50, f: 54, lh: 66 });
     }
@@ -176,17 +176,14 @@
       L.forEach((l, j) => x.fillText(l, tx, sy + st.r + st.f * .33 + j * st.lh)); sy += Math.max(st.r * 2 + 26, (L.length - 1) * st.lh + st.r * 2 + 30);
     }
   }
-  // QR: deep purple modules, the Vórtice VR mark in the middle, "¡Escanéame!" on top and the link under it
-  function drawQR(x, url, qx, qy, qs, accent, icon, urlPx) {
+  // QR: deep purple modules, the Vórtice VR mark in the middle and "¡Escanéame!" on top (no link text: the QR is enough)
+  function drawQR(x, url, qx, qy, qs, accent, icon) {
     x.fillStyle = "#fff"; x.strokeStyle = accent; x.lineWidth = 14; rr(x, qx - 40, qy - 40, qs + 80, qs + 80, 50); x.fill(); x.stroke();
     const qr = qrcode(0, "H"); qr.addData(url); qr.make(); const n = qr.getModuleCount(), cell = qs / n;
     x.fillStyle = INK; for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) x.fillRect(qx + c * cell, qy + r * cell, Math.ceil(cell), Math.ceil(cell));
     if (icon) { const s = qs * .2, p = qx + (qs - s) / 2, q = qy + (qs - s) / 2; x.fillStyle = "#fff"; rr(x, p - 18, q - 18, s + 36, s + 36, 28); x.fill(); x.drawImage(icon, p, q, s, s); }
     x.textAlign = "center"; x.font = "700 64px Sora"; const et = "¡ESCANÉAME!", ew = x.measureText(et).width + 100;
     x.fillStyle = accent; rr(x, qx + qs / 2 - ew / 2, qy - 150, ew, 104, 52); x.fill(); x.fillStyle = "#fff"; x.fillText(et, qx + qs / 2, qy - 76);
-    x.fillStyle = "#5b4a7a"; x.font = `500 ${urlPx}px 'IBM Plex Mono'`; let u = String(url).replace(/^https?:\/\//, "").replace(/\/$/, "");
-    while (x.measureText(u).width > qs + 100 && u.length > 10) u = u.slice(0, -2) + "…";
-    x.fillText(u, qx + qs / 2, qy + qs + 40 + urlPx * 1.6);
   }
   // footer: made with Vórtice VR (not with the brand's own logo or none)
   function drawFooter(x, foot, brand, logo) {
