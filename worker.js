@@ -109,6 +109,12 @@ async function route(request, env, ctx) {
       if (!url.pathname.endsWith("/")) return Response.redirect(url.origin + url.pathname + "/" + url.search, 301);
       return viewerPage(request, env, url);
     }
+    // a portal: vorticevr.mx/@nombre (assets in /portal/; the page reads the name from the address)
+    const at = url.pathname.match(/^\/@([A-Za-z0-9_-]{3,24})\/?$/);
+    if (at) {
+      if (at[1] !== at[1].toLowerCase()) return Response.redirect(url.origin + "/@" + at[1].toLowerCase() + url.search, 301);
+      return env.ASSETS.fetch(new Request(new URL("/portal/", url), request));
+    }
     const cp = cursosPage(url.pathname);
     if (cp) {
       if (!url.pathname.endsWith("/")) return Response.redirect(url.origin + url.pathname + "/" + url.search, 301);
@@ -249,7 +255,8 @@ async function api(request, env, ctx, url) {
     const P = planOf(row);
     if (P.views && row.views >= P.views) return json({ error: "Límite de vistas", limit: true }, 410);
     if (String(row.data || "").includes('"kind":"galeria"') && !galleryPlan(P)) return json({ error: "Pausada", paused: true }, 410);   // a gallery needs a paid plan
-    ctx.waitUntil(env.DB.batch([env.DB.prepare("UPDATE experiences SET views = views + 1 WHERE slug = ?").bind(row.slug), bump(env, "views")]));
+    // ?sin_vista=1: Explora reads it to draw its poster or its 3D card, which is not a visit
+    if (!url.searchParams.get("sin_vista")) ctx.waitUntil(env.DB.batch([env.DB.prepare("UPDATE experiences SET views = views + 1 WHERE slug = ?").bind(row.slug), bump(env, "views")]));
     const out = publicExp(row);
     if (out.brand && !P.brand) delete out.brand;   // its own logo (or none) only while the plan includes it (brand: Premium)
     return json(out, 200, { "Cache-Control": "no-store" });
@@ -268,6 +275,37 @@ async function api(request, env, ctx, url) {
       if (list.length >= 100) break;
     }
     return json({ galerias: list }, 200, { "Cache-Control": "public, max-age=300" });
+  }
+
+  // "Explora" (/explora/ and the home page): the experiences their makers chose to show, newest first, 24 at a time
+  if (path === "/api/explora" && M === "GET") {
+    const n = Math.min(48, Math.max(1, Math.round(+url.searchParams.get("n")) || 24));
+    return json(await explore(env, request, { kind: url.searchParams.get("tipo") || "", n, before: +url.searchParams.get("antes") || 0 }), 200, { "Cache-Control": "public, max-age=60" });
+  }
+  // a portal (vorticevr.mx/@nombre): the account's name and its public experiences
+  m = path.match(/^\/api\/portal\/([a-z0-9_-]{3,24})$/);
+  if (m && M === "GET") {
+    const u = await env.DB.prepare("SELECT name, email, handle, created FROM users WHERE handle = ?").bind(m[1]).first();
+    if (!u) return json({ error: "No existe" }, 404);
+    const r = await explore(env, request, { email: u.email, n: 300 });
+    return json({ name: u.name, handle: u.handle, since: u.created, experiences: r.experiences }, 200, { "Cache-Control": "public, max-age=60" });
+  }
+  // "Reportar" on a public experience: an e-mail to CONTACT_TO; an admin takes it down from /admin/ (Reportes)
+  m = path.match(/^\/api\/report\/([a-z0-9-]+)$/);
+  if (m && M === "POST") {
+    const b = await request.json().catch(() => ({}));
+    const reason = REPORT_REASONS[b.reason] ? b.reason : "otro", note = String(b.note || "").trim().slice(0, 500);
+    if (!(await limit(env, "report:" + ip, 10, 3600e3))) return json({ error: "Recibimos muchos reportes seguidos. Intenta en un rato." }, 429);
+    const row = await env.DB.prepare("SELECT e.slug, e.title, e.email, u.handle FROM experiences e LEFT JOIN users u ON u.email = e.email WHERE e.slug = ? AND e.listed = 1").bind(m[1]).first();
+    if (!row) return json({ error: "No encontramos esa experiencia." }, 404);
+    await env.DB.prepare("INSERT INTO reports (slug, reason, note, at) VALUES (?, ?, ?, ?)").bind(row.slug, reason, note, Date.now()).run();
+    const site = env.SITE_URL || "https://vorticevr.mx";
+    ctx.waitUntil(sendMail(env, env.CONTACT_TO || "hola@vorticevr.mx", `Reporte en Explora: ${row.title} · ${REPORT_REASONS[reason]}`, shell(`<h1 style="font-size:20px">Reportaron una experiencia pública</h1>
+<p><b>${esc(row.title)}</b> · <a href="${esc(expUrl(row.slug, request, env))}" style="color:#ffbe55">Ver la experiencia</a></p>
+<p style="color:#d2b8ff">Motivo: <b>${esc(REPORT_REASONS[reason])}</b></p>${note ? `<div style="white-space:pre-wrap;background:#1b0a36;border-radius:10px;padding:14px">${esc(note)}</div>` : ""}
+<p>De: ${esc(row.email)}${row.handle ? ` (@${esc(row.handle)})` : ""}</p>
+<p><a href="${site}/admin/#reportes" style="color:#ffbe55">Revisarlo en el admin</a> (ahí la quitas de Explora con un clic).</p>`)));
+    return json({ ok: true });
   }
 
   // link page: one tap on a button; prize wheel: spins, each prize that came out, "lose", review… (navigator.sendBeacon); only counted while it is live
@@ -465,6 +503,31 @@ async function api(request, env, ctx, url) {
     return json({ ok: true });
   }
 
+  // show it in Explora and on the portal, or keep it private (a gallery also changes its own "publica" for /galerias/)
+  m = path.match(/^\/api\/experience\/([a-z0-9-]+)\/listed$/);
+  if (m && M === "POST") {
+    if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
+    const b = await request.json().catch(() => ({})), on = b.listed ? 1 : 0;
+    const r = await env.DB.prepare("UPDATE experiences SET listed = ?, data = CASE WHEN data LIKE '%\"kind\":\"galeria\"%' THEN json_set(data, '$.galeria.publica', json(?)) ELSE data END WHERE slug = ? AND email = ?")
+      .bind(on, on ? "true" : "false", m[1], who).run();
+    if (!r.meta.changes) return json({ error: "No encontramos esa experiencia en tu cuenta." }, 404);
+    return json({ ok: true, listed: !!on });
+  }
+  // the portal's name: vorticevr.mx/@handle (letters, numbers, "-" and "_"; changing it breaks the old link)
+  if (path === "/api/handle" && M === "POST") {
+    if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
+    const b = await request.json().catch(() => ({}));
+    const h = String(b.handle || "").trim().toLowerCase().replace(/^@/, "");
+    if (!h) { await env.DB.prepare("UPDATE users SET handle = NULL WHERE id = ?").bind(me.id).run(); return json({ ok: true, handle: null }); }
+    if (!/^[a-z0-9][a-z0-9_-]{2,23}$/.test(h)) return json({ error: "Tu nombre de usuario debe tener de 3 a 24 letras o números (sin espacios ni acentos; puede llevar - o _)." }, 400);
+    if (RESERVED.has(h) || HANDLE_RESERVED.has(h)) return json({ error: "Ese nombre no está disponible. Prueba otro." }, 409);
+    const taken = await env.DB.prepare("SELECT 1 FROM users WHERE handle = ? AND id != ?").bind(h, me.id).first();
+    if (taken) return json({ error: "Alguien más ya usa ese nombre. Prueba otro." }, 409);
+    try { await env.DB.prepare("UPDATE users SET handle = ? WHERE id = ?").bind(h, me.id).run(); }
+    catch { return json({ error: "Alguien más ya usa ese nombre. Prueba otro." }, 409); }   // taken at the same moment (unique index)
+    return json({ ok: true, handle: h });
+  }
+
   m = path.match(/^\/api\/clicks\/([a-z0-9-]+)$/);
   if (m && M === "GET") {
     if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
@@ -574,8 +637,10 @@ async function api(request, env, ctx, url) {
     const now = Date.now();
     const created = mine ? mine.created : now;
     const expires = mine ? mine.expires : P.days ? now + P.days * 864e5 : FAR;
-    await env.DB.prepare("INSERT INTO experiences (slug, email, title, data, created, updated, expires, views, paused) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0) ON CONFLICT(slug) DO UPDATE SET title = excluded.title, data = excluded.data, updated = excluded.updated")
-      .bind(slug, who, data.title, JSON.stringify(data), created, now, expires, mine ? mine.views || 0 : 0).run();
+    // shown in Explora: a gallery follows its own "publica"; the rest keep what their maker chose (new ones are private)
+    const listed = data.kind === "galeria" ? (data.galeria && data.galeria.publica ? 1 : 0) : mine ? mine.listed || 0 : meta.listed ? 1 : 0;
+    await env.DB.prepare("INSERT INTO experiences (slug, email, title, data, created, updated, expires, views, paused, listed, hidden) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?) ON CONFLICT(slug) DO UPDATE SET title = excluded.title, data = excluded.data, updated = excluded.updated, listed = excluded.listed")
+      .bind(slug, who, data.title, JSON.stringify(data), created, now, expires, mine ? mine.views || 0 : 0, listed, mine ? mine.hidden || 0 : 0).run();
     if (isNew && !me.first_pub) await env.DB.prepare("UPDATE users SET first_pub = ? WHERE id = ? AND first_pub IS NULL").bind(now, me.id).run();
     const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(slug).first();
     const out = ownerExp(row, request, env);
@@ -814,6 +879,25 @@ async function api(request, env, ctx, url) {
       const { results } = await env.DB.prepare("SELECT * FROM experiences WHERE email = ? AND expires > ? ORDER BY paused, updated DESC LIMIT 1000").bind(normEmail(url.searchParams.get("email")), now).all();
       return json({ experiences: results.map(r => ownerExp(r, request, env)) });
     }
+    // Explora: reports of public experiences, and taking one down (hidden) or back
+    if (path === "/api/admin/reports" && M === "GET") {
+      const { results } = await env.DB.prepare(`SELECT r.*, e.title, e.email, e.listed, e.hidden, e.updated, u.handle FROM reports r LEFT JOIN experiences e ON e.slug = r.slug
+        LEFT JOIN users u ON u.email = e.email ORDER BY r.done, r.at DESC LIMIT 300`).all();
+      return json({ reasons: REPORT_REASONS, reports: results.map(r => ({ ...r, url: r.email ? expUrl(r.slug, request, env) : null })) });
+    }
+    m = path.match(/^\/api\/admin\/reports\/(\d+)$/);
+    if (m && M === "POST") {
+      const b = await request.json().catch(() => ({}));
+      await env.DB.prepare("UPDATE reports SET done = ? WHERE id = ?").bind(b.done ? 1 : 0, +m[1]).run();
+      return json({ ok: true });
+    }
+    m = path.match(/^\/api\/admin\/hide\/([a-z0-9-]+)$/);
+    if (m && M === "POST") {
+      const b = await request.json().catch(() => ({}));
+      const r = await env.DB.prepare("UPDATE experiences SET hidden = ? WHERE slug = ?").bind(b.hidden ? 1 : 0, m[1]).run();
+      if (b.hidden) await env.DB.prepare("UPDATE reports SET done = 1 WHERE slug = ?").bind(m[1]).run();
+      return json({ ok: !!r.meta.changes });
+    }
     if (path === "/api/admin/coupons" && M === "GET") {
       const { results } = await env.DB.prepare("SELECT * FROM coupons ORDER BY created DESC LIMIT 200").all();
       return json({ coupons: results });
@@ -937,7 +1021,36 @@ function publicKind(row, d) {
   return { slug: row.slug, kind: "ra", title: row.title, img: d.img, place: d.place || "mesa", sparks: d.sparks, scenes: d.scenes || 1, items: itemsOf(d), buttons: d.buttons, expires: row.expires };
 }
 function ownerExp(row, request, env) {
-  return { ...publicExp(row), url: expUrl(row.slug, request, env), created: row.created, updated: row.updated, views: row.views, paused: !!row.paused, forever: row.expires >= FAR };
+  return { ...publicExp(row), url: expUrl(row.slug, request, env), created: row.created, updated: row.updated, views: row.views, paused: !!row.paused, forever: row.expires >= FAR, listed: !!row.listed, hidden: !!row.hidden || undefined };
+}
+
+// ---------- Explora and the portals (/@nombre) ----------
+const REPORT_REASONS = { inapropiado: "Contenido inapropiado", spam: "Spam o engaño", derechos: "Usa algo que no es suyo", otro: "Otra cosa" };
+const HANDLE_RESERVED = new Set(["explora", "galerias", "educacion", "talleres", "privacidad", "terminos", "vendedor", "portal", "usuario", "usuarios", "hola", "contacto", "nosotros", "oficial", "anthropic", "claude"]);
+// The public experiences (listed, not taken down, live and inside their plan), newest first. kind: one type ("ra" = AR with
+// an image) · email: one account (its portal) · before: "updated" of the last one already shown (next page).
+async function explore(env, request, o) {
+  const now = Date.now(), out = [];
+  let sql = `SELECT e.slug, e.title, e.data, e.updated, e.views, u.name, u.handle, u.plan, u.plan_until, u.owner_id, u.quota, o.plan AS o_plan, o.plan_until AS o_until
+    FROM experiences e LEFT JOIN users u ON u.email = e.email LEFT JOIN users o ON o.id = u.owner_id
+    WHERE e.listed = 1 AND e.hidden = 0 AND e.paused = 0 AND e.expires > ?`;
+  const args = [now];
+  if (o.email) { sql += " AND e.email = ?"; args.push(o.email); }
+  if (o.before) { sql += " AND e.updated < ?"; args.push(o.before); }
+  if (o.kind && o.kind !== "ra") { sql += " AND e.data LIKE ?"; args.push(`%"kind":"${o.kind.replace(/[^a-z]/g, "")}"%`); }
+  const { results } = await env.DB.prepare(sql + " ORDER BY e.updated DESC LIMIT 400").bind(...args).all();
+  let more = false;
+  for (const r of results) {
+    const d = JSON.parse(r.data || "{}"), x = publicKind(r, d), P = planOf(r);
+    if (o.kind && x.kind !== o.kind) continue;
+    if (P.views && r.views >= P.views) continue;                 // no views left on its free plan
+    if (x.kind === "galeria" && !galleryPlan(P)) continue;       // a gallery needs a paid plan
+    if (out.length >= o.n) { more = true; break; }
+    const k = x[x.kind] || {};
+    out.push({ slug: r.slug, kind: x.kind, title: (k.name || r.title || "").slice(0, 80), url: expUrl(r.slug, request, env), updated: r.updated, views: r.views,
+      image: x.kind === "trivia" && !(k.logo) ? null : `/m/${r.slug}/image?v=${r.updated}`, by: r.handle ? { name: r.name || r.handle, handle: r.handle } : null });
+  }
+  return { experiences: out, next: more ? out[out.length - 1].updated : null };
 }
 function expUrl(slug, request, env) {
   const root = env.ROOT_DOMAIN || ROOT_DEFAULT;
@@ -1643,7 +1756,8 @@ async function schema(env) {
   await migrate(env);
   schemaReady = true;
 }
-const EXP_COLS = "slug TEXT PRIMARY KEY, email TEXT NOT NULL, title TEXT, data TEXT, created INTEGER, updated INTEGER, expires INTEGER, views INTEGER DEFAULT 0, paused INTEGER DEFAULT 0";
+// listed = its maker shows it in Explora and on their portal (/@nombre) · hidden = taken down from there by an admin (reports)
+const EXP_COLS = "slug TEXT PRIMARY KEY, email TEXT NOT NULL, title TEXT, data TEXT, created INTEGER, updated INTEGER, expires INTEGER, views INTEGER DEFAULT 0, paused INTEGER DEFAULT 0, listed INTEGER DEFAULT 0, hidden INTEGER DEFAULT 0";
 // Tables from before the plans: experiences had email UNIQUE (one per account) and users had no plan.
 // Production and the preview share this database: every change here has to keep the other version working.
 async function migrate(env) {
@@ -1689,7 +1803,18 @@ async function migrate(env) {
     try { await env.DB.batch(["origin TEXT", "first_pub INTEGER", "no_mail INTEGER DEFAULT 0"].map(c => env.DB.prepare(`ALTER TABLE users ADD COLUMN ${c}`))); }
     catch (e) { console.error("migración origen", e); }
   }
+  if (!/\blisted\b/.test(sql.experiences)) {   // Explora: shown by its maker / taken down by an admin; the public galleries start shown
+    try { await env.DB.batch(["listed INTEGER DEFAULT 0", "hidden INTEGER DEFAULT 0"].map(c => env.DB.prepare(`ALTER TABLE experiences ADD COLUMN ${c}`))); await env.DB.prepare("UPDATE experiences SET listed = 1 WHERE data LIKE '%\"kind\":\"galeria\"%' AND data LIKE '%\"publica\":true%'").run(); }
+    catch (e) { console.error("migración explora", e); }
+  }
+  if (!/\bhandle\b/.test(sql.users)) {   // the account's portal: vorticevr.mx/@handle
+    try { await env.DB.prepare("ALTER TABLE users ADD COLUMN handle TEXT").run(); }
+    catch (e) { console.error("migración portal", e); }
+  }
   await env.DB.batch([
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT NOT NULL, reason TEXT, note TEXT, at INTEGER, done INTEGER DEFAULT 0)"),
+    env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS users_handle ON users (handle)"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS experiences_listed ON experiences (listed, updated)"),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS experiences_email ON experiences (email)"),
     env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS users_ref_code ON users (ref_code)"),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS commissions_referrer ON commissions (referrer_id)"),
@@ -1755,7 +1880,7 @@ async function auth(request, env) {
   const t = bearer(request);
   if (!t) return null;
   const row = await env.DB.prepare(`SELECT u.id, u.email, u.name, u.verified, u.plan, u.plan_until, u.plan_note, u.stripe_customer, u.stripe_sub, u.stripe_status, u.stripe_mode,
-      u.owner_id, u.quota, u.extra_exp, u.temp_pw, u.ref_code, u.ref_by, u.seller, u.payout, u.first_pub, o.plan AS o_plan, o.plan_until AS o_until, o.name AS o_name, o.email AS o_email, s.expires
+      u.owner_id, u.quota, u.extra_exp, u.temp_pw, u.ref_code, u.ref_by, u.seller, u.payout, u.first_pub, u.handle, o.plan AS o_plan, o.plan_until AS o_until, o.name AS o_name, o.email AS o_email, s.expires
     FROM sessions s JOIN users u ON u.id = s.user_id LEFT JOIN users o ON o.id = u.owner_id WHERE s.token = ?`).bind(await sha256hex(t)).first();
   return row && row.expires > Date.now() && row.verified ? row : null;
 }
@@ -1763,7 +1888,7 @@ async function account(env, request, user) {
   const { results } = await env.DB.prepare("SELECT * FROM experiences WHERE email = ? AND expires > ? ORDER BY paused, created DESC").bind(user.email, Date.now()).all();
   const plan = planOf(user), lim = await limitOf(env, user, plan);
   const team = plan.member ? { role: "member", owner: plan.owner } : plan.seats ? { role: "owner", seats: plan.seats, total: plan.exp, mine: lim } : undefined;
-  return { user: { name: user.name, email: user.email }, experiences: results.map(r => ownerExp(r, request, env)), plan, limit: lim, team,
+  return { user: { name: user.name, email: user.email, handle: user.handle || null }, experiences: results.map(r => ownerExp(r, request, env)), plan, limit: lim, team,
     referral: { eligible: REF.plans.includes(plan.id) && !plan.member, discount: !!user.ref_by && !user.stripe_sub ? REF.discount : 0 },
     tempPassword: !!user.temp_pw || undefined, admin: isAdmin(env, user) || undefined, seller: !!(sellerOf(user) && sellerOf(user).active) || undefined, billing: billingInfo(env, user) };
 }

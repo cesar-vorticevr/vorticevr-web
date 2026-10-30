@@ -8,7 +8,7 @@
   const root = new URL(brand ? brand.getAttribute('href') || './' : './', location.href);
   const SITE = [
     ['', 'Inicio', 'Home'],
-    ['#tipos', 'Experiencias', 'Experiences'],
+    ['explora/', 'Explora', 'Explore'],
     ['galerias/', 'Galerías', 'Galleries'],
     ['educacion/', 'Educación', 'Education'],
     ['talleres/', 'Talleres para escuelas', 'School workshops'],

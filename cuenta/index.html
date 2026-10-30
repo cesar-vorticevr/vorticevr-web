@@ -208,6 +208,13 @@ dialog::backdrop{background:rgba(5,2,11,.75)}
 dialog canvas{width:100%;height:auto;border-radius:12px;background:#fff;display:block;margin:12px 0}
 dialog h2{margin:0;font-size:1.1rem;overflow-wrap:anywhere}
 dialog .row{justify-content:space-between}
+.hrow{display:flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:rgba(5,2,11,.7);overflow:hidden}
+.hrow span{padding:0 2px 0 12px;color:var(--mute);font-family:var(--fm);font-size:.9rem;white-space:nowrap}
+.hrow input{border:0;background:transparent;padding-left:0}
+.plink{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.plink a{font-family:var(--fm);color:var(--sun);overflow-wrap:anywhere}
+.ec .acts .pub.on{border-color:var(--ok);color:var(--ok)}
+.ec .th .gone{left:auto;right:10px;top:10px;border-color:var(--bad);color:var(--bad)}
 #posterDlg{width:min(92vw,440px)}
 #posterDlg .pnote{margin:6px 0 0;font-size:.85rem;color:var(--mute)}
 #posterDlg .pwrap{position:relative;aspect-ratio:8.5/11;margin:12px 0;border-radius:10px;overflow:hidden;background:#fff}
@@ -233,6 +240,7 @@ dialog .row{justify-content:space-between}
         <button type="button" id="pManage" hidden>Administrar suscripción</button>
         <a id="pAdmin" href="../admin/" hidden>Administración</a>
         <a id="pSeller" href="../vendedor/" hidden class="refbtn">💼 Mi panel de vendedor</a>
+        <button type="button" id="pPortalBtn">🌐 Mi portal</button>
         <button type="button" id="pRefBtn" class="refbtn">✦ Recomienda y gana</button>
         <button type="button" id="pTeamBtn" hidden>Mi equipo</button>
         <button type="button" id="pCodeBtn">Tengo un código</button>
@@ -333,6 +341,15 @@ dialog .row{justify-content:space-between}
       </form>
       <div class="msg" id="mTeam"></div>
       <div class="pwshow" id="teamPw" hidden></div>
+    </section>
+
+    <section class="card" id="portalBox" hidden>
+      <div class="phead"><h2>Mi portal</h2><button class="btn sm" id="portalClose" type="button">Cerrar</button></div>
+      <p class="note">Tu página pública con las experiencias que muestras en Explora. Elige tu nombre de usuario y compártela: <b>vorticevr.mx/@tunombre</b>. Solo salen las experiencias que tú marques como públicas.</p>
+      <form id="fPortal"><label class="f" for="hIn">Nombre de usuario</label><div class="hrow"><span>vorticevr.mx/@</span><input id="hIn" maxlength="24" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="tunombre" required></div>
+        <button class="btn sun wide" type="submit">Guardar</button></form><div class="msg" id="mPortal"></div>
+      <div class="plink" id="portalLink" hidden><a id="portalA" target="_blank" rel="noopener"></a><button class="btn sm" id="portalCopy" type="button">Copiar link</button></div>
+      <p class="note" id="portalCount"></p>
     </section>
 
     <section class="card" id="codeBox" hidden>
@@ -500,7 +517,7 @@ function showPanel(data){
   if(location.hash==="#planes"&&P.id!=="escuela"&&!member) openPlans(true);
   if(B.pastDue) banner("No pudimos cobrar tu última mensualidad. Actualiza tu tarjeta en “Administrar suscripción” para que tu plan siga activo.","warn");
   renderList();
-  const pub=Q.get("publicada"); if(pub&&experiences.some(x=>x.slug===pub)){ banner("¡Listo! Tu experiencia está publicada. También te enviamos el link y el QR por correo."); history.replaceState(null,"",location.pathname); }
+  const pub=Q.get("publicada"); if(pub&&experiences.some(x=>x.slug===pub)){ banner("¡Listo! Tu experiencia está publicada. También te enviamos el link y el QR por correo. ¿Quieres que otros la vean? Toca «🔒 Privada» en su tarjeta para mostrarla en Explora."); history.replaceState(null,"",location.pathname); }
   view("vPanel");
 }
 // plan cards for the chosen period; pay online with Stripe when billing.enabled, otherwise the contact form
@@ -598,6 +615,18 @@ $("fTeam").addEventListener("submit",e=>{ e.preventDefault(); const f=e.target; 
   catch(err){ msg("mTeam",err.message,"bad"); } }); });
 
 // courtesy code (see /api/coupon): the plan for some months, then back to Gratis on its own
+// the portal: vorticevr.mx/@handle with the experiences shown in Explora (/api/handle)
+function portalShow(){ const h=DATA.user.handle, n=DATA.experiences.filter(x=>x.listed&&!x.paused&&!x.hidden).length;
+  $("hIn").value=h||""; $("portalLink").hidden=!h; if(h){ $("portalA").href=location.origin+"/@"+h; $("portalA").textContent="vorticevr.mx/@"+h; }
+  $("portalCount").textContent=h?(n?`Muestra ${n} ${n===1?"experiencia":"experiencias"}. Para agregar más, toca «🔒 Privada» en la experiencia.`:"Todavía no muestras ninguna: toca «🔒 Privada» en una experiencia para hacerla pública."):""; }
+$("pPortalBtn").addEventListener("click",()=>{ menu(false); portalShow(); $("portalBox").hidden=false; $("portalBox").scrollIntoView({behavior:"smooth",block:"start"}); });
+$("portalClose").addEventListener("click",()=>{ $("portalBox").hidden=true; });
+$("portalCopy").addEventListener("click",async e=>{ try{ await navigator.clipboard.writeText($("portalA").href); e.target.textContent="¡Copiado!"; setTimeout(()=>e.target.textContent="Copiar link",1600); }catch(err){ prompt("Copia tu link:",$("portalA").href); } });
+$("fPortal").addEventListener("submit",e=>{ e.preventDefault(); const old=DATA.user.handle, v=$("hIn").value.trim().toLowerCase().replace(/^@/,"");
+  if(old&&v!==old&&!confirm(`Si cambias tu nombre, el link vorticevr.mx/@${old} dejará de funcionar. ¿Continuar?`)) return;
+  busy(e.target,async()=>{ msg("mPortal","Guardando…");
+    try{ const r=await VVR.call("handle",{json:{handle:v}}); DATA.user.handle=r.handle; msg("mPortal","¡Listo! Ya tienes tu portal.","ok"); portalShow(); }
+    catch(err){ msg("mPortal",err.message,"bad"); } }); });
 $("pCodeBtn").addEventListener("click",()=>{ menu(false); $("codeBox").hidden=false; $("codeBox").scrollIntoView({behavior:"smooth",block:"start"}); setTimeout(()=>$("cCodeIn").focus(),300); });
 $("codeClose").addEventListener("click",()=>{ $("codeBox").hidden=true; });
 $("fCode").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,async()=>{ msg("mCode","Activando…");
@@ -644,11 +673,11 @@ function card(exp){
   const days=Math.max(0,Math.ceil((exp.expires-Date.now())/864e5));
   const free=!DATA.plan||DATA.plan.id==="gratis", vlim=(DATA.plan&&DATA.plan.views)||1000;
   const status=exp.paused?(exp.forever?"Excede tu plan":`se borra en ${days} días`):exp.forever?"Activa":`${days} días restantes`;
-  el.innerHTML=`<div class="th${exp.kind==="colorear"||(exp.kind==="trivia"&&exp.trivia&&exp.trivia.logo)?" white":""}"><img loading="lazy" src="${exp.thumb||(exp.kind==="trivia"&&!(exp.trivia&&exp.trivia.logo)?"../assets/trivia.svg":`${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}`)}" alt="">${exp.paused?'<span class="tag bad">Pausada</span>':""}<span class="kind">${KINDS[kindOf(exp)][0]} ${KINDS[kindOf(exp)][1]}</span></div>
+  el.innerHTML=`<div class="th${exp.kind==="colorear"||(exp.kind==="trivia"&&exp.trivia&&exp.trivia.logo)?" white":""}"><img loading="lazy" src="${exp.thumb||(exp.kind==="trivia"&&!(exp.trivia&&exp.trivia.logo)?"../assets/trivia.svg":`${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}`)}" alt="">${exp.paused?'<span class="tag bad">Pausada</span>':""}${exp.hidden?'<span class="tag gone">Quitada de Explora</span>':""}<span class="kind">${KINDS[kindOf(exp)][0]} ${KINDS[kindOf(exp)][1]}</span></div>
     <div class="bd"><h3>${esc(exp.title)}</h3>
       <div class="meta"><span><b>${nf(exp.views)}</b>${free?`/${nf(vlim)}`:""} ${exp.views===1&&!free?"vista":"vistas"}</span><span>${status}</span></div>
       <div class="acts">${exp.paused?`<button class="btn sun" type="button" data-a="up">Mejorar plan</button>`
-        :`<a class="btn" href="../crear/${exp.kind==="trivia"||exp.kind==="colorear"||exp.kind==="filtro"||exp.kind==="menu"||exp.kind==="links"||exp.kind==="ruleta"||exp.kind==="dispara"||exp.kind==="memorama"||exp.kind==="sopa"||exp.kind==="rompecabezas"||exp.kind==="galeria"?exp.kind+"/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="poster">Póster</button><button class="btn" type="button" data-a="copy">Copiar link</button>`}
+        :`<a class="btn" href="../crear/${exp.kind==="trivia"||exp.kind==="colorear"||exp.kind==="filtro"||exp.kind==="menu"||exp.kind==="links"||exp.kind==="ruleta"||exp.kind==="dispara"||exp.kind==="memorama"||exp.kind==="sopa"||exp.kind==="rompecabezas"||exp.kind==="galeria"?exp.kind+"/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="poster">Póster</button><button class="btn" type="button" data-a="copy">Copiar link</button><button class="btn pub${exp.listed?" on":""}" type="button" data-a="pub" title="${exp.listed?"Se muestra en Explora y en tu portal. Toca para hacerla privada.":"Solo la ve quien tenga el link. Toca para mostrarla en Explora y en tu portal."}">${exp.listed?"🌐 Pública":"🔒 Privada"}</button>`}
         <button class="btn del" type="button" data-a="del" aria-label="Borrar ${esc(exp.title)}">Borrar</button></div></div>`;
   const on=(a,f)=>{ const b=el.querySelector(`[data-a=${a}]`); if(b) b.addEventListener("click",f); };
   if(exp.demo){ // sample card: only the QR works; the rest explains itself
@@ -660,6 +689,10 @@ function card(exp){
   on("up",()=>openPlans(true));
   on("qr",()=>openQR(exp));
   on("poster",()=>openPoster(exp));
+  on("pub",async ev=>{ const b=ev.currentTarget, want=!exp.listed; b.disabled=true;
+    try{ await VVR.call(`experience/${exp.slug}/listed`,{json:{listed:want}}); exp.listed=want; renderList();
+      if(want) banner(DATA.user.handle?`¡Listo! “${exp.title}” ya se muestra en Explora y en tu portal vorticevr.mx/@${DATA.user.handle}.`:`¡Listo! “${exp.title}” ya se muestra en Explora. Elige tu nombre de usuario en Mi cuenta → Mi portal para tener tu página con todas tus experiencias.`); }
+    catch(e){ alert(e.message); b.disabled=false; } });
   on("copy",async ev=>{ try{ await navigator.clipboard.writeText(exp.url); ev.target.textContent="¡Copiado!"; setTimeout(()=>ev.target.textContent="Copiar link",1600); }catch(e){ prompt("Copia tu link:",exp.url); } });
   on("del",async()=>{ if(!confirm(`¿Borrar “${exp.title}”? El link y el QR dejarán de funcionar.`)) return;
     try{ await VVR.call("experience/"+exp.slug,{method:"DELETE"}); load(); }catch(e){ alert(e.message); } });
