@@ -52,9 +52,6 @@ header nav{display:flex;gap:10px;align-items:center}
 .hero h1{font:700 clamp(2.4rem,7vw,4.6rem)/1 var(--fd);margin:14px 0 16px;letter-spacing:-.02em}
 .hero h1 em{font-style:normal;background:linear-gradient(100deg,#fff 10%,var(--lav) 50%,var(--sun));-webkit-background-clip:text;background-clip:text;color:transparent}
 .hero p{color:var(--mute);font-size:clamp(1rem,2.2vw,1.15rem);max-width:58ch;margin:0 auto}
-.kinds{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:30px 0 34px}
-.kinds button{font:600 .85rem var(--fb);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;background:rgba(5,2,11,.5);color:var(--mute);cursor:pointer}
-.kinds button[aria-pressed=true]{background:var(--lav);color:#1b0a36;border-color:var(--lav)}
 main section{padding:0 0 80px}
 .more{display:flex;justify-content:center;margin-top:34px}
 .big{display:inline-block;font:700 .85rem var(--fd);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-radius:999px;padding:15px 26px;color:#1b0f00;background:linear-gradient(135deg,#ffe0a0,var(--sun));box-shadow:0 12px 40px rgba(255,190,85,.3);border:0;cursor:pointer}
@@ -82,7 +79,7 @@ footer img{height:24px}
   </div>
 
   <section><div class="wrap">
-    <div class="kinds" id="kinds" role="group" aria-label="Tipo de experiencia"></div>
+    <div id="kinds"></div>
     <div class="xgrid" id="list" aria-live="polite"></div>
     <div class="empty" id="empty" hidden><b>Todavía no hay experiencias de este tipo</b>Sé de los primeros: crea una y, en Mi cuenta, activa «Mostrar en Explora».</div>
     <div class="more"><button class="big ghost" id="more" type="button" hidden>Ver más</button></div>
@@ -99,12 +96,11 @@ footer img{height:24px}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="../assets/poster.js?v=4"></script>
-<script src="../assets/explora.js?v=1"></script>
+<script src="../assets/explora.js?v=7"></script>
 <script>
 const $=id=>document.getElementById(id), K=VVRExplora.KINDS;
 let kind=new URLSearchParams(location.search).get("tipo")||"", next=null;
-$("kinds").innerHTML=`<button type="button" data-k="">Todas</button>`+Object.entries(K).map(([k,v])=>`<button type="button" data-k="${k}">${v[0]} ${v[1]}</button>`).join("");
-const mark=()=>$("kinds").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.k===kind)));
+VVRExplora.kinds($("kinds"),kind,k=>{ kind=k; next=null; history.replaceState(null,"",kind?`?tipo=${kind}`:location.pathname); load(false); });
 async function load(append){
   $("more").hidden=true;
   try{
@@ -113,10 +109,8 @@ async function load(append){
     next=j.next; $("more").hidden=!next; $("empty").hidden=!!(append||j.experiences.length);
   }catch(e){ if(!append){ $("list").replaceChildren(); $("empty").hidden=false; } }
 }
-$("kinds").addEventListener("click",e=>{ const b=e.target.closest("[data-k]"); if(!b) return; kind=b.dataset.k; mark(); next=null;
-  history.replaceState(null,"",kind?`?tipo=${kind}`:location.pathname); load(false); });
 $("more").addEventListener("click",()=>load(true));
-mark(); load(false);
+load(false);
 </script>
 <script src="../assets/menu-movil.js"></script>
 <script src="../assets/origen.js"></script>
