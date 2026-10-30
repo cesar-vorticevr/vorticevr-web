@@ -46,7 +46,10 @@
     const v = exp.updated || exp.created || "";
     const picSrc = kind === "trivia" && !(d.logo) ? base + "trivia.svg" : `${api}/m/${exp.slug}/image?v=${v}`;
     await Promise.all(["700 100px Sora", "600 100px Sora", "500 100px 'IBM Plex Sans'", "600 100px 'IBM Plex Sans'", "500 100px 'IBM Plex Mono'"].map(f => document.fonts ? document.fonts.load(f).catch(() => {}) : 0));
-    const [pic, top, logo, icon] = await Promise.all([img(picSrc), img(brand === "own" ? `${api}/m/${exp.slug}/logo?v=${v}` : brand === "vortice" ? base + "logo-vorticevr-blanco.png" : null), img(base + "logo-vorticevr.png"), img(base + "icono.png")]);
+    // "superficie": the 3D objects themselves, rendered clean (assets/poster-3d.js), instead of the editor's shot with its grid
+    const hero = kind === "superficie" ? import(new URL(base + "poster-3d.js", location.href).href).then(m => m.render(exp, api)).catch(() => null) : null;
+    const [pic3d, pic2d, top, logo, icon] = await Promise.all([hero, hero ? null : img(picSrc),img(brand === "own" ? `${api}/m/${exp.slug}/logo?v=${v}` : brand === "vortice" ? base + "logo-vorticevr-blanco.png" : null), img(base + "logo-vorticevr.png"), img(base + "icono.png")]);
+    const pic = pic3d || pic2d || (hero ? await img(picSrc) : null), stage = !!pic3d;
 
     canvas.width = W; canvas.height = H; const x = canvas.getContext("2d");
     x.fillStyle = "#fff"; x.fillRect(0, 0, W, H);
@@ -80,9 +83,32 @@
     y += 40; for (const l of sl) { y += 96; x.fillText(l, W / 2, y); }
     y += 80;
     // the picture, on a white card that crosses the edge of the band
-    const maxW = 1900, maxH = Math.max(520, 2200 - (K[3] === "scan" ? 190 : 130) - 26 - y);   // the steps and the QR need from 2200 down
-    let pr = pic ? pic.naturalWidth / pic.naturalHeight : 1.6, iw = maxW, ih = iw / pr; if (ih > maxH) { ih = maxH; iw = ih * pr; }
+    const below = stage ? 290 : (K[3] === "scan" ? 190 : 130) + 26, maxW = stage ? 1500 : 1900, maxH = Math.max(520, 2200 - below - y);   // the steps and the QR need from 2200 down
+    let pr = pic ? (pic.naturalWidth || pic.width) / (pic.naturalHeight || pic.height) : 1.6, iw = maxW, ih = iw / pr; if (ih > maxH) { ih = maxH; iw = ih * pr; }
     const ix = (W - iw) / 2, iy = y, pad = 26;
+    if (stage) { // the object on a glowing golden stage, with its sparkles: no card
+      const pih = ih, piw = pih * pr, px = (W - piw) / 2, floor = iy + ih + 10, ex = Math.max(piw * .62, 520), ey = ex * .17;
+      const gl = x.createRadialGradient(W / 2, iy + ih * .5, 0, W / 2, iy + ih * .5, Math.max(piw, pih) * .85);
+      gl.addColorStop(0, mix(accent, "#ffffff", .55) + "cc"); gl.addColorStop(.45, accent + "55"); gl.addColorStop(1, accent + "00");
+      x.fillStyle = gl; x.fillRect(0, iy - 300, W, ih + 600);
+      const sp = x.createLinearGradient(0, iy - 260, 0, floor); sp.addColorStop(0, "rgba(255,255,255,0)"); sp.addColorStop(1, "rgba(255,255,255,.22)");   // light from above onto the stage
+      x.fillStyle = sp; x.beginPath(); x.moveTo(W / 2 - 140, iy - 260); x.lineTo(W / 2 + 140, iy - 260); x.lineTo(W / 2 + ex * .95, floor); x.lineTo(W / 2 - ex * .95, floor); x.closePath(); x.fill();
+      x.save(); x.translate(W / 2, floor); x.scale(1, ey / ex);   // round stage seen from above: shadow, gold disk, light ring
+      x.shadowColor = "rgba(30,8,60,.55)"; x.shadowBlur = 90; x.shadowOffsetY = 70;
+      const dg = x.createLinearGradient(0, -ex, 0, ex); dg.addColorStop(0, "#ffe2a3"); dg.addColorStop(.5, "#ffbe55"); dg.addColorStop(1, "#c77b1c");
+      x.fillStyle = dg; x.beginPath(); x.arc(0, 0, ex, 0, Math.PI * 2); x.fill(); x.shadowColor = "transparent";
+      const tg = x.createRadialGradient(0, 0, 0, 0, 0, ex * .92); tg.addColorStop(0, "#ffffff"); tg.addColorStop(.6, mix(accent, "#ffffff", .7)); tg.addColorStop(1, mix(accent, "#ffffff", .35));
+      x.fillStyle = tg; x.beginPath(); x.arc(0, -ex * .08, ex * .92, 0, Math.PI * 2); x.fill();
+      x.strokeStyle = "#ffbe55"; x.lineWidth = 14; x.beginPath(); x.arc(0, -ex * .08, ex * .8, 0, Math.PI * 2); x.stroke();
+      x.restore();
+      x.save(); x.shadowColor = "rgba(20,5,40,.45)"; x.shadowBlur = 40; x.shadowOffsetY = 18; x.drawImage(pic, px, floor - ey * .25 - pih, piw, pih); x.restore();
+      const sc = hex(exp.sparks && exp.sparks.c) || "#ffbe55";
+      for (let i = 0; i < 26; i++) { const a = R() * Math.PI * 2, rr2 = .55 + R() * .5; x.fillStyle = i % 3 ? sc : "#ffffff";
+        star(x, W / 2 + Math.cos(a) * (piw / 2 + 120) * rr2 * 1.25, iy + ih * .45 + Math.sin(a) * (pih / 2 + 80) * rr2, 10 + R() * 36); }
+      x.font = "700 54px Sora"; const t = "MÍRALO EN TU ESPACIO", tw = x.measureText(t).width + 90, ty = floor + ey + 30;
+      x.fillStyle = INK; rr(x, (W - tw) / 2, ty, tw, 100, 50); x.fill(); x.fillStyle = "#ffbe55"; x.fillText(t, W / 2, ty + 68);
+    }
+    if (!stage) {
     x.save(); x.shadowColor = "rgba(20,5,40,.5)"; x.shadowBlur = 80; x.shadowOffsetY = 30; x.fillStyle = "#fff"; rr(x, ix - pad, iy - pad, iw + pad * 2, ih + pad * 2, 50); x.fill(); x.restore();
     x.save(); rr(x, ix, iy, iw, ih, 30); x.clip();
     if (pic) x.drawImage(pic, ix, iy, iw, ih);
@@ -90,6 +116,7 @@
       x.fillStyle = "rgba(255,255,255,.9)"; for (let i = 0; i < 14; i++) star(x, ix + R() * iw, iy + R() * ih, 14 + R() * 40);
       x.font = "700 120px Sora"; x.fillStyle = "#fff"; x.fillText(K[0], W / 2, iy + ih / 2 + 40); }
     x.restore();
+    }
     if (K[3] === "scan") { // AR: gold scan corners and "point here"
       const c = 120, m = pad + 34; x.strokeStyle = "#ffbe55"; x.lineWidth = 22; x.lineCap = "round";
       for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const px = sx < 0 ? ix - m : ix + iw + m, py = sy < 0 ? iy - m : iy + ih + m; x.beginPath(); x.moveTo(px, py - sy * c); x.lineTo(px, py); x.lineTo(px - sx * c, py); x.stroke(); }
@@ -98,7 +125,7 @@
     }
     // bottom: how it works (left) and the QR (right)
     const foot = brand === "vortice" ? 3110 : 3200;
-    let by = Math.max(iy + ih + pad + (K[3] === "scan" ? 190 : 130), 2000);
+    let by = Math.max(iy + ih + below, 2000);
     const qs = Math.max(540, Math.min(900, foot - by - 330)), qx = W - 170 - qs, lx = 190, lw = qx - lx - 130;
     x.textAlign = "left"; x.fillStyle = INK; x.font = "700 96px Sora"; x.fillText("¿Cómo funciona?", lx, by + 90);
     let sy = by + 200; const steps = K[2].slice();
