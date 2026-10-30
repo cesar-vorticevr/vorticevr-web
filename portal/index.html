@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Portal de experiencias | Vórtice VR</title>
+<meta name="description" content="Las experiencias inmersivas que comparte en Vórtice VR: realidad aumentada, filtros, juegos y galerías en 3D.">
+<meta property="og:type" content="profile">
+<meta property="og:site_name" content="Vórtice VR">
+<meta property="og:locale" content="es_MX">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="/assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<style>
+/* A portal: vorticevr.mx/@nombre (worker.js serves this page for any /@…). The account's name and the experiences it
+   chose to show (/api/portal/<nombre>), with the same cards as Explora (assets/explora.js). Absolute paths: it lives at /@nombre. */
+:root{--void:#05020b;--line:rgba(210,184,255,.16);--line2:rgba(210,184,255,.38);--lav:#d2b8ff;--ink:#f4eeff;--mute:#b3a4d2;--sun:#ffbe55;
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--void);color:var(--ink);font-family:var(--fb);line-height:1.6;overflow-x:hidden}
+a{color:var(--lav)}
+:focus-visible{outline:2px solid var(--lav);outline-offset:3px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+header{position:absolute;top:0;left:0;right:0;z-index:5}
+header .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:calc(18px + env(safe-area-inset-top,0px))}
+header img{height:34px;display:block}
+header nav{display:flex;gap:10px;align-items:center}
+.pill{font:600 .78rem var(--fd);letter-spacing:.12em;text-transform:uppercase;text-decoration:none;color:var(--ink);border:1px solid var(--line2);border-radius:999px;padding:9px 15px;background:rgba(20,9,40,.5);cursor:pointer}
+.pill.gold{border-color:var(--sun);color:#1b0f00;background:linear-gradient(135deg,#ffe0a0,var(--sun))}
+@media (max-width:560px){header img{height:26px}.pill.hide{display:none}}
+.hero{text-align:center;padding:130px 20px 44px;background:radial-gradient(ellipse 50% 80% at 50% 0%,rgba(139,63,214,.45),transparent 70%),linear-gradient(180deg,#120a20,#05020b)}
+.av{width:104px;height:104px;margin:0 auto 16px;border-radius:50%;display:grid;place-items:center;font:700 2.6rem var(--fd);color:#1b0a36;background:linear-gradient(135deg,#ffe0a0,var(--sun) 40%,var(--lav));box-shadow:0 0 0 6px rgba(210,184,255,.15),0 20px 50px -10px rgba(139,63,214,.8)}
+.hero h1{font:700 clamp(2rem,6vw,3.4rem)/1.05 var(--fd);margin:0 0 6px;overflow-wrap:anywhere}
+.hero .h{font-family:"IBM Plex Mono",monospace;color:var(--sun)}
+.hero p{color:var(--mute);margin:8px 0 22px}
+.share{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+main section{padding:20px 0 80px}
+.empty{border:1px dashed var(--line2);border-radius:18px;padding:40px 24px;text-align:center;color:var(--mute)}
+.empty b{display:block;color:var(--ink);font:600 1.2rem var(--fd);margin-bottom:6px}
+.band{border-top:1px solid var(--line);padding:60px 0;text-align:center}
+.band p{color:var(--mute);max-width:52ch;margin:0 auto 20px}
+footer{padding:40px 0 60px;color:var(--mute);font-size:.88rem}
+footer .wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+footer img{height:24px}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><a class="brand" href="/" aria-label="Vórtice VR, inicio"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
+  <nav><a class="pill hide" href="/explora/">Explora</a><a class="pill gold" href="/crear/">Crear experiencia</a></nav></div></header>
+
+<main>
+  <div class="hero">
+    <div class="av" id="av" aria-hidden="true">·</div>
+    <h1 id="name">Cargando…</h1>
+    <div class="h" id="handle"></div>
+    <p id="count"></p>
+    <div class="share" id="share" hidden><button class="pill gold" id="shareBtn" type="button">Compartir este portal</button><a class="pill" href="/explora/">Ver más en Explora</a></div>
+  </div>
+  <section><div class="wrap">
+    <div class="xgrid" id="list"></div>
+    <div class="empty" id="empty" hidden><b>Todavía no hay experiencias públicas</b>Cuando comparta alguna, aparecerá aquí.</div>
+  </div></section>
+  <section class="band"><div class="wrap">
+    <p>Realidad aumentada, filtros, juegos y galerías en 3D sin programar. Crea los tuyos y ten tu propio portal.</p>
+    <a class="pill gold" href="/crear/">Crear mi experiencia</a>
+  </div></section>
+</main>
+
+<footer><div class="wrap"><a href="/"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><span>© Vórtice VR · <a href="/privacidad/">Privacidad</a> · <a href="/terminos/">Términos</a></span></div></footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="/assets/poster.js?v=4"></script>
+<script src="/assets/explora.js?v=1"></script>
+<script>
+const $=id=>document.getElementById(id);
+const handle=(location.pathname.match(/^\/@([a-z0-9_-]{3,24})/i)||[])[1];
+function notFound(){ $("name").textContent="Este portal no existe"; $("count").innerHTML=`Revisa el nombre o <a href="/explora/">explora otras experiencias</a>.`; $("av").textContent="?"; }
+if(!handle) notFound();
+else fetch(`/api/portal/${handle.toLowerCase()}`).then(r=>r.ok?r.json():Promise.reject(r)).then(j=>{
+  const name=j.name||j.handle, n=j.experiences.length;
+  document.title=`${name} (@${j.handle}) · Portal de experiencias | Vórtice VR`;
+  $("av").textContent=(name.trim()[0]||"·").toUpperCase(); $("name").textContent=name; $("handle").textContent="@"+j.handle;
+  $("count").textContent=n?`${n} ${n===1?"experiencia":"experiencias"} en Vórtice VR`:"";
+  $("share").hidden=false; $("empty").hidden=!!n;
+  VVRExplora.render($("list"),j.experiences,{by:false});
+  $("shareBtn").onclick=async()=>{ const url=location.origin+"/@"+j.handle, data={title:`${name} en Vórtice VR`,text:"Mira mis experiencias:",url};
+    try{ if(navigator.share) await navigator.share(data); else { await navigator.clipboard.writeText(url); $("shareBtn").textContent="¡Link copiado!"; setTimeout(()=>$("shareBtn").textContent="Compartir este portal",1800); } }catch(e){} };
+}).catch(notFound);
+</script>
+<script src="/assets/menu-movil.js"></script>
+<script src="/assets/magia.js" defer></script>
+</body>
+</html>

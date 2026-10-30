@@ -432,8 +432,15 @@ header.top .brand{flex:none}
 @media (max-width:760px){.stgal{min-height:200px}}
 </style>
 <script type="importmap">
-{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
 </script>
+<style>
+/* #explora: public experiences (/api/explora; cards from assets/explora.js) */
+#explora .xgrid{margin-top:8px}
+.xempty{border:1px dashed rgba(210,184,255,.38);border-radius:18px;padding:36px 22px;text-align:center;color:#b3a4d2}
+.xempty b{display:block;color:#f4eeff;font:600 1.15rem Sora,sans-serif;margin-bottom:6px}
+.xmore{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:30px 0 40px}
+</style>
 </head>
 <body>
 <div id="progress"></div>
@@ -442,7 +449,7 @@ header.top .brand{flex:none}
 <header class="top" id="top"><div class="wrap">
   <a class="brand" href="./" aria-label="Vórtice VR, inicio" data-en-aria="Vórtice VR, home"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
   <nav aria-label="Secciones" data-en-aria="Sections">
-    <a href="#tipos" data-en="Experiences">Experiencias</a><a href="galerias/" data-en="Galleries">Galerías</a><a href="educacion/" data-en="Education">Educación</a><a href="#nosotros" data-en="About">Nosotros</a><a class="pill sun mag" href="crear/" data-en="Create&lt;span class=&quot;l2&quot;&gt; experience&lt;/span&gt;">Crear<span class="l2"> experiencia</span></a>
+    <a href="explora/" data-en="Explore">Explora</a><a href="galerias/" data-en="Galleries">Galerías</a><a href="educacion/" data-en="Education">Educación</a><a href="#nosotros" data-en="About">Nosotros</a><a class="pill sun mag" href="crear/" data-en="Create&lt;span class=&quot;l2&quot;&gt; experience&lt;/span&gt;">Crear<span class="l2"> experiencia</span></a>
     <a class="pill acct mag" id="acct" href="cuenta/#entrar" data-en="Sign in">Entrar</a>
     <button class="lang mag" id="lang" type="button" aria-label="Ver en inglés" data-en-aria="Ver en español"><span data-en="ES">EN</span></button>
   </nav>
@@ -462,7 +469,7 @@ header.top .brand{flex:none}
       <p class="fade" style="transition-delay:.7s" data-en="Augmented reality, face filters, trivia, prize wheels and games. Fill in a few fields and share a link or a QR code: nobody has to install an app. Free to start.">Realidad aumentada, filtros para tu cara, trivias, ruletas de premios y juegos. Llenas unos campos y compartes un link o un código QR: nadie tiene que instalar apps. Empieza gratis.</p>
       <div class="actions fade" style="transition-delay:.9s">
         <a class="btn sun mag" href="cuenta/?siguiente=crear#registro" data-en="Create an experience free">Crear experiencia gratis</a>
-        <a class="btn primary mag" href="#tipos" data-en="See experiences ↓">Ver experiencias ↓</a>
+        <a class="btn primary mag" href="#explora" data-en="See experiences ↓">Ver experiencias ↓</a>
         <a class="btn mag" href="#contacto"><svg viewBox="0 0 24 24"><path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1.6 2 7.4 5.6L19.4 7H4.6zM20 8.5l-7.4 5.6a1 1 0 0 1-1.2 0L4 8.5V17h16V8.5z"/></svg><span data-en="Let’s talk">Platiquemos</span></a>
       </div>
     </div></div>
@@ -474,26 +481,15 @@ header.top .brand{flex:none}
     <span data-en="Augmented reality">Realidad aumentada</span><span data-en="Virtual reality">Realidad virtual</span><span data-en="&lt;b&gt;✦&lt;/b&gt; Mixed reality"><b>✦</b> Realidad mixta</span><span data-en="Artificial intelligence">Inteligencia artificial</span><span data-en="Education">Educación</span><span data-en="Culture">Cultura</span><span data-en="&lt;b&gt;✦&lt;/b&gt; Tourism"><b>✦</b> Turismo</span><span data-en="Video games">Videojuegos</span>
   </div></div>
 
-  <section id="tipos"><div class="wrap">
+  <section id="explora"><div class="wrap">
     <div class="shead reveal">
-      <span class="kick" data-en="What you can create">Lo que puedes crear</span>
-      <h2 data-en="Pick your experience.">Elige tu experiencia.</h2>
-      <p data-en="Fill in a few fields and publish: you get your own link and a QR code. Nobody has to install an app.">Llenas unos campos y publicas: recibes un link propio y un código QR. Nadie tiene que instalar apps.</p>
+      <span class="kick" data-en="Explore">Explora</span>
+      <h2 data-en="What the community is creating.">Lo que la comunidad está creando.</h2>
+      <p data-en="Experiences people made with Vórtice VR and chose to show. Open them on your phone, download their poster or make your own: no coding, with a link and a QR code.">Experiencias que la gente hizo con Vórtice VR y eligió mostrar. Ábrelas en tu celular, descarga su póster o crea la tuya: sin programar, con un link y un código QR.</p>
     </div>
-    <div class="tgrid">
-      <a class="xt fav reveal" href="crear/?tipo=ra"><span class="tags"><span class="tag fav" data-en="★ Favorite">★ Favorita</span><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🪄</span><h3 data-en="Augmented reality with an image">Realidad aumentada con imagen</h3><p data-en="Your printed image comes alive with videos, photos, text and 3D.">Tu imagen impresa cobra vida con videos, fotos, textos y 3D.</p><span class="go" data-en="Create →">Crear →</span></a>
-      <a class="xt fav reveal" href="crear/?tipo=superficie"><span class="tags"><span class="tag fav" data-en="★ Favorite">★ Favorita</span><span class="tag new" data-hasta="2026-12-31" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🛋️</span><h3 data-en="Augmented reality on a surface">Realidad aumentada en superficie</h3><p data-en="Your 3D objects appear on the floor or the table, at real size.">Tus objetos 3D aparecen en el piso o la mesa, a tamaño real.</p><span class="go" data-en="Create →">Crear →</span></a>
-      <a class="xt fav reveal" href="crear/filtro/"><span class="tags"><span class="tag fav" data-en="★ Favorite">★ Favorita</span><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🕶️</span><h3 data-en="Face filter">Filtro para tu cara</h3><p data-en="Catrina, Christmas, party and more: glasses, hats and effects.">Catrina, Navidad, fiesta y más: lentes, sombreros y efectos.</p><span class="go" data-en="Create →">Crear →</span></a>
-      <a class="xt fav reveal" href="crear/dispara/"><span class="tags"><span class="tag fav" data-en="★ Favorite">★ Favorita</span><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🎯</span><h3 data-en="Shoot and win">Dispara y gana</h3><p data-en="A 360° game with the camera: shoot the bad guys flying around you. With your images and an optional prize.">Un juego 360 con la cámara: dispárales a los malos que vuelan a tu alrededor. Con tus imágenes y, si quieres, un premio.</p><span class="go" data-en="Create →">Crear →</span></a>
-      <a class="xt reveal" href="crear/colorear/"><span class="tags"><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🎨</span><h3 data-en="Color my drawing">Colorea mi dibujo</h3><p data-en="Share a drawing and let everyone paint it with a finger.">Comparte un dibujo y que todos lo pinten con el dedo.</p><span class="go" data-en="Create →">Crear →</span></a>
-      <a class="xt reveal" href="crear/trivia/"><span class="tags"><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🤔</span><h3 data-en="Face trivia">Trivia con tu cara</h3><p data-en="Questions answered by tilting your head.">Preguntas que se contestan inclinando la cabeza.</p><span class="go" data-en="Create →">Crear →</span></a>
-      <a class="xt reveal" href="crear/ruleta/"><span class="tags"><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🎡</span><h3 data-en="Prize wheel">Ruleta de premios</h3><p data-en="Spin and win a coupon from your phone; then leave a review.">Gira y gana un cupón desde el celular; después, una reseña.</p><span class="go" data-en="Create →">Crear →</span></a>
-      <a class="xt reveal" href="crear/memorama/"><span class="tags"><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🃏</span><h3 data-en="Memory game">Memorama</h3><p data-en="Find the pairs against the clock, with your pictures or words.">Encuentra los pares contra el reloj, con tus imágenes o palabras.</p><span class="go" data-en="Create →">Crear →</span></a>
-      <a class="xt reveal" href="crear/sopa/"><span class="tags"><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🔤</span><h3 data-en="Word search">Sopa de letras</h3><p data-en="Find the words with your finger, or guess them from clues.">Encuentra las palabras con el dedo, o adivínalas con pistas.</p><span class="go" data-en="Create →">Crear →</span></a>
-      <a class="xt reveal" href="crear/rompecabezas/"><span class="tags"><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🧩</span><h3 data-en="Jigsaw puzzle">Rompecabezas</h3><p data-en="Your picture in real pieces to put together on the phone.">Tu imagen en piezas de verdad para armar en el celular.</p><span class="go" data-en="Create →">Crear →</span></a>
-      <a class="xt reveal" href="crear/menu/"><span class="tags"><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🍽️</span><h3 data-en="Interactive menu">Menú interactivo</h3><p data-en="Your restaurant menu helps diners choose and shows your special dish in 3D on their table.">Tu menú ayuda a elegir y muestra tu platillo especial en 3D sobre la mesa.</p><span class="go" data-en="Create →">Crear →</span></a>
-      <a class="xt reveal" href="crear/links/"><span class="tags"><span class="tag new" data-hasta="2026-11-30" data-en="New">Nuevo</span></span><span class="ic" aria-hidden="true">🔗</span><h3 data-en="All your links">Todos tus links</h3><p data-en="Your socials and links on one page, like Linktree. Perfect for your NFC card.">Tus redes y links en una sola página, como Linktree. Perfecta para tu tarjeta NFC.</p><span class="go" data-en="Create →">Crear →</span></a>
-    </div>
+    <div class="xgrid" id="xlist"></div>
+    <div class="xempty reveal" id="xempty" hidden><b data-en="The first ones are coming">Muy pronto, las primeras</b><span data-en="Make an experience and, in My account, turn on «Show in Explore» so it appears here.">Crea una experiencia y, en Mi cuenta, activa «Mostrar en Explora» para que aparezca aquí.</span></div>
+    <div class="xmore reveal"><a class="btn primary mag" href="explora/" data-en="See all in Explore →">Ver todas en Explora →</a><a class="btn sun mag" href="crear/" data-en="Create mine">Crear la mía</a></div>
     <a class="galx reveal" href="galerias/"><span class="gx-fr" aria-hidden="true"><i></i><i></i><i></i></span><span class="gx-tx"><span class="gx-k" data-en="Vórtice VR Galleries · Pro and Premium">Galerías Vórtice VR · Pro y Premium</span><b data-en="Mount your exhibition in 3D">Monta tu exposición en 3D</b><span class="gx-p" data-en="Your artworks at their real size in a museum, a classic room or a gallery in space. Several rooms, the exhibition text and a link to share it.">Tus obras a tamaño real en un museo, una sala clásica o una galería en el espacio. Varias salas, el texto de la exposición y un link para compartirla.</span><span class="gx-go" data-en="See the galleries →">Ver las galerías →</span></span></a>
   </div></section>
   <section id="crea" class="mk"><div class="wrap">
@@ -631,7 +627,7 @@ header.top .brand{flex:none}
   </section>
 </main>
 
-<footer><div class="wrap"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span>© Vórtice VR</span><nav class="explore" aria-label="Explora" data-en-aria="Explore"><a href="restaurantes/" data-en="Restaurants">Restaurantes</a> · <a href="eventos/" data-en="Events">Eventos</a> · <a href="escuelas/" data-en="Schools">Escuelas</a> · <a href="talleres/" data-en="Workshops">Talleres</a> · <a href="realidad-aumentada/" data-en="Augmented reality">Realidad aumentada</a> · <a href="filtros-para-la-cara/" data-en="Face filters">Filtros para la cara</a> · <a href="experiencias-inmersivas/" data-en="Immersive experiences">Experiencias inmersivas</a> · <a href="educacion/" data-en="Education">Educación</a> · <a href="galerias/" data-en="Galleries">Galerías</a></nav><span class="legal"><a href="privacidad/" data-en="Privacy">Privacidad</a> · <a href="privacidad/#cookies">Cookies</a> · <a href="terminos/" data-en="Terms">Términos</a></span></div></footer>
+<footer><div class="wrap"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span>© Vórtice VR</span><nav class="explore" aria-label="Explora" data-en-aria="Explore"><a href="explora/" data-en="Community">Comunidad</a> · <a href="restaurantes/" data-en="Restaurants">Restaurantes</a> · <a href="eventos/" data-en="Events">Eventos</a> · <a href="escuelas/" data-en="Schools">Escuelas</a> · <a href="talleres/" data-en="Workshops">Talleres</a> · <a href="realidad-aumentada/" data-en="Augmented reality">Realidad aumentada</a> · <a href="filtros-para-la-cara/" data-en="Face filters">Filtros para la cara</a> · <a href="experiencias-inmersivas/" data-en="Immersive experiences">Experiencias inmersivas</a> · <a href="educacion/" data-en="Education">Educación</a> · <a href="galerias/" data-en="Galleries">Galerías</a></nav><span class="legal"><a href="privacidad/" data-en="Privacy">Privacidad</a> · <a href="privacidad/#cookies">Cookies</a> · <a href="terminos/" data-en="Terms">Términos</a></span></div></footer>
 
 <script>
 // ---- UI effects (no dependencies) ----
@@ -891,5 +887,13 @@ document.addEventListener("click",e=>{
   document.querySelectorAll(".tag.new[data-hasta]").forEach(t=>{ if(hoy>t.dataset.hasta) t.remove(); }); })();
 </script>
 <script src="assets/menu-movil.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="assets/poster.js?v=4"></script>
+<script src="assets/explora.js?v=1"></script>
+<script>
+// #explora: the 8 newest public experiences
+VVRExplora.load("?n=8").then(j=>{ VVRExplora.render(document.getElementById("xlist"),j.experiences); document.getElementById("xempty").hidden=!!j.experiences.length; })
+  .catch(()=>{ document.getElementById("xempty").hidden=false; });
+</script>
 </body>
 </html>

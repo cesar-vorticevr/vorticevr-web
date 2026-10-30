@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Explora experiencias inmersivas | Vórtice VR</title>
+<meta name="description" content="Realidad aumentada, filtros, juegos, galerías en 3D y más, hechos por la comunidad de Vórtice VR. Ábrelos en tu celular, descarga su póster o crea el tuyo sin programar.">
+<link rel="canonical" href="https://vorticevr.mx/explora/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Vórtice VR">
+<meta property="og:locale" content="es_MX">
+<meta property="og:url" content="https://vorticevr.mx/explora/">
+<meta property="og:title" content="Explora · Experiencias de la comunidad de Vórtice VR">
+<meta property="og:description" content="Realidad aumentada, filtros, juegos y galerías en 3D hechos por la comunidad. Ábrelos en tu celular o crea el tuyo.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[{"@type":"CollectionPage","@id":"https://vorticevr.mx/explora/","url":"https://vorticevr.mx/explora/","name":"Explora experiencias","description":"Experiencias inmersivas hechas por la comunidad de Vórtice VR.","inLanguage":"es-MX","isPartOf":{"@type":"WebSite","url":"https://vorticevr.mx/","name":"Vórtice VR"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Vórtice VR","item":"https://vorticevr.mx/"},{"@type":"ListItem","position":2,"name":"Explora","item":"https://vorticevr.mx/explora/"}]}]}
+</script>
+<style>
+/* "Explora": the public directory of experiences (those whose makers chose to show them, /api/explora), filtered by type,
+   24 at a time. Cards come from assets/explora.js (open, poster, report). */
+:root{--void:#05020b;--line:rgba(210,184,255,.16);--line2:rgba(210,184,255,.38);--vortex:#8b3fd6;--lav:#d2b8ff;--ink:#f4eeff;--mute:#b3a4d2;--sun:#ffbe55;
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--void);color:var(--ink);font-family:var(--fb);line-height:1.6;overflow-x:hidden}
+a{color:var(--lav)}
+:focus-visible{outline:2px solid var(--lav);outline-offset:3px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+header{position:absolute;top:0;left:0;right:0;z-index:5}
+header .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:calc(18px + env(safe-area-inset-top,0px))}
+header img{height:34px;display:block}
+header nav{display:flex;gap:10px;align-items:center}
+.pill{font:600 .78rem var(--fd);letter-spacing:.12em;text-transform:uppercase;text-decoration:none;color:var(--ink);border:1px solid var(--line2);border-radius:999px;padding:9px 15px;background:rgba(20,9,40,.5)}
+.pill.gold{border-color:var(--sun);color:#1b0f00;background:linear-gradient(135deg,#ffe0a0,var(--sun))}
+@media (max-width:560px){header img{height:26px}.pill.hide{display:none}}
+.hero{position:relative;text-align:center;padding:130px 20px 40px;overflow:hidden;
+  background:radial-gradient(ellipse 50% 70% at 50% 0%,rgba(139,63,214,.4),transparent 70%),radial-gradient(ellipse 30% 40% at 85% 20%,rgba(255,190,85,.12),transparent 70%),linear-gradient(180deg,#120a20,#05020b)}
+.kick{font:600 .8rem var(--fd);letter-spacing:.32em;text-transform:uppercase;color:var(--sun)}
+.hero h1{font:700 clamp(2.4rem,7vw,4.6rem)/1 var(--fd);margin:14px 0 16px;letter-spacing:-.02em}
+.hero h1 em{font-style:normal;background:linear-gradient(100deg,#fff 10%,var(--lav) 50%,var(--sun));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--mute);font-size:clamp(1rem,2.2vw,1.15rem);max-width:58ch;margin:0 auto}
+.kinds{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:30px 0 34px}
+.kinds button{font:600 .85rem var(--fb);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;background:rgba(5,2,11,.5);color:var(--mute);cursor:pointer}
+.kinds button[aria-pressed=true]{background:var(--lav);color:#1b0a36;border-color:var(--lav)}
+main section{padding:0 0 80px}
+.more{display:flex;justify-content:center;margin-top:34px}
+.big{display:inline-block;font:700 .85rem var(--fd);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-radius:999px;padding:15px 26px;color:#1b0f00;background:linear-gradient(135deg,#ffe0a0,var(--sun));box-shadow:0 12px 40px rgba(255,190,85,.3);border:0;cursor:pointer}
+.big.ghost{color:var(--ink);background:rgba(20,9,40,.6);border:1px solid var(--line2);box-shadow:none}
+.empty{border:1px dashed var(--line2);border-radius:18px;padding:40px 24px;text-align:center;color:var(--mute)}
+.empty b{display:block;color:var(--ink);font:600 1.2rem var(--fd);margin-bottom:6px}
+.band{border-top:1px solid var(--line);padding:70px 0;text-align:center;background:radial-gradient(60% 120% at 50% 0%,rgba(255,190,85,.1),transparent 70%)}
+.band h2{font:700 clamp(1.7rem,4vw,2.4rem)/1.1 var(--fd);margin:0 0 10px}
+.band p{color:var(--mute);max-width:58ch;margin:0 auto 26px}
+.band .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+footer{padding:40px 0 60px;color:var(--mute);font-size:.88rem}
+footer .wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+footer img{height:24px}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><a class="brand" href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
+  <nav><a class="pill hide" href="../galerias/">Galerías</a><a class="pill gold" href="../crear/">Crear experiencia</a></nav></div></header>
+
+<main>
+  <div class="hero">
+    <div class="kick">Explora</div>
+    <h1>Experiencias de la <em>comunidad</em></h1>
+    <p>Realidad aumentada, filtros, juegos y galerías en 3D que la gente creó y eligió mostrar. Ábrelas en tu celular, descarga su póster para imprimirlo o crea la tuya sin programar.</p>
+  </div>
+
+  <section><div class="wrap">
+    <div class="kinds" id="kinds" role="group" aria-label="Tipo de experiencia"></div>
+    <div class="xgrid" id="list" aria-live="polite"></div>
+    <div class="empty" id="empty" hidden><b>Todavía no hay experiencias de este tipo</b>Sé de los primeros: crea una y, en Mi cuenta, activa «Mostrar en Explora».</div>
+    <div class="more"><button class="big ghost" id="more" type="button" hidden>Ver más</button></div>
+  </div></section>
+
+  <section class="band"><div class="wrap">
+    <h2>Muestra la tuya aquí</h2>
+    <p>Tus experiencias son privadas hasta que tú decides. En Mi cuenta, activa «Mostrar en Explora» en las que quieras compartir, y elige tu nombre de usuario para tener tu portal: vorticevr.mx/@tunombre.</p>
+    <div class="cta"><a class="big" href="../crear/">Crear experiencia</a><a class="big ghost" href="../cuenta/">Ir a Mi cuenta</a></div>
+  </div></section>
+</main>
+
+<footer><div class="wrap"><a href="../"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><span>© Vórtice VR · <a href="../privacidad/">Privacidad</a> · <a href="../terminos/">Términos</a></span></div></footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="../assets/poster.js?v=4"></script>
+<script src="../assets/explora.js?v=1"></script>
+<script>
+const $=id=>document.getElementById(id), K=VVRExplora.KINDS;
+let kind=new URLSearchParams(location.search).get("tipo")||"", next=null;
+$("kinds").innerHTML=`<button type="button" data-k="">Todas</button>`+Object.entries(K).map(([k,v])=>`<button type="button" data-k="${k}">${v[0]} ${v[1]}</button>`).join("");
+const mark=()=>$("kinds").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.k===kind)));
+async function load(append){
+  $("more").hidden=true;
+  try{
+    const j=await VVRExplora.load(`?n=24${kind?"&tipo="+kind:""}${append&&next?"&antes="+next:""}`);
+    VVRExplora.render($("list"),j.experiences,{append});
+    next=j.next; $("more").hidden=!next; $("empty").hidden=!!(append||j.experiences.length);
+  }catch(e){ if(!append){ $("list").replaceChildren(); $("empty").hidden=false; } }
+}
+$("kinds").addEventListener("click",e=>{ const b=e.target.closest("[data-k]"); if(!b) return; kind=b.dataset.k; mark(); next=null;
+  history.replaceState(null,"",kind?`?tipo=${kind}`:location.pathname); load(false); });
+$("more").addEventListener("click",()=>load(true));
+mark(); load(false);
+</script>
+<script src="../assets/menu-movil.js"></script>
+<script src="../assets/origen.js"></script>
+<script src="../assets/magia.js" defer></script>
+</body>
+</html>

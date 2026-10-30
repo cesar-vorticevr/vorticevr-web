@@ -120,6 +120,7 @@ table.top td.n,table.top th.n{text-align:right;font-variant-numeric:tabular-nums
       <button type="button" role="tab" data-tab="cupones" aria-selected="false">Cupones</button>
       <button type="button" role="tab" data-tab="comisiones" aria-selected="false">Comisiones</button>
       <button type="button" role="tab" data-tab="vendedores" aria-selected="false">Vendedores</button>
+      <button type="button" role="tab" data-tab="reportes" aria-selected="false">Reportes <span id="repN"></span></button>
     </nav>
 
     <!-- analytics -->
@@ -169,6 +170,13 @@ table.top td.n,table.top th.n{text-align:right;font-variant-numeric:tabular-nums
         <div class="row" style="margin:8px 0 4px"><button class="btn sm" id="cmCredit" type="button">Abonar ahora las disponibles</button><span class="note" id="cmMsg"></span></div>
         <div class="tablewrap"><table class="top" id="cmRef"></table></div></div>
       <div class="card" style="margin-top:12px"><h2>Movimientos recientes</h2><div class="tablewrap"><table class="top" id="cmRows"></table></div></div>
+    </section>
+
+    <!-- Explora: reports of public experiences -->
+    <section id="t-reportes" hidden>
+      <div class="card"><h2>Reportes de Explora</h2>
+        <p class="note">Cualquiera puede reportar una experiencia que se muestra en Explora o en un portal (vorticevr.mx/@nombre); también te llega un correo. <b>Quitar de Explora</b> la oculta de Explora y de su portal (el link sigue funcionando y su dueño ve "Quitada de Explora" en Mi cuenta); si es grave, búscala en Cuentas y pausa la cuenta o bórrala. <b>Listo</b> marca el reporte como revisado.</p>
+        <div class="tablewrap"><table class="top" id="repT"></table></div></div>
     </section>
 
     <!-- sellers -->
@@ -278,7 +286,8 @@ async function toggleExps(el,u){
 // ---- tabs
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",String(x===b)));
-  ["resumen","cuentas","cupones","comisiones","vendedores"].forEach(t=>$("t-"+t).hidden=t!==b.dataset.tab);
+  ["resumen","cuentas","cupones","comisiones","vendedores","reportes"].forEach(t=>$("t-"+t).hidden=t!==b.dataset.tab);
+  if(b.dataset.tab==="reportes") loadReports();
   if(b.dataset.tab==="vendedores") loadSellers();
   if(b.dataset.tab==="cupones") loadCoupons(); if(b.dataset.tab==="comisiones") loadCommissions(); if(b.dataset.tab==="resumen") loadStats(); }));
 
@@ -351,6 +360,20 @@ async function loadCommissions(){
 $("cmCredit").addEventListener("click",async()=>{ $("cmMsg").textContent="Abonando…"; try{ const r=await VVR.call("admin/commissions/credit",{method:"POST"}); $("cmMsg").textContent=r.credited?`Listo: ${r.credited} comisiones, ${mx(r.amount)} abonados como saldo.`:"No había comisiones disponibles de clientes con tarjeta."; loadCommissions(); }catch(e){ $("cmMsg").textContent=e.message; } });
 $("cmCsv").addEventListener("click",async()=>{ const s=VVR.session(); const r=await fetch(VVR.api+"/api/admin/commissions?csv=1",{headers:{Authorization:"Bearer "+s.token}});
   const b=await r.blob(), a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="comisiones-vorticevr.csv"; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); });
+
+// ---- Explora reports: take an experience down (hidden) or back, mark the report as reviewed
+async function loadReports(){
+  const r=await VVR.call("admin/reports"), open=r.reports.filter(x=>!x.done).length;
+  $("repN").textContent=open?"("+open+")":"";
+  $("repT").innerHTML="<tr><th>Fecha</th><th>Experiencia</th><th>Motivo</th><th>Estado</th><th></th></tr>"+(r.reports.length?r.reports.map(x=>`<tr${x.done?' style="opacity:.55"':""}><td>${fmt(x.at)}</td>
+    <td>${x.url?`<a href="${esc(x.url)}" target="_blank" rel="noopener"><b>${esc(x.title||x.slug)}</b></a>`:`<b>${esc(x.slug)}</b> <span class="note">(ya no existe)</span>`}<br><span class="note">${esc(x.email||"")}${x.handle?" · @"+esc(x.handle):""}</span></td>
+    <td>${esc(r.reasons[x.reason]||x.reason)}${x.note?`<br><span class="note">${esc(x.note)}</span>`:""}</td>
+    <td>${x.hidden?'<span class="tag warn">Quitada</span>':x.listed?"En Explora":"Privada"}</td>
+    <td>${x.url?`<button class="btn sm${x.hidden?"":" primary"}" type="button" data-hide="${esc(x.slug)}" data-v="${x.hidden?0:1}">${x.hidden?"Volver a mostrar":"Quitar de Explora"}</button> `:""}${x.done?"":`<button class="btn sm" type="button" data-done="${x.id}">Listo</button>`}</td></tr>`).join(""):"<tr><td colspan='5'>No hay reportes.</td></tr>");
+  $("repT").querySelectorAll("[data-hide]").forEach(b=>b.onclick=async()=>{ await VVR.call("admin/hide/"+b.dataset.hide,{json:{hidden:b.dataset.v==="1"}}); loadReports(); });
+  $("repT").querySelectorAll("[data-done]").forEach(b=>b.onclick=async()=>{ await VVR.call("admin/reports/"+b.dataset.done,{json:{done:true}}); loadReports(); });
+}
+if(location.hash==="#reportes") setTimeout(()=>{ const b=document.querySelector('[data-tab="reportes"]'); if(b) b.click(); },600);
 
 // ---- coupons
 async function loadCoupons(){
