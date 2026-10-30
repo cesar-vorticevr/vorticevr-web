@@ -202,6 +202,13 @@ dialog::backdrop{background:rgba(5,2,11,.75)}
 dialog canvas{width:100%;height:auto;border-radius:12px;background:#fff;display:block;margin:12px 0}
 dialog h2{margin:0;font-size:1.1rem;overflow-wrap:anywhere}
 dialog .row{justify-content:space-between}
+#posterDlg{width:min(92vw,440px)}
+#posterDlg .pnote{margin:6px 0 0;font-size:.85rem;color:var(--mute)}
+#posterDlg .pwrap{position:relative;aspect-ratio:8.5/11;margin:12px 0;border-radius:10px;overflow:hidden;background:#fff}
+#posterDlg canvas{position:absolute;inset:0;width:100%;height:100%;margin:0;border-radius:0}
+#posterDlg #posterWait{position:absolute;inset:0;display:grid;place-items:center;color:#6b279b;font-weight:600;background:#fff}
+#posterDlg #posterWait[hidden]{display:none}
+#posterDlg .row{gap:8px}#posterDlg .row .btn{padding:11px 16px}
 .note{font-size:.85rem;color:var(--mute)}
 .lfoot{text-align:center;color:var(--mute);font-size:.82rem;padding:10px 20px 34px}
 .lfoot a{color:var(--mute)}
@@ -362,12 +369,20 @@ dialog .row{justify-content:space-between}
     <h2 id="qrTitle"></h2>
     <canvas id="qrCanvas" aria-label="Código QR"></canvas>
     <div class="row"><button class="btn sun" id="qrDown" type="button">Descargar QR</button><button class="btn" id="qrClose" type="button">Cerrar</button></div>
+    <button class="btn" id="qrPoster" type="button" style="width:100%;margin-top:10px">Póster para imprimir</button>
+  </dialog>
+  <dialog id="posterDlg">
+    <h2>Póster para imprimir</h2>
+    <p class="pnote">Tamaño carta, listo para imprimir o compartir: tu imagen, el nombre, cómo se usa y el QR.</p>
+    <div class="pwrap"><canvas id="posterCanvas" aria-label="Vista previa del póster"></canvas><span id="posterWait">Preparando tu póster…</span></div>
+    <div class="row"><button class="btn sun" id="posterPdf" type="button" disabled>Descargar PDF</button><button class="btn" id="posterPng" type="button" disabled>Imagen</button><button class="btn" id="posterClose" type="button">Cerrar</button></div>
   </dialog>
 </main>
 <footer class="lfoot"><a href="../privacidad/">Aviso de privacidad</a> · <a href="../terminos/">Términos</a> · <a href="mailto:hola@vorticevr.mx">hola@vorticevr.mx</a></footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="../assets/plataforma.js"></script>
+<script src="../assets/poster.js"></script>
 <script src="../assets/origen.js"></script>
 <script>
 const $=id=>document.getElementById(id);
@@ -627,17 +642,18 @@ function card(exp){
     <div class="bd"><h3>${esc(exp.title)}</h3>
       <div class="meta"><span><b>${nf(exp.views)}</b>${free?`/${nf(vlim)}`:""} ${exp.views===1&&!free?"vista":"vistas"}</span><span>${status}</span></div>
       <div class="acts">${exp.paused?`<button class="btn sun" type="button" data-a="up">Mejorar plan</button>`
-        :`<a class="btn" href="../crear/${exp.kind==="trivia"||exp.kind==="colorear"||exp.kind==="filtro"||exp.kind==="menu"||exp.kind==="links"||exp.kind==="ruleta"||exp.kind==="dispara"||exp.kind==="memorama"||exp.kind==="sopa"||exp.kind==="rompecabezas"||exp.kind==="galeria"?exp.kind+"/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="copy">Copiar link</button>`}
+        :`<a class="btn" href="../crear/${exp.kind==="trivia"||exp.kind==="colorear"||exp.kind==="filtro"||exp.kind==="menu"||exp.kind==="links"||exp.kind==="ruleta"||exp.kind==="dispara"||exp.kind==="memorama"||exp.kind==="sopa"||exp.kind==="rompecabezas"||exp.kind==="galeria"?exp.kind+"/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="poster">Póster</button><button class="btn" type="button" data-a="copy">Copiar link</button>`}
         <button class="btn del" type="button" data-a="del" aria-label="Borrar ${esc(exp.title)}">Borrar</button></div></div>`;
   const on=(a,f)=>{ const b=el.querySelector(`[data-a=${a}]`); if(b) b.addEventListener("click",f); };
   if(exp.demo){ // sample card: only the QR works; the rest explains itself
     el.querySelectorAll("a.url,a.btn").forEach(a=>a.addEventListener("click",e=>{ e.preventDefault(); alert("Es una experiencia de ejemplo: no existe."); }));
-    on("up",()=>openPlans(true)); on("qr",()=>openQR(exp)); on("copy",()=>alert("Es una experiencia de ejemplo: no existe."));
+    on("up",()=>openPlans(true)); on("qr",()=>openQR(exp)); on("poster",()=>openPoster(exp)); on("copy",()=>alert("Es una experiencia de ejemplo: no existe."));
     on("del",()=>{ DATA.experiences=DATA.experiences.filter(x=>x!==exp); renderList(); });
     return el;
   }
   on("up",()=>openPlans(true));
   on("qr",()=>openQR(exp));
+  on("poster",()=>openPoster(exp));
   on("copy",async ev=>{ try{ await navigator.clipboard.writeText(exp.url); ev.target.textContent="¡Copiado!"; setTimeout(()=>ev.target.textContent="Copiar link",1600); }catch(e){ prompt("Copia tu link:",exp.url); } });
   on("del",async()=>{ if(!confirm(`¿Borrar “${exp.title}”? El link y el QR dejarán de funcionar.`)) return;
     try{ await VVR.call("experience/"+exp.slug,{method:"DELETE"}); load(); }catch(e){ alert(e.message); } });
@@ -647,6 +663,17 @@ let qrExp=null;
 function openQR(exp){ qrExp=exp; $("qrTitle").textContent=exp.title; VVR.iconReady.then(()=>VVR.drawQR($("qrCanvas"),exp.url)); $("qrDlg").showModal(); }
 $("qrDown").addEventListener("click",()=>VVR.downloadCanvas($("qrCanvas"),`QR-${qrExp.slug}.png`));
 $("qrClose").addEventListener("click",()=>$("qrDlg").close());
+$("qrPoster").addEventListener("click",()=>{ $("qrDlg").close(); openPoster(qrExp); });
+// printable letter poster (assets/poster.js): image, name, steps for its kind and the QR
+let posterExp=null, posterRun=0;
+async function openPoster(exp){ posterExp=exp; const run=++posterRun;
+  $("posterWait").hidden=false; $("posterWait").textContent="Preparando tu póster…"; $("posterPdf").disabled=$("posterPng").disabled=true; $("posterDlg").showModal();
+  try{ await VVRPoster.draw($("posterCanvas"),exp,{api:VVR.api,base:"../assets/",plan:DATA.plan});
+    if(run!==posterRun) return; $("posterWait").hidden=true; $("posterPdf").disabled=$("posterPng").disabled=false; }
+  catch(e){ if(run===posterRun) $("posterWait").textContent="No se pudo preparar el póster. Intenta de nuevo."; } }
+$("posterPdf").addEventListener("click",()=>VVRPoster.pdf($("posterCanvas"),`poster-${posterExp.slug}.pdf`));
+$("posterPng").addEventListener("click",()=>VVRPoster.png($("posterCanvas"),`poster-${posterExp.slug}.png`));
+$("posterClose").addEventListener("click",()=>{ posterRun++; $("posterDlg").close(); });
 $("pSearch").addEventListener("input",()=>{ shownN=PAGE; renderList(); });
 $("pSort").addEventListener("change",()=>{ shownN=PAGE; renderList(); });
 $("pKinds").addEventListener("click",e=>{ const b=e.target.closest("[data-k]"); if(!b) return; kindSel=b.dataset.k; shownN=PAGE; renderList(); });
