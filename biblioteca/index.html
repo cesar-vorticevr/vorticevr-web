@@ -56,7 +56,7 @@ header nav{display:flex;gap:10px;align-items:center}
 .books{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:22px 18px}
 @media (max-width:480px){.books{grid-template-columns:1fr 1fr;gap:18px 12px}}
 .bk{text-decoration:none;color:var(--ink);display:block}
-.bk .cv{position:relative;aspect-ratio:3/4;border-radius:5px 14px 14px 5px;overflow:hidden;background:linear-gradient(160deg,var(--vortex),#2b1450);box-shadow:0 22px 40px -22px rgba(139,63,214,.9),inset 8px 0 14px -10px rgba(0,0,0,.5);transition:transform .25s}
+.bk .cv{display:block;position:relative;aspect-ratio:3/4;border-radius:5px 14px 14px 5px;overflow:hidden;background:linear-gradient(160deg,var(--vortex),#2b1450);box-shadow:0 22px 40px -22px rgba(139,63,214,.9),inset 8px 0 14px -10px rgba(0,0,0,.5);transition:transform .25s}
 .bk:hover .cv{transform:translateY(-4px) rotate(-1deg)}
 .bk .cv img{width:100%;height:100%;object-fit:cover;display:block}
 .bk .cv::before{content:"";position:absolute;inset:0 auto 0 0;width:9px;background:linear-gradient(90deg,rgba(0,0,0,.35),transparent);z-index:1}
@@ -129,8 +129,10 @@ async function load(append){
   try{
     const q=new URLSearchParams({n:24}); if(edad) q.set("edad",edad); if(tema) q.set("tema",tema); if(append&&next) q.set("antes",next);
     const r=await fetch("../api/biblioteca?"+q), j=await r.json(); if(!r.ok) throw 0;
-    const html=j.books.map(card).join(""); if(append) $("list").insertAdjacentHTML("beforeend",html); else $("list").innerHTML=html;
-    next=j.next; $("more").hidden=!next; $("empty").hidden=!!(append||j.books.length);
+    // Vórtice VR's example book always goes first (when the filters let it)
+    const ej=!append&&(!edad||edad==="6-8")&&(!tema||tema==="cuentos")?`<a class="bk" href="ejemplo/"><span class="cv"><img src="../assets/libros/balam/portada.svg" alt=""><span class="tag pay">Ejemplo</span></span><h3>Balam y el río crecido</h3><span class="by">Un cuento de Vórtice VR</span><span class="meta">6 a 8 años · 12 páginas</span></a>`:"";
+    const html=ej+j.books.map(card).join(""); if(append) $("list").insertAdjacentHTML("beforeend",html); else $("list").innerHTML=html;
+    next=j.next; $("more").hidden=!next; $("empty").hidden=!!(append||j.books.length||ej);
   }catch(e){ if(!append){ $("list").innerHTML=""; $("empty").hidden=false; } }
 }
 $("more").addEventListener("click",()=>load(true));

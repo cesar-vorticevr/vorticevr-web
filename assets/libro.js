@@ -44,25 +44,27 @@ export const PLANTILLAS = {
   libre: { t: "Libre", d: "Un álbum, un recetario, una biografía o lo que quieran: páginas libres.", estilo: "acuarela", pages: [
     P("portada", "portada"), P("imagen", "libre"), P("imagen", "libre"), P("imagen", "libre"), P("autores", "autores")] },
 };
-// a whole story ready to try (the maker's "Llenar con un cuento de ejemplo"): only the illustrations are missing
+// a whole story with its illustrations (art = assets/libros/balam/<art>.svg, made by tools/ilustrar-balam.mjs): the library's
+// example book (/biblioteca/ejemplo/) and the maker's "Llenar con un cuento de ejemplo"
 export const EJEMPLO = {
   name: "Balam y el río crecido", autor: "Un cuento de Vórtice VR", sub: "Un jaguarcito de la selva de Tabasco descubre que pedir ayuda también es ser valiente.",
   tipo: "cuento", edad: "6-8", tema: "cuentos", estilo: "acuarela",
   pages: [
-    P("portada", "portada", { t: "Balam y el río crecido" }),
+    P("portada", "portada", { t: "Balam y el río crecido", art: "portada" }),
     P("texto", "dedicatoria", { t: "Para…", x: "Para todas las niñas y los niños que alguna vez tuvieron miedo y se atrevieron a pedir ayuda." }),
-    P("imagen", "inicio", { t: "Balam", x: "En lo más verde de la selva de Tabasco vivía Balam, un jaguar pequeño con manchas como estrellas. Corría más rápido que nadie y trepaba los árboles más altos. Pero había algo que nunca hacía: meterse al agua." }),
-    P("imagen", "problema", { t: "La gran lluvia", x: "Una tarde llovió y llovió. El río creció tanto que tapó el camino a casa. Del otro lado, su mamá lo llamaba: —¡Balam, ven! Pero Balam se quedó quieto en la orilla. ¡No sabía nadar!" }),
+    P("imagen", "inicio", { art: "inicio", t: "Balam", x: "En lo más verde de la selva de Tabasco vivía Balam, un jaguar pequeño con manchas como estrellas. Corría más rápido que nadie y trepaba los árboles más altos. Pero había algo que nunca hacía: meterse al agua." }),
+    P("imagen", "problema", { art: "lluvia", t: "La gran lluvia", x: "Una tarde llovió y llovió. El río creció tanto que tapó el camino a casa. Del otro lado, su mamá lo llamaba: —¡Balam, ven! Pero Balam se quedó quieto en la orilla. ¡No sabía nadar!" }),
     P("pregunta", "pregunta", { q: { p: "¿Por qué Balam no podía volver a casa?", ops: [{ t: "El río creció y no sabía nadar" }, { t: "Se le olvidó el camino" }, { t: "Estaba jugando con sus amigos" }], ok: 0, why: "La lluvia hizo crecer el río y Balam nunca había aprendido a nadar." } }),
-    P("lado", "aventura", { t: "Doña Tortuga", x: "Por la orilla pasó Doña Tortuga, una pochitoque muy sabia. —¿Por qué lloras, pequeño? —Quiero ir con mi mamá, pero me da miedo el agua —dijo Balam bajito. —Pedir ayuda no es de miedosos —sonrió ella—. Súbete a mi caparazón." }),
-    P("completa", "climax", { t: "Ola tras ola", x: "Balam se agarró fuerte. El agua se movía y pasaban ramas flotando. —Respira y mira hacia adelante —le decía Doña Tortuga. Poco a poco, Balam dejó de temblar y hasta movió sus patas como si nadara." }),
-    P("imagen", "desenlace", { t: "¡Mamá!", x: "En la otra orilla, su mamá lo abrazó con todas sus fuerzas. Balam le dio las gracias a Doña Tortuga y le pidió algo: —Mañana, ¿me enseñas a nadar?" }),
+    P("imagen", "aventura", { art: "tortuga", t: "Doña Tortuga", x: "Por la orilla pasó Doña Tortuga, una pochitoque muy sabia. —¿Por qué lloras, pequeño? —Quiero ir con mi mamá, pero me da miedo el agua —dijo Balam bajito. —Pedir ayuda no es de miedosos —sonrió ella—. Súbete a mi caparazón." }),
+    P("completa", "climax", { art: "olas", t: "Ola tras ola", x: "Balam se agarró fuerte. El agua se movía y pasaban ramas flotando. —Respira y mira hacia adelante —le decía Doña Tortuga. Poco a poco, Balam dejó de temblar y hasta movió sus patas como si nadara." }),
+    P("imagen", "desenlace", { art: "mama", t: "¡Mamá!", x: "En la otra orilla, su mamá lo abrazó con todas sus fuerzas. Balam le dio las gracias a Doña Tortuga y le pidió algo: —Mañana, ¿me enseñas a nadar?" }),
     P("pregunta", "pregunta", { q: { p: "¿Quién ayudó a Balam a cruzar el río?", ops: [{ t: "Doña Tortuga" }, { t: "Un cocodrilo" }, { t: "Nadie, cruzó solo" }], ok: 0, why: "Doña Tortuga, la pochitoque, lo llevó en su caparazón." } }),
     P("juego", "actividad", { t: "Encuentra las palabras del cuento", g: { k: "sopa", words: ["jaguar", "tortuga", "río", "selva", "lluvia", "mamá"] } }),
-    P("fin", "fin", { t: "Fin", x: "Pedir ayuda también es ser valiente." }),
-    P("autores", "autores", { t: "Hecho por", x: "Texto: Vórtice VR\nIlustraciones: ¡las de tu grupo!\nUn cuento de ejemplo para escribir el suyo" }),
+    P("fin", "fin", { art: "fin", t: "Fin", x: "Pedir ayuda también es ser valiente." }),
+    P("autores", "autores", { t: "Hecho por", x: "Texto e ilustraciones: Vórtice VR\nUn cuento de ejemplo para que tu grupo escriba el suyo" }),
   ],
 };
+export const artUrl = k => new URL(`./libros/balam/${k}.svg`, import.meta.url).href;
 export const wordsOf = t => (String(t || "").match(/\S+/g) || []).length;
 
 const FONTS = "https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Bangers&family=Comic+Neue:wght@400;700&family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Fredoka:wght@500;700&family=Nunito:wght@500;700;800&family=Patrick+Hand&display=swap";
@@ -93,7 +95,7 @@ const CSS = `
 @keyframes lbOutB{to{transform:translateX(40%) rotate(4deg);opacity:0}}
 @keyframes lbIn{from{opacity:.4;transform:scale(.97)}}
 .lb-pic{position:relative;flex:1 1 auto;min-height:0;display:grid;place-items:center;overflow:hidden}
-.lb-pic img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.lb-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 68%;display:block;pointer-events:none}
 .lb-pic.fit img{object-fit:contain}
 .lb-txt{flex:none;padding:16px 20px 18px;font-size:calc(var(--lbFs,1.12rem));line-height:1.5;font-weight:600}
 .lb-txt h2{margin:0 0 6px;font:800 1.35em/1.15 var(--lbT);color:var(--lbAcc);letter-spacing:.01em}

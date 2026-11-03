@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>Balam y el río crecido · Biblioteca Vórtice VR</title>
+<meta name="description" content="Un cuento interactivo de ejemplo de Vórtice VR: se lee, se escucha con las palabras iluminadas y trae preguntas y una sopa de letras.">
+<link rel="canonical" href="https://vorticevr.mx/biblioteca/ejemplo/">
+<meta property="og:type" content="book">
+<meta property="og:title" content="Balam y el río crecido · Biblioteca Vórtice VR">
+<meta property="og:description" content="Un jaguarcito de la selva de Tabasco descubre que pedir ayuda también es ser valiente. Léelo, escúchalo y juega.">
+<meta property="og:image" content="https://vorticevr.mx/assets/libros/balam/portada.svg">
+<meta name="theme-color" content="#1b0e2e">
+<link rel="icon" href="../../assets/icono.png">
+<style>html,body{margin:0;height:100%;background:#1b0e2e;overflow:hidden}#ar{position:fixed;inset:0}</style>
+</head>
+<body>
+<!-- The library's example book: assets/libro.js → EJEMPLO, with its illustrations in assets/libros/balam/ (no account, no database) -->
+<div id="ar"></div>
+<script type="module">
+import { run, EJEMPLO, artUrl } from "../../assets/libro.js";
+const pages = EJEMPLO.pages.map((p, i) => ({ id: "ejemplo" + i, ...p, ...(p.art ? { img: "art:" + p.art } : {}) }));
+run({ root: document.getElementById("ar"), cfg: { slug: "ejemplo-balam", title: EJEMPLO.name, libro: { ...EJEMPLO, pages, total: pages.length, locked: 0 }, items: [] },
+  brand: { href: "https://vorticevr.mx/" }, access: { owned: true, venta: { modo: "gratis" } }, url: location.origin + "/biblioteca/ejemplo/",
+  src: id => id && id.startsWith("art:") ? artUrl(id.slice(4)) : "" });
+</script>
+</body>
+</html>

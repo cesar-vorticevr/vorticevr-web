@@ -112,7 +112,7 @@ async function route(request, env, ctx) {
     }
     // a book of the library: vorticevr.mx/biblioteca/<slug>/ (on the main domain, so the account's session works to buy it)
     const bk = url.pathname.match(/^\/biblioteca\/([a-z0-9-]+)\/?$/);
-    if (bk) {
+    if (bk && bk[1] !== "ejemplo") {   // /biblioteca/ejemplo/ is a page of the site: the example book (assets/libro.js → EJEMPLO)
       if (!url.pathname.endsWith("/")) return Response.redirect(url.origin + url.pathname + "/" + url.search, 301);
       return viewerPage(request, env, url);
     }

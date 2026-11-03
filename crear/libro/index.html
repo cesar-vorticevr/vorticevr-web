@@ -149,7 +149,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--lav);outline:none}
         <label class="f" style="margin-top:0">¿Qué tipo de libro es?</label>
         <div class="tpls" id="tpls"></div>
         <p class="note" style="margin:8px 0 0">Cada tipo trae sus páginas en orden y una pregunta que guía qué escribir en cada una. Luego puedes agregar, mover o quitar páginas.</p>
-        <div class="row"><button class="btn sm" type="button" id="ejemplo">✦ Llenar con un cuento de ejemplo</button><span class="note">Para ver cómo queda un libro completo: solo le faltan las ilustraciones.</span></div>
+        <div class="row"><button class="btn sm" type="button" id="ejemplo">✦ Llenar con un cuento de ejemplo</button><span class="note">Para ver cómo queda un libro completo, con ilustraciones, preguntas y un juego.</span></div>
         <label class="f" for="bname">Nombre del libro</label>
         <input type="text" id="bname" maxlength="80" placeholder="Ej. El jaguar que no sabía nadar">
         <label class="f" for="autor">Escrito por</label>
@@ -216,7 +216,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--lav);outline:none}
 <script src="../../assets/marca.js"></script>
 <script src="../../assets/plataforma.js" data-api="../.."></script>
 <script type="module">
-import { run, PLANTILLAS, ROLES, LAYS, ESTILOS, EDADES, TEMAS, JUEGOS, LIMITS, wordsOf, EJEMPLO } from "../../assets/libro.js";
+import { run, PLANTILLAS, ROLES, LAYS, ESTILOS, EDADES, TEMAS, JUEGOS, LIMITS, wordsOf, EJEMPLO, artUrl } from "../../assets/libro.js";
 const $=id=>document.getElementById(id);
 const API=VVR.api;
 const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -248,9 +248,15 @@ function drawTpls(){ $("tpls").innerHTML=Object.entries(PLANTILLAS).map(([k,T])=
 $("tpls").addEventListener("click",e=>{ const b=e.target.closest("[data-t]"); if(!b) return; const k=b.dataset.t; if(k===S.tpl) return;
   const used=S.d.pages.some(p=>(p.x||"").trim()||p.img||p.aud); if(used&&!confirm("Se cambiarán tus páginas por las de este tipo de libro. ¿Seguimos?")) return;
   S.tpl=k; S.d.tipo=k; S.d.estilo=PLANTILLAS[k].estilo; S.d.tema=k==="cuento"?"cuentos":S.d.tema==="cuentos"?"otro":S.d.tema; S.d.pages=fromTpl(k); S.sel=0; drawAll(); changed(); });
-$("ejemplo").addEventListener("click",()=>{
+$("ejemplo").addEventListener("click",async()=>{
   const used=S.d.pages.some(p=>(p.x||"").trim()||p.img||p.aud); if(used&&!confirm("Se cambiarán tus páginas por las del cuento de ejemplo. ¿Seguimos?")) return;
-  const E=EJEMPLO; S.tpl=E.tipo; Object.assign(S.d,{tipo:E.tipo,estilo:E.estilo,edad:E.edad,tema:E.tema,pages:normPages(E.pages)}); S.sel=0;
+  const E=EJEMPLO, pages=normPages(E.pages), b=$("ejemplo"); b.disabled=true; b.textContent="Preparando las ilustraciones…";
+  // its illustrations become pictures of the book, like the ones a person uploads (WebP)
+  for(const p of pages) if(p.art){ try{ const im=await loadImg(artUrl(p.art)), k=1600/Math.max(im.naturalWidth,im.naturalHeight), c=document.createElement("canvas"); c.width=Math.round(im.naturalWidth*k); c.height=Math.round(im.naturalHeight*k);
+    c.getContext("2d").drawImage(im,0,0,c.width,c.height); let bl=await new Promise(r=>c.toBlob(r,"image/webp",.86)); if(!bl||bl.type!=="image/webp") bl=await new Promise(r=>c.toBlob(r,"image/jpeg",.86));
+    const id=rid(); S.files.set(id,{type:"foto",blob:bl,url:URL.createObjectURL(bl),w:c.width,h:c.height}); p.img=id; }catch(e){} delete p.art; }
+  b.disabled=false; b.textContent="✦ Llenar con un cuento de ejemplo";
+  S.tpl=E.tipo; Object.assign(S.d,{tipo:E.tipo,estilo:E.estilo,edad:E.edad,tema:E.tema,pages}); S.sel=0;
   $("bname").value=E.name; $("bname").dataset.last=E.name; $("autor").value=E.autor; $("sub").value=E.sub;
   if(!$("title").dataset.touched&&!S.mine){ $("title").value=E.name; $("title").dispatchEvent(new Event("input")); }
   drawAll(); changed(); });
