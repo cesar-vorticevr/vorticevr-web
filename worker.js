@@ -79,6 +79,7 @@ export default {
     for (let i = 0; i < keys.length; i += 1000) await env.MEDIA.delete(keys.slice(i, i + 1000));
     if (results.length) await env.DB.prepare("DELETE FROM experiences WHERE slug IN (SELECT slug FROM experiences WHERE expires < ? LIMIT 2000)").bind(now).run();
     await env.DB.prepare("DELETE FROM clicks WHERE slug NOT IN (SELECT slug FROM experiences)").run();
+    await env.DB.prepare("DELETE FROM likes WHERE slug NOT IN (SELECT slug FROM experiences)").run();
     await env.DB.prepare("DELETE FROM otp WHERE expires < ?").bind(Date.now() - 864e5).run();
     await env.DB.prepare("DELETE FROM sessions WHERE expires < ?").bind(Date.now()).run();
     await env.DB.prepare("DELETE FROM users WHERE verified = 0 AND created < ?").bind(Date.now() - 7 * 864e5).run();
@@ -258,13 +259,26 @@ async function api(request, env, ctx, url) {
     const n = Math.min(48, Math.max(1, Math.round(+url.searchParams.get("n")) || 24));
     return json(await explore(env, request, { kind: url.searchParams.get("tipo") || "", n, before: +url.searchParams.get("antes") || 0 }), 200, { "Cache-Control": "public, max-age=60" });
   }
-  // a portal (vorticevr.mx/@nombre): the account's name and its public experiences
+  // a portal (vorticevr.mx/@nombre): the account's name, photo and its public experiences (a private profile shows nothing)
   m = path.match(/^\/api\/portal\/([a-z0-9_-]{3,24})$/);
   if (m && M === "GET") {
-    const u = await env.DB.prepare("SELECT name, email, handle, created FROM users WHERE handle = ?").bind(m[1]).first();
+    const u = await env.DB.prepare("SELECT id, name, email, handle, created, avatar, profile_public FROM users WHERE handle = ? AND verified = 1").bind(m[1]).first();
     if (!u) return json({ error: "No existe" }, 404);
+    if (u.profile_public === 0) return json({ private: true, handle: u.handle }, 403, { "Cache-Control": "public, max-age=60" });
     const r = await explore(env, request, { email: u.email, n: 300 });
-    return json({ name: u.name, handle: u.handle, since: u.created, experiences: r.experiences }, 200, { "Cache-Control": "public, max-age=60" });
+    return json({ name: u.name, handle: u.handle, since: u.created, avatar: u.avatar ? avatarUrl(u.id, u.avatar) : null, likes: r.experiences.reduce((a, x) => a + x.likes, 0), experiences: r.experiences }, 200, { "Cache-Control": "public, max-age=60" });
+  }
+  // is this user name free? (sign-up and Mi portal, while typing; yo = my id, so my own name counts as free)
+  if (path === "/api/handle" && M === "GET") {
+    if (!(await limit(env, "hcheck:" + ip, 120, 600e3))) return json({ error: "Espera un momento." }, 429);
+    const h = normHandle(url.searchParams.get("h")), bad = await handleProblem(env, h, +url.searchParams.get("yo") || 0);
+    return json({ handle: h, ok: !bad, error: bad || undefined }, 200, { "Cache-Control": "no-store" });
+  }
+  m = path.match(/^\/api\/avatar\/(\d+)$/);
+  if (m && M === "GET") {
+    const o = await env.MEDIA.get(`avatar/${m[1]}`);
+    if (!o) return new Response("No existe", { status: 404 });
+    return new Response(o.body, { headers: { "Content-Type": (o.httpMetadata && o.httpMetadata.contentType) || "image/jpeg", "Cache-Control": "public, max-age=31536000, immutable" } });
   }
   // "Reportar" on a public experience: an e-mail to CONTACT_TO; an admin takes it down from /admin/ (Reportes)
   m = path.match(/^\/api\/report\/([a-z0-9-]+)$/);
@@ -376,13 +390,17 @@ async function api(request, env, ctx, url) {
     if (!(await limit(env, "reg:" + ip, 8, 3600e3))) return json({ error: "Demasiados intentos. Espera un rato." }, 429);
     const user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(em).first();
     if (user && user.verified) return json({ error: "Ya existe una cuenta con ese correo. Inicia sesión." }, 409);
+    const handle = normHandle(b.handle), hBad = await handleProblem(env, handle, user ? user.id : 0);
+    if (hBad) return json({ error: hBad, field: "handle" }, hBad.startsWith("Tu nombre") || hBad.startsWith("Elige") ? 400 : 409);
     const hash = await hashPassword(pw);
     const code = String(b.ref || "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20);
     const by = code ? await env.DB.prepare("SELECT id, email FROM users WHERE ref_code = ?").bind(code).first() : null;
     const refBy = by && by.email !== em ? by.id : null;   // nobody refers themselves
     const origin = cleanOrigin(b.origin, refBy);
-    if (user) await env.DB.prepare("UPDATE users SET name = ?, pass = ?, ref_by = COALESCE(ref_by, ?), origin = COALESCE(origin, ?) WHERE id = ?").bind(name, hash, refBy, origin, user.id).run();
-    else await env.DB.prepare("INSERT INTO users (email, name, pass, verified, created, ref_by, origin) VALUES (?, ?, ?, 0, ?, ?, ?)").bind(em, name, hash, Date.now(), refBy, origin).run();
+    try {
+      if (user) await env.DB.prepare("UPDATE users SET name = ?, pass = ?, handle = ?, ref_by = COALESCE(ref_by, ?), origin = COALESCE(origin, ?) WHERE id = ?").bind(name, hash, handle, refBy, origin, user.id).run();
+      else await env.DB.prepare("INSERT INTO users (email, name, pass, verified, created, ref_by, origin, handle) VALUES (?, ?, ?, 0, ?, ?, ?, ?)").bind(em, name, hash, Date.now(), refBy, origin, handle).run();
+    } catch { return json({ error: "Alguien más acaba de tomar ese nombre de usuario. Prueba otro.", field: "handle" }, 409); }   // unique index
     return codeResponse(await sendCode(env, em, "verify"));
   }
 
@@ -474,7 +492,7 @@ async function api(request, env, ctx, url) {
     const exp = await env.DB.prepare("SELECT slug, data FROM experiences WHERE slug = ? AND email = ?").bind(m[1], who).first();
     if (!exp) return json({ error: "No encontramos esa experiencia en tu cuenta." }, 404);
     await deleteMedia(env, exp.slug, exp.data);
-    await env.DB.batch([env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(exp.slug), env.DB.prepare("DELETE FROM clicks WHERE slug = ?").bind(exp.slug)]);
+    await env.DB.batch([env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(exp.slug), env.DB.prepare("DELETE FROM clicks WHERE slug = ?").bind(exp.slug), env.DB.prepare("DELETE FROM likes WHERE slug = ?").bind(exp.slug)]);
     return json({ ok: true });
   }
 
@@ -492,15 +510,52 @@ async function api(request, env, ctx, url) {
   if (path === "/api/handle" && M === "POST") {
     if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
     const b = await request.json().catch(() => ({}));
-    const h = String(b.handle || "").trim().toLowerCase().replace(/^@/, "");
-    if (!h) { await env.DB.prepare("UPDATE users SET handle = NULL WHERE id = ?").bind(me.id).run(); return json({ ok: true, handle: null }); }
-    if (!/^[a-z0-9][a-z0-9_-]{2,23}$/.test(h)) return json({ error: "Tu nombre de usuario debe tener de 3 a 24 letras o números (sin espacios ni acentos; puede llevar - o _)." }, 400);
-    if (RESERVED.has(h) || HANDLE_RESERVED.has(h)) return json({ error: "Ese nombre no está disponible. Prueba otro." }, 409);
-    const taken = await env.DB.prepare("SELECT 1 FROM users WHERE handle = ? AND id != ?").bind(h, me.id).first();
-    if (taken) return json({ error: "Alguien más ya usa ese nombre. Prueba otro." }, 409);
+    const h = normHandle(b.handle), bad = await handleProblem(env, h, me.id);   // everyone keeps one: it can change, not go away
+    if (bad) return json({ error: bad }, bad.startsWith("Tu nombre") || bad.startsWith("Elige") ? 400 : 409);
     try { await env.DB.prepare("UPDATE users SET handle = ? WHERE id = ?").bind(h, me.id).run(); }
     catch { return json({ error: "Alguien más ya usa ese nombre. Prueba otro." }, 409); }   // taken at the same moment (unique index)
     return json({ ok: true, handle: h });
+  }
+  // public or private profile: a private one hides the portal and keeps all its experiences out of Explora (each keeps its own setting)
+  if (path === "/api/profile" && M === "POST") {
+    if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
+    const b = await request.json().catch(() => ({}));
+    await env.DB.prepare("UPDATE users SET profile_public = ? WHERE id = ?").bind(b.public ? 1 : 0, me.id).run();
+    return json({ ok: true, public: !!b.public });
+  }
+  // profile photo: a square JPEG/PNG/WebP made by the page (≤ 400 px); DELETE = back to the generic one
+  if (path === "/api/avatar" && (M === "POST" || M === "DELETE")) {
+    if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
+    if (M === "DELETE") { await env.MEDIA.delete(`avatar/${me.id}`); await env.DB.prepare("UPDATE users SET avatar = NULL WHERE id = ?").bind(me.id).run(); return json({ ok: true, avatar: null }); }
+    const type = (request.headers.get("Content-Type") || "").split(";")[0];
+    if (!/^image\/(jpeg|png|webp)$/.test(type)) return json({ error: "Sube una foto JPG, PNG o WebP." }, 400);
+    const buf = await request.arrayBuffer();
+    if (!buf.byteLength || buf.byteLength > 600 * 1024) return json({ error: "La foto pesa demasiado." }, 400);
+    const v = Date.now();
+    await env.MEDIA.put(`avatar/${me.id}`, buf, { httpMetadata: { contentType: type } });
+    await env.DB.prepare("UPDATE users SET avatar = ? WHERE id = ?").bind(v, me.id).run();
+    return json({ ok: true, avatar: avatarUrl(me.id, v) });
+  }
+  // ♥: give or take back a heart on a public experience (only with an account)
+  m = path.match(/^\/api\/like\/([a-z0-9-]+)$/);
+  if (m && M === "POST") {
+    if (!me) return json({ error: "Inicia sesión para darle corazón.", login: true }, 401);
+    const b = await request.json().catch(() => ({})), on = b.on !== false;
+    const ok = await env.DB.prepare("SELECT 1 FROM experiences WHERE slug = ? AND listed = 1 AND hidden = 0").bind(m[1]).first();
+    if (!ok) return json({ error: "Esa experiencia ya no es pública." }, 404);
+    if (on) { if (!(await limit(env, "like:" + me.id, 300, 3600e3))) return json({ error: "Vas muy rápido. Intenta en un rato." }, 429);
+      await env.DB.prepare("INSERT OR IGNORE INTO likes (slug, user_id, at) VALUES (?, ?, ?)").bind(m[1], me.id, Date.now()).run(); }
+    else await env.DB.prepare("DELETE FROM likes WHERE slug = ? AND user_id = ?").bind(m[1], me.id).run();
+    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM likes WHERE slug = ?").bind(m[1]).first();
+    return json({ ok: true, liked: on, likes: n.n });
+  }
+  // which of these already have my heart (Explora is cached for everyone, so this comes apart)
+  if (path === "/api/likes" && M === "GET") {
+    if (!me) return json({ liked: [] });
+    const s = (url.searchParams.get("s") || "").split(",").filter(x => /^[a-z0-9-]{1,40}$/.test(x)).slice(0, 100);
+    if (!s.length) return json({ liked: [] });
+    const { results } = await env.DB.prepare(`SELECT slug FROM likes WHERE user_id = ? AND slug IN (${s.map(() => "?").join(",")})`).bind(me.id, ...s).all();
+    return json({ liked: results.map(r => r.slug) }, 200, { "Cache-Control": "no-store" });
   }
 
   m = path.match(/^\/api\/clicks\/([a-z0-9-]+)$/);
@@ -597,7 +652,8 @@ async function api(request, env, ctx, url) {
       for (const u of uploads) moving.delete(u[0]);
       for (const k of moving) { const o = await env.MEDIA.get(`exp/${mine.slug}/${k}`); if (o) await env.MEDIA.put(`exp/${slug}/${k}`, o.body, { httpMetadata: o.httpMetadata }); }
       await deleteMedia(env, mine.slug, mine.data);
-      await env.DB.batch([env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(mine.slug), env.DB.prepare("DELETE FROM clicks WHERE slug = ?").bind(slug), env.DB.prepare("UPDATE clicks SET slug = ? WHERE slug = ?").bind(slug, mine.slug)]);
+      await env.DB.batch([env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(mine.slug), env.DB.prepare("DELETE FROM clicks WHERE slug = ?").bind(slug), env.DB.prepare("UPDATE clicks SET slug = ? WHERE slug = ?").bind(slug, mine.slug),
+        env.DB.prepare("DELETE FROM likes WHERE slug = ?").bind(slug), env.DB.prepare("UPDATE likes SET slug = ? WHERE slug = ?").bind(slug, mine.slug)]);
     }
     if (image) await env.MEDIA.put(`exp/${slug}/image`, await image.arrayBuffer(), { httpMetadata: { contentType: image.type } });
     if (target) await env.MEDIA.put(`exp/${slug}/target`, await target.arrayBuffer(), { httpMetadata: { contentType: "application/octet-stream" } });
@@ -996,19 +1052,30 @@ function publicKind(row, d) {
   return { slug: row.slug, kind: "ra", title: row.title, img: d.img, place: d.place || "mesa", sparks: d.sparks, scenes: d.scenes || 1, items: itemsOf(d), buttons: d.buttons, expires: row.expires };
 }
 function ownerExp(row, request, env) {
-  return { ...publicExp(row), url: expUrl(row.slug, request, env), created: row.created, updated: row.updated, views: row.views, paused: !!row.paused, forever: row.expires >= FAR, listed: !!row.listed, hidden: !!row.hidden || undefined };
+  return { ...publicExp(row), url: expUrl(row.slug, request, env), created: row.created, updated: row.updated, views: row.views, paused: !!row.paused, forever: row.expires >= FAR, listed: !!row.listed, hidden: !!row.hidden || undefined, likes: row.likes || 0 };
 }
 
 // ---------- Explora and the portals (/@nombre) ----------
 const REPORT_REASONS = { inapropiado: "Contenido inapropiado", spam: "Spam o engaño", derechos: "Usa algo que no es suyo", otro: "Otra cosa" };
 const HANDLE_RESERVED = new Set(["explora", "galerias", "educacion", "talleres", "privacidad", "terminos", "vendedor", "portal", "usuario", "usuarios", "hola", "contacto", "nosotros", "oficial", "anthropic", "claude"]);
+// user names (vorticevr.mx/@nombre): 3 to 24 letters, numbers, "-" or "_"; handleProblem = why it cannot be used, or null
+const normHandle = v => String(v || "").trim().toLowerCase().replace(/^@/, "");
+async function handleProblem(env, h, myId) {
+  if (!h) return "Elige tu nombre de usuario.";
+  if (!/^[a-z0-9][a-z0-9_-]{2,23}$/.test(h)) return "Tu nombre de usuario debe tener de 3 a 24 letras o números (sin espacios ni acentos; puede llevar - o _).";
+  if (RESERVED.has(h) || HANDLE_RESERVED.has(h) || ADMIN_SLUGS.has(h)) return "Ese nombre no está disponible. Prueba otro.";
+  const taken = await env.DB.prepare("SELECT 1 FROM users WHERE handle = ? AND id != ?").bind(h, myId || 0).first();
+  return taken ? "Alguien más ya usa ese nombre. Prueba otro." : null;
+}
+const avatarUrl = (id, v) => `/api/avatar/${id}?v=${v}`;
 // The public experiences (listed, not taken down, live and inside their plan), newest first. kind: one type ("ra" = AR with
 // an image) · email: one account (its portal) · before: "updated" of the last one already shown (next page).
 async function explore(env, request, o) {
   const now = Date.now(), out = [];
-  let sql = `SELECT e.slug, e.title, e.data, e.updated, e.views, u.name, u.handle, u.plan, u.plan_until, u.owner_id, u.quota, o.plan AS o_plan, o.plan_until AS o_until
+  let sql = `SELECT e.slug, e.title, e.data, e.updated, e.views, u.id AS uid, u.name, u.handle, u.avatar, u.plan, u.plan_until, u.owner_id, u.quota, o.plan AS o_plan, o.plan_until AS o_until,
+      (SELECT COUNT(*) FROM likes l WHERE l.slug = e.slug) AS likes
     FROM experiences e LEFT JOIN users u ON u.email = e.email LEFT JOIN users o ON o.id = u.owner_id
-    WHERE e.listed = 1 AND e.hidden = 0 AND e.paused = 0 AND e.expires > ?`;
+    WHERE e.listed = 1 AND e.hidden = 0 AND e.paused = 0 AND e.expires > ? AND COALESCE(u.profile_public, 1) = 1`;
   const args = [now];
   if (o.email) { sql += " AND e.email = ?"; args.push(o.email); }
   if (o.before) { sql += " AND e.updated < ?"; args.push(o.before); }
@@ -1023,7 +1090,8 @@ async function explore(env, request, o) {
     if (out.length >= o.n) { more = true; break; }
     const k = x[x.kind] || {};
     out.push({ slug: r.slug, kind: x.kind, title: (k.name || r.title || "").slice(0, 80), url: expUrl(r.slug, request, env), updated: r.updated, views: r.views,
-      image: x.kind === "trivia" && !(k.logo) ? null : `/m/${r.slug}/image?v=${r.updated}`, by: r.handle ? { name: r.name || r.handle, handle: r.handle } : null });
+      image: x.kind === "trivia" && !(k.logo) ? null : `/m/${r.slug}/image?v=${r.updated}`, likes: r.likes || 0,
+      by: r.handle ? { name: r.name || r.handle, handle: r.handle, avatar: r.avatar ? avatarUrl(r.uid, r.avatar) : null } : null });
   }
   return { experiences: out, next: more ? out[out.length - 1].updated : null };
 }
@@ -1727,6 +1795,9 @@ async function schema(env) {
     env.DB.prepare("CREATE TABLE IF NOT EXISTS stats (day TEXT PRIMARY KEY, views INTEGER DEFAULT 0, signups INTEGER DEFAULT 0, publishes INTEGER DEFAULT 0, contacts INTEGER DEFAULT 0)"),
     // reminder e-mails already sent (cron): "act:<user>" = make your first experience, "exp:<slug>:<expires>" = it expires soon
     env.DB.prepare("CREATE TABLE IF NOT EXISTS mails (k TEXT PRIMARY KEY, at INTEGER)"),
+    // ♥ on public experiences: one per account (only signed-in people can give one)
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS likes (slug TEXT NOT NULL, user_id INTEGER NOT NULL, at INTEGER, PRIMARY KEY (slug, user_id))"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS likes_user ON likes (user_id)"),
   ]);
   await migrate(env);
   schemaReady = true;
@@ -1785,6 +1856,10 @@ async function migrate(env) {
   if (!/\bhandle\b/.test(sql.users)) {   // the account's portal: vorticevr.mx/@handle
     try { await env.DB.prepare("ALTER TABLE users ADD COLUMN handle TEXT").run(); }
     catch (e) { console.error("migración portal", e); }
+  }
+  if (!/\bprofile_public\b/.test(sql.users)) {   // the portal: profile photo (its version) and a public or private profile
+    try { await env.DB.batch(["avatar INTEGER", "profile_public INTEGER DEFAULT 1"].map(c => env.DB.prepare(`ALTER TABLE users ADD COLUMN ${c}`))); }
+    catch (e) { console.error("migración perfil", e); }
   }
   await env.DB.batch([
     env.DB.prepare("CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT NOT NULL, reason TEXT, note TEXT, at INTEGER, done INTEGER DEFAULT 0)"),
@@ -1855,15 +1930,15 @@ async function auth(request, env) {
   const t = bearer(request);
   if (!t) return null;
   const row = await env.DB.prepare(`SELECT u.id, u.email, u.name, u.verified, u.plan, u.plan_until, u.plan_note, u.stripe_customer, u.stripe_sub, u.stripe_status, u.stripe_mode,
-      u.owner_id, u.quota, u.extra_exp, u.temp_pw, u.ref_code, u.ref_by, u.seller, u.payout, u.first_pub, u.handle, o.plan AS o_plan, o.plan_until AS o_until, o.name AS o_name, o.email AS o_email, s.expires
+      u.owner_id, u.quota, u.extra_exp, u.temp_pw, u.ref_code, u.ref_by, u.seller, u.payout, u.first_pub, u.handle, u.avatar, u.profile_public, o.plan AS o_plan, o.plan_until AS o_until, o.name AS o_name, o.email AS o_email, s.expires
     FROM sessions s JOIN users u ON u.id = s.user_id LEFT JOIN users o ON o.id = u.owner_id WHERE s.token = ?`).bind(await sha256hex(t)).first();
   return row && row.expires > Date.now() && row.verified ? row : null;
 }
 async function account(env, request, user) {
-  const { results } = await env.DB.prepare("SELECT * FROM experiences WHERE email = ? AND expires > ? ORDER BY paused, created DESC").bind(user.email, Date.now()).all();
+  const { results } = await env.DB.prepare("SELECT e.*, (SELECT COUNT(*) FROM likes l WHERE l.slug = e.slug) AS likes FROM experiences e WHERE e.email = ? AND e.expires > ? ORDER BY e.paused, e.created DESC").bind(user.email, Date.now()).all();
   const plan = planOf(user), lim = await limitOf(env, user, plan);
   const team = plan.member ? { role: "member", owner: plan.owner } : plan.seats ? { role: "owner", seats: plan.seats, total: plan.exp, mine: lim } : undefined;
-  return { user: { name: user.name, email: user.email, handle: user.handle || null }, experiences: results.map(r => ownerExp(r, request, env)), plan, limit: lim, team,
+  return { user: { id: user.id, name: user.name, email: user.email, handle: user.handle || null, avatar: user.avatar ? avatarUrl(user.id, user.avatar) : null, public: user.profile_public !== 0 }, experiences: results.map(r => ownerExp(r, request, env)), plan, limit: lim, team,
     referral: { eligible: REF.plans.includes(plan.id) && !plan.member, discount: !!user.ref_by && !user.stripe_sub ? REF.discount : 0 },
     tempPassword: !!user.temp_pw || undefined, admin: isAdmin(env, user) || undefined, seller: !!(sellerOf(user) && sellerOf(user).active) || undefined, billing: billingInfo(env, user) };
 }
