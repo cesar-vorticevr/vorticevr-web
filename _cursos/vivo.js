@@ -40,6 +40,12 @@ export async function migrateVivo(env) {
     try { await env.DB.batch(["payout_id TEXT", "refund_payout_id TEXT"].map(c => env.DB.prepare(`ALTER TABLE c_orders ADD COLUMN ${c}`))); }
     catch (e) { console.error("migración cortes", e.message); }
   }
+  // the books (_libros/api.js) sell and receive support through c_orders too: item_kind = "libro" | "apoyo"
+  const row2 = await env.DB.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'c_orders'").first();
+  if (row2 && !/\bitem_kind\b/.test(row2.sql)) {
+    try { await env.DB.batch(["item_kind TEXT", "item_title TEXT"].map(c => env.DB.prepare(`ALTER TABLE c_orders ADD COLUMN ${c}`))); }
+    catch (e) { console.error("migración libros", e.message); }
+  }
 }
 
 // ---------- editions: what the sales page, the checkout and the player need ----------
@@ -257,7 +263,7 @@ export async function vivoApi(request, env, ctx, url, path, h, user, lib) {
     if (!user) return json({ error: "Inicia sesión.", login: true }, 401);
     if (path === "/api/cursos/ventas" && M === "GET") {
       const [{ results: orders }, { results: pays }, { results: coupons }, { results: courses }] = await Promise.all([
-        env.DB.prepare(`SELECT o.id, o.amount_mxn, o.commission_mxn, o.instructor_net_mxn, o.status, o.paid_at, o.payout_id, o.coupon_id, c.title, u.name FROM c_orders o JOIN c_courses c ON c.id = o.course_id JOIN users u ON u.id = o.student_id
+        env.DB.prepare(`SELECT o.id, o.amount_mxn, o.commission_mxn, o.instructor_net_mxn, o.status, o.paid_at, o.payout_id, o.coupon_id, COALESCE(c.title, CASE o.item_kind WHEN 'apoyo' THEN 'Apoyo · ' || o.item_title ELSE 'Libro · ' || o.item_title END) AS title, u.name FROM c_orders o LEFT JOIN c_courses c ON c.id = o.course_id JOIN users u ON u.id = o.student_id
           WHERE o.instructor_id = ? AND o.status IN ('paid', 'refunded') ORDER BY o.paid_at DESC LIMIT 300`).bind(user.id).all(),
         env.DB.prepare("SELECT * FROM c_payouts WHERE instructor_id = ? ORDER BY period_start DESC LIMIT 48").bind(user.id).all(),
         env.DB.prepare("SELECT k.*, c.title FROM c_coupons k LEFT JOIN c_courses c ON c.id = k.course_id WHERE k.instructor_id = ? ORDER BY k.created_at DESC").bind(user.id).all(),

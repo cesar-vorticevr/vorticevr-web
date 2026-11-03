@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Biblioteca de libros interactivos | Vórtice VR</title>
+<meta name="description" content="Libros cortos que se leen, se escuchan y se juegan en el celular: cuentos y libros educativos hechos por escuelas, maestros y autores, con la voz de quien los escribió y preguntas entre sus páginas.">
+<link rel="canonical" href="https://vorticevr.mx/biblioteca/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Vórtice VR">
+<meta property="og:locale" content="es_MX">
+<meta property="og:url" content="https://vorticevr.mx/biblioteca/">
+<meta property="og:title" content="Biblioteca Vórtice VR · Libros que se leen, se escuchan y se juegan">
+<meta property="og:description" content="Cuentos y libros educativos interactivos hechos por escuelas y autores. Ábrelos en tu celular o escribe el tuyo.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[{"@type":"CollectionPage","@id":"https://vorticevr.mx/biblioteca/","url":"https://vorticevr.mx/biblioteca/","name":"Biblioteca Vórtice VR","description":"Libros interactivos que se leen, se escuchan y se juegan, hechos por escuelas y autores.","inLanguage":"es-MX","isPartOf":{"@type":"WebSite","url":"https://vorticevr.mx/","name":"Vórtice VR"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Vórtice VR","item":"https://vorticevr.mx/"},{"@type":"ListItem","position":2,"name":"Biblioteca","item":"https://vorticevr.mx/biblioteca/"}]}]}
+</script>
+<style>
+/* "Biblioteca Vórtice VR": the public interactive books (/api/biblioteca: the ones their authors chose to show), by age and
+   topic, 24 at a time. Each one opens at /biblioteca/<slug>/ (assets/libro.js). */
+:root{--void:#05020b;--line:rgba(210,184,255,.16);--line2:rgba(210,184,255,.38);--vortex:#8b3fd6;--lav:#d2b8ff;--ink:#f4eeff;--mute:#b3a4d2;--sun:#ffbe55;
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--void);color:var(--ink);font-family:var(--fb);line-height:1.6;overflow-x:hidden}
+a{color:var(--lav)}
+:focus-visible{outline:2px solid var(--lav);outline-offset:3px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+@media (max-width:480px){.wrap{padding:0 16px}}
+header{position:absolute;top:0;left:0;right:0;z-index:5}
+header .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:calc(18px + env(safe-area-inset-top,0px))}
+header img{height:34px;display:block}
+header nav{display:flex;gap:10px;align-items:center}
+.pill{font:600 .78rem var(--fd);letter-spacing:.12em;text-transform:uppercase;text-decoration:none;color:var(--ink);border:1px solid var(--line2);border-radius:999px;padding:9px 15px;background:rgba(20,9,40,.5)}
+.pill.gold{border-color:var(--sun);color:#1b0f00;background:linear-gradient(135deg,#ffe0a0,var(--sun))}
+@media (max-width:560px){header img{height:26px}.pill.hide{display:none}}
+.hero{position:relative;text-align:center;padding:130px 20px 34px;overflow:hidden;
+  background:radial-gradient(ellipse 50% 70% at 50% 0%,rgba(139,63,214,.4),transparent 70%),radial-gradient(ellipse 30% 40% at 15% 30%,rgba(255,190,85,.14),transparent 70%),linear-gradient(180deg,#120a20,#05020b)}
+.kick{font:600 .8rem var(--fd);letter-spacing:.32em;text-transform:uppercase;color:var(--sun)}
+.hero h1{font:700 clamp(2.3rem,7vw,4.4rem)/1 var(--fd);margin:14px 0 16px;letter-spacing:-.02em}
+.hero h1 em{font-style:normal;background:linear-gradient(100deg,#fff 10%,var(--lav) 50%,var(--sun));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--mute);font-size:clamp(1rem,2.2vw,1.15rem);max-width:60ch;margin:0 auto}
+.feats{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:22px 0 0;padding:0;list-style:none}
+.feats li{font:600 .82rem var(--fd);border:1px solid var(--line2);border-radius:999px;padding:7px 13px;background:rgba(20,9,40,.5)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 22px}
+.filters button{font:600 .85rem var(--fb);color:var(--ink);background:rgba(20,9,40,.6);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
+.filters select{font:600 .85rem var(--fb);color:var(--ink);background:rgba(20,9,40,.8);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;margin-left:auto}
+@media (max-width:640px){.filters{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}.filters>*{flex:none}.filters select{margin-left:0}}
+.books{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:22px 18px}
+@media (max-width:480px){.books{grid-template-columns:1fr 1fr;gap:18px 12px}}
+.bk{text-decoration:none;color:var(--ink);display:block}
+.bk .cv{position:relative;aspect-ratio:3/4;border-radius:5px 14px 14px 5px;overflow:hidden;background:linear-gradient(160deg,var(--vortex),#2b1450);box-shadow:0 22px 40px -22px rgba(139,63,214,.9),inset 8px 0 14px -10px rgba(0,0,0,.5);transition:transform .25s}
+.bk:hover .cv{transform:translateY(-4px) rotate(-1deg)}
+.bk .cv img{width:100%;height:100%;object-fit:cover;display:block}
+.bk .cv::before{content:"";position:absolute;inset:0 auto 0 0;width:9px;background:linear-gradient(90deg,rgba(0,0,0,.35),transparent);z-index:1}
+.bk .tag{position:absolute;top:8px;right:8px;font:700 .68rem var(--fd);letter-spacing:.06em;border-radius:999px;padding:3px 9px;background:rgba(5,2,11,.75);border:1px solid rgba(255,255,255,.25)}
+.bk .tag.pay{background:var(--sun);color:#2b1300;border-color:var(--sun)}
+.bk h3{font:600 1rem/1.25 var(--fd);margin:10px 0 2px}
+.bk .by{font-size:.84rem;color:var(--mute);display:block;line-height:1.35}
+.bk .meta{font-size:.76rem;color:var(--mute);margin-top:4px;display:block}
+.more{display:flex;justify-content:center;margin-top:34px}
+.big{display:inline-block;font:700 .85rem var(--fd);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-radius:999px;padding:15px 26px;color:#1b0f00;background:linear-gradient(135deg,#ffe0a0,var(--sun));box-shadow:0 12px 40px rgba(255,190,85,.3);border:0;cursor:pointer}
+.big.ghost{color:var(--ink);background:rgba(20,9,40,.6);border:1px solid var(--line2);box-shadow:none}
+.empty{border:1px dashed var(--line2);border-radius:18px;padding:40px 24px;text-align:center;color:var(--mute)}
+.empty b{display:block;color:var(--ink);font:600 1.2rem var(--fd);margin-bottom:6px}
+main section{padding:0 0 80px}
+.band{border-top:1px solid var(--line);padding:70px 0;text-align:center;background:radial-gradient(60% 120% at 50% 0%,rgba(255,190,85,.1),transparent 70%)}
+.band h2{font:700 clamp(1.7rem,4vw,2.4rem)/1.1 var(--fd);margin:0 0 10px}
+.band p{color:var(--mute);max-width:60ch;margin:0 auto 26px}
+.band .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+footer{padding:40px 0 60px;color:var(--mute);font-size:.88rem}
+footer .wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+footer img{height:24px}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><a class="brand" href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
+  <nav><a class="pill hide" href="../explora/">Explora</a><a class="pill gold" href="../crear/libro/">Escribir un libro</a></nav></div></header>
+
+<main>
+  <div class="hero">
+    <div class="kick">Biblioteca Vórtice VR</div>
+    <h1>Libros que se leen, <em>se escuchan y se juegan</em></h1>
+    <p>Cuentos y libros educativos cortos, hechos por escuelas, maestros y autores. Se hojean en el celular, se escuchan con la voz de quien los escribió y traen preguntas y juegos entre sus páginas.</p>
+    <ul class="feats"><li>🔊 Se escuchan</li><li>✨ Las palabras se iluminan</li><li>🔠 Letra grande o para aprender a leer</li><li>🧩 Preguntas y juegos</li></ul>
+  </div>
+
+  <section><div class="wrap">
+    <div class="filters" id="filters"></div>
+    <div class="books" id="list" aria-live="polite"></div>
+    <div class="empty" id="empty" hidden><b>Todavía no hay libros aquí</b>Sé de los primeros: escribe uno con tu grupo o tu familia y publícalo en la biblioteca.</div>
+    <div class="more"><button class="big ghost" id="more" type="button" hidden>Ver más</button></div>
+  </div></section>
+
+  <section class="band"><div class="wrap">
+    <h2>Escribe un libro con tu grupo</h2>
+    <p>Elige si es cuento, educativo o libre y llena sus páginas una por una: con las ilustraciones de los alumnos, sus voces leyendo y preguntas para quien lo lea. Puedes dejarlo gratis, venderlo o recibir apoyos para su autor.</p>
+    <div class="cta"><a class="big" href="../crear/libro/">Escribir un libro</a><a class="big ghost" href="../?tema=escuela#contacto">Para escuelas</a></div>
+  </div></section>
+</main>
+
+<footer><div class="wrap"><a href="../"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><span>© Vórtice VR · <a href="../privacidad/">Privacidad</a> · <a href="../terminos/">Términos</a></span></div></footer>
+
+<script>
+const $=id=>document.getElementById(id);
+const EDADES={"":"Todos","3-5":"3 a 5 años","6-8":"6 a 8 años","9-12":"9 a 12 años"};
+const TEMAS={"":"Todos los temas",cuentos:"Cuentos",lectura:"Lectura y lenguaje",ciencias:"Ciencias",naturaleza:"Naturaleza",historia:"Historia y cultura",valores:"Valores y emociones",matematicas:"Matemáticas",otro:"Otro"};
+const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const Q=new URLSearchParams(location.search);
+let edad=Q.get("edad")||"", tema=Q.get("tema")||"", next=null;
+function drawFilters(){
+  $("filters").innerHTML=Object.entries(EDADES).map(([k,t])=>`<button type="button" data-e="${k}" aria-pressed="${edad===k}">${t}</button>`).join("")
+    +`<select id="tema" aria-label="Tema">${Object.entries(TEMAS).map(([k,t])=>`<option value="${k}"${tema===k?" selected":""}>${t}</option>`).join("")}</select>`;
+  $("filters").querySelectorAll("[data-e]").forEach(b=>b.onclick=()=>{ edad=b.dataset.e; drawFilters(); go(); });
+  $("tema").onchange=()=>{ tema=$("tema").value; go(); };
+}
+function go(){ const q=new URLSearchParams(); if(edad) q.set("edad",edad); if(tema) q.set("tema",tema); history.replaceState(null,"",q.toString()?"?"+q:location.pathname); next=null; load(false); }
+const card=b=>`<a class="bk" href="${esc(b.url)}"><span class="cv"><img src="${esc(b.image)}" alt="" loading="lazy">${b.venta.modo==="venta"?`<span class="tag pay">$${b.venta.precio}</span>`:`<span class="tag">Gratis</span>`}</span>
+  <h3>${esc(b.name)}</h3>${b.autor?`<span class="by">${esc(b.autor)}</span>`:b.by?`<span class="by">por @${esc(b.by.handle)}</span>`:""}<span class="meta">${esc(EDADES[b.edad]||"Para todos")} · ${b.pages} páginas</span></a>`;
+async function load(append){
+  $("more").hidden=true;
+  try{
+    const q=new URLSearchParams({n:24}); if(edad) q.set("edad",edad); if(tema) q.set("tema",tema); if(append&&next) q.set("antes",next);
+    const r=await fetch("../api/biblioteca?"+q), j=await r.json(); if(!r.ok) throw 0;
+    const html=j.books.map(card).join(""); if(append) $("list").insertAdjacentHTML("beforeend",html); else $("list").innerHTML=html;
+    next=j.next; $("more").hidden=!next; $("empty").hidden=!!(append||j.books.length);
+  }catch(e){ if(!append){ $("list").innerHTML=""; $("empty").hidden=false; } }
+}
+$("more").addEventListener("click",()=>load(true));
+drawFilters(); load(false);
+</script>
+<script src="../assets/menu-movil.js"></script>
+<script src="../assets/origen.js"></script>
+<script src="../assets/magia.js" defer></script>
+</body>
+</html>

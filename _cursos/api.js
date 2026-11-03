@@ -103,6 +103,8 @@ async function enrollmentOf(env, user, courseId) {
 const LIB = { uid, settings, courseBySlug, ready: schema, onboardingSlug: ONBOARDING_SLUG };
 // Stripe events of the courses (worker.js's webhook asks first; true = it was ours)
 export const cursosStripeEvent = (env, ctx, ev, h) => cursosWebhook(env, ctx, ev, h, LIB);
+// the books (_libros/api.js) keep their sales in c_orders: they need these tables ready
+export const cursosReady = env => schema(env);
 // the 15-minute cron of worker.js: reminders before live sessions
 export async function cursosTick(env, h) { await schema(env); return cursosCron(env, h); }
 

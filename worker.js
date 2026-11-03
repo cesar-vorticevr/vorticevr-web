@@ -8,10 +8,11 @@
 //    Requiere bindings DB (D1) y MEDIA (R2); secretos RESEND_API_KEY y SESSION_SECRET.
 //    Sin bindings, el sitio funciona igual y la API responde 503.
 //  - Plataforma de cursos (_cursos/): cursos.vorticevr.mx → vorticevr.mx/cursos/…, /api/cursos/* → _cursos/api.js.
-import { cursosApi, cursosStripeEvent, cursosTick } from "./_cursos/api.js";
+import { cursosApi, cursosStripeEvent, cursosTick, cursosReady } from "./_cursos/api.js";
+import { librosApi, librosWebhook, cleanLibro, publicLibro, lockedMediaOk, newBookId, LIBRO } from "./_libros/api.js";
 
 const ROOT_DEFAULT = "vorticevr.mx";
-const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear","create","ra","x","e","m","preview","app","apps","static","assets","cdn","dev","test","staging","beta","demo","vorticevr","vortice","soporte","support","help","ayuda","blog","shop","tienda","login","cuenta","account","johara","tarjeta","proyectos","status","docs","cursos"]);
+const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear","create","ra","x","e","m","preview","app","apps","static","assets","cdn","dev","test","staging","beta","demo","vorticevr","vortice","soporte","support","help","ayuda","blog","shop","tienda","login","cuenta","account","johara","tarjeta","proyectos","status","docs","cursos","biblioteca"]);
 const LIMITS = { imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, codeMinutes: 10, codeTries: 5, sessionDays: 30, pausedDays: 30 };
 // Plans. exp = active experiences; days = how long each one lasts (0 = while the plan is active);
 // views = most times each experience can be opened (Gratis only, so a viral free QR cannot run up costs);
@@ -109,6 +110,12 @@ async function route(request, env, ctx) {
       if (!url.pathname.endsWith("/")) return Response.redirect(url.origin + url.pathname + "/" + url.search, 301);
       return viewerPage(request, env, url);
     }
+    // a book of the library: vorticevr.mx/biblioteca/<slug>/ (on the main domain, so the account's session works to buy it)
+    const bk = url.pathname.match(/^\/biblioteca\/([a-z0-9-]+)\/?$/);
+    if (bk) {
+      if (!url.pathname.endsWith("/")) return Response.redirect(url.origin + url.pathname + "/" + url.search, 301);
+      return viewerPage(request, env, url);
+    }
     // a portal: vorticevr.mx/@nombre (assets in /portal/; the page reads the name from the address)
     const at = url.pathname.match(/^\/@([A-Za-z0-9_-]{3,24})\/?$/);
     if (at) {
@@ -187,9 +194,11 @@ function rangeFromBuffer(request, baseHeaders, buf) {
 
 // ---------- experience files from R2 ----------
 async function media(request, env, url) {
-  const m = url.pathname.match(/^\/m\/([a-z0-9-]+)\/(video|target|image|model|logo|i\/[a-z0-9]{6,16})$/);
+  const m = url.pathname.match(/^\/m\/([a-z0-9-]+)\/(video|target|image|model|logo|[ip]\/[a-z0-9]{6,16})$/);
   if (!m || !env.MEDIA || !env.DB) return new Response("No encontrado", { status: 404 });
   const [, slug, kind] = m;
+  // p/<id> = a file of a book's pages for sale: only with the signature that /api/libro/<slug> gives to whoever may read it
+  if (kind.startsWith("p/") && !(await lockedMediaOk(env, slug, kind.slice(2), url.searchParams.get("k")))) return new Response("No encontrado", { status: 404 });
   await schema(env);
   const exp = await env.DB.prepare("SELECT expires, paused FROM experiences WHERE slug = ?").bind(slug).first();
   if (!exp || exp.expires < Date.now() || (exp.paused && kind !== "image")) return new Response("No encontrado", { status: 404 }); // a paused one keeps its thumbnail for the dashboard
@@ -236,6 +245,8 @@ async function deleteMedia(env, slug, data) {
 // what the courses platform (_cursos/) uses from here: accounts, mail, Stripe
 // (a function: several of these are consts defined further down)
 const cursosH = () => ({ auth, json, isAdmin, sendMail, shell, esc, btnMail, fecha, stripe, stripeMode, limit, siteUrl, clabeOk, CLABE_BANKS });
+// and what the books (_libros/) use
+const librosH = () => ({ ...cursosH(), planOf, cursosReady });
 
 async function api(request, env, ctx, url) {
   if (!env.DB || !env.MEDIA) return json({ error: "La plataforma todavía se está configurando." }, 503);
@@ -244,6 +255,7 @@ async function api(request, env, ctx, url) {
   const ip = request.headers.get("CF-Connecting-IP") || "local";
   const M = request.method;
   if (path.startsWith("/api/cursos/")) return cursosApi(request, env, ctx, url, path, cursosH());
+  if (path === "/api/biblioteca" || path.startsWith("/api/libro/")) { const r = await librosApi(request, env, ctx, url, path, librosH()); if (r) return r; }
 
   // public: one experience's settings
   let m = path.match(/^\/api\/exp\/([a-z0-9-]+)$/);
@@ -311,7 +323,7 @@ async function api(request, env, ctx, url) {
   // link page: one tap on a button; prize wheel: spins, each prize that came out, "lose", review… (navigator.sendBeacon); only counted while it is live
   m = path.match(/^\/api\/click\/([a-z0-9-]+)\/([a-z0-9]{1,16})$/);
   if (m && M === "POST") {
-    ctx.waitUntil(env.DB.prepare("INSERT INTO clicks (slug, id, n) SELECT slug, ?, 1 FROM experiences WHERE slug = ? AND paused = 0 AND expires > ? AND (data LIKE '%\"kind\":\"links\"%' OR data LIKE '%\"kind\":\"ruleta\"%' OR data LIKE '%\"kind\":\"dispara\"%' OR data LIKE '%\"kind\":\"memorama\"%' OR data LIKE '%\"kind\":\"sopa\"%' OR data LIKE '%\"kind\":\"rompecabezas\"%' OR data LIKE '%\"kind\":\"galeria\"%') ON CONFLICT(slug, id) DO UPDATE SET n = n + 1")
+    ctx.waitUntil(env.DB.prepare("INSERT INTO clicks (slug, id, n) SELECT slug, ?, 1 FROM experiences WHERE slug = ? AND paused = 0 AND expires > ? AND (data LIKE '%\"kind\":\"links\"%' OR data LIKE '%\"kind\":\"ruleta\"%' OR data LIKE '%\"kind\":\"dispara\"%' OR data LIKE '%\"kind\":\"memorama\"%' OR data LIKE '%\"kind\":\"sopa\"%' OR data LIKE '%\"kind\":\"rompecabezas\"%' OR data LIKE '%\"kind\":\"galeria\"%' OR data LIKE '%\"kind\":\"libro\"%') ON CONFLICT(slug, id) DO UPDATE SET n = n + 1")
       .bind(m[2], m[1], Date.now()).run().catch(e => console.error("click", e.message)));
     return new Response(null, { status: 204 });
   }
@@ -459,6 +471,7 @@ async function api(request, env, ctx, url) {
     const raw = await request.text();
     if (!(await stripeVerify(env, raw, request.headers.get("Stripe-Signature")))) return json({ error: "Firma inválida" }, 400);
     const ev = JSON.parse(raw), o = (ev.data && ev.data.object) || {};
+    if (await librosWebhook(env, ctx, ev, librosH())) return json({ received: true });   // a book bought or its author supported (metadata.vvr = "libro")
     if (await cursosStripeEvent(env, ctx, ev, cursosH())) return json({ received: true });   // Premier and course purchases (metadata.vvr)
     let sub = null;
     if (ev.type === "checkout.session.completed" && o.mode === "subscription") sub = o.subscription;
@@ -561,7 +574,9 @@ async function api(request, env, ctx, url) {
       if (other) return json({ error: "Solo puedes tener una galería por cuenta. Edita la que ya tienes desde Mi cuenta.", galeria: other.slug }, 409);
     }
     const data = cleanMeta(meta, P);
-    if (data.error) return json({ error: data.error }, 400);
+    if (data.error) return json({ error: data.error, plan: data.plan || undefined }, 400);
+    // a book keeps its id (its sales are tied to it) while it is edited; a new one gets a new one
+    if (data.kind === "libro") data.libro.id = (mine && (JSON.parse(mine.data || "{}").libro || {}).id) || newBookId();
     const image = form.get("image"), target = form.get("target"), qr = form.get("qr");
     // its own brand logo instead of Vórtice VR (plans with brand): uploaded now or kept from the version being edited
     const logo = form.get("logo"), newLogo = logo && typeof logo !== "string" ? logo : null;
@@ -578,13 +593,13 @@ async function api(request, env, ctx, url) {
     const isNew = !mine;
     if (data.kind === "trivia" && data.trivia.logo && !image && !(mine && (JSON.parse(mine.data || "{}").trivia || {}).logo)) data.trivia.logo = false;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
-    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu" && data.kind !== "links" && data.kind !== "ruleta" && data.kind !== "dispara" && data.kind !== "memorama" && data.kind !== "sopa" && data.kind !== "rompecabezas" && data.kind !== "galeria" && data.kind !== "superficie"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
+    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu" && data.kind !== "links" && data.kind !== "ruleta" && data.kind !== "dispara" && data.kind !== "memorama" && data.kind !== "sopa" && data.kind !== "rompecabezas" && data.kind !== "galeria" && data.kind !== "superficie" && data.kind !== "libro"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
     if (target && target.size > LIMITS.targetBytes) return json({ error: "La imagen no se pudo preparar. Intenta con otra." }, 400);
     // each element's file: uploaded now (field f_<id>) or kept from the version being edited (same id and type)
     const oldItems = mine ? itemsOf(JSON.parse(mine.data || "{}")) : [];
     const oldById = new Map(oldItems.map(i => [i.id, i]));
-    const uploads = [];
+    const uploads = [], relock = [];
     let total = 0;
     for (const it of data.items) {
       if (it.type === "text" || it.type === "sticker" || (it.type === "pantalla" && it.key)) continue;   // a face filter's stickers and ready-made screen pictures have no upload
@@ -592,17 +607,19 @@ async function api(request, env, ctx, url) {
       if (file && typeof file !== "string") {
         if (it.type === "video" && (file.size > P.videoMB * 1048576 || !/^video\/(mp4|webm|quicktime)$/.test(file.type))) return json({ error: `Cada video debe ser MP4, WebM o MOV de máximo ${P.videoMB} MB.` }, 400);
         if (["image", "pintura", "pantalla", "foto", "pagina"].includes(it.type) && (file.size > ITEM_LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(file.type))) return json({ error: "Cada imagen debe ser JPG, PNG o WebP de máximo 5 MB." }, 400);
-        if (it.type === "audio" && (file.size > ITEM_LIMITS.audioBytes || !/^audio\/(mpeg|mp3|mp4|x-m4a|m4a|aac)$/.test(file.type))) return json({ error: "Cada audio debe ser MP3 o M4A de máximo 10 MB." }, 400);
+        if (it.type === "audio" && (file.size > ITEM_LIMITS.audioBytes || !(/^audio\/(mpeg|mp3|mp4|x-m4a|m4a|aac)$/.test(file.type) || (data.kind === "libro" && /^audio\/(webm|ogg)$/.test(file.type))))) return json({ error: "Cada audio debe ser MP3 o M4A de máximo 10 MB." }, 400);   // a book's narration can be recorded right in the browser (WebM/Ogg)
         if (it.type === "model") {
           if (file.size > P.modelMB * 1048576) return json({ error: `Cada objeto 3D debe pesar máximo ${P.modelMB} MB.` }, 400);
           if (new TextDecoder().decode(new Uint8Array(await file.slice(0, 4).arrayBuffer())) !== "glTF") return json({ error: "Los objetos 3D deben ser archivos GLB." }, 400);
         }
-        it.file = "i/" + it.id; it.bytes = file.size;
+        it.file = (it.lock ? "p/" : "i/") + it.id; it.bytes = file.size;   // p/ = a file of a book's pages for sale (served signed)
         uploads.push([it.file, file, it.type === "model" ? "model/gltf-binary" : file.type]);
       } else {
         const o = oldById.get(it.id);
         if (!o || !o.file || o.type !== it.type) return json({ error: "Falta el archivo de uno de tus elementos. Vuelve a subirlo." }, 400);
         it.file = o.file; it.bytes = o.bytes || 0;
+        // a book's page that went from free to for sale (or back): its file moves between i/ and p/
+        if (data.kind === "libro" && /^[ip]\//.test(o.file) && o.file.slice(0, 2) !== (it.lock ? "p/" : "i/")) relock.push([o.file, it.file = (it.lock ? "p/" : "i/") + it.id]);
       }
       total += it.bytes;
     }
@@ -615,6 +632,7 @@ async function api(request, env, ctx, url) {
       const stale = await env.DB.prepare("SELECT slug, data FROM experiences WHERE slug = ?").bind(slug).first();
       if (stale) { await deleteMedia(env, slug, stale.data); await env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(slug).run(); }
     }
+    for (const [from, to] of relock) { const o = await env.MEDIA.get(`exp/${mine.slug}/${from}`); if (o) await env.MEDIA.put(`exp/${mine.slug}/${to}`, o.body, { httpMetadata: o.httpMetadata }); }
     // changing the name moves the files that stay
     if (mine && mine.slug !== slug) {
       const moving = new Set(data.items.map(i => i.file).filter(Boolean));
@@ -622,6 +640,7 @@ async function api(request, env, ctx, url) {
       for (const u of uploads) moving.delete(u[0]);
       for (const k of moving) { const o = await env.MEDIA.get(`exp/${mine.slug}/${k}`); if (o) await env.MEDIA.put(`exp/${slug}/${k}`, o.body, { httpMetadata: o.httpMetadata }); }
       await deleteMedia(env, mine.slug, mine.data);
+      if (relock.length) await env.MEDIA.delete(relock.map(r => `exp/${mine.slug}/${r[1]}`));
       await env.DB.batch([env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(mine.slug), env.DB.prepare("DELETE FROM clicks WHERE slug = ?").bind(slug), env.DB.prepare("UPDATE clicks SET slug = ? WHERE slug = ?").bind(slug, mine.slug)]);
     }
     if (image) await env.MEDIA.put(`exp/${slug}/image`, await image.arrayBuffer(), { httpMetadata: { contentType: image.type } });
@@ -644,7 +663,7 @@ async function api(request, env, ctx, url) {
     if (isNew && !me.first_pub) await env.DB.prepare("UPDATE users SET first_pub = ? WHERE id = ? AND first_pub IS NULL").bind(now, me.id).run();
     const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(slug).first();
     const out = ownerExp(row, request, env);
-    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "links" ? "Tu página de links está lista" : data.kind === "ruleta" ? "Tu ruleta de premios está lista" : data.kind === "dispara" ? "Tu juego Dispara y gana está listo" : data.kind === "memorama" ? "Tu memorama está listo" : data.kind === "sopa" ? "Tu sopa de letras está lista" : data.kind === "rompecabezas" ? "Tu rompecabezas está listo" : data.kind === "galeria" ? "Tu galería en 3D está lista" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
+    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "links" ? "Tu página de links está lista" : data.kind === "ruleta" ? "Tu ruleta de premios está lista" : data.kind === "dispara" ? "Tu juego Dispara y gana está listo" : data.kind === "memorama" ? "Tu memorama está listo" : data.kind === "sopa" ? "Tu sopa de letras está lista" : data.kind === "rompecabezas" ? "Tu rompecabezas está listo" : data.kind === "libro" ? "Tu libro interactivo está listo" : data.kind === "galeria" ? "Tu galería en 3D está lista" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
     return json({ ok: true, experience: out });
   }
 
@@ -1006,6 +1025,7 @@ function publicExp(row) {
   return out;
 }
 function publicKind(row, d) {
+  if (d.kind === "libro") return publicLibro(row, d);   // only its free pages (_libros/api.js)
   if (d.kind === "trivia") return { slug: row.slug, kind: "trivia", title: row.title, trivia: d.trivia, buttons: d.buttons, expires: row.expires };
   if (d.kind === "filtro") return { slug: row.slug, kind: "filtro", title: row.title, filtro: d.filtro, items: d.items || [], buttons: d.buttons, expires: row.expires };
   if (d.kind === "colorear") return { slug: row.slug, kind: "colorear", title: row.title, img: d.img, color: d.color, buttons: d.buttons, expires: row.expires };
@@ -1021,12 +1041,14 @@ function publicKind(row, d) {
   return { slug: row.slug, kind: "ra", title: row.title, img: d.img, place: d.place || "mesa", sparks: d.sparks, scenes: d.scenes || 1, items: itemsOf(d), buttons: d.buttons, expires: row.expires };
 }
 function ownerExp(row, request, env) {
-  return { ...publicExp(row), url: expUrl(row.slug, request, env), created: row.created, updated: row.updated, views: row.views, paused: !!row.paused, forever: row.expires >= FAR, listed: !!row.listed, hidden: !!row.hidden || undefined };
+  const pub = publicExp(row);
+  if (pub.kind === "libro") { const d = JSON.parse(row.data || "{}"); pub.libro = d.libro; pub.items = d.items || []; }   // its author edits all the pages
+  return { ...pub, url: pub.kind === "libro" ? `${new URL(request.url).origin}/biblioteca/${row.slug}/` : expUrl(row.slug, request, env), created: row.created, updated: row.updated, views: row.views, paused: !!row.paused, forever: row.expires >= FAR, listed: !!row.listed, hidden: !!row.hidden || undefined };
 }
 
 // ---------- Explora and the portals (/@nombre) ----------
 const REPORT_REASONS = { inapropiado: "Contenido inapropiado", spam: "Spam o engaño", derechos: "Usa algo que no es suyo", otro: "Otra cosa" };
-const HANDLE_RESERVED = new Set(["explora", "galerias", "educacion", "talleres", "privacidad", "terminos", "vendedor", "portal", "usuario", "usuarios", "hola", "contacto", "nosotros", "oficial", "anthropic", "claude"]);
+const HANDLE_RESERVED = new Set(["explora", "galerias", "educacion", "talleres", "privacidad", "terminos", "vendedor", "portal", "biblioteca", "libros", "usuario", "usuarios", "hola", "contacto", "nosotros", "oficial", "anthropic", "claude"]);
 // The public experiences (listed, not taken down, live and inside their plan), newest first. kind: one type ("ra" = AR with
 // an image) · email: one account (its portal) · before: "updated" of the last one already shown (next page).
 async function explore(env, request, o) {
@@ -1047,7 +1069,7 @@ async function explore(env, request, o) {
     if (x.kind === "galeria" && !galleryPlan(P)) continue;       // a gallery needs a paid plan
     if (out.length >= o.n) { more = true; break; }
     const k = x[x.kind] || {};
-    out.push({ slug: r.slug, kind: x.kind, title: (k.name || r.title || "").slice(0, 80), url: expUrl(r.slug, request, env), updated: r.updated, views: r.views,
+    out.push({ slug: r.slug, kind: x.kind, title: (k.name || r.title || "").slice(0, 80), url: x.kind === "libro" ? `${new URL(request.url).origin}/biblioteca/${r.slug}/` : expUrl(r.slug, request, env), updated: r.updated, views: r.views,
       image: x.kind === "trivia" && !(k.logo) ? null : `/m/${r.slug}/image?v=${r.updated}`, by: r.handle ? { name: r.name || r.handle, handle: r.handle } : null });
   }
   return { experiences: out, next: more ? out[out.length - 1].updated : null };
@@ -1670,6 +1692,10 @@ function cleanMeta(m, P) {
   if (m.kind === "ruleta") {
     const rl = cleanRuleta(m.ruleta, m.items);
     return rl.error ? rl : { kind: "ruleta", title, ruleta: rl.ruleta, items: rl.items, buttons: {} };
+  }
+  if (m.kind === "libro") {
+    const lb = cleanLibro(m.libro, m.items, P);
+    return lb.error ? lb : { kind: "libro", title, libro: lb.libro, items: lb.items, buttons: {} };
   }
   if (m.kind === "memorama") {
     const mm = cleanMemorama(m.memorama, m.items);

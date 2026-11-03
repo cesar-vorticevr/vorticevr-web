@@ -9,7 +9,7 @@
   const KINDS = {
     ra: ["🪄", "Realidad aumentada"], superficie: ["🛋️", "En tu espacio"], filtro: ["🕶️", "Filtro"], dispara: ["🎯", "Dispara y gana"],
     colorear: ["🎨", "Colorear"], trivia: ["🤔", "Trivia"], ruleta: ["🎡", "Ruleta"], memorama: ["🃏", "Memorama"], sopa: ["🔤", "Sopa de letras"],
-    rompecabezas: ["🧩", "Rompecabezas"], galeria: ["🖼️", "Galería 3D"], menu: ["🍽️", "Menú"], links: ["🔗", "Links"],
+    rompecabezas: ["🧩", "Rompecabezas"], galeria: ["🖼️", "Galería 3D"], libro: ["📖", "Libro"], menu: ["🍽️", "Menú"], links: ["🔗", "Links"],
   };
   const REASONS = [["inapropiado", "Contenido inapropiado"], ["spam", "Spam o engaño"], ["derechos", "Usa algo que no es suyo"], ["otro", "Otra cosa"]];
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));

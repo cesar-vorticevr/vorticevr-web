@@ -403,7 +403,7 @@ export async function pagosApi(request, env, ctx, url, path, h, user, lib) {
         certificate_signer_name: s.certificate_signer_name || "", certificate_signer_title: s.certificate_signer_title || "", stripe: env.STRIPE_SECRET_KEY ? h.stripeMode(env) : "" });
     }
     if (path === "/api/cursos/admin/ventas" && M === "GET") {
-      const { results } = await env.DB.prepare(`SELECT o.*, c.title, u.name, u.email FROM c_orders o JOIN c_courses c ON c.id = o.course_id JOIN users u ON u.id = o.student_id WHERE o.status != 'pending' ORDER BY o.paid_at DESC LIMIT 200`).all();
+      const { results } = await env.DB.prepare(`SELECT o.*, COALESCE(c.title, CASE o.item_kind WHEN 'apoyo' THEN 'Apoyo · ' || o.item_title ELSE 'Libro · ' || o.item_title END) AS title, u.name, u.email FROM c_orders o LEFT JOIN c_courses c ON c.id = o.course_id JOIN users u ON u.id = o.student_id WHERE o.status != 'pending' ORDER BY o.paid_at DESC LIMIT 200`).all();
       return json({ list: results.map(o => ({ id: o.id, course: o.title, student: o.name, email: o.email, amount: o.amount_mxn, commission: o.commission_mxn, net: o.instructor_net_mxn, status: o.status, paid_at: o.paid_at, mode: o.stripe_mode, cfdi: o.cfdi_requested ? JSON.parse(o.cfdi_data || "null") : null })) });
     }
     return json({ error: "No encontrado" }, 404);

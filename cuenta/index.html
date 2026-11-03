@@ -405,7 +405,7 @@ dialog .row{justify-content:space-between}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="../assets/plataforma.js"></script>
-<script src="../assets/poster.js?v=4"></script>
+<script src="../assets/poster.js?v=5"></script>
 <script src="../assets/origen.js"></script>
 <script>
 const $=id=>document.getElementById(id);
@@ -417,7 +417,7 @@ function refCode(){ try{ const r=JSON.parse(localStorage.getItem(REFKEY)||"null"
 (async()=>{ const c=refCode(); if(!c) return; try{ const r=await (await fetch(`${VVR.api}/api/ref/${encodeURIComponent(c)}`)).json();
   if(r.ok){ const b=$("rInvite"); b.hidden=false; b.innerHTML=`✦ <b>${esc(r.name)}</b> te invitó: tendrás <b>${r.discount}% de descuento</b> en tu primer pago de cualquier plan.`; } }catch(e){} })();
 // siguiente=crear/ruleta (the segment pages) goes straight to that creator after signing in; siguiente=cursos/… back to the courses
-const NEXT=/^cursos(\/[a-z0-9-]+)*$/.test(Q.get("siguiente")||"")?"../"+Q.get("siguiente")+"/":/^crear\/[a-z]+$/.test(Q.get("siguiente")||"")?"../"+Q.get("siguiente")+"/":Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":Q.get("siguiente")==="vendedor"?"../vendedor/":null;
+const NEXT=/^(cursos(\/[a-z0-9-]+)*|biblioteca\/[a-z0-9-]+)$/.test(Q.get("siguiente")||"")?"../"+Q.get("siguiente")+"/":/^crear\/[a-z]+$/.test(Q.get("siguiente")||"")?"../"+Q.get("siguiente")+"/":Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":Q.get("siguiente")==="vendedor"?"../vendedor/":null;
 // public plans: [id, name, monthly price, yearly price, what it includes] (a year is ~10 months; IVA included)
 const PLANS=[["gratis","Gratis",0,0,"Para probar la magia",["Hasta <b>3</b> experiencias de cualquier tipo","Realidad aumentada: hasta <b>3</b> elementos por imagen (video, foto, texto o 3D)","Activa <b>15 días</b>","Hasta <b>1,000</b> vistas","Videos de hasta 25 MB"]],
   ["pro","Pro",499,4990,"Para crear y vender experiencias",["<b>100</b> experiencias de cualquier tipo","Realidad aumentada: hasta <b>15</b> elementos por imagen","Cámbialas cuando quieras","Sin vencimiento mientras pagues","Vistas ilimitadas","Videos de hasta <b>50 MB</b>"]],
@@ -644,7 +644,7 @@ $("pUpgrade").addEventListener("click",()=>{ menu(false); openPlans(true); });
 $("plansClose").addEventListener("click",()=>openPlans(false));
 
 // kinds of experience (data.kind; "ra" when there is none)
-const KINDS={ra:["🪄","Realidad aumentada con imagen"],superficie:["🛋️","Realidad aumentada en superficie"],colorear:["🎨","Colorea mi dibujo"],trivia:["🤔","Trivia"],filtro:["🕶️","Filtro"],menu:["🍽️","Menú"],links:["🔗","Links"],ruleta:["🎡","Ruleta"],dispara:["🎯","Dispara y gana"],memorama:["🃏","Memorama"],sopa:["🔤","Sopa de letras"],rompecabezas:["🧩","Rompecabezas"],galeria:["🖼️","Galería 3D"]};
+const KINDS={ra:["🪄","Realidad aumentada con imagen"],superficie:["🛋️","Realidad aumentada en superficie"],colorear:["🎨","Colorea mi dibujo"],trivia:["🤔","Trivia"],filtro:["🕶️","Filtro"],menu:["🍽️","Menú"],links:["🔗","Links"],ruleta:["🎡","Ruleta"],dispara:["🎯","Dispara y gana"],memorama:["🃏","Memorama"],sopa:["🔤","Sopa de letras"],rompecabezas:["🧩","Rompecabezas"],galeria:["🖼️","Galería 3D"],libro:["📖","Libro"]};
 const kindOf=x=>KINDS[x.kind]?x.kind:"ra";
 let kindSel="all";
 // experiences: kind chips, search, sort and a "paused" filter; 24 at a time
@@ -677,7 +677,7 @@ function card(exp){
     <div class="bd"><h3>${esc(exp.title)}</h3>
       <div class="meta"><span><b>${nf(exp.views)}</b>${free?`/${nf(vlim)}`:""} ${exp.views===1&&!free?"vista":"vistas"}</span><span>${status}</span></div>
       <div class="acts">${exp.paused?`<button class="btn sun" type="button" data-a="up">Mejorar plan</button>`
-        :`<a class="btn" href="../crear/${exp.kind==="trivia"||exp.kind==="colorear"||exp.kind==="filtro"||exp.kind==="menu"||exp.kind==="links"||exp.kind==="ruleta"||exp.kind==="dispara"||exp.kind==="memorama"||exp.kind==="sopa"||exp.kind==="rompecabezas"||exp.kind==="galeria"?exp.kind+"/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="poster">Póster</button><button class="btn" type="button" data-a="copy">Copiar link</button><button class="btn pub${exp.listed?" on":""}" type="button" data-a="pub" title="${exp.listed?"Se muestra en Explora y en tu portal. Toca para hacerla privada.":"Solo la ve quien tenga el link. Toca para mostrarla en Explora y en tu portal."}">${exp.listed?"🌐 Pública":"🔒 Privada"}</button>`}
+        :`<a class="btn" href="../crear/${exp.kind==="trivia"||exp.kind==="colorear"||exp.kind==="filtro"||exp.kind==="menu"||exp.kind==="links"||exp.kind==="ruleta"||exp.kind==="dispara"||exp.kind==="memorama"||exp.kind==="sopa"||exp.kind==="rompecabezas"||exp.kind==="galeria"||exp.kind==="libro"?exp.kind+"/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="poster">Póster</button><button class="btn" type="button" data-a="copy">Copiar link</button><button class="btn pub${exp.listed?" on":""}" type="button" data-a="pub" title="${exp.listed?"Se muestra en Explora y en tu portal. Toca para hacerla privada.":"Solo la ve quien tenga el link. Toca para mostrarla en Explora y en tu portal."}">${exp.listed?"🌐 Pública":"🔒 Privada"}</button>`}
         <button class="btn del" type="button" data-a="del" aria-label="Borrar ${esc(exp.title)}">Borrar</button></div></div>`;
   const on=(a,f)=>{ const b=el.querySelector(`[data-a=${a}]`); if(b) b.addEventListener("click",f); };
   if(exp.demo){ // sample card: only the QR works; the rest explains itself

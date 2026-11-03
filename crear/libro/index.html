@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Crea tu libro interactivo · Vórtice VR</title>
+<meta name="description" content="Un libro digital corto que se lee, se escucha y se juega: con tus ilustraciones, tu voz, preguntas y juegos entre sus páginas. Para la biblioteca de Vórtice VR, gratis, a la venta o con apoyo para su autor.">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../../assets/icono.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Book maker: the kind of book (its ready-made sequence of pages), its pages (layout, text, picture, the author's voice,
+   questions and games), how it is shared (free, for sale or with support for its author), title and link; a phone with
+   the live book on the right (above on a phone). The reader itself is assets/libro.js (also at the link). */
+:root{--void:#05020b;--panel:rgba(20,9,40,.7);--line:rgba(190,150,255,.2);--line2:rgba(190,150,255,.45);--vortex:#8b3fd6;--vortex-d:#5a1f8f;--lav:#d2b8ff;--ink:#f2ecff;--mute:#a99bcb;--sun:#ffbe55;--ok:#74e8ba;--bad:#ff8a9e;
+  --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,-apple-system,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:radial-gradient(80% 50% at 70% 0%,rgba(139,63,214,.22),transparent 70%),var(--void);color:var(--ink);font-family:var(--fb);font-size:16px;line-height:1.55;min-height:100vh}
+a{color:var(--lav)}
+:focus-visible{outline:2px solid var(--lav);outline-offset:3px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1180px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 8px}
+header img{height:38px;width:auto;display:block}
+@media (max-width:480px){header img{height:28px}}
+header a.back{font-family:var(--fd);font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--mute)}
+header .acts{display:flex;align-items:center;gap:14px}
+.mybtn{font-family:var(--fd);font-weight:600;letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;border:1px solid var(--line2);border-radius:999px;padding:9px 14px;background:rgba(139,63,214,.2);color:var(--ink);cursor:pointer;text-decoration:none}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+@media (max-width:480px){.wrap{padding:0 16px 80px}}
+.hero{padding:28px 0 26px}
+.kick{font-family:var(--fd);font-size:.78rem;letter-spacing:.26em;text-transform:uppercase;color:var(--sun);font-weight:600}
+h1{font-family:var(--fd);font-size:clamp(2rem,5vw,3.2rem);line-height:1.02;margin:8px 0 10px;text-wrap:balance}
+.hero p{margin:0;color:var(--mute);max-width:64ch}
+.allx{display:inline-flex;align-items:center;gap:6px;margin:12px 16px 0 0;font:600 .85rem var(--fd);color:var(--lav);text-decoration:none}
+.step{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:20px;margin-bottom:16px}
+@media (max-width:480px){.step{padding:16px}}
+.step h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font-family:var(--fd);font-size:1.2rem}
+.step h2 .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--fm);font-size:.85rem;background:rgba(139,63,214,.3);border:1px solid var(--line2);flex:none}
+.step h2 .n.done{background:var(--ok);color:#0b2a1e;border-color:var(--ok)}
+.step>p.hint{margin:0 0 14px;color:var(--mute);font-size:.92rem}
+.bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--vortex),var(--sun));transition:width .2s}
+.msg{font-size:.88rem;margin-top:8px}
+.msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+label.f{display:block;font-size:.8rem;font-family:var(--fd);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:12px 0 6px}
+input[type=text],input[type=number],textarea,select{width:100%;font:inherit;color:var(--ink);background:rgba(5,2,11,.7);border:1px solid var(--line2);border-radius:10px;padding:10px 12px}
+textarea{resize:vertical;min-height:70px}
+input:focus,textarea:focus,select:focus{border-color:var(--lav);outline:none}
+.slugrow{display:flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:rgba(5,2,11,.7);overflow:hidden}
+.slugrow span{padding:11px 0 11px 12px;color:var(--mute);white-space:nowrap;font-family:var(--fm);font-size:.9rem}
+.slugrow input{border:0;background:transparent;border-radius:0;padding-left:2px;min-width:0}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{font:600 .85rem var(--fb);color:var(--ink);background:rgba(5,2,11,.6);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--vortex);border-color:var(--lav)}
+.seg button:disabled{opacity:.45;cursor:not-allowed}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--fd);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:.85rem;border:1px solid var(--line2);border-radius:999px;padding:13px 22px;color:var(--ink);background:rgba(20,9,40,.6);cursor:pointer;text-decoration:none}
+.btn.sm{padding:8px 13px;font-size:.72rem}
+.btn.primary{background:linear-gradient(135deg,var(--vortex),var(--vortex-d));border-color:var(--lav);box-shadow:0 0 26px rgba(139,63,214,.45)}
+.btn.rec{border-color:#ff7a8a;color:#ffd0d6}
+.btn.rec.on{background:#e2453c;color:#fff;animation:pulse 1.2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 6px rgba(226,69,60,.3)}}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.note{font-size:.85rem;color:var(--mute)}
+.legal{font-size:.8rem;color:var(--mute);margin-top:10px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+@media (max-width:560px){.two{grid-template-columns:1fr}}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:28px;align-items:start}
+.side{position:sticky;top:16px}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.side{position:static;order:-1}}
+/* kinds of book */
+.tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.tpls button{border:2px solid var(--line);border-radius:14px;background:rgba(5,2,11,.5);color:var(--ink);cursor:pointer;padding:12px;text-align:left;font:inherit}
+.tpls button b{display:block;font:700 1rem var(--fd);margin-bottom:4px}
+.tpls button span{font-size:.84rem;color:var(--mute);line-height:1.35;display:block}
+.tpls button[aria-pressed="true"]{border-color:var(--sun);box-shadow:0 0 0 3px rgba(255,190,85,.2)}
+/* pages */
+.pages{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.pg{position:relative;border:2px solid var(--line);border-radius:10px;background:#fbf3e2;color:#2d1d0e;aspect-ratio:3/4;overflow:hidden;cursor:pointer;padding:0;text-align:left;font:inherit}
+.pg img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9}
+.pg .lbl{position:absolute;left:0;right:0;bottom:0;background:rgba(27,10,54,.86);color:#fff;font:600 .66rem var(--fd);padding:4px 6px;line-height:1.2}
+.pg .num{position:absolute;top:4px;left:4px;background:rgba(27,10,54,.86);color:var(--sun);font:700 .66rem var(--fm);border-radius:6px;padding:1px 5px}
+.pg .tx{position:absolute;inset:22px 6px 30px;font-size:.6rem;line-height:1.25;overflow:hidden}
+.pg.sel{border-color:var(--sun);box-shadow:0 0 0 3px rgba(255,190,85,.3)}
+.pg.err{border-color:var(--bad)}
+.pg.lockd::after{content:"$";position:absolute;top:4px;right:4px;background:var(--sun);color:#2b1300;font:800 .62rem var(--fd);border-radius:6px;padding:1px 5px}
+.addpg{border:1.5px dashed var(--line2);border-radius:10px;background:none;color:var(--lav);font:600 .85rem var(--fd);cursor:pointer;aspect-ratio:3/4}
+.addmenu{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding:12px;border-radius:12px;border:1px solid var(--line2);background:rgba(20,9,40,.95)}
+.ed{margin-top:16px;padding:16px;border-radius:14px;border:1px solid var(--line2);background:rgba(5,2,11,.45)}
+.ed h3{margin:0 0 4px;font:700 1.05rem var(--fd);display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.guide{margin:8px 0 4px;padding:10px 12px;border-radius:12px;background:rgba(255,190,85,.08);border:1px solid rgba(255,190,85,.35);font-size:.9rem}
+.guide b{color:var(--sun)}
+.wc{font-size:.8rem;color:var(--mute);text-align:right;margin-top:4px}
+.wc.bad{color:var(--bad)}
+.picbox{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.picbox .th{width:84px;height:84px;border-radius:12px;background:rgba(139,63,214,.18);border:1.5px dashed var(--line2);display:grid;place-items:center;overflow:hidden;color:var(--lav);font:600 .7rem var(--fd);text-align:center}
+.picbox .th img{width:100%;height:100%;object-fit:cover}
+.ops{display:grid;gap:8px}
+.op{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+.op input[type=radio]{width:20px;height:20px;accent-color:var(--ok)}
+.x{width:30px;height:30px;border-radius:8px;border:1px solid transparent;background:none;color:var(--mute);cursor:pointer}
+.x:hover{border-color:var(--bad);color:var(--bad)}
+.pairs{display:grid;gap:8px}
+.pair{display:grid;grid-template-columns:1fr 1fr auto;gap:8px}
+.pair.one{grid-template-columns:1fr auto}
+.tools{display:flex;gap:6px;flex-wrap:wrap}
+.lockbox{padding:12px;border-radius:12px;background:rgba(255,190,85,.08);border:1px solid rgba(255,190,85,.35);font-size:.9rem;margin-top:10px}
+.cnt{font-size:.82rem;color:var(--mute);margin-top:8px}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.stats div{flex:1;min-width:110px;padding:10px 14px;border-radius:12px;background:rgba(255,190,85,.07);border:1px solid rgba(255,190,85,.35)}
+.stats b{display:block;font:700 1.3rem var(--fd);color:var(--sun)}
+.stats span{font-size:.82rem;color:var(--mute)}
+.issues{margin:0 0 12px;padding-left:20px;color:var(--bad);font-size:.9rem}
+.check{display:flex;gap:10px;align-items:flex-start;margin-top:12px;font-size:.92rem}
+.check input{width:20px;height:20px;accent-color:var(--vortex);margin-top:2px}
+/* phone */
+.pv{border:1px solid var(--line2);border-radius:18px;background:#120826;padding:14px}
+.pv h3{margin:0 0 10px;font-family:var(--fd);font-size:1rem;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pv h3 small{font:500 .78rem var(--fb);color:var(--mute)}
+.phone{position:relative;margin:0 auto;width:100%;max-width:360px;height:min(72vh,700px);border-radius:34px;border:9px solid #1d1430;background:#000;overflow:hidden;box-shadow:0 30px 60px -30px rgba(139,63,214,.7)}
+@media (max-width:900px){.phone{height:min(70vh,620px)}}
+.phone .screen{position:absolute;inset:0}
+</style>
+</head>
+<body>
+<header><a href="../../" aria-label="Vórtice VR, inicio"><img src="../../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><div class="acts"><a class="mybtn" href="../../cuenta/">Mi cuenta</a><a class="back" href="../../">← Sitio</a></div></header>
+<main class="wrap">
+  <div class="hero">
+    <span class="kick" id="kick">Gratis · prueba de 15 días</span>
+    <h1>Crea tu libro interactivo</h1>
+    <p>Un libro corto que se lee, se escucha y se juega en el celular: con tus ilustraciones, tu voz contando la historia, preguntas y juegos entre sus páginas. Ideal para escribirlo en clase entre todos y para quien está aprendiendo a leer. Va a la biblioteca de Vórtice VR, gratis, a la venta o con apoyo para su autor.</p>
+    <a class="allx" href="../">← Todas las experiencias</a><a class="allx" href="../../biblioteca/">Ver la biblioteca →</a>
+  </div>
+  <div class="grid">
+    <div>
+      <section class="step" id="full" hidden>
+        <h2>Ya usaste todas tus experiencias</h2>
+        <p class="hint" id="fullText"></p>
+        <div class="row"><a class="btn" href="../../cuenta/#planes">Ver planes</a><a class="btn" href="../../cuenta/">Ir a mi cuenta</a></div>
+      </section>
+
+      <section class="step" id="statsBox" hidden>
+        <h2>✦ Cómo va tu libro</h2>
+        <div class="stats" id="stats"></div>
+      </section>
+
+      <section class="step" id="s1">
+        <h2><span class="n" id="n1">1</span>Tu libro</h2>
+        <label class="f" style="margin-top:0">¿Qué tipo de libro es?</label>
+        <div class="tpls" id="tpls"></div>
+        <p class="note" style="margin:8px 0 0">Cada tipo trae sus páginas en orden y una pregunta que guía qué escribir en cada una. Luego puedes agregar, mover o quitar páginas.</p>
+        <label class="f" for="bname">Nombre del libro</label>
+        <input type="text" id="bname" maxlength="80" placeholder="Ej. El jaguar que no sabía nadar">
+        <label class="f" for="autor">Escrito por</label>
+        <input type="text" id="autor" maxlength="120" placeholder="Ej. Alumnos de 3° B · Escuela Benito Juárez">
+        <label class="f" for="sub">De qué trata (para la biblioteca)</label>
+        <textarea id="sub" maxlength="300" rows="2" placeholder="Ej. Un jaguarcito de la selva de Tabasco aprende que pedir ayuda también es ser valiente."></textarea>
+        <div class="two">
+          <div><label class="f" for="edad">Para</label><select id="edad"></select></div>
+          <div><label class="f" for="tema">Tema</label><select id="tema"></select></div>
+        </div>
+        <label class="f">Estilo</label>
+        <div class="seg" id="estiloSeg"></div>
+      </section>
+
+      <section class="step" id="s2">
+        <h2><span class="n" id="n2">2</span>Las páginas</h2>
+        <p class="hint">Toca una página para llenarla. Poco texto por página (máximo 60 palabras): así se lee y se escucha mejor.</p>
+        <div class="pages" id="pages"></div>
+        <div class="addmenu" id="addmenu" hidden></div>
+        <div class="cnt" id="cnt"></div>
+        <div class="ed" id="ed"></div>
+        <input type="file" id="upImg" accept="image/png,image/webp,image/jpeg" hidden>
+        <input type="file" id="upAud" accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/webm,audio/ogg" hidden>
+      </section>
+
+      <section class="step" id="s3">
+        <h2><span class="n done">3</span>¿Cómo lo compartes?</h2>
+        <div class="seg" id="ventaSeg"></div>
+        <div id="ventaBox"></div>
+      </section>
+
+      <section class="step" id="s4">
+        <h2><span class="n" id="n4">4</span>Título y link</h2>
+        <label class="f" for="title" style="margin-top:0">Título de la experiencia</label>
+        <input type="text" id="title" maxlength="80" placeholder="Ej. Libro de 3° B">
+        <div class="note">Es solo para ti: así la ves en Mi cuenta.</div>
+        <label class="f" for="slug">Tu link</label>
+        <div class="slugrow"><span id="root">vorticevr.mx/biblioteca/</span><input type="text" id="slug" maxlength="30" placeholder="tu-libro" autocapitalize="off" autocomplete="off" spellcheck="false"></div>
+        <div class="msg" id="mSlug"></div>
+      </section>
+      <section class="step" id="sMarca" hidden></section>
+      <section class="step" id="s6">
+        <h2><span class="n" id="n6">6</span>Publicar</h2>
+        <div id="mine" hidden style="margin:0 0 12px"></div>
+        <ul class="issues" id="issues" hidden></ul>
+        <label class="check" id="listedRow"><input type="checkbox" id="listed" checked><span>Mostrarlo en la <b>biblioteca</b> de Vórtice VR para que cualquiera lo encuentre. Si no, solo lo lee quien tenga el link.</span></label>
+        <p class="hint" id="pubHint" style="margin-top:12px">Completa los pasos anteriores.</p>
+        <button class="btn primary" id="publish" type="button" disabled>Publicar mi libro</button>
+        <div class="bar" id="bPub" hidden><i></i></div><div class="msg" id="mPub"></div>
+        <p class="legal">Al publicar confirmas que tienes derecho a usar los textos, imágenes y audios, y que tienes permiso de los papás o tutores para publicar la voz o el nombre de menores. Vórtice VR puede retirar contenido inapropiado (<a href="../../terminos/">términos</a>). <span id="legalDays">La experiencia se borra a los 15 días; puedes editarla o borrarla desde tu cuenta.</span></p>
+      </section>
+    </div>
+    <aside class="side">
+      <div class="pv">
+        <h3>Vista previa <small>hojéalo y escúchalo</small></h3>
+        <div class="phone"><div class="screen" id="screen"></div></div>
+        <p class="note" style="margin:10px 0 0">Así se ve en el celular de quien abre tu libro.</p>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="../../assets/marca.js"></script>
+<script src="../../assets/plataforma.js" data-api="../.."></script>
+<script type="module">
+import { run, PLANTILLAS, ROLES, LAYS, ESTILOS, EDADES, TEMAS, JUEGOS, LIMITS, wordsOf } from "../../assets/libro.js";
+const $=id=>document.getElementById(id);
+const API=VVR.api;
+const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const rid=()=>Array.from(crypto.getRandomValues(new Uint8Array(10)),b=>"abcdefghijklmnopqrstuvwxyz0123456789"[b%36]).join("");
+const SELL=["pro","premium","empresarial","escuela"];
+// S.d = the book; S.files = pictures and audios added here (id → {blob,url,w,h,type}); S.old = the published ones
+const S={token:null,email:null,mine:null,plan:{id:"gratis"},files:new Map(),old:new Map(),signed:{},sel:0,tpl:"cuento",adding:false,
+  d:{tipo:"cuento",estilo:"clasico",edad:"6-8",tema:"cuentos",pages:[],venta:{modo:"gratis",precio:39,gratis:3}}};
+// the published files: the pages for sale come signed (/api/libro/<slug> gives them to their author)
+const fileUrl=id=>{ if(!id) return ""; const f=S.files.get(id); if(f) return f.url; if(S.signed[id]) return API+S.signed[id]; const o=S.old.get(id); return o&&S.mine&&!o.lock?`${API}/m/${S.mine.slug}/${o.file}?v=${S.mine.updated||""}`:""; };
+const fileOf=id=>S.files.get(id)||S.old.get(id);
+const loadImg=src=>new Promise((ok,bad)=>{ const i=new Image(); i.crossOrigin="anonymous"; i.onload=()=>ok(i); i.onerror=bad; i.src=src; });
+async function shrink(file,max){
+  const url=URL.createObjectURL(file); const im=await loadImg(url); URL.revokeObjectURL(url);
+  const k=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)), c=document.createElement("canvas"); c.width=Math.round(im.naturalWidth*k); c.height=Math.round(im.naturalHeight*k);
+  c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+  let b=await new Promise(r=>c.toBlob(r,"image/webp",.86)); if(!b||b.type!=="image/webp") b=await new Promise(r=>c.toBlob(r,"image/jpeg",.86));
+  return {blob:b,w:c.width,h:c.height};
+}
+const newPage=(lay,role,extra={})=>({id:rid(),lay,role:role||"libre",t:"",x:"",credit:"",...(lay==="pregunta"?{q:{p:"",ops:[{t:""},{t:""},{t:""}],ok:0,why:""}}:{}),...(lay==="juego"?{g:{k:"sopa",words:[],mode:"iguales",pairs:[{a:{t:""}},{a:{t:""}},{a:{t:""}}],level:"facil"}}:{}),...extra});
+function fromTpl(k){ return PLANTILLAS[k].pages.map(p=>{ const pg=newPage(p.lay,p.role); if(p.g) pg.g={...pg.g,...p.g,words:[]}; if(p.lay==="fin") pg.t="Fin"; if(p.lay==="autores") pg.t="Hecho por"; if(p.role==="dedicatoria") pg.t="Para…"; return pg; }); }
+
+// ---------- 1. the book ----------
+function drawTpls(){ $("tpls").innerHTML=Object.entries(PLANTILLAS).map(([k,T])=>`<button type="button" data-t="${k}" aria-pressed="${S.tpl===k}"><b>${esc(T.t)}</b><span>${esc(T.d)}</span></button>`).join(""); }
+$("tpls").addEventListener("click",e=>{ const b=e.target.closest("[data-t]"); if(!b) return; const k=b.dataset.t; if(k===S.tpl) return;
+  const used=S.d.pages.some(p=>(p.x||"").trim()||p.img||p.aud); if(used&&!confirm("Se cambiarán tus páginas por las de este tipo de libro. ¿Seguimos?")) return;
+  S.tpl=k; S.d.tipo=k; S.d.estilo=PLANTILLAS[k].estilo; S.d.tema=k==="cuento"?"cuentos":S.d.tema==="cuentos"?"otro":S.d.tema; S.d.pages=fromTpl(k); S.sel=0; drawAll(); changed(); });
+for(const [k,t] of Object.entries(EDADES)) $("edad").add(new Option(t,k));
+for(const [k,t] of Object.entries(TEMAS)) $("tema").add(new Option(t,k));
+$("edad").onchange=()=>{ S.d.edad=$("edad").value; changed(); };
+$("tema").onchange=()=>{ S.d.tema=$("tema").value; changed(); };
+function drawEstilo(){ $("estiloSeg").innerHTML=Object.entries(ESTILOS).map(([k,t])=>`<button type="button" data-v="${k}" aria-pressed="${S.d.estilo===k}">${t}</button>`).join(""); }
+$("estiloSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; S.d.estilo=b.dataset.v; drawEstilo(); changed(); });
+$("bname").addEventListener("input",()=>{ const p=S.d.pages[0]; if(p&&p.lay==="portada"&&(!p.t||p.t===$("bname").dataset.last)){ p.t=$("bname").value; if(S.sel===0) drawEditor(); } $("bname").dataset.last=$("bname").value; if(!$("title").dataset.touched&&!S.mine){ $("title").value=$("bname").value; $("title").dispatchEvent(new Event("input")); } drawPages(); changed(); });
+$("autor").addEventListener("input",changed);
+$("sub").addEventListener("input",changed);
+
+// ---------- 2. pages ----------
+const freeN=()=>S.d.venta.modo==="venta"?Math.max(1,Math.min(S.d.pages.length-1,S.d.venta.gratis||3)):S.d.pages.length;
+function pageIssue(p,i){
+  if(i===0&&p.lay!=="portada") return "La primera página es la portada.";
+  if(p.lay==="portada"&&!(p.t||"").trim()) return "Escribe el título en la portada.";
+  if(wordsOf(p.x)>LIMITS.words&&p.lay!=="autores") return `Tiene ${wordsOf(p.x)} palabras (máximo ${LIMITS.words}).`;
+  if(p.lay==="pregunta"){ const ops=p.q.ops.filter(o=>o.t.trim()); if(!p.q.p.trim()) return "Falta la pregunta."; if(ops.length<2) return "Pon al menos 2 respuestas."; if(!(p.q.ops[p.q.ok]||{}).t?.trim()) return "Marca una respuesta correcta que tenga texto."; return ""; }
+  if(p.lay==="juego"){ const g=p.g; if(g.k==="sopa"&&g.words.filter(Boolean).length<3) return "La sopa necesita al menos 3 palabras."; if(g.k==="memorama"&&g.pairs.filter(x=>(x.a.t||x.a.img)&&(g.mode==="iguales"||(x.b&&(x.b.t||x.b.img)))).length<3) return "El memorama necesita al menos 3 pares completos."; if(g.k==="rompecabezas"&&!g.img) return "Elige la imagen del rompecabezas."; return ""; }
+  if(!(p.x||"").trim()&&!p.img&&!(p.t||"").trim()) return "Está vacía.";
+  return "";
+}
+function drawPages(){
+  const free=freeN();
+  $("pages").innerHTML=S.d.pages.map((p,i)=>{ const iss=pageIssue(p,i), role=ROLES[p.role]?ROLES[p.role][0]:LAYS[p.lay];
+    return `<button class="pg${i===S.sel?" sel":""}${iss?" err":""}${i>=free?" lockd":""}" type="button" data-i="${i}" title="${esc(iss||role)}">${p.img?`<img src="${esc(fileUrl(p.img))}" alt="">`:`<span class="tx">${esc((p.lay==="pregunta"?p.q.p:p.t||p.x||"").slice(0,90))}</span>`}<span class="num">${i+1}</span><span class="lbl">${esc(role)}${p.aud?" · 🎙":""}</span></button>`; }).join("")
+    +(S.d.pages.length<LIMITS.pages?`<button class="addpg" type="button" id="addpg">+ Página</button>`:"");
+  const ap=$("addpg"); if(ap) ap.onclick=()=>{ S.adding=!S.adding; drawAdd(); };
+  const words=S.d.pages.reduce((a,p)=>a+wordsOf(p.x),0), bad=S.d.pages.filter((p,i)=>pageIssue(p,i)).length;
+  $("cnt").textContent=`${S.d.pages.length} de ${LIMITS.pages} páginas · ${words} palabras`+(bad?` · ${bad} por completar (en rojo)`:"");
+}
+function drawAdd(){ $("addmenu").hidden=!S.adding; if(!S.adding) return;
+  $("addmenu").innerHTML=`<span class="note" style="width:100%">¿Qué página agregas? (va después de la página ${S.sel+1})</span>`+Object.entries(LAYS).filter(([k])=>k!=="portada").map(([k,t])=>`<button class="btn sm" type="button" data-lay="${k}">${t}</button>`).join(""); }
+$("addmenu").addEventListener("click",e=>{ const b=e.target.closest("[data-lay]"); if(!b) return; const lay=b.dataset.lay;
+  const role=lay==="pregunta"?(S.d.tipo==="educativo"?"repaso":"pregunta"):lay==="juego"?"actividad":lay==="fin"?"fin":lay==="autores"?"autores":S.d.tipo==="cuento"?"aventura":S.d.tipo==="educativo"?"explica":"libre";
+  const pg=newPage(lay,role); if(lay==="fin") pg.t="Fin"; if(lay==="autores") pg.t="Hecho por";
+  S.d.pages.splice(S.sel+1,0,pg); S.sel++; S.adding=false; drawAdd(); drawPages(); drawEditor(); changed(); });
+$("pages").addEventListener("click",e=>{ const b=e.target.closest("[data-i]"); if(!b) return; S.sel=+b.dataset.i; S.adding=false; drawAdd(); drawPages(); drawEditor(); goPreview(); });
+
+const cur=()=>S.d.pages[S.sel];
+function picHtml(id,what){ return `<div class="picbox"><div class="th">${id?`<img src="${esc(fileUrl(id))}" alt="">`:"Sin imagen"}</div><div class="tools"><button class="btn sm" type="button" data-up="${what}">${id?"Cambiar":"Subir"} imagen</button>${id?`<button class="btn sm" type="button" data-rm="${what}">Quitar</button>`:""}</div></div>`; }
+function drawEditor(){
+  const p=cur(); if(!p){ $("ed").innerHTML=""; return; }
+  const i=S.sel, role=ROLES[p.role]||ROLES.libre, iss=pageIssue(p,i), free=freeN();
+  const laysOk=Object.entries(LAYS).filter(([k])=>i===0?k==="portada":k!=="portada");
+  let h=`<h3><span>Página ${i+1} · ${esc(role[0])}</span><span class="tools">
+      <button class="btn sm" type="button" data-mv="-1" ${i<=1?"disabled":""} aria-label="Mover antes">↑</button><button class="btn sm" type="button" data-mv="1" ${i===0||i>=S.d.pages.length-1?"disabled":""} aria-label="Mover después">↓</button>
+      <button class="btn sm" type="button" data-dup ${i===0||S.d.pages.length>=LIMITS.pages?"disabled":""}>Duplicar</button><button class="btn sm" type="button" data-del ${i===0||S.d.pages.length<=3?"disabled":""}>Quitar</button></span></h3>
+    <div class="guide"><b>Para escribir:</b> ${esc(role[1])}</div>
+    ${i>=free?`<div class="note">Esta página es de pago: la leen quienes compran el libro.</div>`:""}
+    ${iss?`<div class="msg bad">${esc(iss)}</div>`:""}
+    <label class="f">Diseño de la página</label><div class="seg" data-seg="lay">${laysOk.map(([k,t])=>`<button type="button" data-v="${k}" aria-pressed="${p.lay===k}">${t}</button>`).join("")}</div>`;
+  if(p.lay==="pregunta"){
+    h+=`<label class="f">Pregunta</label><input type="text" maxlength="160" data-f="q.p" value="${esc(p.q.p)}" placeholder="Ej. ¿Por qué el jaguar no quería meterse al río?">
+      <label class="f">Respuestas (marca la correcta)</label><div class="ops">${p.q.ops.map((o,k)=>`<div class="op"><input type="radio" name="ok" data-ok="${k}" ${p.q.ok===k?"checked":""} aria-label="Es la correcta"><input type="text" maxlength="60" data-op="${k}" value="${esc(o.t)}" placeholder="Respuesta ${k+1}"><button class="x" type="button" data-rmop="${k}" ${p.q.ops.length<=2?"disabled":""} aria-label="Quitar">✕</button></div>`).join("")}</div>
+      ${p.q.ops.length<4?`<div class="row"><button class="btn sm" type="button" data-addop>+ Respuesta</button></div>`:""}
+      <label class="f">Por qué (sale al acertar, opcional)</label><input type="text" maxlength="200" data-f="q.why" value="${esc(p.q.why||"")}" placeholder="Ej. Porque le daba miedo el agua, pero su amiga la tortuga le enseñó.">
+      <label class="f">Imagen (opcional)</label>${picHtml(p.img,"img")}`;
+  } else if(p.lay==="juego"){
+    const g=p.g;
+    h+=`<label class="f">Juego</label><div class="seg" data-seg="g.k">${Object.entries(JUEGOS).map(([k,t])=>`<button type="button" data-v="${k}" aria-pressed="${g.k===k}">${t}</button>`).join("")}</div>
+      <label class="f">Instrucción</label><input type="text" maxlength="80" data-f="t" value="${esc(p.t)}" placeholder="${esc(g.k==="sopa"?"Encuentra los animales del cuento":g.k==="memorama"?"Encuentra los pares":"Arma la ilustración")}">`;
+    if(g.k==="sopa") h+=`<label class="f">Palabras (de 3 a 8, separadas por comas)</label><input type="text" maxlength="160" data-words value="${esc(g.words.join(", "))}" placeholder="Ej. jaguar, río, tortuga, selva">`;
+    if(g.k==="memorama") h+=`<label class="f">¿Cómo son los pares?</label><div class="seg" data-seg="g.mode"><button type="button" data-v="iguales" aria-pressed="${g.mode==="iguales"}">Dos cartas iguales</button><button type="button" data-v="parejas" aria-pressed="${g.mode==="parejas"}">Dos que van juntas</button></div>
+      <label class="f">Pares (de 3 a 6)</label><div class="pairs">${g.pairs.map((x,k)=>`<div class="pair${g.mode==="iguales"?" one":""}"><input type="text" maxlength="30" data-pa="${k}" value="${esc(x.a.t||"")}" placeholder="${g.mode==="iguales"?"Ej. Jaguar":"Ej. Perro"}">${g.mode==="parejas"?`<input type="text" maxlength="30" data-pb="${k}" value="${esc((x.b||{}).t||"")}" placeholder="Ej. Dog">`:""}<button class="x" type="button" data-rmpair="${k}" ${g.pairs.length<=3?"disabled":""} aria-label="Quitar">✕</button></div>`).join("")}</div>
+      ${g.pairs.length<6?`<div class="row"><button class="btn sm" type="button" data-addpair>+ Par</button></div>`:""}`;
+    if(g.k==="rompecabezas"){ const pics=S.d.pages.filter(x=>x.img&&x!==p);
+      h+=`<label class="f">Imagen del rompecabezas</label>${picHtml(g.img,"g.img")}${pics.length?`<div class="note" style="margin-top:8px">O usa la ilustración de otra página:</div><div class="tools" style="margin-top:6px">${pics.map(x=>`<button class="btn sm" type="button" data-useimg="${x.img}">Pág. ${S.d.pages.indexOf(x)+1}</button>`).join("")}</div>`:""}
+        <label class="f">Dificultad</label><div class="seg" data-seg="g.level"><button type="button" data-v="facil" aria-pressed="${g.level!=="normal"}">Fácil (6 piezas)</button><button type="button" data-v="normal" aria-pressed="${g.level==="normal"}">Normal (12)</button></div>`; }
+  } else {
+    const W=wordsOf(p.x);
+    h+=`<label class="f">${p.lay==="portada"?"Título del libro":"Título de la página (opcional)"}</label><input type="text" maxlength="80" data-f="t" value="${esc(p.t)}" placeholder="${p.lay==="portada"?"Ej. El jaguar que no sabía nadar":"Ej. La gran tormenta"}">`;
+    if(p.lay!=="portada") h+=`<label class="f">${p.lay==="autores"?"Nombres (uno por renglón)":"Texto"}</label><textarea data-f="x" maxlength="${LIMITS.chars}" rows="${p.lay==="autores"?5:4}" placeholder="${p.lay==="autores"?"Texto: Ana, Luis y Sofía\nIlustraciones: Pedro y Mariana\n3° B · Escuela Benito Juárez":"Ej. En lo más verde de la selva vivía Balam, un jaguar pequeño que le tenía miedo al agua."}">${esc(p.x)}</textarea>
+      ${p.lay!=="autores"?`<div class="wc${W>LIMITS.words?" bad":""}" data-wc>${W} de ${LIMITS.words} palabras</div>`:""}`;
+    h+=`<label class="f">${p.lay==="portada"?"Ilustración de la portada":"Ilustración"}</label>${picHtml(p.img,"img")}`;
+    if(p.lay!=="portada"&&p.lay!=="autores") h+=`<label class="f">Quién la hizo (opcional)</label><input type="text" maxlength="120" data-f="credit" value="${esc(p.credit||"")}" placeholder="Ej. Texto: Ana · Dibujo: Luis">`;
+  }
+  if(p.lay!=="juego"){ const a=p.aud&&fileOf(p.aud);
+    h+=`<label class="f">Narración</label><div class="tools"><button class="btn sm rec" type="button" data-rec>🎙 ${p.aud?"Volver a grabar":"Grabar mi voz"}</button><button class="btn sm" type="button" data-up="aud">Subir audio</button>${p.aud?`<button class="btn sm" type="button" data-playaud>▶ Escuchar</button><button class="btn sm" type="button" data-rm="aud">Quitar</button>`:""}</div>
+      <div class="note" style="margin-top:6px">${p.aud?`Tiene tu voz${a&&a.dur?` (${Math.round(a.dur)} s)`:""}: mientras suena, las palabras se van iluminando.`:"Lee el texto de esta página en voz alta. Si no grabas nada, el celular lo lee con su propia voz."}</div>`; }
+  $("ed").innerHTML=h;
+}
+const setPath=(o,path,v)=>{ const k=path.split("."); let t=o; while(k.length>1) t=t[k.shift()]; t[k[0]]=v; };
+$("ed").addEventListener("input",e=>{ const p=cur(), t=e.target;
+  if(t.dataset.f){ setPath(p,t.dataset.f,t.value); if(t.dataset.f==="t"&&S.sel===0){ $("bname").value=t.value; $("bname").dataset.last=t.value; }
+    if(t.dataset.f==="x"){ const W=wordsOf(t.value), wc=$("ed").querySelector("[data-wc]"); if(wc){ wc.textContent=`${W} de ${LIMITS.words} palabras`; wc.classList.toggle("bad",W>LIMITS.words); } } }
+  else if(t.dataset.op!==undefined) p.q.ops[+t.dataset.op].t=t.value;
+  else if(t.dataset.words!==undefined) p.g.words=t.value.split(/[,;\n]+/).map(s=>s.trim()).filter(Boolean).slice(0,8);
+  else if(t.dataset.pa!==undefined) p.g.pairs[+t.dataset.pa].a={t:t.value};
+  else if(t.dataset.pb!==undefined) p.g.pairs[+t.dataset.pb].b={t:t.value};
+  else if(t.dataset.ok!==undefined) p.q.ok=+t.dataset.ok;
+  drawPages(); changed(); });
+$("ed").addEventListener("click",async e=>{ const p=cur(), b=e.target.closest("button"); if(!b) return;
+  const seg=b.closest("[data-seg]");
+  if(seg&&b.dataset.v){ const path=seg.dataset.seg; setPath(p,path,b.dataset.v);
+    if(path==="lay"){ if(p.lay==="pregunta"&&!p.q) p.q={p:"",ops:[{t:""},{t:""},{t:""}],ok:0,why:""}; if(p.lay==="juego"&&!p.g) p.g={k:"sopa",words:[],mode:"iguales",pairs:[{a:{t:""}},{a:{t:""}},{a:{t:""}}],level:"facil"};
+      if(p.lay==="pregunta") p.role=S.d.tipo==="educativo"?"repaso":"pregunta"; else if(p.lay==="juego") p.role="actividad"; else if(p.lay==="fin") p.role="fin"; else if(p.lay==="autores") p.role="autores"; else if(["pregunta","repaso","actividad","fin","autores"].includes(p.role)) p.role=S.d.tipo==="cuento"?"aventura":S.d.tipo==="educativo"?"explica":"libre"; }
+    drawEditor(); drawPages(); changed(); return; }
+  if(b.dataset.mv){ const j=S.sel+ +b.dataset.mv; if(j<1||j>=S.d.pages.length) return; [S.d.pages[S.sel],S.d.pages[j]]=[S.d.pages[j],S.d.pages[S.sel]]; S.sel=j; }
+  else if(b.dataset.dup!==undefined){ const c=JSON.parse(JSON.stringify(p)); c.id=rid(); S.d.pages.splice(S.sel+1,0,c); S.sel++; }
+  else if(b.dataset.del!==undefined){ if(!confirm("¿Quitar esta página?")) return; S.d.pages.splice(S.sel,1); S.sel=Math.min(S.sel,S.d.pages.length-1); }
+  else if(b.dataset.addop!==undefined) p.q.ops.push({t:""});
+  else if(b.dataset.rmop!==undefined){ const k=+b.dataset.rmop; p.q.ops.splice(k,1); if(p.q.ok>=p.q.ops.length||p.q.ok===k) p.q.ok=0; }
+  else if(b.dataset.addpair!==undefined) p.g.pairs.push({a:{t:""},b:{t:""}});
+  else if(b.dataset.rmpair!==undefined) p.g.pairs.splice(+b.dataset.rmpair,1);
+  else if(b.dataset.useimg) p.g.img=b.dataset.useimg;
+  else if(b.dataset.up){ S.upTo=b.dataset.up; (b.dataset.up==="aud"?$("upAud"):$("upImg")).click(); return; }
+  else if(b.dataset.rm){ if(b.dataset.rm==="aud") delete p.aud; else setPath(p,b.dataset.rm,undefined); }
+  else if(b.dataset.playaud!==undefined){ const a=new Audio(fileUrl(p.aud)); a.play().catch(()=>{}); return; }
+  else if(b.dataset.rec!==undefined){ await record(b); return; }
+  else return;
+  drawPages(); drawEditor(); changed(); goPreview(); });
+$("upImg").addEventListener("change",async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return; const p=cur();
+  try{ const r=await shrink(f,1600), id=rid(); S.files.set(id,{type:"foto",blob:r.blob,url:URL.createObjectURL(r.blob),w:r.w,h:r.h}); setPath(p,S.upTo||"img",id); drawPages(); drawEditor(); changed(); }
+  catch(err){ alert("No pude abrir esa imagen. Usa PNG, JPG o WebP."); } });
+$("upAud").addEventListener("change",e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  if(f.size>10*1048576){ alert("El audio debe pesar máximo 10 MB."); return; }
+  const type=(f.type||"").split(";")[0]||"audio/mpeg"; setAudio(new Blob([f],{type})); });
+function setAudio(blob){ const p=cur(), id=rid(), url=URL.createObjectURL(blob), rec={type:"audio",blob,url};
+  const a=new Audio(url); a.onloadedmetadata=()=>{ if(isFinite(a.duration)){ rec.dur=a.duration; drawEditor(); } };
+  S.files.set(id,rec); p.aud=id; drawPages(); drawEditor(); changed(); }
+// recording right here: the microphone of the computer or the phone (MediaRecorder)
+let REC=null;
+async function record(btn){
+  if(REC){ REC.stop(); return; }
+  if(!navigator.mediaDevices||!window.MediaRecorder){ alert("Este navegador no puede grabar. Graba con tu celular y sube el audio."); return; }
+  let stream; try{ stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); }catch(e){ alert("No me dieron permiso para usar el micrófono."); return; }
+  const mime=["audio/mp4","audio/webm;codecs=opus","audio/webm","audio/ogg;codecs=opus"].find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||"";
+  const mr=new MediaRecorder(stream,mime?{mimeType:mime,audioBitsPerSecond:64000}:{}), chunks=[]; REC=mr;
+  const t0=Date.now(), tick=setInterval(()=>{ const s=Math.round((Date.now()-t0)/1000); btn.textContent=`■ Detener (${s} s)`; if(s>=120) mr.stop(); },500);
+  mr.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
+  mr.onstop=()=>{ clearInterval(tick); stream.getTracks().forEach(t=>t.stop()); REC=null; const type=(mr.mimeType||mime||"audio/webm").split(";")[0]; if(chunks.length) setAudio(new Blob(chunks,{type})); else drawEditor(); };
+  mr.start(); btn.classList.add("on"); btn.textContent="■ Detener (0 s)";
+}
+
+// ---------- 3. free, for sale or with support ----------
+const canSell=()=>SELL.includes(S.plan.id);
+function drawVenta(){ const v=S.d.venta, sell=canSell();
+  $("ventaSeg").innerHTML=[["gratis","Gratis"],["venta","A la venta"],["apoyo","Gratis con apoyo al autor"]].map(([k,t])=>`<button type="button" data-v="${k}" aria-pressed="${v.modo===k}" ${k!=="gratis"&&!sell?"disabled":""}>${k!=="gratis"&&!sell?"🔒 ":""}${t}</button>`).join("");
+  let h="";
+  if(!sell) h=`<div class="lockbox">Vender tu libro o recibir apoyos es de los planes <b>Pro</b> y <b>Premium</b>. <a href="../../cuenta/#planes">Ver planes</a></div>`;
+  else if(v.modo==="venta") h=`<div class="two"><div><label class="f" for="precio">Precio (pesos, IVA incluido)</label><input type="number" id="precio" min="10" max="999" step="1" value="${v.precio}"></div>
+    <div><label class="f" for="gratisN">Páginas que se leen gratis</label><input type="number" id="gratisN" min="1" max="${Math.max(1,S.d.pages.length-1)}" step="1" value="${freeN()}"></div></div>
+    <p class="note">Las primeras páginas se leen gratis (las demás salen con un $ en tu lista). Para seguir leyendo, compran el libro con tarjeta y su cuenta de Vórtice VR, y queda en su cuenta para siempre.</p>`;
+  else if(v.modo==="apoyo") h=`<p class="note" style="margin-top:12px">El libro se lee completo gratis y lleva un botón <b>«♥ Apoyar al autor»</b>: quien quiera te da $20, $50, $100 o lo que guste, con tarjeta.</p>`;
+  else h=`<p class="note" style="margin-top:12px">Cualquiera lo lee completo, sin cuenta y sin pagar.</p>`;
+  if(sell&&v.modo!=="gratis") h+=`<div class="lockbox">Vórtice VR se queda con el 20 % de cada venta o apoyo (incluye el cobro con tarjeta). El resto te lo pagamos cada quincena a tu cuenta bancaria: regístrala en <a href="../../cursos/ventas/" target="_blank" rel="noopener">tu panel de ventas</a>.</div>`;
+  $("ventaBox").innerHTML=h;
+  const pr=$("precio"), gn=$("gratisN");
+  if(pr) pr.oninput=()=>{ v.precio=Math.round(+pr.value)||0; changed(); };
+  if(gn) gn.oninput=()=>{ v.gratis=Math.round(+gn.value)||1; drawPages(); changed(); };
+}
+$("ventaSeg").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b||b.disabled) return; S.d.venta.modo=b.dataset.v; drawVenta(); drawPages(); changed(); });
+
+// ---------- live preview ----------
+let app=null, pvT=0;
+function dNow(){ const d=S.d;
+  return {id:S.mine&&S.mine.libro&&S.mine.libro.id,name:$("bname").value.trim()||(d.pages[0]&&d.pages[0].t)||"",autor:$("autor").value.trim(),sub:$("sub").value.trim(),tipo:d.tipo,edad:d.edad,tema:d.tema,estilo:d.estilo,
+    venta:d.venta.modo==="venta"?{modo:"venta",precio:d.venta.precio,gratis:freeN()}:{modo:canSell()?d.venta.modo:"gratis"},
+    pages:d.pages.map(p=>{ const o={id:p.id,lay:p.lay,role:p.role}; for(const k of ["t","x","credit","img","aud"]){ const v=typeof p[k]==="string"?p[k].trim():p[k]; if(v) o[k]=v; }
+      if(p.lay==="pregunta") o.q={p:p.q.p.trim(),ops:p.q.ops.filter(x=>x.t.trim()).map(x=>({t:x.t.trim()})),ok:Math.max(0,p.q.ops.filter((x,k)=>k<p.q.ok&&x.t.trim()).length),why:(p.q.why||"").trim()};
+      if(p.lay==="juego"){ const g=p.g; o.g=g.k==="sopa"?{k:"sopa",words:g.words}:g.k==="memorama"?{k:"memorama",mode:g.mode,pairs:g.pairs.filter(x=>x.a.t&&(g.mode==="iguales"||(x.b&&x.b.t))).map(x=>g.mode==="parejas"?{a:{t:x.a.t},b:{t:x.b.t}}:{a:{t:x.a.t}})}:{k:"rompecabezas",img:g.img,level:g.level}; }
+      return o; })}; }
+const itemsNow=()=>{ const out=[], seen=new Set(), d=dNow();
+  for(const p of d.pages) for(const id of [p.img,p.aud,p.g&&p.g.img]){ if(!id||seen.has(id)) continue; seen.add(id); const f=fileOf(id); if(f) out.push(f.type==="audio"?{id,type:"audio"}:{id,type:"foto",w:f.w,h:f.h}); }
+  return out; };
+function cfgNow(){ const L=dNow(); L.total=L.pages.length; L.locked=0; return {slug:"vista-previa",title:L.name||"Tu libro",libro:L,items:itemsNow()}; }
+function brand(){ const mk=S.marca&&S.marca.get(); if(mk&&mk.brand==="none") return null; if(mk&&mk.brand==="own"&&mk.preview) return {src:mk.preview,own:true}; return {}; }
+const access=()=>({owned:true,venta:dNow().venta,mine:false});
+const pvIndex=()=>{ const v=dNow().venta; return v.modo==="venta"&&S.sel>=v.gratis?S.sel+1:S.sel; };
+function preview(){ if(app) app.destroy(); app=run({root:$("screen"),cfg:cfgNow(),src:fileUrl,brand:brand(),access:access(),embedded:true,page:pvIndex()}); }
+function goPreview(){ if(app) app.go(pvIndex()); }
+function changed(){ clearTimeout(pvT); pvT=setTimeout(()=>{ if(app){ app.update(cfgNow(),brand(),access()); app.go(pvIndex()); } else preview(); },300); check(); }
+
+// ---------- link ----------
+const slugIn=$("slug"); let slugOk=false, slugTimer=0;
+const toSlug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9-]+/g,"-").replace(/-+/g,"-").replace(/^-/,"").slice(0,30);
+$("title").addEventListener("input",e=>{ if(e.isTrusted) $("title").dataset.touched="1"; if(!slugIn.dataset.touched&&!S.mine){ slugIn.value=toSlug($("title").value).replace(/-$/,""); checkSlug(); } check(); });
+slugIn.addEventListener("input",()=>{ const c=slugIn.selectionStart; slugIn.value=toSlug(slugIn.value); slugIn.setSelectionRange(c,c); checkSlug(); });
+slugIn.addEventListener("keydown",()=>slugIn.dataset.touched="1");
+const ORIGIN=location.hostname.endsWith("vorticevr.mx")?"https://vorticevr.mx":location.origin;
+$("root").textContent=ORIGIN.replace(/^https?:\/\//,"")+"/biblioteca/";
+const linkFor=s=>`${ORIGIN}/biblioteca/${s}/`;
+function checkSlug(){ clearTimeout(slugTimer); const m=$("mSlug"); slugOk=false; check(); const s=slugIn.value.replace(/-$/,"");
+  if(s.length<3){ m.className="msg"; m.textContent=""; return; }
+  if(S.mine&&S.mine.slug===s){ slugOk=true; m.className="msg ok"; m.textContent="Es tu link actual."; check(); return; }
+  slugTimer=setTimeout(async()=>{ try{ const r=await (await fetch(`${API}/api/slug?s=${encodeURIComponent(s)}`,{headers:S.token?{Authorization:"Bearer "+S.token}:{}})).json(); if(!r.ok&&r.suggest&&!slugIn.dataset.touched&&!S.mine){ slugIn.value=r.suggest; checkSlug(); return; } slugOk=!!r.ok; m.className="msg "+(r.ok?"ok":"bad"); m.textContent=r.ok?`Disponible: ${linkFor(s)}`:r.reason; }catch(e){ m.className="msg bad"; m.textContent="No pude revisar el nombre."; } check(); },350); }
+
+// ---------- publish ----------
+function issues(){ return S.d.pages.map((p,i)=>{ const x=pageIssue(p,i); return x?`Página ${i+1}: ${x}`:""; }).filter(Boolean); }
+function problems(){
+  if(!($("bname").value.trim()||(S.d.pages[0]||{}).t)) return "Escribe el nombre del libro (paso 1).";
+  if(S.d.pages.length<3) return "Tu libro necesita al menos 3 páginas.";
+  if(issues().length) return "Completa las páginas marcadas en rojo (paso 2).";
+  const v=S.d.venta; if(v.modo==="venta"&&canSell()&&!(v.precio>=10&&v.precio<=999)) return "El precio va de $10 a $999 (paso 3).";
+  if(!$("title").value.trim()) return "Escribe el título de tu experiencia (paso 4).";
+  if(!slugOk) return "Elige un link disponible.";
+  if(!S.token) return "Inicia sesión de nuevo.";
+  const mk=S.marca&&S.marca.get(); if(mk&&!mk.ok) return "Sube el logo de tu marca o elige el de Vórtice VR.";
+  return "";
+}
+function check(){
+  const p=problems(), iss=issues();
+  $("n1").classList.toggle("done",!!$("bname").value.trim()); $("n2").classList.toggle("done",S.d.pages.length>=3&&!iss.length);
+  $("n4").classList.toggle("done",slugOk&&!!$("title").value.trim());
+  $("issues").hidden=!iss.length; $("issues").innerHTML=iss.slice(0,8).map(t=>`<li>${esc(t)}</li>`).join("");
+  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
+}
+// the card for the library and the dashboard: the cover (its picture and its title)
+async function cover(){
+  const c=document.createElement("canvas"); c.width=900; c.height=1200; const x=c.getContext("2d"), d=dNow(), p=d.pages[0]||{};
+  const g=x.createLinearGradient(0,0,900,1200); g.addColorStop(0,"#8b3fd6"); g.addColorStop(1,"#2b1450"); x.fillStyle=g; x.fillRect(0,0,900,1200);
+  if(p.img){ try{ const im=await loadImg(fileUrl(p.img)), k=Math.max(900/im.naturalWidth,1200/im.naturalHeight); x.drawImage(im,450-im.naturalWidth*k/2,600-im.naturalHeight*k/2,im.naturalWidth*k,im.naturalHeight*k); }catch(e){} }
+  const sh=x.createLinearGradient(0,620,0,1200); sh.addColorStop(0,"rgba(0,0,0,0)"); sh.addColorStop(1,"rgba(0,0,0,.82)"); x.fillStyle=sh; x.fillRect(0,600,900,600);
+  x.fillStyle="rgba(0,0,0,.25)"; x.fillRect(0,0,26,1200);
+  x.fillStyle="#fff"; x.textAlign="center"; x.textBaseline="alphabetic";
+  const title=d.name||"Mi libro"; let s=92; x.font=`800 ${s}px Sora, sans-serif`;
+  const wrap=t=>{ const ws=t.split(/\s+/), L=[]; let cur=""; for(const w of ws){ const tt=cur?cur+" "+w:w; if(x.measureText(tt).width>780&&cur){ L.push(cur); cur=w; } else cur=tt; } if(cur) L.push(cur); return L; };
+  let L=wrap(title); while(L.length>3&&s>48){ s-=6; x.font=`800 ${s}px Sora, sans-serif`; L=wrap(title); }
+  const y0=1200-90-(d.autor?60:0)-(L.length-1)*s*1.05; L.slice(0,4).forEach((l,i)=>x.fillText(l,450,y0+i*s*1.05));
+  if(d.autor){ x.font="600 40px 'IBM Plex Sans', sans-serif"; x.fillStyle="rgba(255,255,255,.9)"; let a=d.autor; while(x.measureText(a).width>800&&a.length>4) a=a.slice(0,-2)+"…"; x.fillText(a,450,1200-80); }
+  return new Promise(res=>c.toBlob(res,"image/jpeg",.88));
+}
+$("publish").addEventListener("click",async()=>{
+  const p=problems(); if(p){ check(); return; }
+  const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Preparando…"; bar.hidden=false; bar.firstElementChild.style.width="0%"; $("publish").disabled=true;
+  const libro=dNow(), items=itemsNow(), fd=new FormData();
+  for(const it of items){ const f=S.files.get(it.id); if(f) fd.append("f_"+it.id,f.blob,it.id+(it.type==="audio"?".audio":".img")); else if(!S.old.get(it.id)){ m.className="msg bad"; m.textContent="Falta uno de tus archivos: vuelve a subirlo."; bar.hidden=true; $("publish").disabled=false; return; } }
+  const meta={kind:"libro",original:S.mine?S.mine.slug:undefined,slug:slugIn.value,title:$("title").value.trim(),libro,items,buttons:{},listed:!S.mine&&$("listed").checked};
+  const mk=S.marca&&S.marca.get(); if(mk&&mk.brand!=="vortice") meta.brand=mk.brand;
+  fd.append("meta",JSON.stringify(meta));
+  if(mk&&mk.file) fd.append("logo",mk.file,"logo.png");
+  fd.append("image",await cover(),"portada.jpg");
+  const qrc=document.createElement("canvas"); await VVR.iconReady; VVR.drawQR(qrc,linkFor(meta.slug),"Escanea y lee");
+  fd.append("qr",await new Promise(r=>qrc.toBlob(r,"image/png")),"qr.png");
+  m.textContent="Publicando…";
+  const xhr=new XMLHttpRequest(); xhr.open("POST",`${API}/api/publish`); xhr.setRequestHeader("Authorization","Bearer "+S.token);
+  xhr.upload.onprogress=e=>{ if(e.lengthComputable) bar.firstElementChild.style.width=(e.loaded/e.total*100)+"%"; };
+  xhr.onload=()=>{ bar.hidden=true; let j={}; try{ j=JSON.parse(xhr.responseText); }catch(e){}
+    if(xhr.status!==200){ m.className="msg bad"; m.textContent=j.error||"No se pudo publicar."; $("publish").disabled=false; if(xhr.status===401){ VVR.clearSession(); location.href="../../cuenta/?siguiente=crear/libro"; } return; }
+    try{ localStorage.removeItem("vvr-libro-borrador"); }catch(e){}
+    m.textContent="¡Publicado! Abriendo tu cuenta…"; location.href="../../cuenta/?publicada="+encodeURIComponent(j.experience.slug); };
+  xhr.onerror=()=>{ bar.hidden=true; m.className="msg bad"; m.textContent="Se cortó la conexión. Intenta de nuevo."; $("publish").disabled=false; };
+  xhr.send(fd);
+});
+
+// ---------- start: session, plan, editing ----------
+function drawAll(){ drawTpls(); drawEstilo(); $("edad").value=S.d.edad; $("tema").value=S.d.tema; drawPages(); drawEditor(); drawVenta(); }
+(async()=>{
+  const ed=new URLSearchParams(location.search).get("editar");
+  const toLogin=()=>location.replace("../../cuenta/?siguiente=crear/libro");
+  const sess=VVR.session(); if(!sess){ toLogin(); return; }
+  S.token=sess.token; S.email=sess.user&&sess.user.email;
+  S.d.pages=fromTpl(S.tpl);
+  drawAll(); preview(); check();
+  try{
+    const r=await VVR.call("me"); S.email=r.user.email;
+    const P=r.plan||{id:"gratis",name:"Gratis",exp:r.limit||1}, LIM=r.limit??P.exp, member=r.team&&r.team.role==="member"; S.plan=P;
+    if(P.id!=="gratis"){ $("kick").textContent=`Plan ${P.name}`; $("legalDays").textContent="Tus experiencias siguen activas mientras tu plan esté vigente; puedes editarlas o borrarlas desde tu cuenta."; }
+    const exp=ed?r.experiences.find(x=>x.slug===ed):null;
+    if(window.VVRMarca){ S.marca=VVRMarca.mount($("sMarca"),{plan:P,exp,api:API,base:"../../",onChange:()=>{ check(); clearTimeout(pvT); pvT=setTimeout(preview,200); }}); $("sMarca").hidden=false; }
+    if(exp&&exp.kind!=="libro"){ location.replace((exp.kind==="ra"?"../":"../"+exp.kind+"/")+"?editar="+encodeURIComponent(ed)); return; }
+    if(exp){
+      S.mine=exp; $("mine").hidden=false; $("mine").innerHTML=`Estás editando <b>${esc(exp.title)}</b>. Al publicar se actualiza en el mismo link (tu QR sigue funcionando).`;
+      $("listedRow").hidden=true;
+      for(const it of exp.items||[]) S.old.set(it.id,it);
+      try{ S.signed=(await VVR.call("libro/"+encodeURIComponent(exp.slug))).files||{}; }catch(e){}
+      const L=exp.libro||{pages:[]};
+      S.tpl=L.tipo||"cuento";
+      S.d={tipo:L.tipo||"cuento",estilo:L.estilo||"clasico",edad:L.edad||"todos",tema:L.tema||"otro",venta:{modo:"gratis",precio:39,gratis:3,...(L.venta||{})},
+        pages:(L.pages||[]).map(p=>({t:"",x:"",credit:"",...JSON.parse(JSON.stringify(p)),
+          ...(p.lay==="pregunta"?{q:{why:"",...p.q,ops:p.q.ops.map(o=>({t:o.t}))}}:{}),
+          ...(p.lay==="juego"?{g:{k:"sopa",words:[],mode:"iguales",pairs:[{a:{t:""}},{a:{t:""}},{a:{t:""}}],level:"facil",...p.g,pairs:(p.g.pairs||[{a:{t:""}},{a:{t:""}},{a:{t:""}}]).map(x=>({a:{...x.a},b:x.b?{...x.b}:{t:""}}))}}:{})}))};
+      $("bname").value=L.name||exp.title; $("bname").dataset.last=(S.d.pages[0]||{}).t||""; $("autor").value=L.autor||""; $("sub").value=L.sub||"";
+      $("title").value=exp.title; $("title").dataset.touched="1"; slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
+      $("publish").textContent="Guardar cambios";
+      try{ const [k,v]=await Promise.all([VVR.call("clicks/"+encodeURIComponent(exp.slug)),VVR.call("libro/"+encodeURIComponent(exp.slug)+"/ventas").catch(()=>null)]), c=k.clicks||{}, n=x=>(x||0).toLocaleString("es-MX");
+        $("stats").innerHTML=`<div><b>${n(exp.views)}</b><span>visitas</span></div><div><b>${n(c.open)}</b><span>empezaron a leer</span></div><div><b>${n(c.fin)}</b><span>llegaron al final</span></div><div><b>${n(c.listen)}</b><span>lo escucharon</span></div><div><b>${n(c.game)}</b><span>jugaron</span></div>`
+          +(v&&(v.ventas||v.apoyos)?`<div><b>${n(v.ventas)}</b><span>ventas</span></div><div><b>${n(v.apoyos)}</b><span>apoyos</span></div><div><b>$${(v.net/100).toLocaleString("es-MX")}</b><span>para ti</span></div>`:"");
+        $("statsBox").hidden=false; }catch(e){}
+      drawAll(); preview();
+    } else if(r.experiences.filter(x=>!x.paused).length>=LIM){
+      document.querySelectorAll(".step:not(#full)").forEach(x=>x.hidden=true); document.querySelector(".side").hidden=true; $("full").hidden=false;
+      $("fullText").textContent=member?"Tu equipo te asignó todas las que puedes usar. Borra una o pide más a quien administra tu equipo.":`Tu plan ${P.name} incluye ${LIM.toLocaleString("es-MX")} ${LIM===1?"experiencia":"experiencias"}. Borra una desde tu cuenta o mejora tu plan para crear tu libro.`;
+    } else drawVenta();
+  }catch(e){ if(e.status===401){ toLogin(); return; } }
+  check();
+})();
+</script>
+<script src="../../assets/magia.js" defer></script>
+</body>
+</html>
