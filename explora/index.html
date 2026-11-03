@@ -65,6 +65,20 @@ main section{padding:0 0 80px}
 footer{padding:40px 0 60px;color:var(--mute);font-size:.88rem}
 footer .wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between}
 footer img{height:24px}
+/* search by @user or name, together with the type chips */
+.find{position:relative;max-width:560px;margin:-14px auto 22px}
+.find input{width:100%;font:500 1rem var(--fb);color:var(--ink);background:rgba(20,9,40,.7);border:1px solid var(--line2);border-radius:999px;padding:14px 46px 14px 48px;outline:none}
+.find input:focus{border-color:var(--lav);box-shadow:0 0 0 4px rgba(210,184,255,.12)}
+.find input::placeholder{color:#8f80b0}
+.find svg{position:absolute;left:17px;top:50%;width:20px;height:20px;transform:translateY(-50%);stroke:var(--lav);fill:none;stroke-width:2}
+.find button{all:unset;position:absolute;right:10px;top:50%;transform:translateY(-50%);width:30px;height:30px;display:grid;place-items:center;border-radius:50%;color:var(--mute);cursor:pointer;font-size:20px}
+.find button:hover{color:var(--ink);background:rgba(210,184,255,.12)}
+.people{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;margin:0 0 26px;padding:2px}
+.people::-webkit-scrollbar{display:none}
+.people a{flex:none;display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);border:1px solid var(--line2);border-radius:999px;padding:6px 16px 6px 6px;background:rgba(20,9,40,.6)}
+.people a:hover{border-color:var(--sun)}
+.people b{display:block;font:600 .9rem/1.2 var(--fd)}.people small{color:var(--mute);font-size:.78rem}
+.ptitle{font:600 .72rem var(--fd);letter-spacing:.16em;text-transform:uppercase;color:var(--sun);margin:0 0 10px}
 </style>
 </head>
 <body>
@@ -79,9 +93,13 @@ footer img{height:24px}
   </div>
 
   <section><div class="wrap">
+    <form class="find" id="find" role="search" onsubmit="return false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      <input type="search" id="q" placeholder="Busca por @usuario o por nombre" aria-label="Buscar experiencias por @usuario o nombre" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="40">
+      <button type="button" id="qx" aria-label="Borrar búsqueda" hidden>×</button></form>
     <div id="kinds"></div>
+    <div id="peopleBox" hidden><p class="ptitle">Personas</p><div class="people" id="people"></div></div>
     <div class="xgrid" id="list" aria-live="polite"></div>
-    <div class="empty" id="empty" hidden><b>Todavía no hay experiencias de este tipo</b>Sé de los primeros: crea una y, en Mi cuenta, activa «Mostrar en Explora».</div>
+    <div class="empty" id="empty" hidden><b id="emptyT">Todavía no hay experiencias de este tipo</b><span id="emptyS">Sé de los primeros: crea una y, en Mi cuenta, activa «Mostrar en Explora».</span></div>
     <div class="more"><button class="big ghost" id="more" type="button" hidden>Ver más</button></div>
   </div></section>
 
@@ -98,16 +116,30 @@ footer img{height:24px}
 <script src="../assets/poster.js?v=6"></script>
 <script src="../assets/explora.js?v=9"></script>
 <script>
-const $=id=>document.getElementById(id), K=VVRExplora.KINDS;
-let kind=new URLSearchParams(location.search).get("tipo")||"", next=null;
-VVRExplora.kinds($("kinds"),kind,k=>{ kind=k; next=null; history.replaceState(null,"",kind?`?tipo=${kind}`:location.pathname); load(false); });
+const $=id=>document.getElementById(id), K=VVRExplora.KINDS, P=new URLSearchParams(location.search);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let kind=P.get("tipo")||"", q=(P.get("q")||"").trim(), next=null, run=0, typing;
+$("q").value=q; $("qx").hidden=!q;
+// the address keeps the type and the search, so a result can be shared
+const keep=()=>{ const u=new URLSearchParams(); if(kind) u.set("tipo",kind); if(q) u.set("q",q); history.replaceState(null,"",u.toString()?"?"+u:location.pathname); };
+VVRExplora.kinds($("kinds"),kind,k=>{ kind=k; next=null; keep(); load(false); });
+$("q").addEventListener("input",()=>{ clearTimeout(typing); $("qx").hidden=!$("q").value; typing=setTimeout(()=>{ const v=$("q").value.trim(); if(v===q) return; q=v; next=null; keep(); load(false); },350); });
+$("qx").addEventListener("click",()=>{ $("q").value=""; $("q").dispatchEvent(new Event("input")); $("q").focus(); });
+function people(list){
+  $("peopleBox").hidden=!list||!list.length; if(!list||!list.length) return;
+  $("people").innerHTML=list.map(u=>`<a href="/@${esc(u.handle)}">${VVRExplora.avatar(u.avatar,u.handle,40)}<span><b>@${esc(u.handle)}</b><small>${esc(u.name)} · ${u.n} ${u.n===1?"experiencia":"experiencias"}</small></span></a>`).join("");
+}
 async function load(append){
-  $("more").hidden=true;
+  const me=++run; $("more").hidden=true;
   try{
-    const j=await VVRExplora.load(`?n=24${kind?"&tipo="+kind:""}${append&&next?"&antes="+next:""}`);
+    const j=await VVRExplora.load(`?n=24${kind?"&tipo="+kind:""}${q?"&q="+encodeURIComponent(q):""}${append&&next?"&antes="+next:""}`);
+    if(me!==run) return;   // an older search answered late
+    if(!append) people(q?j.users:null);
     VVRExplora.render($("list"),j.experiences,{append});
     next=j.next; $("more").hidden=!next; $("empty").hidden=!!(append||j.experiences.length);
-  }catch(e){ if(!append){ $("list").replaceChildren(); $("empty").hidden=false; } }
+    $("emptyT").textContent=q?`No encontramos experiencias con «${q}»${kind?" de este tipo":""}`:"Todavía no hay experiencias de este tipo";
+    $("emptyS").textContent=q?(j.users&&j.users.length?"Pero sí estas personas: entra a su portal para ver todo lo que comparten.":"Prueba con otro nombre o con @ y el nombre de usuario."):"Sé de los primeros: crea una y, en Mi cuenta, activa «Mostrar en Explora».";
+  }catch(e){ if(!append&&me===run){ $("list").replaceChildren(); $("empty").hidden=false; } }
 }
 $("more").addEventListener("click",()=>load(true));
 load(false);

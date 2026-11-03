@@ -257,7 +257,10 @@ async function api(request, env, ctx, url) {
   // "Explora" (/explora/ and the home page): the experiences their makers chose to show, newest first, 24 at a time
   if (path === "/api/explora" && M === "GET") {
     const n = Math.min(48, Math.max(1, Math.round(+url.searchParams.get("n")) || 24));
-    return json(await explore(env, request, { kind: url.searchParams.get("tipo") || "", n, before: +url.searchParams.get("antes") || 0 }), 200, { "Cache-Control": "public, max-age=60" });
+    const q = String(url.searchParams.get("q") || "").trim().slice(0, 40);
+    const r = await explore(env, request, { kind: url.searchParams.get("tipo") || "", n, before: +url.searchParams.get("antes") || 0, q });
+    if (q && !url.searchParams.get("antes")) r.users = await findUsers(env, q);   // the people whose @ matches, first page only
+    return json(r, 200, { "Cache-Control": "public, max-age=60" });
   }
   // a portal (vorticevr.mx/@nombre): the account's name, photo and its public experiences (a private profile shows nothing)
   m = path.match(/^\/api\/portal\/([a-z0-9_-]{3,24})$/);
@@ -1068,6 +1071,15 @@ async function handleProblem(env, h, myId) {
   return taken ? "Alguien más ya usa ese nombre. Prueba otro." : null;
 }
 const avatarUrl = (id, v) => `/api/avatar/${id}?v=${v}`;
+const fold = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+const likeEsc = s => s.replace(/[\\%_]/g, c => "\\" + c);
+// Explora's search: up to 6 public profiles whose @ starts with (or contains) the text, with how many experiences they show
+async function findUsers(env, q) {
+  const t = likeEsc(fold(q).replace(/^@+/, "")); if (!t) return [];
+  const { results } = await env.DB.prepare(`SELECT u.id, u.name, u.handle, u.avatar, (SELECT COUNT(*) FROM experiences e WHERE e.email = u.email AND e.listed = 1 AND e.hidden = 0 AND e.paused = 0 AND e.expires > ?) AS n
+    FROM users u WHERE u.handle LIKE ? ESCAPE '\\' AND u.verified = 1 AND COALESCE(u.profile_public, 1) = 1 ORDER BY (u.handle LIKE ? ESCAPE '\\') DESC, n DESC LIMIT 6`).bind(Date.now(), `%${t}%`, `${t}%`).all();
+  return results.filter(u => u.n > 0).map(u => ({ name: u.name || u.handle, handle: u.handle, avatar: u.avatar ? avatarUrl(u.id, u.avatar) : null, n: u.n }));
+}
 // The public experiences (listed, not taken down, live and inside their plan), newest first. kind: one type ("ra" = AR with
 // an image) · email: one account (its portal) · before: "updated" of the last one already shown (next page).
 async function explore(env, request, o) {
@@ -1080,6 +1092,10 @@ async function explore(env, request, o) {
   if (o.email) { sql += " AND e.email = ?"; args.push(o.email); }
   if (o.before) { sql += " AND e.updated < ?"; args.push(o.before); }
   if (o.kind && o.kind !== "ra") { sql += " AND e.data LIKE ?"; args.push(`%"kind":"${o.kind.replace(/[^a-z]/g, "")}"%`); }
+  // search: "@ana" = whose user name starts with "ana" (in SQL); anything else = in the name people see or the user name,
+  // without accents or capitals (below, over the newest 400)
+  const at = (o.q || "").startsWith("@"), words = fold(o.q).replace(/^@+/, "");
+  if (at && words) { sql += " AND u.handle LIKE ? ESCAPE '\\'"; args.push(likeEsc(words) + "%"); }
   const { results } = await env.DB.prepare(sql + " ORDER BY e.updated DESC LIMIT 400").bind(...args).all();
   let more = false;
   for (const r of results) {
@@ -1089,6 +1105,7 @@ async function explore(env, request, o) {
     if (x.kind === "galeria" && !galleryPlan(P)) continue;       // a gallery needs a paid plan
     if (out.length >= o.n) { more = true; break; }
     const k = x[x.kind] || {};
+    if (words && !at && ![k.name, r.title, r.handle].some(v => fold(v).includes(words))) continue;
     out.push({ slug: r.slug, kind: x.kind, title: (k.name || r.title || "").slice(0, 80), url: expUrl(r.slug, request, env), updated: r.updated, views: r.views,
       image: x.kind === "trivia" && !(k.logo) ? null : `/m/${r.slug}/image?v=${r.updated}`, likes: r.likes || 0,
       by: r.handle ? { name: r.name || r.handle, handle: r.handle, avatar: r.avatar ? avatarUrl(r.uid, r.avatar) : null } : null });
