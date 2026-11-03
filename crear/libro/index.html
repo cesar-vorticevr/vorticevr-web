@@ -149,6 +149,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--lav);outline:none}
         <label class="f" style="margin-top:0">¿Qué tipo de libro es?</label>
         <div class="tpls" id="tpls"></div>
         <p class="note" style="margin:8px 0 0">Cada tipo trae sus páginas en orden y una pregunta que guía qué escribir en cada una. Luego puedes agregar, mover o quitar páginas.</p>
+        <div class="row"><button class="btn sm" type="button" id="ejemplo">✦ Llenar con un cuento de ejemplo</button><span class="note">Para ver cómo queda un libro completo: solo le faltan las ilustraciones.</span></div>
         <label class="f" for="bname">Nombre del libro</label>
         <input type="text" id="bname" maxlength="80" placeholder="Ej. El jaguar que no sabía nadar">
         <label class="f" for="autor">Escrito por</label>
@@ -215,7 +216,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--lav);outline:none}
 <script src="../../assets/marca.js"></script>
 <script src="../../assets/plataforma.js" data-api="../.."></script>
 <script type="module">
-import { run, PLANTILLAS, ROLES, LAYS, ESTILOS, EDADES, TEMAS, JUEGOS, LIMITS, wordsOf } from "../../assets/libro.js";
+import { run, PLANTILLAS, ROLES, LAYS, ESTILOS, EDADES, TEMAS, JUEGOS, LIMITS, wordsOf, EJEMPLO } from "../../assets/libro.js";
 const $=id=>document.getElementById(id);
 const API=VVR.api;
 const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -236,6 +237,10 @@ async function shrink(file,max){
   return {blob:b,w:c.width,h:c.height};
 }
 const newPage=(lay,role,extra={})=>({id:rid(),lay,role:role||"libre",t:"",x:"",credit:"",...(lay==="pregunta"?{q:{p:"",ops:[{t:""},{t:""},{t:""}],ok:0,why:""}}:{}),...(lay==="juego"?{g:{k:"sopa",words:[],mode:"iguales",pairs:[{a:{t:""}},{a:{t:""}},{a:{t:""}}],level:"facil"}}:{}),...extra});
+// stored pages (a published book or the example) → the maker's pages, with every field its editor uses
+const normPages=ps=>ps.map(p=>({t:"",x:"",credit:"",...JSON.parse(JSON.stringify(p)),id:p.id||rid(),
+  ...(p.lay==="pregunta"?{q:{why:"",...p.q,ops:p.q.ops.map(o=>({t:o.t}))}}:{}),
+  ...(p.lay==="juego"?{g:{k:"sopa",words:[],mode:"iguales",pairs:[{a:{t:""}},{a:{t:""}},{a:{t:""}}],level:"facil",...p.g,pairs:(p.g.pairs||[{a:{t:""}},{a:{t:""}},{a:{t:""}}]).map(x=>({a:{...x.a},b:x.b?{...x.b}:{t:""}}))}}:{})}));
 function fromTpl(k){ return PLANTILLAS[k].pages.map(p=>{ const pg=newPage(p.lay,p.role); if(p.g) pg.g={...pg.g,...p.g,words:[]}; if(p.lay==="fin") pg.t="Fin"; if(p.lay==="autores") pg.t="Hecho por"; if(p.role==="dedicatoria") pg.t="Para…"; return pg; }); }
 
 // ---------- 1. the book ----------
@@ -243,6 +248,12 @@ function drawTpls(){ $("tpls").innerHTML=Object.entries(PLANTILLAS).map(([k,T])=
 $("tpls").addEventListener("click",e=>{ const b=e.target.closest("[data-t]"); if(!b) return; const k=b.dataset.t; if(k===S.tpl) return;
   const used=S.d.pages.some(p=>(p.x||"").trim()||p.img||p.aud); if(used&&!confirm("Se cambiarán tus páginas por las de este tipo de libro. ¿Seguimos?")) return;
   S.tpl=k; S.d.tipo=k; S.d.estilo=PLANTILLAS[k].estilo; S.d.tema=k==="cuento"?"cuentos":S.d.tema==="cuentos"?"otro":S.d.tema; S.d.pages=fromTpl(k); S.sel=0; drawAll(); changed(); });
+$("ejemplo").addEventListener("click",()=>{
+  const used=S.d.pages.some(p=>(p.x||"").trim()||p.img||p.aud); if(used&&!confirm("Se cambiarán tus páginas por las del cuento de ejemplo. ¿Seguimos?")) return;
+  const E=EJEMPLO; S.tpl=E.tipo; Object.assign(S.d,{tipo:E.tipo,estilo:E.estilo,edad:E.edad,tema:E.tema,pages:normPages(E.pages)}); S.sel=0;
+  $("bname").value=E.name; $("bname").dataset.last=E.name; $("autor").value=E.autor; $("sub").value=E.sub;
+  if(!$("title").dataset.touched&&!S.mine){ $("title").value=E.name; $("title").dispatchEvent(new Event("input")); }
+  drawAll(); changed(); });
 for(const [k,t] of Object.entries(EDADES)) $("edad").add(new Option(t,k));
 for(const [k,t] of Object.entries(TEMAS)) $("tema").add(new Option(t,k));
 $("edad").onchange=()=>{ S.d.edad=$("edad").value; changed(); };
@@ -512,9 +523,7 @@ function drawAll(){ drawTpls(); drawEstilo(); $("edad").value=S.d.edad; $("tema"
       const L=exp.libro||{pages:[]};
       S.tpl=L.tipo||"cuento";
       S.d={tipo:L.tipo||"cuento",estilo:L.estilo||"clasico",edad:L.edad||"todos",tema:L.tema||"otro",venta:{modo:"gratis",precio:39,gratis:3,...(L.venta||{})},
-        pages:(L.pages||[]).map(p=>({t:"",x:"",credit:"",...JSON.parse(JSON.stringify(p)),
-          ...(p.lay==="pregunta"?{q:{why:"",...p.q,ops:p.q.ops.map(o=>({t:o.t}))}}:{}),
-          ...(p.lay==="juego"?{g:{k:"sopa",words:[],mode:"iguales",pairs:[{a:{t:""}},{a:{t:""}},{a:{t:""}}],level:"facil",...p.g,pairs:(p.g.pairs||[{a:{t:""}},{a:{t:""}},{a:{t:""}}]).map(x=>({a:{...x.a},b:x.b?{...x.b}:{t:""}}))}}:{})}))};
+        pages:normPages(L.pages||[])};
       $("bname").value=L.name||exp.title; $("bname").dataset.last=(S.d.pages[0]||{}).t||""; $("autor").value=L.autor||""; $("sub").value=L.sub||"";
       $("title").value=exp.title; $("title").dataset.touched="1"; slugIn.value=exp.slug; slugIn.dataset.touched="1"; checkSlug();
       $("publish").textContent="Guardar cambios";
