@@ -51,6 +51,22 @@ main section{padding:20px 0 80px}
 footer{padding:40px 0 60px;color:var(--mute);font-size:.88rem}
 footer .wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between}
 footer img{height:24px}
+.av{overflow:hidden;background:none}.av img,.av svg{width:100%!important;height:100%!important;object-fit:cover;display:block}
+.hearts{color:#ff6b93;font-weight:600}
+.gal{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:0;border-radius:22px;overflow:hidden;margin:0 0 40px;text-decoration:none;color:var(--ink);border:1px solid rgba(255,190,85,.55);background:linear-gradient(135deg,rgba(255,190,85,.14),rgba(139,63,214,.18));box-shadow:0 30px 70px -30px rgba(255,190,85,.5)}
+.gal img{width:100%;height:100%;min-height:220px;object-fit:cover;display:block}
+.gal div{padding:28px;display:flex;flex-direction:column;justify-content:center;gap:8px}
+.gal small{font:600 .72rem var(--fd);letter-spacing:.16em;text-transform:uppercase;color:var(--sun)}
+.gal b{font:700 clamp(1.4rem,3vw,2rem)/1.15 var(--fd)}
+.gal span.pill{width:max-content;margin-top:8px}
+@media (max-width:700px){.gal{grid-template-columns:1fr}.gal div{padding:20px}}
+.kit{border:1px solid var(--line2);border-radius:20px;background:#0d0620;color:var(--ink);padding:20px;width:min(94vw,760px);max-height:none}
+.kit::backdrop{background:rgba(5,2,11,.82);backdrop-filter:blur(4px)}
+.kit h2{margin:0 0 12px;font:700 1.3rem var(--fd)}
+.kit .pv{display:flex;justify-content:center;background:#05020b;border-radius:12px;padding:12px}
+.kit canvas{max-width:100%;max-height:62vh;height:auto;border-radius:8px;box-shadow:0 20px 50px -20px #000}
+.kit .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:14px}
+.kit .wait{color:var(--mute);text-align:center;margin:8px 0 0}
 </style>
 </head>
 <body>
@@ -63,9 +79,10 @@ footer img{height:24px}
     <h1 id="name">Cargando…</h1>
     <div class="h" id="handle"></div>
     <p id="count"></p>
-    <div class="share" id="share" hidden><button class="pill gold" id="shareBtn" type="button">Compartir este portal</button><a class="pill" href="/explora/">Ver más en Explora</a></div>
+    <div class="share" id="share" hidden><button class="pill gold" id="shareBtn" type="button">Compartir este portal</button><button class="pill" id="kitP" type="button">Póster con QR</button><button class="pill" id="kitC" type="button">Tarjeta de presentación</button></div>
   </div>
   <section><div class="wrap">
+    <a class="gal" id="gal" hidden target="_blank" rel="noopener"><img id="galImg" alt=""><div><small>Galería en 3D</small><b id="galName"></b><span id="galMeta" style="color:var(--mute)"></span><span class="pill gold">Recorrer la galería</span></div></a>
     <div class="xgrid" id="list"></div>
     <div class="empty" id="empty" hidden><b>Todavía no hay experiencias públicas</b>Cuando comparta alguna, aparecerá aquí.</div>
   </div></section>
@@ -75,26 +92,48 @@ footer img{height:24px}
   </div></section>
 </main>
 
+<dialog class="kit" id="kit"><h2 id="kitT"></h2><div class="pv"><canvas id="kitCv"></canvas></div><p class="wait" id="kitW">Preparando…</p>
+  <div class="row"><button class="pill" id="kitX" type="button">Cerrar</button><button class="pill" id="kitPng" type="button">Descargar imagen</button><button class="pill gold" id="kitPdf" type="button">Descargar PDF</button></div></dialog>
+
 <footer><div class="wrap"><a href="/"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><span>© Vórtice VR · <a href="/privacidad/">Privacidad</a> · <a href="/terminos/">Términos</a></span></div></footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
-<script src="/assets/poster.js?v=5"></script>
-<script src="/assets/explora.js?v=8"></script>
+<script src="/assets/poster.js?v=6"></script>
+<script src="/assets/explora.js?v=9"></script>
+<script src="/assets/perfil-kit.js?v=1"></script>
 <script>
 const $=id=>document.getElementById(id);
 const handle=(location.pathname.match(/^\/@([a-z0-9_-]{3,24})/i)||[])[1];
+const nf=n=>Number(n||0).toLocaleString("es-MX");
 function notFound(){ $("name").textContent="Este portal no existe"; $("count").innerHTML=`Revisa el nombre o <a href="/explora/">explora otras experiencias</a>.`; $("av").textContent="?"; }
+function privado(h){ $("av").innerHTML=VVRExplora.avatar(null,h,104); $("name").textContent="Perfil privado"; $("handle").textContent="@"+h; $("count").textContent="Sus experiencias solo se ven con su link o su QR."; }
 if(!handle) notFound();
-else fetch(`/api/portal/${handle.toLowerCase()}`).then(r=>r.ok?r.json():Promise.reject(r)).then(j=>{
+else fetch(`/api/portal/${handle.toLowerCase()}`).then(async r=>{ const j=await r.json().catch(()=>({})); if(r.status===403&&j.private) return privado(j.handle); if(!r.ok) throw r; show(j); }).catch(notFound);
+// the gallery in 3D (one per account) goes first and big; the rest as posters
+function show(j){
   const name=j.name||j.handle, n=j.experiences.length;
   document.title=`${name} (@${j.handle}) · Portal de experiencias | Vórtice VR`;
-  $("av").textContent=(name.trim()[0]||"·").toUpperCase(); $("name").textContent=name; $("handle").textContent="@"+j.handle;
-  $("count").textContent=n?`${n} ${n===1?"experiencia":"experiencias"} en Vórtice VR`:"";
+  $("av").innerHTML=VVRExplora.avatar(j.avatar,j.handle,104); $("name").textContent=name; $("handle").textContent="@"+j.handle;
+  $("count").innerHTML=n?`${nf(n)} ${n===1?"experiencia":"experiencias"} en Vórtice VR${j.likes?` · <span class="hearts">♥ ${nf(j.likes)}</span>`:""}`:"";
   $("share").hidden=false; $("empty").hidden=!!n;
+  const g=j.experiences.find(x=>x.kind==="galeria");
+  if(g){ $("gal").hidden=false; $("gal").href=g.url; $("galImg").src=g.image; $("galName").textContent=g.title; $("galMeta").textContent=g.likes?`♥ ${nf(g.likes)}`:"Una exposición que se recorre"; }
   VVRExplora.render($("list"),j.experiences,{by:false});
+  // printables: letter poster and business card with the QR to this portal (assets/perfil-kit.js)
+  let run=0, kind="";
+  async function kit(k){ kind=k; const me=++run; $("kitT").textContent=k==="poster"?"Póster del portal":"Tarjeta de presentación"; $("kitW").hidden=false; $("kitW").textContent="Preparando…";
+    $("kitPdf").disabled=$("kitPng").disabled=true; if(!$("kit").open) $("kit").showModal();
+    try{ await (k==="poster"?VVRKit.poster:VVRKit.card)($("kitCv"),j); if(me!==run) return; $("kitW").hidden=true; $("kitPdf").disabled=$("kitPng").disabled=false; }
+    catch(e){ if(me===run) $("kitW").textContent="No se pudo preparar. Intenta de nuevo."; } }
+  const file=()=>`${kind==="poster"?"poster":"tarjeta"}-${j.handle}`;
+  $("kitP").onclick=()=>kit("poster"); $("kitC").onclick=()=>kit("tarjeta");
+  $("kitPdf").onclick=()=>VVRPoster.pdf($("kitCv"),file()+".pdf",kind==="poster"?null:VVRKit.CARD_PT);
+  $("kitPng").onclick=()=>VVRPoster.png($("kitCv"),file()+".png");
+  $("kitX").onclick=()=>$("kit").close();
+  const q=new URLSearchParams(location.search).get("kit"); if(q==="poster"||q==="tarjeta") kit(q);
   $("shareBtn").onclick=async()=>{ const url=location.origin+"/@"+j.handle, data={title:`${name} en Vórtice VR`,text:"Mira mis experiencias:",url};
     try{ if(navigator.share) await navigator.share(data); else { await navigator.clipboard.writeText(url); $("shareBtn").textContent="¡Link copiado!"; setTimeout(()=>$("shareBtn").textContent="Compartir este portal",1800); } }catch(e){} };
-}).catch(notFound);
+}
 </script>
 <script src="/assets/menu-movil.js"></script>
 <script src="/assets/magia.js" defer></script>

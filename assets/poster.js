@@ -1,6 +1,6 @@
 // Printable poster of an experience (letter size, 8.5 × 11 in at 300 dpi = 2550 × 3300):
 // its image, name, logo, how-to steps for its kind and a big QR. Downloads as PDF (the JPEG inside a one-page PDF) or PNG.
-// Usage: VVRPoster.draw(canvas, exp, { api, base, plan }) → Promise; VVRPoster.pdf(canvas, name); VVRPoster.png(canvas, name).
+// Usage: VVRPoster.draw(canvas, exp, { api, base, plan, by }) → Promise (by = the owner's user name: "por @nombre" under the name); VVRPoster.pdf(canvas, name); VVRPoster.png(canvas, name).
 // Needs qrcode-generator (window.qrcode) and the Sora / IBM Plex fonts on the page.
 (function () {
   const W = 2550, H = 3300, BAND = 1850, INK = "#1b0a36";
@@ -72,7 +72,7 @@
       y += hh + (big ? 60 : 90); } else y += 60;
     const steps = K[2].slice();
     if (kind === "dispara" && d.prize && d.prize.min) steps[2] += ` y llega a ${d.prize.min} puntos para ganar un premio`;
-    if (big) return scanLayout(x, { pic, name, accent, url: exp.url, brand, logo, icon, steps, y });
+    if (big) return scanLayout(x, { pic, name, accent, url: exp.url, brand, logo, icon, steps, y, by: o.by });
     // kind pill
     x.font = "700 58px Sora"; const label = K[0].toUpperCase(); if ("letterSpacing" in x) x.letterSpacing = "8px";
     const pw = x.measureText(label).width + 120; x.fillStyle = "#ffbe55"; rr(x, (W - pw) / 2, y, pw, 110, 55); x.fill();
@@ -86,6 +86,7 @@
     for (const l of tl) { y += fs * 1.02; x.fillText(l, W / 2, y); } x.restore();
     x.font = "500 76px 'IBM Plex Sans'"; x.fillStyle = mix(accent, "#ffffff", .75); const sl = lines(x, sub, 2100).slice(0, 2);
     y += 40; for (const l of sl) { y += 96; x.fillText(l, W / 2, y); }
+    if (o.by) { y += 96; x.font = "600 66px 'IBM Plex Sans'"; x.fillStyle = "#ffbe55"; x.fillText("por @" + o.by, W / 2, y); }
     y += 80;
     // the picture, on a white card that crosses the edge of the band
     const below = stage ? 290 : 156, maxW = stage ? 1500 : 1900, maxH = Math.max(520, 2200 - below - y);   // the steps and the QR need from 2200 down
@@ -140,6 +141,7 @@
     if (tl.length > 2) { tl = tl.slice(0, 2); tl[1] = tl[1].replace(/\s*\S*$/, "") + "…"; }
     x.fillStyle = "#fff"; x.save(); x.shadowColor = "rgba(0,0,0,.35)"; x.shadowBlur = 24;
     for (const l of tl) { y += fs * 1.02; x.fillText(l, W / 2, y); } x.restore();
+    if (o.by) { y += 76; x.font = "600 56px 'IBM Plex Sans'"; x.fillStyle = "#ffbe55"; x.fillText("por @" + o.by, W / 2, y); }
     y += 60 + m;
     const pr = pic ? (pic.naturalWidth || pic.width) / (pic.naturalHeight || pic.height) : .75, side = pr < .95, col = 600;
     const left = 130 + m, right = side ? W - 130 - col - 70 - m : W - 130 - m, bottom = side ? foot - 70 - m : foot - 760;
@@ -196,16 +198,16 @@
   }
 
   // one-page letter PDF with the canvas as a JPEG (DCTDecode): no library needed
-  function pdf(canvas, name) {
+  function pdf(canvas, name, size) {   // size = [width, height] in points (default letter); the business card is [252, 144]
     return new Promise(res => canvas.toBlob(async b => {
       const jpg = new Uint8Array(await b.arrayBuffer()), enc = new TextEncoder(), parts = [], offs = []; let len = 0;
       const add = p => { const u = typeof p === "string" ? enc.encode(p) : p; parts.push(u); len += u.length; };
       const obj = (n, body, stream) => { offs[n] = len; add(`${n} 0 obj\n${body}\n`); if (stream) { add("stream\n"); add(stream); add("\nendstream\n"); } add("endobj\n"); };
-      const draw = "q 612 0 0 792 0 0 cm /Im0 Do Q";
+      const [pw, ph] = size || [612, 792], draw = `q ${pw} 0 0 ${ph} 0 0 cm /Im0 Do Q`;
       add("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
       obj(1, "<< /Type /Catalog /Pages 2 0 R >>");
       obj(2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-      obj(3, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /XObject << /Im0 5 0 R >> >> /Contents 4 0 R >>");
+      obj(3, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pw} ${ph}] /Resources << /XObject << /Im0 5 0 R >> >> /Contents 4 0 R >>`);
       obj(4, `<< /Length ${draw.length} >>`, enc.encode(draw));
       obj(5, `<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>`, jpg);
       const xref = len; add(`xref\n0 6\n0000000000 65535 f \n${offs.slice(1).map(o => String(o).padStart(10, "0") + " 00000 n \n").join("")}trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);

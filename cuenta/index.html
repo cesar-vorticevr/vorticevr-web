@@ -214,6 +214,29 @@ dialog .row{justify-content:space-between}
 .plink{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
 .plink a{font-family:var(--fm);color:var(--sun);overflow-wrap:anywhere}
 .ec .acts .pub.on{border-color:var(--ok);color:var(--ok)}
+.ec .acts .pub:not(.on){border-color:rgba(255,77,77,.6);color:#ff6b6b}
+/* public = glowing green outline · private = red (the private ones are still fully usable by their link) */
+.ec.vis-pub{border-color:#2bff88;box-shadow:0 0 0 1px #2bff88,0 0 22px -4px rgba(43,255,136,.65)}
+.ec.vis-priv{border-color:rgba(255,64,64,.85);box-shadow:0 0 0 1px rgba(255,64,64,.7),0 0 18px -6px rgba(255,64,64,.55)}
+.ec.vis-pub.hid{border-color:var(--sun);box-shadow:0 0 0 1px var(--sun)}
+.ec .th .vis{position:absolute;left:10px;bottom:10px;font:700 .68rem var(--fd);letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
+.ec.vis-pub .th .vis{background:#2bff88;color:#04210f}.ec.vis-priv .th .vis{background:rgba(255,64,64,.92);color:#fff}
+.ec .meta .hearts{color:#ff6b93}.ec .meta .hearts b{color:#ff6b93}
+.vischips{display:flex;gap:6px}
+.vischips .chip[aria-pressed="true"][data-v="pub"]{background:rgba(43,255,136,.12);border-color:#2bff88;color:#2bff88}
+.vischips .chip[aria-pressed="true"][data-v="priv"]{background:rgba(255,64,64,.12);border-color:#ff4040;color:#ff6b6b}
+/* user name (sign-up and Mi portal), profile photo, public/private profile */
+.hstat{min-height:1.3em;font-size:.82rem;margin:6px 0 0;color:var(--mute)}.hstat.ok{color:var(--ok)}.hstat.bad{color:var(--bad)}
+.prof{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin:6px 0 18px}
+.prof .ph{width:96px;height:96px;border-radius:50%;overflow:hidden;flex:none;box-shadow:0 0 0 4px rgba(210,184,255,.18)}
+.prof .ph img,.prof .ph svg{width:100%!important;height:100%!important;object-fit:cover;display:block}
+.prof .pa{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.mebtn .av img,.mebtn .av svg{width:28px!important;height:28px!important;border-radius:50%;object-fit:cover;display:block}
+.pswitch{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line2);border-radius:14px;padding:14px;margin:18px 0 6px;cursor:pointer}
+.pswitch input{width:20px;height:20px;margin:2px 0 0;accent-color:#2bff88;flex:none}
+.pswitch b{display:block;font-family:var(--fd)}.pswitch span{color:var(--mute);font-size:.86rem}
+.pkit{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.must{border:1px solid var(--sun);background:rgba(255,190,85,.08);border-radius:12px;padding:12px 14px;margin:0 0 14px;font-size:.92rem}
 .ec .th .gone{left:auto;right:10px;top:10px;border-color:var(--bad);color:var(--bad)}
 #posterDlg{width:min(92vw,440px)}
 #posterDlg .pnote{margin:6px 0 0;font-size:.85rem;color:var(--mute)}
@@ -276,6 +299,8 @@ dialog .row{justify-content:space-between}
     <div class="invite" id="rInvite" hidden></div>
     <form id="fRegistro">
       <label class="f" for="rName">Nombre</label><input type="text" id="rName" autocomplete="name" maxlength="60" required>
+      <label class="f" for="rHandle">Nombre de usuario</label><div class="hrow"><span>@</span><input id="rHandle" maxlength="24" autocapitalize="none" autocomplete="username" spellcheck="false" placeholder="tunombre" pattern="[A-Za-z0-9][A-Za-z0-9_\-]{2,23}" required aria-describedby="rHStat"></div>
+      <p class="hstat" id="rHStat">Así te verán los demás y será tu página: vorticevr.mx/@tunombre</p>
       <label class="f" for="rEmail">Correo</label><input type="email" id="rEmail" autocomplete="email" required>
       <label class="f" for="rPass">Contraseña (mínimo 8 caracteres)</label><div class="pw"><input type="password" id="rPass" autocomplete="new-password" minlength="8" required><button type="button" data-show="rPass">Ver</button></div>
       <button class="btn primary wide" type="submit">Crear cuenta</button>
@@ -345,11 +370,18 @@ dialog .row{justify-content:space-between}
 
     <section class="card" id="portalBox" hidden>
       <div class="phead"><h2>Mi portal</h2><button class="btn sm" id="portalClose" type="button">Cerrar</button></div>
-      <p class="note">Tu página pública con las experiencias que muestras en Explora. Elige tu nombre de usuario y compártela: <b>vorticevr.mx/@tunombre</b>. Solo salen las experiencias que tú marques como públicas.</p>
-      <form id="fPortal"><label class="f" for="hIn">Nombre de usuario</label><div class="hrow"><span>vorticevr.mx/@</span><input id="hIn" maxlength="24" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="tunombre" required></div>
+      <div class="must" id="portalMust" hidden><b>Elige tu nombre de usuario.</b> Todos en Vórtice VR tienen uno: así te ven los demás cuando muestras tus experiencias y es la dirección de tu página.</div>
+      <p class="note">Tu página pública con las experiencias que muestras en Explora (también tu galería en 3D): <b>vorticevr.mx/@tunombre</b>. Solo salen las experiencias que tú marques como públicas.</p>
+      <div class="prof"><div class="ph" id="avBig"></div><div class="pa">
+        <label class="btn sm" for="avIn" style="cursor:pointer">Subir foto de perfil</label><input type="file" id="avIn" accept="image/png,image/jpeg,image/webp" hidden>
+        <button class="btn sm" id="avDel" type="button" hidden>Quitar foto</button><span class="note" style="margin:0">Opcional. Si no subes una, usamos una genérica.</span></div></div>
+      <form id="fPortal"><label class="f" for="hIn">Nombre de usuario</label><div class="hrow"><span>vorticevr.mx/@</span><input id="hIn" maxlength="24" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="tunombre" required aria-describedby="hStat"></div>
+        <p class="hstat" id="hStat"></p>
         <button class="btn sun wide" type="submit">Guardar</button></form><div class="msg" id="mPortal"></div>
+      <label class="pswitch"><input type="checkbox" id="pubIn"><div><b id="pubT">Perfil público</b><span id="pubS"></span></div></label>
       <div class="plink" id="portalLink" hidden><a id="portalA" target="_blank" rel="noopener"></a><button class="btn sm" id="portalCopy" type="button">Copiar link</button></div>
       <p class="note" id="portalCount"></p>
+      <div class="pkit" id="portalKit" hidden><a class="btn sm" id="kitPoster" target="_blank" rel="noopener">Póster de mi portal</a><a class="btn sm" id="kitCard" target="_blank" rel="noopener">Tarjeta de presentación</a></div>
     </section>
 
     <section class="card" id="codeBox" hidden>
@@ -380,6 +412,7 @@ dialog .row{justify-content:space-between}
       <h2>Mis experiencias <span class="lim" id="pCount"></span></h2>
       <input type="search" id="pSearch" placeholder="Buscar por título" aria-label="Buscar experiencias">
       <select id="pSort" aria-label="Ordenar"><option value="new">Más recientes</option><option value="views">Más vistas</option><option value="name">Nombre (A–Z)</option></select>
+      <span class="vischips" id="pVis" role="group" aria-label="Públicas o privadas" hidden><button class="chip" type="button" data-v="pub" aria-pressed="false"></button><button class="chip" type="button" data-v="priv" aria-pressed="false"></button></span>
       <button class="chip" id="pPausedOnly" type="button" aria-pressed="false" hidden></button>
     </div>
     <div class="kinds" id="pKinds" role="group" aria-label="Tipo de experiencia" hidden></div>
@@ -405,7 +438,8 @@ dialog .row{justify-content:space-between}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="../assets/plataforma.js"></script>
-<script src="../assets/poster.js?v=5"></script>
+<script src="../assets/poster.js?v=6"></script>
+<script src="../assets/explora.js?v=9"></script>
 <script src="../assets/origen.js"></script>
 <script>
 const $=id=>document.getElementById(id);
@@ -417,7 +451,7 @@ function refCode(){ try{ const r=JSON.parse(localStorage.getItem(REFKEY)||"null"
 (async()=>{ const c=refCode(); if(!c) return; try{ const r=await (await fetch(`${VVR.api}/api/ref/${encodeURIComponent(c)}`)).json();
   if(r.ok){ const b=$("rInvite"); b.hidden=false; b.innerHTML=`✦ <b>${esc(r.name)}</b> te invitó: tendrás <b>${r.discount}% de descuento</b> en tu primer pago de cualquier plan.`; } }catch(e){} })();
 // siguiente=crear/ruleta (the segment pages) goes straight to that creator after signing in; siguiente=cursos/… back to the courses
-const NEXT=/^(cursos(\/[a-z0-9-]+)*|biblioteca\/[a-z0-9-]+)$/.test(Q.get("siguiente")||"")?"../"+Q.get("siguiente")+"/":/^crear\/[a-z]+$/.test(Q.get("siguiente")||"")?"../"+Q.get("siguiente")+"/":Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":Q.get("siguiente")==="vendedor"?"../vendedor/":null;
+const NEXT=/^(cursos(\/[a-z0-9-]+)*|biblioteca\/[a-z0-9-]+|explora)$/.test(Q.get("siguiente")||"")?"../"+Q.get("siguiente")+"/":/^@[a-z0-9_-]{3,24}$/i.test(Q.get("siguiente")||"")?"../"+Q.get("siguiente"):Q.get("siguiente")==="inicio"?"../":/^crear\/[a-z]+$/.test(Q.get("siguiente")||"")?"../"+Q.get("siguiente")+"/":Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":Q.get("siguiente")==="vendedor"?"../vendedor/":null;
 // public plans: [id, name, monthly price, yearly price, what it includes] (a year is ~10 months; IVA included)
 const PLANS=[["gratis","Gratis",0,0,"Para probar la magia",["Hasta <b>3</b> experiencias de cualquier tipo","Realidad aumentada: hasta <b>3</b> elementos por imagen (video, foto, texto o 3D)","Activa <b>15 días</b>","Hasta <b>1,000</b> vistas","Videos de hasta 25 MB"]],
   ["pro","Pro",499,4990,"Para crear y vender experiencias",["<b>100</b> experiencias de cualquier tipo","Realidad aumentada: hasta <b>15</b> elementos por imagen","Cámbialas cuando quieras","Sin vencimiento mientras pagues","Vistas ilimitadas","Videos de hasta <b>50 MB</b>"]],
@@ -443,7 +477,7 @@ $("fEntrar").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,as
 
 // ---- sign up ----
 $("fRegistro").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,async()=>{ msg("mRegistro","Creando tu cuenta…");
-  try{ const r=await VVR.call("register",{json:{name:$("rName").value,email:$("rEmail").value,password:$("rPass").value,ref:refCode(),origin:window.vvrOrigen?vvrOrigen():null}}); askCode("verify",$("rEmail").value,r.dev_code); }
+  try{ const r=await VVR.call("register",{json:{name:$("rName").value,email:$("rEmail").value,password:$("rPass").value,handle:$("rHandle").value,ref:refCode(),origin:window.vvrOrigen?vvrOrigen():null}}); askCode("verify",$("rEmail").value,r.dev_code); }
   catch(err){ msg("mRegistro",err.message,"bad"); if(err.status===409) setTimeout(()=>{ $("eEmail").value=$("rEmail").value; location.hash="#entrar"; },1500); } }); });
 
 // ---- code: confirm account, or reset password ----
@@ -495,7 +529,7 @@ function showPanel(data){
   $("pHello").textContent=`Hola, ${user.name||"bienvenido"}`;
   // account menu (header): name, email, plan and settings, only when opened
   $("me").hidden=false; $("mName").textContent=user.name||""; $("mEmail").textContent=user.email;
-  $("meAv").textContent=String(user.name||user.email||"?").trim().charAt(0).toUpperCase();
+  $("meAv").innerHTML=VVRExplora.avatar(user.avatar,user.handle||user.name,28);
   const T=data.team||{}, member=T.role==="member", owner=T.role==="owner", lim=data.limit??P.exp;
   const active=experiences.filter(x=>!x.paused).length, full=active>=lim;
   $("pPlanName").textContent=member?`${P.name} · equipo`:P.name; $("pAdmin").hidden=!data.admin; $("pSeller").hidden=!data.seller; $("pManage").hidden=!B.subscribed;
@@ -517,6 +551,7 @@ function showPanel(data){
   if(location.hash==="#planes"&&P.id!=="escuela"&&!member) openPlans(true);
   if(B.pastDue) banner("No pudimos cobrar tu última mensualidad. Actualiza tu tarjeta en “Administrar suscripción” para que tu plan siga activo.","warn");
   renderList();
+  if(!user.handle) openPortal();
   const pub=Q.get("publicada"); if(pub&&experiences.some(x=>x.slug===pub)){ banner("¡Listo! Tu experiencia está publicada. También te enviamos el link y el QR por correo. ¿Quieres que otros la vean? Toca «🔒 Privada» en su tarjeta para mostrarla en Explora."); history.replaceState(null,"",location.pathname); }
   view("vPanel");
 }
@@ -616,16 +651,48 @@ $("fTeam").addEventListener("submit",e=>{ e.preventDefault(); const f=e.target; 
 
 // courtesy code (see /api/coupon): the plan for some months, then back to Gratis on its own
 // the portal: vorticevr.mx/@handle with the experiences shown in Explora (/api/handle)
-function portalShow(){ const h=DATA.user.handle, n=DATA.experiences.filter(x=>x.listed&&!x.paused&&!x.hidden).length;
-  $("hIn").value=h||""; $("portalLink").hidden=!h; if(h){ $("portalA").href=location.origin+"/@"+h; $("portalA").textContent="vorticevr.mx/@"+h; }
-  $("portalCount").textContent=h?(n?`Muestra ${n} ${n===1?"experiencia":"experiencias"}. Para agregar más, toca «🔒 Privada» en la experiencia.`:"Todavía no muestras ninguna: toca «🔒 Privada» en una experiencia para hacerla pública."):""; }
-$("pPortalBtn").addEventListener("click",()=>{ menu(false); portalShow(); $("portalBox").hidden=false; $("portalBox").scrollIntoView({behavior:"smooth",block:"start"}); });
-$("portalClose").addEventListener("click",()=>{ $("portalBox").hidden=true; });
+function portalShow(){ const U=DATA.user, h=U.handle, n=DATA.experiences.filter(x=>x.listed&&!x.paused&&!x.hidden).length;
+  $("hIn").value=h||""; $("hStat").textContent=""; $("portalMust").hidden=!!h; $("portalLink").hidden=$("portalKit").hidden=!h||!U.public;
+  $("avBig").innerHTML=VVRExplora.avatar(U.avatar,h||U.name,96); $("avDel").hidden=!U.avatar;
+  $("pubIn").checked=U.public; $("pubT").textContent=U.public?"Perfil público":"Perfil privado";
+  $("pubS").textContent=U.public?"Tu página se puede ver y tus experiencias públicas salen en Explora. Desmárcalo para ocultar todo (tus links y QR siguen funcionando).":"Tu página y tus experiencias no salen en ningún lado; solo funcionan con su link o QR. Márcalo para mostrar las que tengas como públicas.";
+  if(h){ $("portalA").href=location.origin+"/@"+h; $("portalA").textContent="vorticevr.mx/@"+h; $("kitPoster").href=`/@${h}?kit=poster`; $("kitCard").href=`/@${h}?kit=tarjeta`; }
+  $("portalCount").textContent=h&&U.public?(n?`Muestra ${n} ${n===1?"experiencia":"experiencias"}. Las públicas brillan en verde en tu lista; las privadas, en rojo.`:"Todavía no muestras ninguna: toca «🔒 Privada» en una experiencia para hacerla pública."):""; }
+function openPortal(){ portalShow(); $("portalBox").hidden=false; $("portalBox").scrollIntoView({behavior:"smooth",block:"start"}); }
+// user name: is it free? (while typing; my own name counts as free)
+function handleCheck(input,out,mineId){ let t;
+  input.addEventListener("input",()=>{ clearTimeout(t); const v=input.value.trim().toLowerCase().replace(/^@/,"");
+    if(input.value!==v) input.value=v.replace(/[^a-z0-9_-]/g,"");
+    if(!v){ out.className="hstat"; out.textContent=""; return; }
+    out.className="hstat"; out.textContent="Revisando…";
+    t=setTimeout(async()=>{ try{ const r=await fetch(`${VVR.api}/api/handle?h=${encodeURIComponent(v)}&yo=${mineId()||0}`).then(r=>r.json());
+      if(input.value.trim().toLowerCase()!==v) return;
+      out.className="hstat "+(r.ok?"ok":"bad"); out.textContent=r.ok?(DATA&&input.id==="hIn"&&v===DATA.user.handle?"Es tu nombre de usuario actual.":`✓ @${v} está disponible`):r.error; }catch(e){ out.textContent=""; } },350); }); }
+handleCheck($("rHandle"),$("rHStat"),()=>0);
+handleCheck($("hIn"),$("hStat"),()=>DATA&&DATA.user.id);
+// suggest a user name from the name while it has not been typed
+$("rName").addEventListener("input",()=>{ const h=$("rHandle"); if(h.dataset.typed) return;
+  h.value=$("rName").value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"").slice(0,24); h.dispatchEvent(new Event("input")); });
+$("rHandle").addEventListener("keydown",()=>{ $("rHandle").dataset.typed=1; });
+$("pubIn").addEventListener("change",async e=>{ const want=e.target.checked; e.target.disabled=true;
+  try{ await VVR.call("profile",{json:{public:want}}); DATA.user.public=want; portalShow(); renderList(); }
+  catch(err){ e.target.checked=!want; alert(err.message); } e.target.disabled=false; });
+// profile photo: square crop, 400 px JPEG
+$("avIn").addEventListener("change",async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  try{ msg("mPortal","Subiendo tu foto…"); const img=await createImageBitmap(f), s=Math.min(img.width,img.height), c=document.createElement("canvas"); c.width=c.height=400;
+    c.getContext("2d").drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,400,400);
+    const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",.88));
+    const r=await VVR.call("avatar",{method:"POST",body:blob,headers:{"Content-Type":"image/jpeg"}});
+    DATA.user.avatar=r.avatar; portalShow(); $("meAv").innerHTML=VVRExplora.avatar(r.avatar,DATA.user.handle,28); msg("mPortal","¡Lista tu foto!","ok"); }
+  catch(err){ msg("mPortal",err.message||"No pudimos leer esa imagen.","bad"); } });
+$("avDel").addEventListener("click",async()=>{ try{ await VVR.call("avatar",{method:"DELETE"}); DATA.user.avatar=null; portalShow(); $("meAv").innerHTML=VVRExplora.avatar(null,DATA.user.handle,28); }catch(err){ alert(err.message); } });
+$("pPortalBtn").addEventListener("click",()=>{ menu(false); openPortal(); });
+$("portalClose").addEventListener("click",()=>{ if(!DATA.user.handle){ msg("mPortal","Primero elige tu nombre de usuario.","bad"); $("hIn").focus(); return; } $("portalBox").hidden=true; });
 $("portalCopy").addEventListener("click",async e=>{ try{ await navigator.clipboard.writeText($("portalA").href); e.target.textContent="¡Copiado!"; setTimeout(()=>e.target.textContent="Copiar link",1600); }catch(err){ prompt("Copia tu link:",$("portalA").href); } });
 $("fPortal").addEventListener("submit",e=>{ e.preventDefault(); const old=DATA.user.handle, v=$("hIn").value.trim().toLowerCase().replace(/^@/,"");
   if(old&&v!==old&&!confirm(`Si cambias tu nombre, el link vorticevr.mx/@${old} dejará de funcionar. ¿Continuar?`)) return;
   busy(e.target,async()=>{ msg("mPortal","Guardando…");
-    try{ const r=await VVR.call("handle",{json:{handle:v}}); DATA.user.handle=r.handle; msg("mPortal","¡Listo! Ya tienes tu portal.","ok"); portalShow(); }
+    try{ const r=await VVR.call("handle",{json:{handle:v}}); DATA.user.handle=r.handle; msg("mPortal","¡Listo! Ya tienes tu nombre de usuario y tu portal.","ok"); portalShow(); renderList(); }
     catch(err){ msg("mPortal",err.message,"bad"); } }); });
 $("pCodeBtn").addEventListener("click",()=>{ menu(false); $("codeBox").hidden=false; $("codeBox").scrollIntoView({behavior:"smooth",block:"start"}); setTimeout(()=>$("cCodeIn").focus(),300); });
 $("codeClose").addEventListener("click",()=>{ $("codeBox").hidden=true; });
@@ -646,11 +713,14 @@ $("plansClose").addEventListener("click",()=>openPlans(false));
 // kinds of experience (data.kind; "ra" when there is none)
 const KINDS={ra:["🪄","Realidad aumentada con imagen"],superficie:["🛋️","Realidad aumentada en superficie"],colorear:["🎨","Colorea mi dibujo"],trivia:["🤔","Trivia"],filtro:["🕶️","Filtro"],menu:["🍽️","Menú"],links:["🔗","Links"],ruleta:["🎡","Ruleta"],dispara:["🎯","Dispara y gana"],memorama:["🃏","Memorama"],sopa:["🔤","Sopa de letras"],rompecabezas:["🧩","Rompecabezas"],galeria:["🖼️","Galería 3D"],libro:["📖","Libro"]};
 const kindOf=x=>KINDS[x.kind]?x.kind:"ra";
-let kindSel="all";
+let kindSel="all", visSel="";
 // experiences: kind chips, search, sort and a "paused" filter; 24 at a time
 function renderList(){
   const exps=DATA.experiences, list=$("pList"); list.replaceChildren();
   const paused=exps.filter(x=>x.paused).length, pausedOnly=$("pPausedOnly").getAttribute("aria-pressed")==="true";
+  const nPub=exps.filter(x=>x.listed).length, [vb1,vb2]=$("pVis").children;
+  $("pVis").hidden=exps.length<2; vb1.textContent=`🌐 Públicas (${nPub})`; vb2.textContent=`🔒 Privadas (${exps.length-nPub})`;
+  vb1.setAttribute("aria-pressed",String(visSel==="pub")); vb2.setAttribute("aria-pressed",String(visSel==="priv"));
   const lim=DATA.limit??((DATA.plan&&DATA.plan.exp)||1), act=exps.length-paused;
   $("pCount").textContent=lim>=1e6?`${nf(act)} · ilimitadas`:`${nf(act)}/${nf(lim)}`; $("pSearch").hidden=$("pSort").hidden=exps.length<2;
   $("pPausedOnly").hidden=!paused; $("pPausedOnly").textContent=`Pausadas (${paused})`;
@@ -661,7 +731,7 @@ function renderList(){
   const kinds=Object.keys(KINDS).filter(k=>counts[k]); if(kindSel!=="all"&&!counts[kindSel]) kindSel="all";
   $("pKinds").hidden=kinds.length<2;
   $("pKinds").innerHTML=`<button type="button" data-k="all" aria-pressed="${kindSel==="all"}">Todas <span>${nf(exps.length)}</span></button>`+kinds.map(k=>`<button type="button" data-k="${k}" aria-pressed="${kindSel===k}">${KINDS[k][0]} ${KINDS[k][1]} <span>${nf(counts[k])}</span></button>`).join("");
-  const items=exps.filter(x=>(kindSel==="all"||kindOf(x)===kindSel)&&(!pausedOnly||x.paused)&&(!q||x.title.toLowerCase().includes(q)||x.slug.includes(q)))
+  const items=exps.filter(x=>(kindSel==="all"||kindOf(x)===kindSel)&&(!pausedOnly||x.paused)&&(!visSel||(visSel==="pub")===!!x.listed)&&(!q||x.title.toLowerCase().includes(q)||x.slug.includes(q)))
     .sort((a,b)=>(a.paused-b.paused)||(sort==="views"?(b.views||0)-(a.views||0):sort==="name"?a.title.localeCompare(b.title,"es"):(b.updated||b.created)-(a.updated||a.created)));
   if(!items.length){ list.innerHTML=`<p class="none">No hay experiencias con esa búsqueda.</p>`; $("pMore").hidden=true; return; }
   const grid=document.createElement("div"); grid.className="grid";
@@ -669,13 +739,13 @@ function renderList(){
   $("pMore").hidden=items.length<=shownN; $("pMore").textContent=`Mostrar más (${nf(items.length-shownN)})`;
 }
 function card(exp){
-  const el=document.createElement("article"); el.className="ec"+(exp.paused?" paused":"");
+  const el=document.createElement("article"); el.className="ec"+(exp.paused?" paused":"")+(exp.listed?" vis-pub":" vis-priv")+(exp.hidden?" hid":"");
   const days=Math.max(0,Math.ceil((exp.expires-Date.now())/864e5));
   const free=!DATA.plan||DATA.plan.id==="gratis", vlim=(DATA.plan&&DATA.plan.views)||1000;
   const status=exp.paused?(exp.forever?"Excede tu plan":`se borra en ${days} días`):exp.forever?"Activa":`${days} días restantes`;
-  el.innerHTML=`<div class="th${exp.kind==="colorear"||(exp.kind==="trivia"&&exp.trivia&&exp.trivia.logo)?" white":""}"><img loading="lazy" src="${exp.thumb||(exp.kind==="trivia"&&!(exp.trivia&&exp.trivia.logo)?"../assets/trivia.svg":`${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}`)}" alt="">${exp.paused?'<span class="tag bad">Pausada</span>':""}${exp.hidden?'<span class="tag gone">Quitada de Explora</span>':""}<span class="kind">${KINDS[kindOf(exp)][0]} ${KINDS[kindOf(exp)][1]}</span></div>
+  el.innerHTML=`<div class="th${exp.kind==="colorear"||(exp.kind==="trivia"&&exp.trivia&&exp.trivia.logo)?" white":""}"><img loading="lazy" src="${exp.thumb||(exp.kind==="trivia"&&!(exp.trivia&&exp.trivia.logo)?"../assets/trivia.svg":`${VVR.api}/m/${exp.slug}/image?v=${exp.updated||exp.created}`)}" alt="">${exp.paused?'<span class="tag bad">Pausada</span>':""}${exp.hidden?'<span class="tag gone">Quitada de Explora</span>':""}<span class="kind">${KINDS[kindOf(exp)][0]} ${KINDS[kindOf(exp)][1]}</span><span class="vis">${exp.listed?(DATA.user.public?"Pública":"Pública · perfil privado"):"Privada"}</span></div>
     <div class="bd"><h3>${esc(exp.title)}</h3>
-      <div class="meta"><span><b>${nf(exp.views)}</b>${free?`/${nf(vlim)}`:""} ${exp.views===1&&!free?"vista":"vistas"}</span><span>${status}</span></div>
+      <div class="meta">${exp.listed||exp.likes?`<span class="hearts" title="Corazones">♥ <b>${nf(exp.likes)}</b></span>`:""}<span><b>${nf(exp.views)}</b>${free?`/${nf(vlim)}`:""} ${exp.views===1&&!free?"vista":"vistas"}</span><span>${status}</span></div>
       <div class="acts">${exp.paused?`<button class="btn sun" type="button" data-a="up">Mejorar plan</button>`
         :`<a class="btn" href="../crear/${exp.kind==="trivia"||exp.kind==="colorear"||exp.kind==="filtro"||exp.kind==="menu"||exp.kind==="links"||exp.kind==="ruleta"||exp.kind==="dispara"||exp.kind==="memorama"||exp.kind==="sopa"||exp.kind==="rompecabezas"||exp.kind==="galeria"||exp.kind==="libro"?exp.kind+"/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="poster">Póster</button><button class="btn" type="button" data-a="copy">Copiar link</button><button class="btn pub${exp.listed?" on":""}" type="button" data-a="pub" title="${exp.listed?"Se muestra en Explora y en tu portal. Toca para hacerla privada.":"Solo la ve quien tenga el link. Toca para mostrarla en Explora y en tu portal."}">${exp.listed?"🌐 Pública":"🔒 Privada"}</button>`}
         <button class="btn del" type="button" data-a="del" aria-label="Borrar ${esc(exp.title)}">Borrar</button></div></div>`;
@@ -691,7 +761,8 @@ function card(exp){
   on("poster",()=>openPoster(exp));
   on("pub",async ev=>{ const b=ev.currentTarget, want=!exp.listed; b.disabled=true;
     try{ await VVR.call(`experience/${exp.slug}/listed`,{json:{listed:want}}); exp.listed=want; renderList();
-      if(want) banner(DATA.user.handle?`¡Listo! “${exp.title}” ya se muestra en Explora y en tu portal vorticevr.mx/@${DATA.user.handle}.`:`¡Listo! “${exp.title}” ya se muestra en Explora. Elige tu nombre de usuario en Mi cuenta → Mi portal para tener tu página con todas tus experiencias.`); }
+      if(want&&!DATA.user.public) banner(`“${exp.title}” quedó como pública, pero tu perfil es privado: nadie la verá en Explora hasta que lo hagas público en Mi cuenta → Mi portal.`,"warn");
+      else if(want) banner(`¡Listo! “${exp.title}” ya se muestra en Explora y en tu portal vorticevr.mx/@${DATA.user.handle}.`); }
     catch(e){ alert(e.message); b.disabled=false; } });
   on("copy",async ev=>{ try{ await navigator.clipboard.writeText(exp.url); ev.target.textContent="¡Copiado!"; setTimeout(()=>ev.target.textContent="Copiar link",1600); }catch(e){ prompt("Copia tu link:",exp.url); } });
   on("del",async()=>{ if(!confirm(`¿Borrar “${exp.title}”? El link y el QR dejarán de funcionar.`)) return;
@@ -707,15 +778,17 @@ $("qrPoster").addEventListener("click",()=>{ $("qrDlg").close(); openPoster(qrEx
 let posterExp=null, posterRun=0;
 async function openPoster(exp){ posterExp=exp; const run=++posterRun;
   $("posterWait").hidden=false; $("posterWait").textContent="Preparando tu póster…"; $("posterPdf").disabled=$("posterPng").disabled=true; $("posterDlg").showModal();
-  try{ await VVRPoster.draw($("posterCanvas"),exp,{api:VVR.api,base:"../assets/",plan:DATA.plan});
+  try{ await VVRPoster.draw($("posterCanvas"),exp,{api:VVR.api,base:"../assets/",plan:DATA.plan,by:DATA.user.handle});
     if(run!==posterRun) return; $("posterWait").hidden=true; $("posterPdf").disabled=$("posterPng").disabled=false; }
   catch(e){ if(run===posterRun) $("posterWait").textContent="No se pudo preparar el póster. Intenta de nuevo."; } }
-$("posterPdf").addEventListener("click",()=>VVRPoster.pdf($("posterCanvas"),`poster-${posterExp.slug}.pdf`));
-$("posterPng").addEventListener("click",()=>VVRPoster.png($("posterCanvas"),`poster-${posterExp.slug}.png`));
+const posterFile=()=>`poster-${DATA.user.handle?DATA.user.handle+"-":""}${posterExp.slug}`;
+$("posterPdf").addEventListener("click",()=>VVRPoster.pdf($("posterCanvas"),posterFile()+".pdf"));
+$("posterPng").addEventListener("click",()=>VVRPoster.png($("posterCanvas"),posterFile()+".png"));
 $("posterClose").addEventListener("click",()=>{ posterRun++; $("posterDlg").close(); });
 $("pSearch").addEventListener("input",()=>{ shownN=PAGE; renderList(); });
 $("pSort").addEventListener("change",()=>{ shownN=PAGE; renderList(); });
 $("pKinds").addEventListener("click",e=>{ const b=e.target.closest("[data-k]"); if(!b) return; kindSel=b.dataset.k; shownN=PAGE; renderList(); });
+$("pVis").addEventListener("click",e=>{ const b=e.target.closest("[data-v]"); if(!b) return; visSel=visSel===b.dataset.v?"":b.dataset.v; shownN=PAGE; renderList(); });
 $("pPausedOnly").addEventListener("click",e=>{ e.target.setAttribute("aria-pressed",String(e.target.getAttribute("aria-pressed")!=="true")); shownN=PAGE; renderList(); });
 $("pMore").addEventListener("click",()=>{ shownN+=PAGE; renderList(); });
 function banner(t,kind){ const b=$("pBanner"); b.hidden=false; b.className="banner"+(kind?" "+kind:""); b.textContent=t; }
