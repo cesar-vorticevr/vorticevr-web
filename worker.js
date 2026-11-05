@@ -725,7 +725,9 @@ async function api(request, env, ctx, url) {
     if (isNew && !me.first_pub) await env.DB.prepare("UPDATE users SET first_pub = ? WHERE id = ? AND first_pub IS NULL").bind(now, me.id).run();
     const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(slug).first();
     const out = ownerExp(row, request, env);
-    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "links" ? "Tu página de links está lista" : data.kind === "ruleta" ? "Tu ruleta de premios está lista" : data.kind === "dispara" ? "Tu juego Dispara y gana está listo" : data.kind === "memorama" ? "Tu memorama está listo" : data.kind === "sopa" ? "Tu sopa de letras está lista" : data.kind === "rompecabezas" ? "Tu rompecabezas está listo" : data.kind === "libro" ? "Tu libro interactivo está listo" : data.kind === "galeria" ? "Tu galería en 3D está lista" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
+    // "it's ready" mail with the link and QR: only the first time (not on every edit) and at most PUB_MAIL_DAY a day,
+    // so a workshop publishing at once never uses up the Resend quota the sign-up codes need
+    if (isNew && meta.sendEmail !== false && (await limit(env, "pubmail:" + new Date(now - 6 * 3600e3).toISOString().slice(0, 10), +env.PUB_MAIL_DAY || 20, 864e5))) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "links" ? "Tu página de links está lista" : data.kind === "ruleta" ? "Tu ruleta de premios está lista" : data.kind === "dispara" ? "Tu juego Dispara y gana está listo" : data.kind === "memorama" ? "Tu memorama está listo" : data.kind === "sopa" ? "Tu sopa de letras está lista" : data.kind === "rompecabezas" ? "Tu rompecabezas está listo" : data.kind === "libro" ? "Tu libro interactivo está listo" : data.kind === "galeria" ? "Tu galería en 3D está lista" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
     return json({ ok: true, experience: out });
   }
 
@@ -2369,13 +2371,13 @@ const teamMail = (owner, name, email, pw, quota, origin) => shell(`<h1 style="fo
 // 1) free experiences that expire in the next 3 days (one e-mail per account), 2) accounts 1–3 days old that have not
 // published anything yet. Each one once (table mails), at most MAIL_DAY a day so the sign-up codes always fit in Resend,
 // and never to accounts that asked to stop them (users.no_mail, link at the bottom).
-const MAIL_DAY = 50;
+const MAIL_DAY = 20;   // with Resend Pro (no daily cap) set the MAIL_DAY variable higher
 const siteUrl = env => env.SITE_URL || "https://vorticevr.mx";
 async function unsubUrl(env, id) { return `${siteUrl(env)}/api/no-mail?u=${id}&s=${(await hmac(env, "nomail:" + id)).slice(0, 24)}`; }
 const remindShell = (body, unsub) => shell(`${body}<p style="color:#a99bcb;font-size:12px;margin-top:22px">¿No quieres estos avisos? <a href="${esc(unsub)}" style="color:#a99bcb">Dejar de recibirlos</a>.</p>`);
 const btnMail = (href, t) => `<p style="margin:22px 0"><a href="${esc(href)}" style="background:#ffbe55;color:#1a0d33;font-weight:700;text-decoration:none;padding:13px 22px;border-radius:999px;display:inline-block">${t}</a></p>`;
 async function reminders(env) {
-  const now = Date.now(), site = siteUrl(env); let left = MAIL_DAY;
+  const now = Date.now(), site = siteUrl(env); let left = +env.MAIL_DAY || MAIL_DAY;
   const pause = () => new Promise(r => setTimeout(r, 600));   // Resend allows 2 per second
   // claim the keys first (two runs never send the same reminder); if the e-mail fails they are freed to retry tomorrow
   async function once(keys, to, subject, html) {
