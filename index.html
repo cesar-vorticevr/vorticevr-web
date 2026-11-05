@@ -446,7 +446,7 @@ header.top .brand{flex:none}
 <div id="progress"></div>
 <div id="cur"></div><div id="cur2"></div>
 
-<header class="top" id="top"><div class="wrap">
+<header data-menu class="top" id="top"><div class="wrap">
   <a class="brand" href="./" aria-label="Vórtice VR, inicio" data-en-aria="Vórtice VR, home"><img src="assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
   <nav aria-label="Secciones" data-en-aria="Sections">
     <a href="explora/" data-en="Explore">Explora</a><a href="galerias/" data-en="Galleries">Galerías</a><a href="educacion/" data-en="Education">Educación</a><a href="#nosotros" data-en="About">Nosotros</a><a class="pill sun mag" href="crear/" data-en="Create&lt;span class=&quot;l2&quot;&gt; experience&lt;/span&gt;">Crear<span class="l2"> experiencia</span></a>
@@ -454,6 +454,7 @@ header.top .brand{flex:none}
     <button class="lang mag" id="lang" type="button" aria-label="Ver en inglés" data-en-aria="Ver en español"><span data-en="ES">EN</span></button>
   </nav>
 </div></header>
+<script src="assets/navegacion.js?v=2"></script>
 
 <main>
   <div class="hero" id="hero">
@@ -887,7 +888,7 @@ document.addEventListener("click",e=>{
 (()=>{ const hoy=new Date().toLocaleDateString("sv-SE",{timeZone:"America/Mexico_City"});
   document.querySelectorAll(".tag.new[data-hasta]").forEach(t=>{ if(hoy>t.dataset.hasta) t.remove(); }); })();
 </script>
-<script src="assets/menu-movil.js" defer></script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="assets/poster.js?v=6"></script>
 <script src="assets/explora.js?v=9"></script>

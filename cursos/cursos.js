@@ -68,10 +68,11 @@
 
   function header(active) {
     const el = document.querySelector("header.top"); if (!el) return;
-    const s = session();
-    el.innerHTML = `<div class="wrap"><a class="brand" href="/cursos/" aria-label="Cursos Vórtice VR"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR" data-logo><span>Cursos</span></a>
-      <nav><a href="/cursos/" class="${active === "catalogo" ? "on" : ""}">Catálogo</a><a href="/cursos/mi-aprendizaje/" class="${active === "mis" ? "on" : ""}">Mi aprendizaje</a><a href="/cursos/instructor/" class="hide-sm ${active === "instructor" ? "on" : ""}">Dar cursos</a>
-      ${s ? `<a class="pill hide-sm" href="/cuenta/">${esc((s.user && s.user.name || "Mi cuenta").split(" ")[0])}</a>` : `<a class="pill" href="${loginUrl(location.pathname.replace(/^\/|\/$/g, ""))}">Entrar</a>`}</nav></div>`;
+    // the site menu (assets/navegacion.js) with the courses' own links as a second row
+    const opts = { tag: "Cursos", login: loginUrl(location.pathname.replace(/^\/|\/$/g, "")), cta: { href: "/cursos/", t: "Ver cursos", en: "See courses" },
+      sub: [{ href: "/cursos/", t: "Catálogo", on: active === "catalogo" }, { href: "/cursos/mi-aprendizaje/", t: "Mi aprendizaje", on: active === "mis" }, { href: "/cursos/instructor/", t: "Dar cursos", on: active === "instructor" }] };
+    if (window.VVRMenu) return VVRMenu.mount(el, opts);
+    const sc = document.createElement("script"); sc.src = "/assets/navegacion.js?v=2"; sc.onload = () => VVRMenu.mount(el, opts); document.head.appendChild(sc);
   }
   function footer() {
     const el = document.querySelector("footer.bot"); if (!el) return;

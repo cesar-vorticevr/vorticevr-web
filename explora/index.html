@@ -82,8 +82,9 @@ footer img{height:24px}
 </style>
 </head>
 <body>
-<header class="top"><div class="wrap"><a class="brand" href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
+<header data-menu class="top"><div class="wrap"><a class="brand" href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
   <nav><a class="pill hide" href="../galerias/">Galerías</a><a class="pill gold" href="../crear/">Crear experiencia</a></nav></div></header>
+<script src="../assets/navegacion.js?v=2"></script>
 
 <main>
   <div class="hero">
@@ -144,7 +145,7 @@ async function load(append){
 $("more").addEventListener("click",()=>load(true));
 load(false);
 </script>
-<script src="../assets/menu-movil.js"></script>
+
 <script src="../assets/origen.js"></script>
 <script src="../assets/magia.js" defer></script>
 </body>

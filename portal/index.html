@@ -70,8 +70,9 @@ footer img{height:24px}
 </style>
 </head>
 <body>
-<header class="top"><div class="wrap"><a class="brand" href="/" aria-label="Vórtice VR, inicio"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
+<header data-menu class="top"><div class="wrap"><a class="brand" href="/" aria-label="Vórtice VR, inicio"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
   <nav><a class="pill hide" href="/explora/">Explora</a><a class="pill gold" href="/crear/">Crear experiencia</a></nav></div></header>
+<script src="/assets/navegacion.js?v=2"></script>
 
 <main>
   <div class="hero">
@@ -135,7 +136,7 @@ function show(j){
     try{ if(navigator.share) await navigator.share(data); else { await navigator.clipboard.writeText(url); $("shareBtn").textContent="¡Link copiado!"; setTimeout(()=>$("shareBtn").textContent="Compartir este portal",1800); } }catch(e){} };
 }
 </script>
-<script src="/assets/menu-movil.js"></script>
+
 <script src="/assets/magia.js" defer></script>
 </body>
 </html>
