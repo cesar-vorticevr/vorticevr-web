@@ -63,6 +63,19 @@ async function load() {
   catch (e) { if (e.status === 401) { location.href = VC.loginUrl("cursos/instructor"); return; } $("main").innerHTML = `<div class="empty">${E(e.message)}</div>`; return; }
   render();
 }
+// re-reads the panel after a photo or a document without losing what was typed and not saved yet (it used to wipe it)
+async function reload(msg) {
+  const pf = $("pf"), kind = $("dkind") && $("dkind").value;
+  const typed = pf ? [...pf.elements].filter(x => x.name).map(x => [x.name, x.type === "checkbox" ? x.checked : x.value]) : [];
+  const saved = D && D.profile;
+  await load();
+  const nf = $("pf");
+  if (nf) for (const [n, v] of typed) { const x = nf.elements[n]; if (x && !x.disabled) { if (x.type === "checkbox") x.checked = v; else x.value = v; } }
+  if (nf && $("noinv")) $("noinv").hidden = nf.can_invoice.checked;
+  if (kind && $("dkind")) $("dkind").value = kind;
+  const dirty = saved && typed.some(([n, v]) => n === "can_invoice" ? !!saved.can_invoice !== v : String(saved[n] || "") !== String(v));
+  if (msg) VC.toast(dirty ? msg + " No olvides guardar tu perfil." : msg, dirty ? 4200 : 3200);
+}
 function steps(p) {
   const a = p.status === "approved", o = p.onboarding_passed, pr = p.premier.active;
   const cls = (done, now) => done ? "ok" : now ? "now" : "";
@@ -144,19 +157,19 @@ function bind() {
   }
   if ($("foto")) $("foto").onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
-    try { const blob = await square(f, 480); await upload("instructor/foto", blob, "foto.jpg"); VC.toast("Foto lista."); await load(); }
+    try { const blob = await square(f, 480); await upload("instructor/foto", blob, "foto.jpg"); await reload("Foto lista."); }
     catch (err) { VC.toast(err.message); }
   };
   if ($("dfile")) $("dfile").onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
     if (f.size > 10 * 1048576) { VC.toast("El archivo pesa más de 10 MB."); return; }
     VC.toast("Subiendo…", 1500);
-    try { await upload("instructor/documento", f, f.name, { kind: $("dkind").value }); VC.toast("Documento subido."); await load(); }
+    try { await upload("instructor/documento", f, f.name, { kind: $("dkind").value }); await reload("Documento subido."); }
     catch (err) { VC.toast(err.message); }
   };
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
     if (!confirm("¿Quitar este documento?")) return;
-    try { await VC.call("instructor/documento/" + b.dataset.del, { method: "DELETE" }); await load(); } catch (err) { VC.toast(err.message); }
+    try { await VC.call("instructor/documento/" + b.dataset.del, { method: "DELETE" }); await reload(); } catch (err) { VC.toast(err.message); }
   });
   if ($("send")) $("send").onclick = async e => {
     e.target.disabled = true;
