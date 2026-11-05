@@ -236,6 +236,50 @@ dialog .row{justify-content:space-between}
 .prof .ph{width:96px;height:96px;border-radius:50%;overflow:hidden;flex:none;box-shadow:0 0 0 4px rgba(210,184,255,.18)}
 .prof .ph img,.prof .ph svg{width:100%!important;height:100%!important;object-fit:cover;display:block}
 .prof .pa{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+/* the showcase (Mi portal): cover, what they do, bio, networks, messages */
+.showf{margin-top:26px;padding-top:22px;border-top:1px solid var(--line)}
+.showf h3{margin:0 0 4px;font:700 1.15rem var(--fd)}
+.showf textarea,.showf select,.showf input:not([type=file]){width:100%}
+.cvbox{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:12px 0 6px}
+.cvpv{width:min(100%,340px);aspect-ratio:8/3;border-radius:12px;overflow:hidden;display:grid;place-items:center;text-align:center;padding:10px;font-size:.82rem;color:var(--mute);background:radial-gradient(ellipse 60% 90% at 20% 0%,rgba(139,63,214,.6),transparent 70%),linear-gradient(180deg,#1c0b36,#05020b);border:1px solid var(--line)}
+.cvpv img{width:100%;height:100%;object-fit:cover;display:block}
+.showf .nets{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:8px}
+.showf .nets label{display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--mute)}
+.showf .nets label span{flex:none;width:78px}
+.showf .nets input{flex:1;min-width:0}
+/* Mensajes: the list of chats and the open one (one pane at a time on the phone) */
+.dm{display:grid;grid-template-columns:300px minmax(0,1fr);height:min(72vh,660px);border:1px solid var(--line);border-radius:16px;overflow:hidden;background:rgba(5,2,11,.35)}
+.dmlist{border-right:1px solid var(--line);overflow-y:auto}
+.dmlist button{all:unset;box-sizing:border-box;display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;padding:12px 14px;cursor:pointer;border-bottom:1px solid rgba(210,184,255,.08)}
+.dmlist button:hover,.dmlist button.on{background:rgba(139,63,214,.18)}
+.dmlist .av{width:40px;height:40px;border-radius:50%;overflow:hidden}.dmlist .av img,.dmlist .av svg{width:100%!important;height:100%!important;object-fit:cover;display:block}
+.dmlist b{display:block;font:600 .95rem var(--fd);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dmlist small{display:block;color:var(--mute);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dmlist .dot{width:10px;height:10px;border-radius:50%;background:var(--sun);box-shadow:0 0 10px var(--sun)}
+.dmlist .tg{font:600 .62rem var(--fd);letter-spacing:.1em;text-transform:uppercase;color:#1b0f00;background:var(--sun);border-radius:999px;padding:3px 7px}
+.dmlist .none{padding:26px 18px;color:var(--mute);font-size:.92rem;text-align:center}
+.dmchat{display:flex;flex-direction:column;min-width:0;min-height:0}
+.dmhead{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.dmhead .av{width:36px;height:36px;border-radius:50%;overflow:hidden;flex:none}.dmhead .av img,.dmhead .av svg{width:100%!important;height:100%!important;object-fit:cover;display:block}
+.dmhead a.who{flex:1;min-width:0;color:var(--ink);text-decoration:none;font:600 1rem var(--fd);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dmhead a.who small{display:block;font:500 .78rem "IBM Plex Mono",monospace;color:var(--lav)}
+.dmhead .back{display:none}
+.dmmsgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
+.dmmsgs .m{max-width:78%;padding:9px 13px;border-radius:16px;background:#1d0f36;border:1px solid rgba(210,184,255,.12);white-space:pre-wrap;overflow-wrap:anywhere;font-size:.95rem;line-height:1.45}
+.dmmsgs .m.me{align-self:flex-end;background:linear-gradient(135deg,#5a1f9a,#8b3fd6);border-color:transparent}
+.dmmsgs .m time{display:block;font-size:.7rem;color:rgba(244,238,255,.6);margin-top:3px}
+.dmmsgs .m.hid{font-style:italic;color:var(--mute)}
+.dmmsgs .day{align-self:center;font-size:.74rem;color:var(--mute);letter-spacing:.08em;text-transform:uppercase;margin:6px 0}
+.dmmsgs .empty{margin:auto;text-align:center;color:var(--mute);max-width:36ch}
+.dmreq{margin:0 14px 10px;padding:12px 14px;border-radius:12px;background:rgba(255,190,85,.1);border:1px solid rgba(255,190,85,.4);font-size:.9rem}
+.dmreq .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.dmsend{display:flex;gap:8px;align-items:flex-end;padding:10px 14px;border-top:1px solid var(--line)}
+.dmsend textarea{flex:1;min-height:44px;max-height:140px;resize:none}
+.dmnote{padding:0 14px 10px;font-size:.74rem;color:var(--mute)}
+.dmwarn{padding:0 14px 8px;font-size:.8rem;color:#ffbe55}
+@media (max-width:760px){.dmhead{flex-wrap:wrap}.dmhead [data-a]{order:5;padding:6px 12px}.dmhead a.who{flex:1 1 60%}.dm{grid-template-columns:1fr;height:min(78vh,700px)}.dm.open .dmlist{display:none}.dm:not(.open) .dmchat{display:none}.dmlist{border-right:0}.dmhead .back{display:inline-flex}}
+.badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--sun);color:#1b0f00;font:700 .7rem var(--fd);margin-left:6px}
+.mebtn{position:relative}.mebtn .badge{position:absolute;top:-4px;right:-4px;margin:0}
 .mebtn .av img,.mebtn .av svg{width:28px!important;height:28px!important;border-radius:50%;object-fit:cover;display:block}
 .pswitch{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line2);border-radius:14px;padding:14px;margin:18px 0 6px;cursor:pointer}
 .pswitch input{width:20px;height:20px;margin:2px 0 0;accent-color:#2bff88;flex:none}
@@ -268,6 +312,7 @@ dialog .row{justify-content:space-between}
         <button type="button" id="pManage" hidden>Administrar suscripción</button>
         <a id="pAdmin" href="../admin/" hidden>Administración</a>
         <a id="pSeller" href="../vendedor/" hidden class="refbtn">💼 Mi panel de vendedor</a>
+        <button type="button" id="pMsgBtn">💬 Mensajes<span class="badge" id="msgBadge" hidden></span></button>
         <button type="button" id="pPortalBtn">🌐 Mi portal</button>
         <button type="button" id="pRefBtn" class="refbtn">✦ Recomienda y gana</button>
         <button type="button" id="pTeamBtn" hidden>Mi equipo</button>
@@ -387,7 +432,38 @@ dialog .row{justify-content:space-between}
       <label class="pswitch"><input type="checkbox" id="pubIn"><div><b id="pubT">Perfil público</b><span id="pubS"></span></div></label>
       <div class="plink" id="portalLink" hidden><a id="portalA" target="_blank" rel="noopener"></a><button class="btn sm" id="portalCopy" type="button">Copiar link</button></div>
       <p class="note" id="portalCount"></p>
+      <!-- the showcase: what people see on vorticevr.mx/@tunombre -->
+      <form id="fShow" class="showf">
+        <h3>Tu escaparate</h3>
+        <p class="note">Así te presentas en tu perfil: lo que haces, tu historia, tus redes y una portada. Es tu escaparate para que te encuentren y te contraten.</p>
+        <div class="cvbox"><div class="cvpv" id="cvPv"><span>Sin portada: usamos un mosaico de tus obras</span></div>
+          <div class="pa"><label class="btn sm" for="cvIn" style="cursor:pointer">Subir portada</label><input type="file" id="cvIn" accept="image/png,image/jpeg,image/webp" hidden>
+            <button class="btn sm" id="cvDel" type="button" hidden>Quitar portada</button><span class="note" style="margin:0">Horizontal, como un banner (se recorta a 1600 × 600).</span></div></div>
+        <label class="f" for="ofIn">¿Qué haces?</label><input id="ofIn" maxlength="60" placeholder="Ilustradora · Realidad aumentada para marcas">
+        <label class="f" for="bioIn">Sobre ti</label><textarea id="bioIn" maxlength="500" rows="4" placeholder="Tu historia, tu estilo y qué tipo de proyectos haces. ¿Qué te gustaría que te pidieran?"></textarea>
+        <p class="note" style="margin:4px 0 0;text-align:right"><span id="bioN">0</span>/500</p>
+        <label class="f">Tus redes <span class="note" style="margin:0;text-transform:none;letter-spacing:0">(el usuario o el link; hasta 6)</span></label>
+        <div class="nets" id="netsIn"></div>
+        <label class="f" for="dmIn">Mensajes</label>
+        <select id="dmIn"><option value="solicitud">Cualquiera me puede escribir (primero como solicitud)</option><option value="nadie">No recibir mensajes</option></select>
+        <button class="btn sun wide" type="submit">Guardar mi escaparate</button><div class="msg" id="mShow"></div>
+      </form>
       <div class="pkit" id="portalKit" hidden><a class="btn sm" id="kitPoster" target="_blank" rel="noopener">Póster de mi portal</a><a class="btn sm" id="kitCard" target="_blank" rel="noopener">Tarjeta de presentación</a></div>
+    </section>
+
+    <section class="card" id="msgBox" hidden>
+      <div class="phead"><h2>Mensajes</h2><button class="btn sm" id="msgClose" type="button">Cerrar</button></div>
+      <div class="dm" id="dm">
+        <div class="dmlist" id="dmList"></div>
+        <div class="dmchat" id="dmChat">
+          <div class="dmhead" id="dmHead"></div>
+          <div class="dmmsgs" id="dmMsgs"><p class="empty">Elige una conversación. Para escribirle a alguien, entra a su perfil y toca «Enviar mensaje».</p></div>
+          <div class="dmreq" id="dmReq" hidden></div>
+          <div class="dmwarn" id="dmWarn" hidden>Cuidado: no compartas tu teléfono, tu dirección ni datos de pago con alguien que no conoces.</div>
+          <form class="dmsend" id="dmSend" hidden><textarea id="dmText" maxlength="2000" rows="1" placeholder="Escribe un mensaje…" aria-label="Tu mensaje"></textarea><button class="btn sun" type="submit">Enviar</button></form>
+          <p class="dmnote" id="dmNote" hidden>Los mensajes no se pueden borrar ni editar. Si alguien te molesta, bloquéalo o repórtalo.</p>
+        </div>
+      </div>
     </section>
 
     <section class="card" id="codeBox" hidden>
@@ -445,7 +521,7 @@ dialog .row{justify-content:space-between}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="../assets/plataforma.js"></script>
 <script src="../assets/poster.js?v=6"></script>
-<script src="../assets/explora.js?v=9"></script>
+<script src="../assets/explora.js?v=10"></script>
 <script src="../assets/origen.js"></script>
 <script>
 const $=id=>document.getElementById(id);
@@ -558,6 +634,9 @@ function showPanel(data){
   if(B.pastDue) banner("No pudimos cobrar tu última mensualidad. Actualiza tu tarjeta en “Administrar suscripción” para que tu plan siga activo.","warn");
   renderList();
   if(!user.handle) openPortal();
+  else if(Q.get("dm")) openMessages(Q.get("dm"));   // from someone's portal: "Enviar mensaje"
+  else if(Q.get("portal")) openPortal();
+  unreadPoll();
   const pub=Q.get("publicada"); if(pub&&experiences.some(x=>x.slug===pub)){ banner("¡Listo! Tu experiencia está publicada: su link, su QR y su póster están en su tarjeta. ¿Quieres que otros la vean? Toca «🔒 Privada» en su tarjeta para mostrarla en Explora."); history.replaceState(null,"",location.pathname); }
   view("vPanel");
 }
@@ -582,7 +661,7 @@ document.querySelectorAll("#pPeriod button").forEach(b=>b.addEventListener("clic
 const menu=on=>{ $("meMenu").hidden=!on; $("meBtn").setAttribute("aria-expanded",String(on)); };
 // the Mi cuenta sections open one at a time, as their own screen (they used to pile up above the experiences, with the
 // create bar always there): opening one closes the other, and while one is open the experiences step aside
-const SUBS=["plansBox","refBox","teamBox","portalBox","codeBox","helpBox","passBox"].map($);
+const SUBS=["plansBox","refBox","teamBox","portalBox","msgBox","codeBox","helpBox","passBox"].map($);
 const subObs=new MutationObserver(ms=>{
   const shown=ms.map(m=>m.target).filter(b=>!b.hidden);
   if(shown.length){ const top=shown[shown.length-1]; SUBS.forEach(b=>{ if(b!==top&&!b.hidden) b.hidden=true; }); scrollTo({top:0,behavior:"smooth"}); }
@@ -674,7 +753,7 @@ function portalShow(){ const U=DATA.user, h=U.handle, n=DATA.experiences.filter(
   $("pubS").textContent=U.public?"Tu página se puede ver y tus experiencias públicas salen en Explora. Desmárcalo para ocultar todo (tus links y QR siguen funcionando).":"Tu página y tus experiencias no salen en ningún lado; solo funcionan con su link o QR. Márcalo para mostrar las que tengas como públicas.";
   if(h){ $("portalA").href=location.origin+"/@"+h; $("portalA").textContent="vorticevr.mx/@"+h; $("kitPoster").href=`/@${h}?kit=poster`; $("kitCard").href=`/@${h}?kit=tarjeta`; }
   $("portalCount").textContent=h&&U.public?(n?`Muestra ${n} ${n===1?"experiencia":"experiencias"}. Las públicas brillan en verde en tu lista; las privadas, en rojo.`:"Todavía no muestras ninguna: toca «🔒 Privada» en una experiencia para hacerla pública."):""; }
-function openPortal(){ portalShow(); $("portalBox").hidden=false; $("portalBox").scrollIntoView({behavior:"smooth",block:"start"}); }
+function openPortal(){ portalShow(); showFill(); $("portalBox").hidden=false; $("portalBox").scrollIntoView({behavior:"smooth",block:"start"}); }
 // user name: is it free? (while typing; my own name counts as free)
 function handleCheck(input,out,mineId){ let t;
   input.addEventListener("input",()=>{ clearTimeout(t); const v=input.value.trim().toLowerCase().replace(/^@/,"");
@@ -826,6 +905,107 @@ $("pOut").addEventListener("click",async()=>{ try{ await VVR.call("logout",{meth
 $("fPass").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,async()=>{ msg("mPass","Guardando…");
   try{ await VVR.call("password",{json:{current:$("aCur").value,password:$("aNew").value}}); msg("mPass","Contraseña actualizada.","ok"); e.target.reset(); }
   catch(err){ msg("mPass",err.message,"bad"); } }); });
+
+// ---- the showcase (Mi portal → Tu escaparate): cover, what you do, bio, networks and messages (POST /api/profile)
+const NETS=[["instagram","Instagram"],["tiktok","TikTok"],["youtube","YouTube"],["facebook","Facebook"],["web","Sitio web"],["whatsapp","WhatsApp"],["x","X"],["linkedin","LinkedIn"],["pinterest","Pinterest"],["email","Correo"]];
+$("netsIn").innerHTML=NETS.map(([k,t])=>`<label><span>${t}</span><input data-net="${k}" maxlength="200" placeholder="${k==="whatsapp"?"10 dígitos":k==="email"?"tu@correo.com":k==="web"?"tusitio.com":"usuario o link"}"></label>`).join("");
+const showLink=v=>String(v||"").replace(/^mailto:/,"").replace(/^https:\/\/wa\.me\/52?/,"").replace(/^https?:\/\/(www\.)?(instagram\.com|tiktok\.com\/@|youtube\.com\/@|facebook\.com|x\.com|linkedin\.com\/in|pinterest\.com)\/?/,"");
+function showFill(){ const U=DATA.user;
+  $("ofIn").value=U.oficio||""; $("bioIn").value=U.bio||""; $("bioN").textContent=($("bioIn").value||"").length; $("dmIn").value=U.dm||"solicitud";
+  const L=Object.fromEntries((U.links||[]).map(l=>[l.k,l.v])); document.querySelectorAll("[data-net]").forEach(i=>{ i.value=L[i.dataset.net]?showLink(L[i.dataset.net]):""; });
+  $("cvPv").innerHTML=U.cover?`<img src="${esc(U.cover)}" alt="Tu portada">`:"<span>Sin portada: usamos un mosaico de tus obras</span>"; $("cvDel").hidden=!U.cover; }
+$("bioIn").addEventListener("input",()=>{ $("bioN").textContent=$("bioIn").value.length; });
+$("fShow").addEventListener("submit",e=>{ e.preventDefault(); busy(e.target,async()=>{
+  const links=[...document.querySelectorAll("[data-net]")].filter(i=>i.value.trim()).map(i=>({k:i.dataset.net,v:i.value.trim()}));
+  if(links.length>6){ msg("mShow","Puedes poner hasta 6 redes.","bad"); return; }
+  msg("mShow","Guardando…");
+  try{ const r=await VVR.call("profile",{json:{oficio:$("ofIn").value,bio:$("bioIn").value,links,dm:$("dmIn").value}}); Object.assign(DATA.user,{oficio:r.oficio,bio:r.bio,links:r.links,dm:r.dm}); showFill();
+    msg("mShow",DATA.user.handle?`¡Listo! Míralo en vorticevr.mx/@${DATA.user.handle}`:"¡Listo!","ok"); }
+  catch(err){ msg("mShow",err.message,"bad"); } }); });
+$("cvIn").addEventListener("change",async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  try{ msg("mShow","Subiendo tu portada…"); const img=await createImageBitmap(f), W=1600, H=600, s=Math.max(W/img.width,H/img.height), c=document.createElement("canvas"); c.width=W; c.height=H;
+    c.getContext("2d").drawImage(img,(W-img.width*s)/2,(H-img.height*s)/2,img.width*s,img.height*s);
+    const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",.85));
+    const r=await VVR.call("cover",{method:"POST",body:blob,headers:{"Content-Type":"image/jpeg"}}); DATA.user.cover=r.cover; showFill(); msg("mShow","¡Lista tu portada!","ok"); }
+  catch(err){ msg("mShow",err.message||"No pudimos leer esa imagen.","bad"); } });
+$("cvDel").addEventListener("click",async()=>{ try{ await VVR.call("cover",{method:"DELETE"}); DATA.user.cover=null; showFill(); }catch(err){ alert(err.message); } });
+
+// ---- Mensajes (_mensajes/api.js): chats that nobody can delete; the first message is a request; block and report
+const DM={threads:[],cur:null,last:0,poll:0,uPoll:0};
+const ago=t=>{ const d=new Date(t), now=new Date(); return d.toDateString()===now.toDateString()?d.toLocaleTimeString("es-MX",{hour:"numeric",minute:"2-digit"}):d.toLocaleDateString("es-MX",{day:"numeric",month:"short"}); };
+function badge(n){ const t=n>9?"9+":String(n); for(const id of ["msgBadge","meBadge"]){ let b=$(id); if(!b&&id==="meBadge"){ b=document.createElement("span"); b.id="meBadge"; b.className="badge"; $("meBtn").appendChild(b); } b.hidden=!n; b.textContent=t; } }
+async function unreadPoll(){ clearTimeout(DM.uPoll); try{ const r=await VVR.call("dm/unread"); badge(r.unread); }catch(e){} DM.uPoll=setTimeout(unreadPoll,60000); }
+async function openMessages(handle){
+  menu(false); $("msgBox").hidden=false; $("dm").classList.remove("open"); await dmList();
+  if(handle){ try{ const r=await VVR.call("dm/start",{json:{handle}}); history.replaceState(null,"",location.pathname); openThread(r.thread); }
+    catch(err){ $("dmMsgs").innerHTML=`<p class="empty">${esc(err.message)}</p>`; } }
+}
+async function dmList(){
+  try{ const r=await VVR.call("dm"); DM.threads=r.threads; }catch(e){ DM.threads=[]; }
+  const L=$("dmList");
+  L.innerHTML=DM.threads.length?DM.threads.map(t=>`<button type="button" data-t="${t.id}" class="${DM.cur&&DM.cur.id===t.id?"on":""}"><span class="av">${VVRExplora.avatar(t.with.avatar,t.with.handle||t.with.name,40)}</span>
+    <span><b>${esc(t.with.name)}</b><small>${t.status==="pending"&&!t.mine?"Quiere escribirte":t.last_mine?"Tú: ":""}${esc(t.last_text)}</small></span>
+    ${t.status==="pending"&&!t.mine?'<span class="tg">Solicitud</span>':t.unread?'<span class="dot" aria-label="Sin leer"></span>':`<small>${ago(t.last_at)}</small>`}</button>`).join("")
+    :`<p class="none">Todavía no tienes mensajes.<br>Para escribirle a alguien, entra a su perfil y toca «Enviar mensaje».</p>`;
+  L.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>openThread(DM.threads.find(t=>t.id===+b.dataset.t)));
+  const n=DM.threads.filter(t=>t.unread||(t.status==="pending"&&!t.mine)).length; badge(n);
+}
+function dmHead(t){
+  const w=t.with, href=w.handle?`/@${esc(w.handle)}`:null;
+  $("dmHead").innerHTML=`<button class="btn sm back" type="button" id="dmBack">←</button><span class="av">${VVRExplora.avatar(w.avatar,w.handle||w.name,36)}</span>
+    <a class="who" ${href?`href="${href}" target="_blank" rel="noopener"`:""}>${esc(w.name)}${w.handle?`<small>@${esc(w.handle)}</small>`:""}</a>
+    ${t.id?`${t.blockedByMe?'<button class="btn sm" type="button" data-a="desbloquear">Desbloquear</button>':t.status!=="blocked"?'<button class="btn sm" type="button" data-a="bloquear">Bloquear</button>':""}<button class="btn sm" type="button" data-a="reportar">Reportar</button>`:""}`;
+  $("dmBack").onclick=()=>{ $("dm").classList.remove("open"); clearTimeout(DM.poll); DM.cur=null; dmList(); };
+  $("dmHead").querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>dmAct(b.dataset.a));
+}
+function dmState(t){
+  const req=$("dmReq"), send=$("dmSend");
+  req.hidden=true; send.hidden=false; $("dmNote").hidden=false; $("dmWarn").hidden=t.status!=="pending"&&t.status!=="new";
+  if(t.status==="pending"&&!t.mine){ req.hidden=false; req.innerHTML=`<b>${esc(t.with.name)} quiere escribirte.</b> Si respondes, aceptas la conversación.<div class="row"><button class="btn sm sun" type="button" data-r="aceptar">Aceptar</button><button class="btn sm" type="button" data-r="rechazar">Rechazar</button><button class="btn sm" type="button" data-r="bloquear">Bloquear</button></div>`;
+    req.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>dmAct(b.dataset.r)); }
+  else if(t.status==="pending"&&t.mine){ req.hidden=false; req.innerHTML="Tu solicitud está enviada. Podrás seguir escribiendo cuando la acepte o te responda."; send.hidden=true; }
+  else if(t.status==="new"){ req.hidden=false; req.innerHTML=`Tu primer mensaje le llega a ${esc(t.with.name)} como <b>solicitud</b>: preséntate y cuéntale qué te interesa.`; }
+  else if(t.status==="rejected"){ req.hidden=false; req.innerHTML=t.mine?"Esta persona no aceptó tu solicitud.":"Rechazaste esta solicitud."; send.hidden=true; }
+  else if(t.status==="blocked"){ req.hidden=false; req.innerHTML=t.blockedByMe?"Bloqueaste esta conversación: no te puede escribir.":"No puedes escribir en esta conversación."; send.hidden=true; }
+}
+function dmDraw(list,append){
+  const box=$("dmMsgs"); if(!append) box.innerHTML="";
+  if(!append&&!list.length){ box.innerHTML=`<p class="empty">${DM.cur.status==="new"?"Escribe tu primer mensaje.":"Todavía no hay mensajes."}</p>`; return; }
+  let day=box.dataset.day||""; const near=box.scrollHeight-box.scrollTop-box.clientHeight<80;
+  for(const m of list){ const d=new Date(m.at).toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"});
+    if(d!==day){ day=d; box.insertAdjacentHTML("beforeend",`<div class="day">${esc(d)}</div>`); }
+    const e=document.createElement("div"); e.className="m"+(m.mine?" me":"")+(m.hidden?" hid":"");
+    e.textContent=m.hidden?"Mensaje ocultado por moderación":m.body; e.insertAdjacentHTML("beforeend",`<time>${new Date(m.at).toLocaleTimeString("es-MX",{hour:"numeric",minute:"2-digit"})}</time>`);
+    box.appendChild(e); DM.last=Math.max(DM.last,m.id); }
+  box.dataset.day=day; if(!append||near) box.scrollTop=box.scrollHeight;
+}
+async function openThread(t){
+  if(!t) return; clearTimeout(DM.poll); DM.cur=t; DM.last=0; $("dmMsgs").dataset.day=""; $("dm").classList.add("open");
+  dmHead(t); dmState(t); $("dmList").querySelectorAll("[data-t]").forEach(b=>b.classList.toggle("on",+b.dataset.t===t.id));
+  if(!t.id){ dmDraw([]); $("dmText").focus(); return; }
+  try{ const r=await VVR.call("dm/"+t.id); DM.cur=r.thread; dmHead(r.thread); dmState(r.thread); dmDraw(r.messages); dmList(); }catch(err){ $("dmMsgs").innerHTML=`<p class="empty">${esc(err.message)}</p>`; return; }
+  dmPoll();
+}
+async function dmPoll(){ clearTimeout(DM.poll); if(!DM.cur||!DM.cur.id||$("msgBox").hidden) return;
+  try{ const r=await VVR.call(`dm/${DM.cur.id}?after=${DM.last}`); if(r.messages.length) dmDraw(r.messages,true); if(r.thread.status!==DM.cur.status){ DM.cur=r.thread; dmState(r.thread); dmHead(r.thread); } }catch(e){}
+  DM.poll=setTimeout(dmPoll,document.hidden?30000:5000); }
+$("dmSend").addEventListener("submit",async e=>{ e.preventDefault(); const t=DM.cur, text=$("dmText").value.trim(); if(!t||!text) return;
+  const b=e.target.querySelector("button"); b.disabled=true;
+  try{ const r=await VVR.call(`dm/${t.id||"nuevo"}/enviar`,{json:{text,handle:t.with.handle}}); $("dmText").value=""; $("dmText").style.height="";
+    if(!t.id){ await dmList(); openThread(DM.threads.find(x=>x.id===r.thread)); }
+    else { dmDraw([r.message],true); dmPoll(); if(t.status==="pending"&&!t.mine){ t.status="ok"; dmState(t); } dmList(); } }
+  catch(err){ alert(err.message); } b.disabled=false; });
+$("dmText").addEventListener("input",e=>{ e.target.style.height=""; e.target.style.height=Math.min(140,e.target.scrollHeight)+"px"; });
+$("dmText").addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.shiftKey&&!matchMedia("(pointer: coarse)").matches){ e.preventDefault(); $("dmSend").requestSubmit(); } });
+async function dmAct(a){ const t=DM.cur; if(!t||!t.id) return;
+  let body={};
+  if(a==="bloquear"&&!confirm(`¿Bloquear a ${t.with.name}? Ya no te podrá escribir.`)) return;
+  if(a==="rechazar"&&!confirm("¿Rechazar esta solicitud? No te podrá volver a escribir aquí.")) return;
+  if(a==="reportar"){ const n=prompt("¿Qué pasó? Lo revisa el equipo de Vórtice VR (puede leer esta conversación para revisarla)."); if(n===null) return; body={note:n}; }
+  try{ const r=await VVR.call(`dm/${t.id}/${a}`,{json:body}); DM.cur=r.thread; dmHead(r.thread); dmState(r.thread); dmList(); if(a==="reportar") alert("Gracias. Lo vamos a revisar."); }
+  catch(err){ alert(err.message); } }
+$("pMsgBtn").addEventListener("click",()=>openMessages());
+$("msgClose").addEventListener("click",()=>{ $("msgBox").hidden=true; clearTimeout(DM.poll); DM.cur=null; });
 
 // ---- routing ----
 async function load(){

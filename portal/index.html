@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Portal de experiencias | Vórtice VR</title>
-<meta name="description" content="Las experiencias inmersivas que comparte en Vórtice VR: realidad aumentada, filtros, juegos y galerías en 3D.">
+<meta name="description" content="Las experiencias inmersivas que comparte en Vórtice VR: realidad aumentada, filtros, juegos, libros y galerías en 3D.">
 <meta property="og:type" content="profile">
 <meta property="og:site_name" content="Vórtice VR">
 <meta property="og:locale" content="es_MX">
@@ -12,7 +12,7 @@
 <link rel="icon" href="/assets/icono.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <script type="importmap">
 {"imports":{
   "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -20,9 +20,10 @@
 }}
 </script>
 <style>
-/* A portal: vorticevr.mx/@nombre (worker.js serves this page for any /@…). The account's name and the experiences it
-   chose to show (/api/portal/<nombre>), with the same cards as Explora (assets/explora.js). Absolute paths: it lives at /@nombre. */
-:root{--void:#05020b;--line:rgba(210,184,255,.16);--line2:rgba(210,184,255,.38);--lav:#d2b8ff;--ink:#f4eeff;--mute:#b3a4d2;--sun:#ffbe55;
+/* A portal: vorticevr.mx/@nombre (worker.js serves this page for any /@…), an artist's showcase (5 de noviembre de 2026):
+   cover, photo, name, what they do, bio, networks, "Enviar mensaje" and their public experiences as artworks
+   (VVRExplora.obras), the 3D gallery first and big. Data: /api/portal/<nombre>. Absolute paths: it lives at /@nombre. */
+:root{--void:#05020b;--line:rgba(210,184,255,.16);--line2:rgba(210,184,255,.38);--lav:#d2b8ff;--ink:#f4eeff;--mute:#b3a4d2;--sun:#ffbe55;--vio:#8b3fd6;
   --fd:"Sora",system-ui,sans-serif;--fb:"IBM Plex Sans",system-ui,sans-serif;color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -30,36 +31,67 @@ body{margin:0;background:var(--void);color:var(--ink);font-family:var(--fb);line
 a{color:var(--lav)}
 :focus-visible{outline:2px solid var(--lav);outline-offset:3px}
 .wrap{max-width:1180px;margin:0 auto;padding:0 20px}
-header{position:absolute;top:0;left:0;right:0;z-index:5}
-header .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:calc(18px + env(safe-area-inset-top,0px))}
-header img{height:34px;display:block}
-header nav{display:flex;gap:10px;align-items:center}
-.pill{font:600 .78rem var(--fd);letter-spacing:.12em;text-transform:uppercase;text-decoration:none;color:var(--ink);border:1px solid var(--line2);border-radius:999px;padding:9px 15px;background:rgba(20,9,40,.5);cursor:pointer}
-.pill.gold{border-color:var(--sun);color:#1b0f00;background:linear-gradient(135deg,#ffe0a0,var(--sun))}
-@media (max-width:560px){header img{height:26px}.pill.hide{display:none}}
-.hero{text-align:center;padding:130px 20px 44px;background:radial-gradient(ellipse 50% 80% at 50% 0%,rgba(139,63,214,.45),transparent 70%),linear-gradient(180deg,#120a20,#05020b)}
-.av{width:104px;height:104px;margin:0 auto 16px;border-radius:50%;display:grid;place-items:center;font:700 2.6rem var(--fd);color:#1b0a36;background:linear-gradient(135deg,#ffe0a0,var(--sun) 40%,var(--lav));box-shadow:0 0 0 6px rgba(210,184,255,.15),0 20px 50px -10px rgba(139,63,214,.8)}
-.hero h1{font:700 clamp(2rem,6vw,3.4rem)/1.05 var(--fd);margin:0 0 6px;overflow-wrap:anywhere}
-.hero .h{font-family:"IBM Plex Mono",monospace;color:var(--sun)}
-.hero p{color:var(--mute);margin:8px 0 22px}
-.share{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-main section{padding:20px 0 80px}
+.btn{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:8px;font:600 .78rem var(--fd);letter-spacing:.12em;text-transform:uppercase;color:var(--ink);border:1px solid var(--line2);border-radius:999px;padding:12px 20px;background:rgba(20,9,40,.55);cursor:pointer;text-decoration:none;transition:border-color .2s,background .2s,transform .2s}
+.btn:hover{border-color:var(--lav);background:rgba(139,63,214,.25)}
+.btn.gold{border-color:var(--sun);color:#1b0f00;background:linear-gradient(135deg,#ffe0a0,var(--sun));box-shadow:0 10px 30px -8px rgba(255,190,85,.55)}
+.btn.gold:hover{transform:translateY(-2px)}
+.btn svg{width:16px;height:16px;fill:currentColor}
+.btn:focus-visible{outline:2px solid var(--lav);outline-offset:3px}
+
+/* cover: theirs, or a mosaic of their own works, or an aurora */
+.cover{position:relative;height:min(46vh,420px);min-height:260px;overflow:hidden;background:radial-gradient(ellipse 60% 90% at 20% 0%,rgba(139,63,214,.75),transparent 70%),radial-gradient(ellipse 50% 80% at 85% 10%,rgba(255,190,85,.35),transparent 70%),linear-gradient(180deg,#1c0b36,#05020b)}
+.cover .img{position:absolute;inset:-4%;background:center/cover no-repeat;animation:drift 30s ease-in-out infinite alternate}
+.cover .mosaic{position:absolute;inset:-10%;display:grid;grid-template-columns:repeat(3,1fr);gap:0;filter:blur(18px) saturate(1.3);opacity:.75;transform:scale(1.1);animation:drift 30s ease-in-out infinite alternate}
+.cover .mosaic img{width:100%;height:100%;object-fit:cover}
+.cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,2,11,.35),rgba(5,2,11,.15) 40%,var(--void))}
+.cover .sp{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff,0 0 16px var(--sun);opacity:0;animation:tw 4s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:0;transform:scale(.4)}50%{opacity:.9;transform:scale(1)}}
+@keyframes drift{from{transform:scale(1.06)}to{transform:scale(1.14) translate(-1.5%,1%)}}
+
+/* the person */
+.me{position:relative;margin-top:-120px;z-index:2;display:grid;grid-template-columns:auto minmax(0,1fr);gap:28px;align-items:end}
+.ring{position:relative;width:164px;height:164px;border-radius:50%;padding:5px;background:conic-gradient(from 210deg,var(--sun),#ff7ab8,var(--vio),var(--lav),var(--sun));box-shadow:0 20px 50px -10px rgba(139,63,214,.7);animation:spin 14s linear infinite}
+.ring>div{width:100%;height:100%;border-radius:50%;overflow:hidden;background:#0d0620;border:4px solid var(--void);animation:spin 14s linear infinite reverse}
+.ring img,.ring svg{width:100%!important;height:100%!important;object-fit:cover;display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.who{padding-bottom:6px;min-width:0}
+.who .of{display:inline-flex;align-items:center;gap:8px;font:600 .74rem var(--fd);letter-spacing:.2em;text-transform:uppercase;color:var(--sun);margin-bottom:6px}
+.who h1{font:800 clamp(2.2rem,6vw,4.2rem)/1 var(--fd);margin:0;letter-spacing:-.02em;overflow-wrap:anywhere;background:linear-gradient(100deg,#fff 30%,var(--lav) 70%,var(--sun));-webkit-background-clip:text;background-clip:text;color:transparent}
+.who .h{font:500 1rem "IBM Plex Mono",monospace;color:var(--lav);margin-top:8px}
+.bio{max-width:68ch;color:#d8ccef;font-size:1.06rem;margin:22px 0 0;white-space:pre-line}
+.stats{display:flex;gap:28px;flex-wrap:wrap;margin:20px 0 0}
+.stats div{display:flex;flex-direction:column}
+.stats b{font:700 1.5rem/1.1 var(--fd)}
+.stats span{font-size:.82rem;color:var(--mute);letter-spacing:.06em}
+.stats .hearts b{color:#ff6b93}
+.nets{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 0}
+.nets a{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line2);background:rgba(20,9,40,.55);color:var(--ink);transition:transform .2s,border-color .2s,background .2s}
+.nets a:hover{transform:translateY(-3px);border-color:var(--sun);background:rgba(255,190,85,.14)}
+.nets svg{width:18px;height:18px;fill:currentColor}
+.acts{display:flex;gap:10px;flex-wrap:wrap;margin:26px 0 0;position:relative}
+.more{position:absolute;top:calc(100% + 8px);left:0;z-index:5;min-width:240px;padding:8px;border-radius:16px;background:#120826;border:1px solid var(--line2);box-shadow:0 24px 60px rgba(0,0,0,.6)}
+.more button{all:unset;display:block;width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;cursor:pointer;font:500 .95rem var(--fb)}
+.more button:hover{background:rgba(139,63,214,.25)}
+@media (max-width:720px){.me{grid-template-columns:1fr;justify-items:center;text-align:center;margin-top:-96px;gap:16px}.ring{width:132px;height:132px}.stats,.nets,.acts{justify-content:center}.bio{margin-left:auto;margin-right:auto}.more{left:50%;translate:-50% 0}}
+
+/* the works */
+main section{padding:56px 0 0}
+.sh{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.sh h2{font:700 clamp(1.5rem,3vw,2.1rem)/1.1 var(--fd);margin:0}
+.sh small{display:block;font:600 .72rem var(--fd);letter-spacing:.22em;text-transform:uppercase;color:var(--sun);margin-bottom:6px}
+.kinds{display:flex;gap:8px;flex-wrap:wrap}
+.kinds button{all:unset;cursor:pointer;font:600 13px/1.2 var(--fb);border:1px solid var(--line2);border-radius:999px;padding:8px 14px;color:var(--mute)}
+.kinds button[aria-pressed=true]{background:var(--lav);color:#1b0a36;border-color:var(--lav)}
 .empty{border:1px dashed var(--line2);border-radius:18px;padding:40px 24px;text-align:center;color:var(--mute)}
 .empty b{display:block;color:var(--ink);font:600 1.2rem var(--fd);margin-bottom:6px}
-.band{border-top:1px solid var(--line);padding:60px 0;text-align:center}
+.talk{margin:80px 0 0;padding:44px 28px;border-radius:26px;text-align:center;background:radial-gradient(ellipse 60% 120% at 50% 0%,rgba(139,63,214,.4),transparent 70%),#0d0620;border:1px solid var(--line2)}
+.talk h2{font:700 clamp(1.5rem,3.4vw,2.3rem)/1.15 var(--fd);margin:0 0 10px}
+.talk p{color:var(--mute);max-width:56ch;margin:0 auto 22px}
+.band{border-top:1px solid var(--line);margin-top:80px;padding:56px 0;text-align:center}
 .band p{color:var(--mute);max-width:52ch;margin:0 auto 20px}
-footer{padding:40px 0 60px;color:var(--mute);font-size:.88rem}
+footer{padding:30px 0 60px;color:var(--mute);font-size:.88rem}
 footer .wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between}
 footer img{height:24px}
-.av{overflow:hidden;background:none}.av img,.av svg{width:100%!important;height:100%!important;object-fit:cover;display:block}
-.hearts{color:#ff6b93;font-weight:600}
-.gal{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:0;border-radius:22px;overflow:hidden;margin:0 0 40px;text-decoration:none;color:var(--ink);border:1px solid rgba(255,190,85,.55);background:linear-gradient(135deg,rgba(255,190,85,.14),rgba(139,63,214,.18));box-shadow:0 30px 70px -30px rgba(255,190,85,.5)}
-.gal img{width:100%;height:100%;min-height:220px;object-fit:cover;display:block}
-.gal div{padding:28px;display:flex;flex-direction:column;justify-content:center;gap:8px}
-.gal small{font:600 .72rem var(--fd);letter-spacing:.16em;text-transform:uppercase;color:var(--sun)}
-.gal b{font:700 clamp(1.4rem,3vw,2rem)/1.15 var(--fd)}
-.gal span.pill{width:max-content;margin-top:8px}
-@media (max-width:700px){.gal{grid-template-columns:1fr}.gal div{padding:20px}}
 .kit{border:1px solid var(--line2);border-radius:20px;background:#0d0620;color:var(--ink);padding:20px;width:min(94vw,760px);max-height:none}
 .kit::backdrop{background:rgba(5,2,11,.82);backdrop-filter:blur(4px)}
 .kit h2{margin:0 0 12px;font:700 1.3rem var(--fd)}
@@ -67,73 +99,145 @@ footer img{height:24px}
 .kit canvas{max-width:100%;max-height:62vh;height:auto;border-radius:8px;box-shadow:0 20px 50px -20px #000}
 .kit .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:14px}
 .kit .wait{color:var(--mute);text-align:center;margin:8px 0 0}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:50;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 32px);padding:14px 18px;border-radius:16px;background:#1b0a36;border:1px solid var(--line2);box-shadow:0 20px 50px -10px #000}
+@media (prefers-reduced-motion:reduce){.cover .img,.cover .mosaic,.ring,.ring>div,.cover .sp{animation:none}}
 </style>
 </head>
 <body>
-<header data-menu class="top"><div class="wrap"><a class="brand" href="/" aria-label="Vórtice VR, inicio"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
-  <nav><a class="pill hide" href="/explora/">Explora</a><a class="pill gold" href="/crear/">Crear experiencia</a></nav></div></header>
+<header data-menu class="top"></header>
 <script src="/assets/navegacion.js?v=2"></script>
 
 <main>
-  <div class="hero">
-    <div class="av" id="av" aria-hidden="true">·</div>
-    <h1 id="name">Cargando…</h1>
-    <div class="h" id="handle"></div>
-    <p id="count"></p>
-    <div class="share" id="share" hidden><button class="pill gold" id="shareBtn" type="button">Compartir este portal</button><button class="pill" id="kitP" type="button">Póster con QR</button><button class="pill" id="kitC" type="button">Tarjeta de presentación</button></div>
+  <div class="cover" id="cover" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="me">
+      <div class="ring"><div id="av"></div></div>
+      <div class="who"><div class="of" id="oficio" hidden></div><h1 id="name">Cargando…</h1><div class="h" id="handle"></div></div>
+    </div>
+    <p class="bio" id="bio" hidden></p>
+    <div class="stats" id="stats" hidden></div>
+    <div class="nets" id="nets" hidden></div>
+    <div class="acts" id="acts" hidden>
+      <a class="btn gold" id="msgBtn" href="#"><svg viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2z"/></svg><span>Enviar mensaje</span></a>
+      <a class="btn gold" id="editBtn" href="/cuenta/?portal=1" hidden>Editar mi perfil</a>
+      <button class="btn" id="shareBtn" type="button">Compartir</button>
+      <button class="btn" id="moreBtn" type="button" aria-expanded="false">Póster y tarjeta ▾</button>
+      <div class="more" id="more" hidden><button type="button" id="kitP">Póster con QR de mi perfil</button><button type="button" id="kitC">Tarjeta de presentación</button></div>
+    </div>
+
+    <section id="galSec" hidden>
+      <div class="sh"><div><small>Exposición</small><h2>Galería en 3D</h2></div></div>
+      <div id="galGrid"></div>
+    </section>
+    <section id="obrasSec">
+      <div class="sh"><div><small>Portafolio</small><h2>Obras y experiencias</h2></div><div class="kinds" id="kinds" hidden></div></div>
+      <div id="list"></div>
+      <div class="empty" id="empty" hidden><b>Todavía no hay obras públicas</b>Cuando comparta alguna, aparecerá aquí.</div>
+    </section>
+
+    <div class="talk" id="talk" hidden>
+      <h2 id="talkT">¿Te gustaría trabajar conmigo?</h2>
+      <p>Escríbeme para una experiencia a la medida: realidad aumentada, filtros, juegos, galerías y más.</p>
+      <a class="btn gold" id="talkBtn" href="#">Enviar mensaje</a>
+    </div>
   </div>
-  <section><div class="wrap">
-    <a class="gal" id="gal" hidden target="_blank" rel="noopener"><img id="galImg" alt=""><div><small>Galería en 3D</small><b id="galName"></b><span id="galMeta" style="color:var(--mute)"></span><span class="pill gold">Recorrer la galería</span></div></a>
-    <div class="xgrid" id="list"></div>
-    <div class="empty" id="empty" hidden><b>Todavía no hay experiencias públicas</b>Cuando comparta alguna, aparecerá aquí.</div>
-  </div></section>
   <section class="band"><div class="wrap">
-    <p>Realidad aumentada, filtros, juegos y galerías en 3D sin programar. Crea los tuyos y ten tu propio portal.</p>
-    <a class="pill gold" href="/crear/">Crear mi experiencia</a>
+    <p>Realidad aumentada, filtros, juegos, libros y galerías en 3D sin programar. Crea los tuyos y ten tu propio escaparate.</p>
+    <a class="btn gold" href="/crear/">Crear mi experiencia</a>
   </div></section>
 </main>
 
 <dialog class="kit" id="kit"><h2 id="kitT"></h2><div class="pv"><canvas id="kitCv"></canvas></div><p class="wait" id="kitW">Preparando…</p>
-  <div class="row"><button class="pill" id="kitX" type="button">Cerrar</button><button class="pill" id="kitPng" type="button">Descargar imagen</button><button class="pill gold" id="kitPdf" type="button">Descargar PDF</button></div></dialog>
+  <div class="row"><button class="btn" id="kitX" type="button">Cerrar</button><button class="btn" id="kitPng" type="button">Descargar imagen</button><button class="btn gold" id="kitPdf" type="button">Descargar PDF</button></div></dialog>
 
 <footer><div class="wrap"><a href="/"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a><span>© Vórtice VR · <a href="/privacidad/">Privacidad</a> · <a href="/terminos/">Términos</a></span></div></footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="/assets/poster.js?v=6"></script>
-<script src="/assets/explora.js?v=9"></script>
+<script src="/assets/explora.js?v=10"></script>
 <script src="/assets/perfil-kit.js?v=1"></script>
 <script>
 const $=id=>document.getElementById(id);
 const handle=(location.pathname.match(/^\/@([a-z0-9_-]{3,24})/i)||[])[1];
 const nf=n=>Number(n||0).toLocaleString("es-MX");
-function notFound(){ $("name").textContent="Este portal no existe"; $("count").innerHTML=`Revisa el nombre o <a href="/explora/">explora otras experiencias</a>.`; $("av").textContent="?"; }
-function privado(h){ $("av").innerHTML=VVRExplora.avatar(null,h,104); $("name").textContent="Perfil privado"; $("handle").textContent="@"+h; $("count").textContent="Sus experiencias solo se ven con su link o su QR."; }
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const session=()=>{ try{ const s=JSON.parse(localStorage.getItem("vvr-sesion")||"null"); return s&&s.token?s:null; }catch(e){ return null; } };
+const ICONS={
+  whatsapp:'<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 2.9 2.9 0 0 0-.9 2.2 5 5 0 0 0 1 2.6 11.4 11.4 0 0 0 4.4 3.9c1.6.7 2.3.8 3.1.6a2.6 2.6 0 0 0 1.7-1.2 2.1 2.1 0 0 0 .2-1.2c-.1-.1-.3-.2-.5-.3z"/>',
+  facebook:'<path d="M20 2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8.6v-7.7H10v-3h2.6V9c0-2.6 1.6-4 3.9-4 1.1 0 2.1.1 2.3.1v2.7h-1.6c-1.3 0-1.5.6-1.5 1.5v1.9h3l-.4 3h-2.6V22H20a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>',
+  instagram:'<path d="M7.8 2h8.4A5.8 5.8 0 0 1 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8A5.8 5.8 0 0 1 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2zm-.2 2A3.6 3.6 0 0 0 4 7.6v8.8A3.6 3.6 0 0 0 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6A3.6 3.6 0 0 0 16.4 4H7.6zm9.7 1.5a1.3 1.3 0 1 1 0 2.5 1.3 1.3 0 0 1 0-2.5zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>',
+  youtube:'<path d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4a2.5 2.5 0 0 0-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.8a2.5 2.5 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8c.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8zM10 15V9l5.2 3-5.2 3z"/>',
+  x:'<path d="M17.8 3h3.1l-6.8 7.7L22 21h-6.2l-4.9-6.4L5.3 21H2.2l7.3-8.3L2 3h6.4l4.4 5.8L17.8 3zm-1.1 16.2h1.7L7.4 4.7H5.6l11.1 14.5z"/>',
+  tiktok:'<path d="M16.6 3c.4 2.2 1.8 3.7 4 3.9v3a7.4 7.4 0 0 1-4-1.3v6.2A5.8 5.8 0 1 1 10.8 9v3.1a2.8 2.8 0 1 0 2.8 2.8V3h3z"/>',
+  web:'<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm7.9 9h-3a15.6 15.6 0 0 0-1.3-5.5A8 8 0 0 1 19.9 11zM12 4c.9 1.1 1.8 3.6 2 7h-4c.2-3.4 1.1-5.9 2-7zM4.1 13h3c.1 2 .6 3.9 1.3 5.5A8 8 0 0 1 4.1 13zm3-2h-3a8 8 0 0 1 4.3-5.5A15.6 15.6 0 0 0 7.1 11zM12 20c-.9-1.1-1.8-3.6-2-7h4c-.2 3.4-1.1 5.9-2 7zm3.6-1.5c.7-1.6 1.2-3.5 1.3-5.5h3a8 8 0 0 1-4.3 5.5z"/>'};
+ICONS.linkedin='<path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.5h4V21H3zM9.5 9.5h3.8v1.6h.1c.5-1 1.8-2 3.8-2 4 0 4.8 2.6 4.8 6V21h-4v-5.2c0-1.2 0-2.9-1.8-2.9s-2 1.4-2 2.8V21h-4z"/>';
+ICONS.pinterest='<path d="M12 2a10 10 0 0 0-3.6 19.3c-.1-.8-.2-2 0-2.9l1.3-5.4s-.3-.7-.3-1.6c0-1.5.9-2.7 2-2.7.9 0 1.4.7 1.4 1.5 0 .9-.6 2.3-.9 3.6-.3 1.1.5 2 1.6 2 1.9 0 3.4-2 3.4-5 0-2.6-1.9-4.4-4.5-4.4-3.1 0-4.9 2.3-4.9 4.7 0 .9.4 1.9.8 2.5.1.1.1.2.1.3l-.3 1.2c0 .2-.2.2-.4.1-1.4-.6-2.2-2.7-2.2-4.3 0-3.5 2.5-6.7 7.3-6.7 3.8 0 6.8 2.7 6.8 6.4 0 3.8-2.4 6.9-5.8 6.9-1.1 0-2.2-.6-2.5-1.3l-.7 2.6c-.3 1-.9 2.2-1.4 2.9A10 10 0 1 0 12 2z"/>';
+ICONS.email='<path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm9 7.2L4 7.3V17h16V7.3z"/>';
+const NET_LABEL={instagram:"Instagram",tiktok:"TikTok",youtube:"YouTube",facebook:"Facebook",x:"X",linkedin:"LinkedIn",pinterest:"Pinterest",web:"Sitio web",whatsapp:"WhatsApp",email:"Correo"};
+
+function notFound(){ $("name").textContent="Este perfil no existe"; $("handle").innerHTML=`Revisa el nombre o <a href="/explora/">explora otras experiencias</a>.`; $("av").innerHTML=VVRExplora.avatar(null,"?",160); }
+function privado(h){ $("av").innerHTML=VVRExplora.avatar(null,h,160); $("name").textContent="Perfil privado"; $("handle").textContent="@"+h; $("bio").hidden=false; $("bio").textContent="Sus experiencias solo se ven con su link o su QR."; $("obrasSec").hidden=true; }
 if(!handle) notFound();
 else fetch(`/api/portal/${handle.toLowerCase()}`).then(async r=>{ const j=await r.json().catch(()=>({})); if(r.status===403&&j.private) return privado(j.handle); if(!r.ok) throw r; show(j); }).catch(notFound);
-// the gallery in 3D (one per account) goes first and big; the rest as posters
+
+// the cover: their own picture, or a blurred mosaic of their works, with a few twinkles
+function cover(j){
+  const c=$("cover");
+  if(j.cover) c.innerHTML=`<div class="img" style="background-image:url('${esc(j.cover)}')"></div>`;
+  else { const imgs=j.experiences.map(x=>x.image).filter(Boolean).slice(0,6); if(imgs.length) c.innerHTML=`<div class="mosaic">${imgs.concat(imgs,imgs).slice(0,6).map(s=>`<img src="${esc(s)}" alt="">`).join("")}</div>`; }
+  for(let i=0;i<18;i++){ const s=document.createElement("i"); s.className="sp"; s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*85}%;animation-delay:${(Math.random()*4).toFixed(2)}s`; c.appendChild(s); }
+}
 function show(j){
-  const name=j.name||j.handle, n=j.experiences.length;
-  document.title=`${name} (@${j.handle}) · Portal de experiencias | Vórtice VR`;
-  $("av").innerHTML=VVRExplora.avatar(j.avatar,j.handle,104); $("name").textContent=name; $("handle").textContent="@"+j.handle;
-  $("count").innerHTML=n?`${nf(n)} ${n===1?"experiencia":"experiencias"} en Vórtice VR${j.likes?` · <span class="hearts">♥ ${nf(j.likes)}</span>`:""}`:"";
-  $("share").hidden=false; $("empty").hidden=!!n;
-  const g=j.experiences.find(x=>x.kind==="galeria");
-  if(g){ $("gal").hidden=false; $("gal").href=g.url; $("galImg").src=g.image; $("galName").textContent=g.title; $("galMeta").textContent=g.likes?`♥ ${nf(g.likes)}`:"Una exposición que se recorre"; }
-  VVRExplora.render($("list"),j.experiences,{by:false});
+  const name=j.name||j.handle, n=j.experiences.length, me=session(), self=me&&me.user&&me.user.handle===j.handle;
+  document.title=`${name} (@${j.handle}) · Vórtice VR`;
+  cover(j);
+  $("av").innerHTML=VVRExplora.avatar(j.avatar,j.handle,160); $("name").textContent=name; $("handle").textContent="@"+j.handle;
+  if(j.oficio){ $("oficio").hidden=false; $("oficio").textContent=j.oficio; }
+  if(j.bio){ $("bio").hidden=false; $("bio").textContent=j.bio; }
+  const since=j.since?new Date(j.since).getFullYear():"";
+  $("stats").hidden=false; $("stats").innerHTML=`<div><b>${nf(n)}</b><span>${n===1?"obra":"obras"}</span></div><div class="hearts"><b>♥ ${nf(j.likes)}</b><span>corazones</span></div>${since?`<div><b>${since}</b><span>en Vórtice VR</span></div>`:""}`;
+  const nets=(j.links||[]).filter(l=>ICONS[l.k]);
+  if(nets.length){ $("nets").hidden=false; $("nets").innerHTML=nets.map(l=>`<a href="${esc(l.v)}" target="_blank" rel="noopener me" aria-label="${esc(NET_LABEL[l.k]||l.k)}" title="${esc(NET_LABEL[l.k]||l.k)}"><svg viewBox="0 0 24 24">${ICONS[l.k]}</svg></a>`).join(""); }
+  // messages: to their chat in Mi cuenta (signing in first); not on your own profile, nor if they don't take messages
+  $("acts").hidden=false;
+  const canMsg=!self&&j.dm!=="nadie", dmUrl=`/cuenta/?dm=${encodeURIComponent(j.handle)}`;
+  $("msgBtn").hidden=!canMsg; $("editBtn").hidden=!self; $("talk").hidden=!canMsg;
+  $("talkT").textContent=`¿Te gustaría trabajar con ${name.split(" ")[0]}?`;
+  const goMsg=e=>{ e.preventDefault(); if(session()) location.href=dmUrl; else login(); };
+  $("msgBtn").onclick=$("talkBtn").onclick=goMsg;
+  // the works: the gallery first and big, then the rest as artworks, with type chips when there are several
+  const g=j.experiences.filter(x=>x.kind==="galeria"), rest=j.experiences.filter(x=>x.kind!=="galeria");
+  if(g.length){ $("galSec").hidden=false; VVRExplora.obras($("galGrid"),g,{big:g[0].slug}); }
+  $("empty").hidden=!!rest.length||!!g.length; if(!rest.length&&g.length) $("obrasSec").hidden=true;
+  VVRExplora.obras($("list"),rest);
+  const ks=[...new Set(rest.map(x=>x.kind))];
+  if(ks.length>1){ $("kinds").hidden=false; const K=VVRExplora.KINDS;
+    $("kinds").innerHTML=`<button type="button" data-k="" aria-pressed="true">Todas</button>`+ks.map(k=>`<button type="button" data-k="${k}" aria-pressed="false">${(K[k]||K.ra)[0]} ${esc((K[k]||K.ra)[1])}</button>`).join("");
+    $("kinds").onclick=e=>{ const b=e.target.closest("[data-k]"); if(!b) return; $("kinds").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b))); VVRExplora.obras($("list"),rest,{only:b.dataset.k}); }; }
   // printables: letter poster and business card with the QR to this portal (assets/perfil-kit.js)
   let run=0, kind="";
-  async function kit(k){ kind=k; const me=++run; $("kitT").textContent=k==="poster"?"Póster del portal":"Tarjeta de presentación"; $("kitW").hidden=false; $("kitW").textContent="Preparando…";
+  async function kit(k){ kind=k; const me=++run; $("kitT").textContent=k==="poster"?"Póster de mi perfil":"Tarjeta de presentación"; $("kitW").hidden=false; $("kitW").textContent="Preparando…";
     $("kitPdf").disabled=$("kitPng").disabled=true; if(!$("kit").open) $("kit").showModal();
     try{ await (k==="poster"?VVRKit.poster:VVRKit.card)($("kitCv"),j); if(me!==run) return; $("kitW").hidden=true; $("kitPdf").disabled=$("kitPng").disabled=false; }
     catch(e){ if(me===run) $("kitW").textContent="No se pudo preparar. Intenta de nuevo."; } }
   const file=()=>`${kind==="poster"?"poster":"tarjeta"}-${j.handle}`;
-  $("kitP").onclick=()=>kit("poster"); $("kitC").onclick=()=>kit("tarjeta");
+  const more=on=>{ $("more").hidden=!on; $("moreBtn").setAttribute("aria-expanded",String(on)); };
+  $("moreBtn").onclick=e=>{ e.stopPropagation(); more($("more").hidden); };
+  document.addEventListener("click",e=>{ if(!$("more").contains(e.target)) more(false); });
+  $("kitP").onclick=()=>{ more(false); kit("poster"); }; $("kitC").onclick=()=>{ more(false); kit("tarjeta"); };
   $("kitPdf").onclick=()=>VVRPoster.pdf($("kitCv"),file()+".pdf",kind==="poster"?null:VVRKit.CARD_PT);
   $("kitPng").onclick=()=>VVRPoster.png($("kitCv"),file()+".png");
   $("kitX").onclick=()=>$("kit").close();
   const q=new URLSearchParams(location.search).get("kit"); if(q==="poster"||q==="tarjeta") kit(q);
-  $("shareBtn").onclick=async()=>{ const url=location.origin+"/@"+j.handle, data={title:`${name} en Vórtice VR`,text:"Mira mis experiencias:",url};
-    try{ if(navigator.share) await navigator.share(data); else { await navigator.clipboard.writeText(url); $("shareBtn").textContent="¡Link copiado!"; setTimeout(()=>$("shareBtn").textContent="Compartir este portal",1800); } }catch(e){} };
+  $("shareBtn").onclick=async()=>{ const url=location.origin+"/@"+j.handle, data={title:`${name} en Vórtice VR`,text:j.oficio||"Mira mis obras:",url};
+    try{ if(navigator.share) await navigator.share(data); else { await navigator.clipboard.writeText(url); $("shareBtn").textContent="¡Link copiado!"; setTimeout(()=>$("shareBtn").textContent="Compartir",1800); } }catch(e){} };
+}
+// to write you need an account: an invitation that comes back here
+function login(){
+  document.querySelectorAll(".toast").forEach(t=>t.remove());
+  const back=encodeURIComponent("@"+handle), t=document.createElement("div"); t.className="toast"; t.setAttribute("role","status");
+  t.innerHTML=`<span>Para enviar mensajes necesitas una cuenta.</span><a class="btn gold" href="/cuenta/?siguiente=${back}#registro">Crear cuenta</a><a class="btn" href="/cuenta/?siguiente=${back}#entrar">Entrar</a>`;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),9000);
 }
 </script>
 

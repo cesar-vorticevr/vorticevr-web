@@ -281,5 +281,43 @@
     mark(cur || "");
   }
 
-  window.VVRExplora = { KINDS, render, kinds, avatar, load: (q = "") => api("/api/explora" + q) };
+  // ---- the portal's showcase (/@nombre): each experience as an artwork, its own picture big with its title over it and its
+  // ♥; tapping it opens the experience. obras(el, list, {only: kind}) (5 de noviembre de 2026: the posters there looked plain)
+  document.head.appendChild(Object.assign(document.createElement("style"), { textContent: `
+.xo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:22px}
+@media (max-width:560px){.xo-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}}
+.xo{position:relative;display:block;border-radius:18px;overflow:hidden;aspect-ratio:4/5;background:radial-gradient(circle at 50% 30%,#4b1d7a,#140827 75%);box-shadow:0 26px 50px -24px rgba(0,0,0,.95),0 0 0 1px rgba(210,184,255,.14);color:#fff;text-decoration:none;isolation:isolate;transition:transform .45s cubic-bezier(.2,.8,.2,1),box-shadow .45s}
+.xo:hover,.xo:focus-visible{transform:translateY(-6px);box-shadow:0 34px 70px -22px rgba(139,63,214,.8),0 0 0 2px rgba(255,190,85,.65)}
+.xo:focus-visible{outline:2px solid #d2b8ff;outline-offset:3px}
+.xo img.ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform 1.2s cubic-bezier(.2,.8,.2,1),filter .6s;z-index:-1}
+.xo.white img.ph{object-fit:contain;background:#fff;padding:12%}
+.xo:hover img.ph{transform:scale(1.07);filter:saturate(1.15)}
+.xo::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(5,2,11,.35) 0,transparent 22%,transparent 48%,rgba(5,2,11,.92) 100%)}
+.xo .kd{position:absolute;left:12px;top:12px;font:600 11px/1.4 "IBM Plex Sans",sans-serif;padding:4px 10px;border-radius:999px;background:rgba(5,2,11,.6);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(6px)}
+.xo .cap{position:absolute;left:0;right:0;bottom:0;padding:16px;display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+.xo .cap b{font:700 clamp(15px,2vw,18px)/1.2 Sora,sans-serif;text-shadow:0 2px 12px rgba(0,0,0,.6);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.xo .go{position:absolute;right:12px;top:12px;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#ffbe55;color:#1b0f00;font:700 16px/1 Sora,sans-serif;opacity:0;transform:scale(.6);transition:opacity .3s,transform .3s}
+.xo:hover .go,.xo:focus-visible .go{opacity:1;transform:none}
+.xo .xv-like{color:#fff;background:rgba(5,2,11,.5);backdrop-filter:blur(6px)}
+.xo.big{grid-column:1/-1;aspect-ratio:21/9}
+@media (max-width:700px){.xo.big{aspect-ratio:4/3}}
+.xo.big .cap b{font-size:clamp(20px,3.4vw,34px)}
+@media (prefers-reduced-motion:reduce){.xo,.xo img.ph,.xo .go{transition:none}}
+` }));
+  function obras(el, list, o = {}) {
+    el.classList.add("xo-grid"); el.replaceChildren();
+    for (const x of list) {
+      if (o.only && x.kind !== o.only) continue;
+      if (!likes.has(x.slug)) likes.set(x.slug, { n: x.likes || 0, on: false });
+      const K = KINDS[x.kind] || KINDS.ra, a = document.createElement("a");
+      a.className = "xo" + (x.kind === "colorear" || (x.kind === "trivia" && !x.image) ? " white" : "") + (o.big === x.slug ? " big" : "");
+      a.href = x.url; a.target = "_blank"; a.rel = "noopener"; a.setAttribute("aria-label", `${x.title} · ${K[1]}`);
+      a.innerHTML = `<img class="ph" loading="lazy" src="${esc(x.image || base + "trivia.svg")}" alt=""><span class="kd">${K[0]} ${esc(K[1])}</span><span class="go" aria-hidden="true">↗</span><span class="cap"><b>${esc(x.title)}</b>${likeBtn(x)}</span>`;
+      wireLike(a.querySelector(".xv-like"), x);
+      el.appendChild(a);
+    }
+    mine(list.map(x => x.slug));
+  }
+
+  window.VVRExplora = { KINDS, render, kinds, avatar, obras, load: (q = "") => api("/api/explora" + q) };
 })();

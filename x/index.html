@@ -29,6 +29,26 @@ button{font:inherit;color:inherit;cursor:pointer}
 /* the customer's own logo (Premium): as it is, with a thin light edge and a soft shadow so any color reads on the camera */
 #brand.own img{height:auto;max-height:34px;max-width:50vw;filter:drop-shadow(0 0 1.5px rgba(255,255,255,.75)) drop-shadow(0 2px 8px rgba(0,0,0,.45))}
 
+/* who made it: always a link to its author's portal (/@nombre) and to Vórtice VR (César, 5 de noviembre de 2026) */
+#byx{position:fixed;left:calc(10px + env(safe-area-inset-left,0px));top:calc(10px + env(safe-area-inset-top,0px));z-index:61;display:flex;align-items:center;gap:2px;max-width:calc(100vw - 120px);padding:3px;border-radius:999px;background:rgba(5,2,11,.62);border:1px solid rgba(210,184,255,.28);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 6px 20px rgba(0,0,0,.35);font:600 12px/1 "Sora",system-ui,sans-serif;animation:byin .6s .4s ease both}
+@keyframes byin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+#byx a{display:flex;align-items:center;gap:7px;min-width:0;color:#f3ecff;text-decoration:none;border-radius:999px;padding:2px 10px 2px 2px}
+#byx a:hover{background:rgba(139,63,214,.35)}
+#byx .av{flex:none;width:24px;height:24px;border-radius:50%;object-fit:cover;display:grid;place-items:center;background:linear-gradient(135deg,#8b3fd6,#1b0a36);color:#fff;font-size:11px}
+#byx .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#byx .t small{display:block;font:500 9px/1.2 "IBM Plex Sans",system-ui,sans-serif;color:#cbbbe8;letter-spacing:.04em}
+#byx .vx{padding:4px 9px;border-left:1px solid rgba(210,184,255,.22);border-radius:0 999px 999px 0}
+#byx .vx img{height:11px;width:auto;display:block;opacity:.92}
+#byx.solo .vx{border-left:0;border-radius:999px}
+/* with the camera the logo is already on top: the author goes centered under it, without a second logo */
+body:is(.k-ra,.k-filtro,.k-trivia,.k-colorear,.k-superficie) #byx{left:50%;translate:-50% 0;top:calc(46px + env(safe-area-inset-top,0px));max-width:calc(100vw - 32px)}
+body:is(.k-ra,.k-filtro,.k-trivia,.k-colorear,.k-superficie) #byx .vx{display:none}
+body:is(.k-ra,.k-filtro,.k-trivia,.k-colorear,.k-superficie) #byx a{padding-right:12px}
+/* rooms and readers with their own top bar: under it */
+body.k-galeria #byx{top:calc(58px + env(safe-area-inset-top,0px))}
+body.k-libro #byx{top:auto;bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+@media print{#byx{display:none}}
+
 /* intro */
 #intro{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;-webkit-overflow-scrolling:touch;gap:18px;padding:74px 22px calc(28px + env(safe-area-inset-bottom,0px));text-align:center;
   background:radial-gradient(90% 60% at 50% 30%,#22104a,#05020b 70%)}
@@ -139,6 +159,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 <body>
 <div id="ar"></div>
 <header id="brand"><a href="https://vorticevr.mx/" aria-label="Vórtice VR"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a></header>
+<nav id="byx" aria-label="Quién la hizo" hidden></nav>
 
 <div id="intro">
   <span class="k" id="kick">Esta imagen tiene un video</span>
@@ -235,6 +256,19 @@ function socialButtons(){
     const a=document.createElement("a"); a.href=socialHref(k,v); a.target="_blank"; a.rel="noopener"; a.setAttribute("aria-label",LABEL[k]);
     a.innerHTML=`<svg viewBox="0 0 24 24">${ICONS[k]}</svg>`; soc.appendChild(a); }
 }
+// who made it: "por @nombre" to their portal and Vórtice VR's logo to the platform (Premium with its own logo or none:
+// only the author); with no public portal, just Vórtice VR
+function credit(){
+  const el=$("byx"), by=CFG.by, white=CFG.brand==="own"||CFG.brand==="none", esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const cam=["ra","filtro","trivia","colorear","superficie"].includes(CFG.kind||"ra");   // the logo is already on top there
+  if(!by&&(white||cam)) return;
+  const av=by&&(by.avatar?`<img class="av" src="${esc((CFG.base||"")+by.avatar)}" alt="">`:`<span class="av" aria-hidden="true">${esc((by.name||by.handle||"?").trim().charAt(0).toUpperCase())}</span>`);
+  const site="https://vorticevr.mx/?utm_source=experiencia&utm_medium=credito&utm_campaign="+encodeURIComponent(CFG.slug||"");
+  const home=/\.vorticevr\.mx$/.test(location.hostname)&&location.hostname!=="www.vorticevr.mx"?"https://vorticevr.mx":location.origin;   // nombre.vorticevr.mx has no portals
+  el.innerHTML=(by?`<a href="${home}/@${esc(by.handle)}" target="_blank" rel="noopener" aria-label="Hecha por @${esc(by.handle)}: ver su perfil">${av}<span class="t"><small>Hecha por</small>@${esc(by.handle)}</span></a>`:"")
+    +(white?"":`<a class="vx" href="${site}" target="_blank" rel="noopener" aria-label="Hecha con Vórtice VR"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>`);
+  el.classList.toggle("solo",!by); el.hidden=false;
+}
 async function load(){
   if(!slug){ message("Experiencia no encontrada","Revisa que el link esté completo."); return; }
   const base=new URLSearchParams(location.search).get("api")||"";
@@ -243,6 +277,7 @@ async function load(){
   if(!r.ok){ message("Experiencia no encontrada","Revisa que el link esté completo."); return; }
   CFG=await r.json(); CFG.base=base;
   if(CFG.brand==="none") $("brand").hidden=true;   // Premium: no logo at all
+  document.body.classList.add("k-"+(CFG.kind||"ra")); credit();
   if(CFG.brand==="own"){   // the brand's logo instead of Vórtice VR's (also on photos, videos and the coloring)
     const a=$("brand").querySelector("a"), im=a.querySelector("img");
     im.src=`${base}/m/${CFG.slug}/logo`; im.alt=CFG.title||""; a.removeAttribute("href"); a.removeAttribute("aria-label"); $("brand").classList.add("own");

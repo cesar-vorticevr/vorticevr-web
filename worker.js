@@ -9,6 +9,7 @@
 //    Sin bindings, el sitio funciona igual y la API responde 503.
 //  - Plataforma de cursos (_cursos/): cursos.vorticevr.mx → vorticevr.mx/cursos/…, /api/cursos/* → _cursos/api.js.
 import { cursosApi, cursosStripeEvent, cursosTick, cursosReady } from "./_cursos/api.js";
+import { mensajesApi } from "./_mensajes/api.js";
 import { librosApi, librosWebhook, cleanLibro, publicLibro, lockedMediaOk, newBookId, LIBRO } from "./_libros/api.js";
 
 const ROOT_DEFAULT = "vorticevr.mx";
@@ -264,7 +265,7 @@ async function api(request, env, ctx, url) {
   // public: one experience's settings
   let m = path.match(/^\/api\/exp\/([a-z0-9-]+)$/);
   if (m && M === "GET") {
-    const row = await env.DB.prepare("SELECT e.*, u.plan, u.plan_until, u.owner_id, u.quota, o.plan AS o_plan, o.plan_until AS o_until FROM experiences e LEFT JOIN users u ON u.email = e.email LEFT JOIN users o ON o.id = u.owner_id WHERE e.slug = ?").bind(m[1]).first();
+    const row = await env.DB.prepare("SELECT e.*, u.plan, u.plan_until, u.owner_id, u.quota, u.id AS uid, u.name AS uname, u.handle AS uhandle, u.avatar AS uavatar, u.profile_public AS upublic, o.plan AS o_plan, o.plan_until AS o_until FROM experiences e LEFT JOIN users u ON u.email = e.email LEFT JOIN users o ON o.id = u.owner_id WHERE e.slug = ?").bind(m[1]).first();
     if (!row) return json({ error: "No existe" }, 404);
     if (row.expires < Date.now()) return json({ error: "Expiró" }, 410);
     if (row.paused) return json({ error: "Pausada", paused: true }, 410);
@@ -275,6 +276,7 @@ async function api(request, env, ctx, url) {
     if (!url.searchParams.get("sin_vista")) ctx.waitUntil(env.DB.batch([env.DB.prepare("UPDATE experiences SET views = views + 1 WHERE slug = ?").bind(row.slug), bump(env, "views")]));
     const out = publicExp(row);
     if (out.brand && !P.brand) delete out.brand;   // its own logo (or none) only while the plan includes it (brand: Premium)
+    if (row.uhandle && row.upublic !== 0) out.by = { handle: row.uhandle, name: row.uname || row.uhandle, avatar: row.uavatar ? avatarUrl(row.uid, row.uavatar) : null };   // its author's portal
     return json(out, 200, { "Cache-Control": "no-store" });
   }
 
@@ -304,11 +306,11 @@ async function api(request, env, ctx, url) {
   // a portal (vorticevr.mx/@nombre): the account's name, photo and its public experiences (a private profile shows nothing)
   m = path.match(/^\/api\/portal\/([a-z0-9_-]{3,24})$/);
   if (m && M === "GET") {
-    const u = await env.DB.prepare("SELECT id, name, email, handle, created, avatar, profile_public FROM users WHERE handle = ? AND verified = 1").bind(m[1]).first();
+    const u = await env.DB.prepare("SELECT id, name, email, handle, created, avatar, profile_public, oficio, bio, links, cover, dm FROM users WHERE handle = ? AND verified = 1").bind(m[1]).first();
     if (!u) return json({ error: "No existe" }, 404);
     if (u.profile_public === 0) return json({ private: true, handle: u.handle }, 403, { "Cache-Control": "public, max-age=60" });
     const r = await explore(env, request, { email: u.email, n: 300 });
-    return json({ name: u.name, handle: u.handle, since: u.created, avatar: u.avatar ? avatarUrl(u.id, u.avatar) : null, likes: r.experiences.reduce((a, x) => a + x.likes, 0), experiences: r.experiences }, 200, { "Cache-Control": "public, max-age=60" });
+    return json({ name: u.name, handle: u.handle, since: u.created, avatar: u.avatar ? avatarUrl(u.id, u.avatar) : null, ...profileOf(u), likes: r.experiences.reduce((a, x) => a + x.likes, 0), experiences: r.experiences }, 200, { "Cache-Control": "public, max-age=60" });
   }
   // is this user name free? (sign-up and Mi portal, while typing; yo = my id, so my own name counts as free)
   if (path === "/api/handle" && M === "GET") {
@@ -319,6 +321,12 @@ async function api(request, env, ctx, url) {
   m = path.match(/^\/api\/avatar\/(\d+)$/);
   if (m && M === "GET") {
     const o = await env.MEDIA.get(`avatar/${m[1]}`);
+    if (!o) return new Response("No existe", { status: 404 });
+    return new Response(o.body, { headers: { "Content-Type": (o.httpMetadata && o.httpMetadata.contentType) || "image/jpeg", "Cache-Control": "public, max-age=31536000, immutable" } });
+  }
+  m = path.match(/^\/api\/cover\/(\d+)$/);
+  if (m && M === "GET") {
+    const o = await env.MEDIA.get("cover/" + m[1]);
     if (!o) return new Response("No existe", { status: 404 });
     return new Response(o.body, { headers: { "Content-Type": (o.httpMetadata && o.httpMetadata.contentType) || "image/jpeg", "Cache-Control": "public, max-age=31536000, immutable" } });
   }
@@ -513,6 +521,7 @@ async function api(request, env, ctx, url) {
   // ---- signed-in ----
   const me = await auth(request, env);
   const who = me && me.email;
+  { const r = await mensajesApi(request, env, ctx, url, path, me, { json, limit, isAdmin, avatarUrl }); if (r) return r; }   // messages between accounts (_mensajes/api.js)
   if (path === "/api/logout" && M === "POST") {
     const t = bearer(request); if (t) await env.DB.prepare("DELETE FROM sessions WHERE token = ?").bind(await sha256hex(t)).run();
     return json({ ok: true });
@@ -564,8 +573,23 @@ async function api(request, env, ctx, url) {
   if (path === "/api/profile" && M === "POST") {
     if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
     const b = await request.json().catch(() => ({}));
-    await env.DB.prepare("UPDATE users SET profile_public = ? WHERE id = ?").bind(b.public ? 1 : 0, me.id).run();
-    return json({ ok: true, public: !!b.public });
+    const set = [], val = [];
+    if ("public" in b) { set.push("profile_public = ?"); val.push(b.public ? 1 : 0); }
+    if ("oficio" in b) { set.push("oficio = ?"); val.push(String(b.oficio || "").replace(/\s+/g, " ").trim().slice(0, PROFILE.oficio) || null); }
+    if ("bio" in b) { set.push("bio = ?"); val.push(String(b.bio || "").replace(/\r/g, "").replace(/\n{3,}/g, "\n\n").trim().slice(0, PROFILE.bio) || null); }
+    if ("dm" in b) { set.push("dm = ?"); val.push(b.dm === "nadie" ? "nadie" : "solicitud"); }
+    if ("links" in b) {
+      const out = [];
+      for (const x of Array.isArray(b.links) ? b.links.slice(0, PROFILE.links) : []) {
+        const k = PROFILE.nets.includes(x && x.k) ? x.k : null; if (!k || !String(x.v || "").trim()) continue;
+        const href = socialHref(k, x.v); if (!href) return json({ error: "Revisa tu " + (PROFILE.names[k] || k) + "." }, 400);
+        out.push({ k, v: href });
+      }
+      set.push("links = ?"); val.push(out.length ? JSON.stringify(out) : null);
+    }
+    if (set.length) await env.DB.prepare("UPDATE users SET " + set.join(", ") + " WHERE id = ?").bind(...val, me.id).run();
+    const u = await env.DB.prepare("SELECT id, profile_public, oficio, bio, links, cover, dm FROM users WHERE id = ?").bind(me.id).first();
+    return json({ ok: true, public: u.profile_public !== 0, ...profileOf(u) });
   }
   // profile photo: a square JPEG/PNG/WebP made by the page (≤ 400 px); DELETE = back to the generic one
   if (path === "/api/avatar" && (M === "POST" || M === "DELETE")) {
@@ -579,6 +603,19 @@ async function api(request, env, ctx, url) {
     await env.MEDIA.put(`avatar/${me.id}`, buf, { httpMetadata: { contentType: type } });
     await env.DB.prepare("UPDATE users SET avatar = ? WHERE id = ?").bind(v, me.id).run();
     return json({ ok: true, avatar: avatarUrl(me.id, v) });
+  }
+  // the portal's cover: a wide JPEG/WebP made by the page (≤ 1600 px); DELETE = back to the generated one
+  if (path === "/api/cover" && (M === "POST" || M === "DELETE")) {
+    if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
+    if (M === "DELETE") { await env.MEDIA.delete("cover/" + me.id); await env.DB.prepare("UPDATE users SET cover = NULL WHERE id = ?").bind(me.id).run(); return json({ ok: true, cover: null }); }
+    const type = (request.headers.get("Content-Type") || "").split(";")[0];
+    if (!/^image\/(jpeg|png|webp)$/.test(type)) return json({ error: "Sube una imagen JPG, PNG o WebP." }, 400);
+    const buf = await request.arrayBuffer();
+    if (!buf.byteLength || buf.byteLength > 1.5 * 1048576) return json({ error: "La imagen pesa demasiado." }, 400);
+    const v = Date.now();
+    await env.MEDIA.put("cover/" + me.id, buf, { httpMetadata: { contentType: type } });
+    await env.DB.prepare("UPDATE users SET cover = ? WHERE id = ?").bind(v, me.id).run();
+    return json({ ok: true, cover: coverUrl(me.id, v) });
   }
   // ♥: give or take back a heart on a public experience (only with an account)
   m = path.match(/^\/api\/like\/([a-z0-9-]+)$/);
@@ -1121,6 +1158,14 @@ async function handleProblem(env, h, myId) {
   return taken ? "Alguien más ya usa ese nombre. Prueba otro." : null;
 }
 const avatarUrl = (id, v) => `/api/avatar/${id}?v=${v}`;
+const coverUrl = (id, v) => "/api/cover/" + id + "?v=" + v;
+// the portal as an artist's showcase (5 de noviembre de 2026): oficio, bio, networks, cover and whether they get messages
+const PROFILE = { oficio: 60, bio: 500, links: 6, nets: ["instagram", "tiktok", "youtube", "facebook", "x", "linkedin", "pinterest", "web", "whatsapp", "email"],
+  names: { web: "sitio web", whatsapp: "WhatsApp (10 dígitos)", email: "correo", x: "usuario de X" } };
+function profileOf(u) {
+  let links = []; try { links = JSON.parse(u.links || "[]"); } catch (e) {}
+  return { oficio: u.oficio || "", bio: u.bio || "", links, cover: u.cover ? coverUrl(u.id, u.cover) : null, dm: u.dm === "nadie" ? "nadie" : "solicitud" };
+}
 const fold = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 const likeEsc = s => s.replace(/[\\%_]/g, c => "\\" + c);
 // Explora's search: up to 6 public profiles whose @ starts with (or contains) the text, with how many experiences they show
@@ -1932,6 +1977,10 @@ async function migrate(env) {
     try { await env.DB.batch(["avatar INTEGER", "profile_public INTEGER DEFAULT 1"].map(c => env.DB.prepare(`ALTER TABLE users ADD COLUMN ${c}`))); }
     catch (e) { console.error("migración perfil", e); }
   }
+  if (!/\bcover\b/.test(sql.users)) {   // the portal as an artist's showcase: what they do, a short bio, their networks, a cover and who can write to them
+    try { await env.DB.batch(["oficio TEXT", "bio TEXT", "links TEXT", "cover INTEGER", "dm TEXT DEFAULT 'solicitud'"].map(c => env.DB.prepare("ALTER TABLE users ADD COLUMN " + c))); }
+    catch (e) { console.error("migración escaparate", e); }
+  }
   await env.DB.batch([
     env.DB.prepare("CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT NOT NULL, reason TEXT, note TEXT, at INTEGER, done INTEGER DEFAULT 0)"),
     env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS users_handle ON users (handle)"),
@@ -2001,7 +2050,7 @@ async function auth(request, env) {
   const t = bearer(request);
   if (!t) return null;
   const row = await env.DB.prepare(`SELECT u.id, u.email, u.name, u.verified, u.plan, u.plan_until, u.plan_note, u.stripe_customer, u.stripe_sub, u.stripe_status, u.stripe_mode,
-      u.owner_id, u.quota, u.extra_exp, u.temp_pw, u.ref_code, u.ref_by, u.seller, u.payout, u.first_pub, u.handle, u.avatar, u.profile_public, o.plan AS o_plan, o.plan_until AS o_until, o.name AS o_name, o.email AS o_email, s.expires
+      u.owner_id, u.quota, u.extra_exp, u.temp_pw, u.ref_code, u.ref_by, u.seller, u.payout, u.first_pub, u.handle, u.avatar, u.profile_public, u.bio, u.oficio, u.links, u.cover, u.dm, o.plan AS o_plan, o.plan_until AS o_until, o.name AS o_name, o.email AS o_email, s.expires
     FROM sessions s JOIN users u ON u.id = s.user_id LEFT JOIN users o ON o.id = u.owner_id WHERE s.token = ?`).bind(await sha256hex(t)).first();
   return row && row.expires > Date.now() && row.verified ? row : null;
 }
@@ -2009,7 +2058,7 @@ async function account(env, request, user) {
   const { results } = await env.DB.prepare("SELECT e.*, (SELECT COUNT(*) FROM likes l WHERE l.slug = e.slug) AS likes FROM experiences e WHERE e.email = ? AND e.expires > ? ORDER BY e.paused, e.created DESC").bind(user.email, Date.now()).all();
   const plan = planOf(user), lim = await limitOf(env, user, plan);
   const team = plan.member ? { role: "member", owner: plan.owner } : plan.seats ? { role: "owner", seats: plan.seats, total: plan.exp, mine: lim } : undefined;
-  return { user: { id: user.id, name: user.name, email: user.email, handle: user.handle || null, avatar: user.avatar ? avatarUrl(user.id, user.avatar) : null, public: user.profile_public !== 0 }, experiences: results.map(r => ownerExp(r, request, env)), plan, limit: lim, team,
+  return { user: { id: user.id, name: user.name, email: user.email, handle: user.handle || null, avatar: user.avatar ? avatarUrl(user.id, user.avatar) : null, public: user.profile_public !== 0, ...profileOf(user) }, experiences: results.map(r => ownerExp(r, request, env)), plan, limit: lim, team,
     referral: { eligible: REF.plans.includes(plan.id) && !plan.member, discount: !!user.ref_by && !user.stripe_sub ? REF.discount : 0 },
     tempPassword: !!user.temp_pw || undefined, admin: isAdmin(env, user) || undefined, seller: !!(sellerOf(user) && sellerOf(user).active) || undefined, billing: billingInfo(env, user) };
 }
