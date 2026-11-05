@@ -202,7 +202,7 @@ const vid=$("vid"), vbox=$("vbox"), guide=$("guide"), startBtn=$("start");
 // ---- which experience: nombre.vorticevr.mx, /e/nombre/, or ?s=nombre (pruebas) ----
 function slugFromUrl(){
   const q=new URLSearchParams(location.search).get("s"); if(q) return q;
-  const m=location.pathname.match(/\/e\/([a-z0-9-]+)/); if(m) return m[1];
+  const m=location.pathname.match(/\/(?:e|biblioteca)\/([a-z0-9-]+)/); if(m) return m[1];
   const h=location.hostname.split("."); if(h.length>=3 || (h.length===2 && h[1]==="localhost")) return h[0];
   return null;
 }
@@ -272,6 +272,7 @@ async function load(){
   if(CFG.kind==="rompecabezas"){ startRompecabezas(); return; }   // a jigsaw puzzle of the image, no camera (assets/rompecabezas.js)
   if(CFG.kind==="galeria"){ startGaleria(); return; }   // a 3D art gallery to walk through, no camera (assets/galeria.js)
   if(CFG.kind==="sopa"){ startSopa(); return; }   // a word search, no camera (assets/sopa.js)
+  if(CFG.kind==="libro"){ startLibro(); return; }   // an interactive book of the library: read, listen and play (assets/libro.js)
   if(CFG.kind==="memorama"){ startMemorama(); return; }   // a memory game, no camera (assets/memorama.js)
   if(CFG.kind==="dispara"){ startDispara(); return; }   // "Dispara y gana": its own start screen asks for the camera (assets/dispara.js)
   if(CFG.kind==="colorear"){   // a coloring page: no camera, the drawing is painted on screen (assets/colorear.js)
@@ -480,6 +481,37 @@ async function startGaleria(){
       src:id=>files.get(id)?`${base}/m/${CFG.slug}/${files.get(id)}?v=${CFG.updated||""}`:"",
       onClick:id=>{ try{ navigator.sendBeacon(`${base}/api/click/${encodeURIComponent(CFG.slug)}/${encodeURIComponent(id)}`); }catch(e){} }});
   }catch(e){ console.error(e); message("No se pudo abrir la galería","Revisa tu conexión y vuelve a abrir el link."); }
+}
+async function startLibro(){
+  // a book lives at vorticevr.mx/biblioteca/<slug>/ (the account's session is there, to buy it): the name.vorticevr.mx link goes there
+  if(!/\/biblioteca\//.test(location.pathname)&&/(^|\.)vorticevr\.mx$/.test(location.hostname)&&location.hostname!=="vorticevr.mx"){ location.replace(`https://vorticevr.mx/biblioteca/${CFG.slug}/${location.search}`); return; }
+  document.title=((CFG.libro&&CFG.libro.name)||CFG.title||"Libro")+" · Biblioteca Vórtice VR"; $("intro").hidden=true; $("brand").hidden=true;
+  document.querySelector('meta[name="theme-color"]').content="#1b0e2e";
+  const vp=document.querySelector('meta[name="viewport"]'); if(vp) vp.content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover";
+  const base=CFG.base||location.origin, Q=new URLSearchParams(location.search);
+  const tok=()=>{ try{ const s=JSON.parse(localStorage.getItem("vvr-sesion")||"null"); return s&&s.token||null; }catch(e){ return null; } };
+  const call=async(path,opt={})=>{ const h={"Content-Type":"application/json"}; if(tok()) h.Authorization="Bearer "+tok(); const r=await fetch(`${base}/api/${path}`,{method:opt.method||"GET",headers:h,body:opt.body?JSON.stringify(opt.body):undefined}); const j=await r.json().catch(()=>({})); if(!r.ok){ const e=new Error(j.error||"Algo salió mal."); e.status=r.status; e.data=j; throw e; } return j; };
+  const login=()=>{ location.href=`/cuenta/?siguiente=${encodeURIComponent("biblioteca/"+CFG.slug)}#entrar`; };
+  try{
+    const LB=await import("/assets/libro.js");
+    let paid=null;
+    if(Q.get("pago")==="ok"&&Q.get("cs")&&tok()){ try{ paid=await call("libro/pago/"+encodeURIComponent(Q.get("cs")),{method:"POST"}); }catch(e){} }
+    if(Q.get("pago")) history.replaceState(null,"",location.pathname);
+    // the whole book for whoever may read it (free, bought, its author): the pages for sale come with signed files
+    let access={owned:!(CFG.libro&&CFG.libro.locked),venta:(CFG.libro&&CFG.libro.venta)||{modo:"gratis"}}, files={};
+    try{ const a=await call("libro/"+encodeURIComponent(CFG.slug)); access=a; if(a.pages){ CFG.libro={...CFG.libro,pages:a.pages,locked:0}; CFG.items=a.items; files=a.files||{}; } }catch(e){ console.error(e); }
+    const byId=new Map((CFG.items||[]).map(i=>[i.id,i.file]));
+    const brand=CFG.brand==="none"?null:CFG.brand==="own"?{src:`${base}/m/${CFG.slug}/logo`,own:true}:{href:"https://vorticevr.mx/"};
+    LB.run({root:$("ar"),cfg:CFG,brand,access,signed:!!tok(),url:location.origin+"/biblioteca/"+CFG.slug+"/",
+      src:id=>files[id]?base+files[id]:byId.get(id)?`${base}/m/${CFG.slug}/${byId.get(id)}?v=${CFG.updated||""}`:"",
+      onClick:id=>{ try{ navigator.sendBeacon(`${base}/api/click/${encodeURIComponent(CFG.slug)}/${encodeURIComponent(id)}`); }catch(e){} },
+      buy:async(kind,monto)=>{
+        if(kind==="login"||!tok()){ login(); return; }
+        try{ const r=await call(`libro/${encodeURIComponent(CFG.slug)}/${kind}`,{method:"POST",body:{monto}}); if(r.owned){ location.reload(); return; } if(r.url) location.href=r.url; }
+        catch(e){ if(e.status===401){ login(); return; } throw e; }
+      }});
+    if(paid&&paid.paid){ const t=document.createElement("div"); t.className="lb-toast"; t.textContent=paid.kind==="apoyo"?"¡Gracias por tu apoyo! Le llega a su autor.":"¡Listo! Ya puedes leer el libro completo."; $("ar").lastElementChild.appendChild(t); setTimeout(()=>t.remove(),4200); }
+  }catch(e){ console.error(e); message("No se pudo abrir el libro","Revisa tu conexión y vuelve a abrir el link."); }
 }
 async function startSopa(){
   document.title=(CFG.sopa&&CFG.sopa.name)||CFG.title||"Sopa de letras"; $("intro").hidden=true; $("brand").hidden=true;

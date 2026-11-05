@@ -7,9 +7,15 @@
 //                                              (video, imagen o GLB). video y model: experiencias de antes de los elementos.
 //    Requiere bindings DB (D1) y MEDIA (R2); secretos RESEND_API_KEY y SESSION_SECRET.
 //    Sin bindings, el sitio funciona igual y la API responde 503.
+//  - Plataforma de cursos (_cursos/): cursos.vorticevr.mx → vorticevr.mx/cursos/…, /api/cursos/* → _cursos/api.js.
+import { cursosApi, cursosStripeEvent, cursosTick, cursosReady } from "./_cursos/api.js";
+import { librosApi, librosWebhook, cleanLibro, publicLibro, lockedMediaOk, newBookId, LIBRO } from "./_libros/api.js";
 
 const ROOT_DEFAULT = "vorticevr.mx";
-const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear","create","ra","x","e","m","preview","app","apps","static","assets","cdn","dev","test","staging","beta","demo","vorticevr","vortice","soporte","support","help","ayuda","blog","shop","tienda","login","cuenta","account","johara","tarjeta","proyectos","status","docs"]);
+const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear","create","ra","x","e","m","preview","app","apps","static","assets","cdn","dev","test","staging","beta","demo","vorticevr","vortice","soporte","support","help","ayuda","blog","shop","tienda","login","cuenta","account","johara","tarjeta","proyectos","status","docs","cursos","biblioteca"]);
+// per-IP limits: a school or a workshop puts 50–300 people behind one IP, so these stay high; the real protection
+// is per email (codes, login tries) and the global sign-up cap
+const IP_LIMITS = { reg: 300, regAll: 1500, login: 600, handle: 3000 };
 const LIMITS = { imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, codeMinutes: 10, codeTries: 5, sessionDays: 30, pausedDays: 30 };
 // Plans. exp = active experiences; days = how long each one lasts (0 = while the plan is active);
 // views = most times each experience can be opened (Gratis only, so a viral free QR cannot run up costs);
@@ -64,6 +70,7 @@ export default {
   // daily: delete expired experiences and their files
   async scheduled(event, env, ctx) {
     if (!env.DB || !env.MEDIA) return;
+    if (event.cron === "*/15 * * * *") { await cursosTick(env, cursosH()).catch(e => console.error("cursos cron", e.message)); return; }   // live-session reminders (_cursos/vivo.js)
     await schema(env);
     // paid plans whose "paid until" date passed go back to free (extra experiences are paused 30 days, then deleted)
     const { results: lapsed } = await env.DB.prepare("SELECT * FROM users WHERE plan != 'gratis' AND plan_until IS NOT NULL AND plan_until < ? LIMIT 20").bind(Date.now()).all();
@@ -92,6 +99,8 @@ async function route(request, env, ctx) {
   const url = new URL(request.url);
   const root = env.ROOT_DOMAIN || ROOT_DEFAULT;
   try {
+    // cursos.vorticevr.mx is only a short address: the courses live at vorticevr.mx/cursos/ (same session and account)
+    if (url.hostname === "cursos." + root) return Response.redirect(`https://${root}/cursos${url.pathname}${url.search}`, 301);
     if (url.pathname.startsWith("/api/")) return await api(request, env, ctx, url);
     if (url.pathname.startsWith("/m/")) return await media(request, env, url);
     const sub = subdomainOf(url.hostname, root);
@@ -105,11 +114,22 @@ async function route(request, env, ctx) {
       if (!url.pathname.endsWith("/")) return Response.redirect(url.origin + url.pathname + "/" + url.search, 301);
       return viewerPage(request, env, url);
     }
+    // a book of the library: vorticevr.mx/biblioteca/<slug>/ (on the main domain, so the account's session works to buy it)
+    const bk = url.pathname.match(/^\/biblioteca\/([a-z0-9-]+)\/?$/);
+    if (bk && bk[1] !== "ejemplo") {   // /biblioteca/ejemplo/ is a page of the site: the example book (assets/libro.js → EJEMPLO)
+      if (!url.pathname.endsWith("/")) return Response.redirect(url.origin + url.pathname + "/" + url.search, 301);
+      return viewerPage(request, env, url);
+    }
     // a portal: vorticevr.mx/@nombre (assets in /portal/; the page reads the name from the address)
     const at = url.pathname.match(/^\/@([A-Za-z0-9_-]{3,24})\/?$/);
     if (at) {
       if (at[1] !== at[1].toLowerCase()) return Response.redirect(url.origin + "/@" + at[1].toLowerCase() + url.search, 301);
       return env.ASSETS.fetch(new Request(new URL("/portal/", url), request));
+    }
+    const cp = cursosPage(url.pathname);
+    if (cp) {
+      if (!url.pathname.endsWith("/")) return Response.redirect(url.origin + url.pathname + "/" + url.search, 301);
+      return env.ASSETS.fetch(new Request(new URL(cp, url), request));
     }
     return assets(request, env, url);
   } catch (err) {
@@ -137,6 +157,15 @@ function subdomainOf(host, root) {
   const sub = host.slice(0, -root.length - 1);
   if (!sub || sub.includes(".") || RESERVED.has(sub)) return null;
   return sub;
+}
+
+// pages of the courses with a name in the address: /cursos/<curso>/ (sales page), /cursos/aprender/<curso>/, /cursos/manual/<curso>/, /cursos/verificar/<token>/
+const CURSOS_PAGES = new Set(["aprender", "verificar", "mi-aprendizaje", "curso", "instructor", "admin", "crear", "manual", "ediciones", "ventas"]);
+function cursosPage(p) {
+  let m = p.match(/^\/cursos\/(aprender|verificar|manual)\/([A-Za-z0-9_-]+)\/?$/);
+  if (m) return `/cursos/${m[1]}/`;
+  m = p.match(/^\/cursos\/([a-z0-9-]+)\/?$/);
+  return m && !CURSOS_PAGES.has(m[1]) ? "/cursos/curso/" : null;
 }
 
 function viewerPage(request, env, url) {
@@ -169,9 +198,11 @@ function rangeFromBuffer(request, baseHeaders, buf) {
 
 // ---------- experience files from R2 ----------
 async function media(request, env, url) {
-  const m = url.pathname.match(/^\/m\/([a-z0-9-]+)\/(video|target|image|model|logo|i\/[a-z0-9]{6,16})$/);
+  const m = url.pathname.match(/^\/m\/([a-z0-9-]+)\/(video|target|image|model|logo|[ip]\/[a-z0-9]{6,16})$/);
   if (!m || !env.MEDIA || !env.DB) return new Response("No encontrado", { status: 404 });
   const [, slug, kind] = m;
+  // p/<id> = a file of a book's pages for sale: only with the signature that /api/libro/<slug> gives to whoever may read it
+  if (kind.startsWith("p/") && !(await lockedMediaOk(env, slug, kind.slice(2), url.searchParams.get("k")))) return new Response("No encontrado", { status: 404 });
   await schema(env);
   const exp = await env.DB.prepare("SELECT expires, paused FROM experiences WHERE slug = ?").bind(slug).first();
   if (!exp || exp.expires < Date.now() || (exp.paused && kind !== "image")) return new Response("No encontrado", { status: 404 }); // a paused one keeps its thumbnail for the dashboard
@@ -215,12 +246,20 @@ async function deleteMedia(env, slug, data) {
 }
 
 // ---------- API ----------
+// what the courses platform (_cursos/) uses from here: accounts, mail, Stripe
+// (a function: several of these are consts defined further down)
+const cursosH = () => ({ auth, json, isAdmin, sendMail, shell, esc, btnMail, fecha, stripe, stripeMode, limit, siteUrl, clabeOk, CLABE_BANKS });
+// and what the books (_libros/) use
+const librosH = () => ({ ...cursosH(), planOf, cursosReady });
+
 async function api(request, env, ctx, url) {
   if (!env.DB || !env.MEDIA) return json({ error: "La plataforma todavía se está configurando." }, 503);
   await schema(env);
   const path = url.pathname.replace(/\/+$/, "");
   const ip = request.headers.get("CF-Connecting-IP") || "local";
   const M = request.method;
+  if (path.startsWith("/api/cursos/")) return cursosApi(request, env, ctx, url, path, cursosH());
+  if (path === "/api/biblioteca" || path.startsWith("/api/libro/")) { const r = await librosApi(request, env, ctx, url, path, librosH()); if (r) return r; }
 
   // public: one experience's settings
   let m = path.match(/^\/api\/exp\/([a-z0-9-]+)$/);
@@ -273,7 +312,7 @@ async function api(request, env, ctx, url) {
   }
   // is this user name free? (sign-up and Mi portal, while typing; yo = my id, so my own name counts as free)
   if (path === "/api/handle" && M === "GET") {
-    if (!(await limit(env, "hcheck:" + ip, 120, 600e3))) return json({ error: "Espera un momento." }, 429);
+    if (!(await limit(env, "hcheck:" + ip, IP_LIMITS.handle, 600e3))) return json({ error: "Espera un momento." }, 429);
     const h = normHandle(url.searchParams.get("h")), bad = await handleProblem(env, h, +url.searchParams.get("yo") || 0);
     return json({ handle: h, ok: !bad, error: bad || undefined }, 200, { "Cache-Control": "no-store" });
   }
@@ -304,7 +343,7 @@ async function api(request, env, ctx, url) {
   // link page: one tap on a button; prize wheel: spins, each prize that came out, "lose", review… (navigator.sendBeacon); only counted while it is live
   m = path.match(/^\/api\/click\/([a-z0-9-]+)\/([a-z0-9]{1,16})$/);
   if (m && M === "POST") {
-    ctx.waitUntil(env.DB.prepare("INSERT INTO clicks (slug, id, n) SELECT slug, ?, 1 FROM experiences WHERE slug = ? AND paused = 0 AND expires > ? AND (data LIKE '%\"kind\":\"links\"%' OR data LIKE '%\"kind\":\"ruleta\"%' OR data LIKE '%\"kind\":\"dispara\"%' OR data LIKE '%\"kind\":\"memorama\"%' OR data LIKE '%\"kind\":\"sopa\"%' OR data LIKE '%\"kind\":\"rompecabezas\"%' OR data LIKE '%\"kind\":\"galeria\"%') ON CONFLICT(slug, id) DO UPDATE SET n = n + 1")
+    ctx.waitUntil(env.DB.prepare("INSERT INTO clicks (slug, id, n) SELECT slug, ?, 1 FROM experiences WHERE slug = ? AND paused = 0 AND expires > ? AND (data LIKE '%\"kind\":\"links\"%' OR data LIKE '%\"kind\":\"ruleta\"%' OR data LIKE '%\"kind\":\"dispara\"%' OR data LIKE '%\"kind\":\"memorama\"%' OR data LIKE '%\"kind\":\"sopa\"%' OR data LIKE '%\"kind\":\"rompecabezas\"%' OR data LIKE '%\"kind\":\"galeria\"%' OR data LIKE '%\"kind\":\"libro\"%') ON CONFLICT(slug, id) DO UPDATE SET n = n + 1")
       .bind(m[2], m[1], Date.now()).run().catch(e => console.error("click", e.message)));
     return new Response(null, { status: 204 });
   }
@@ -390,7 +429,7 @@ async function api(request, env, ctx, url) {
     if (!name) return json({ error: "Escribe tu nombre." }, 400);
     if (!em) return json({ error: "Escribe un correo válido." }, 400);
     if (pw.length < 8) return json({ error: "La contraseña debe tener al menos 8 caracteres." }, 400);
-    if (!(await limit(env, "reg:" + ip, 8, 3600e3))) return json({ error: "Demasiados intentos. Espera un rato." }, 429);
+    if (!(await limit(env, "reg:" + ip, IP_LIMITS.reg, 3600e3)) || !(await limit(env, "reg:all", IP_LIMITS.regAll, 3600e3))) return json({ error: "Demasiados intentos. Espera un rato." }, 429);
     const user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(em).first();
     if (user && user.verified) return json({ error: "Ya existe una cuenta con ese correo. Inicia sesión." }, 409);
     const handle = normHandle(b.handle), hBad = await handleProblem(env, handle, user ? user.id : 0);
@@ -422,7 +461,7 @@ async function api(request, env, ctx, url) {
     const b = await request.json().catch(() => ({}));
     const em = normEmail(b.email), pw = String(b.password || "");
     if (!em || !pw) return json({ error: "Escribe tu correo y tu contraseña." }, 400);
-    if (!(await limit(env, "login:" + ip, 20, 900e3)) || !(await limit(env, "loginmail:" + em, 8, 900e3))) return json({ error: "Demasiados intentos. Espera 15 minutos." }, 429);
+    if (!(await limit(env, "login:" + ip, IP_LIMITS.login, 900e3)) || !(await limit(env, "loginmail:" + em, 8, 900e3))) return json({ error: "Demasiados intentos. Espera 15 minutos." }, 429);
     const user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(em).first();
     if (!user || !(await verifyPassword(pw, user.pass))) return json({ error: "Correo o contraseña incorrectos." }, 401);
     if (!user.verified) { const r = await sendCode(env, em, "verify"); return r.error && r.status !== 429 ? codeResponse(r) : json({ ok: true, needCode: true, dev_code: r.dev_code }); } // 429 = a code was just sent
@@ -456,6 +495,8 @@ async function api(request, env, ctx, url) {
     const raw = await request.text();
     if (!(await stripeVerify(env, raw, request.headers.get("Stripe-Signature")))) return json({ error: "Firma inválida" }, 400);
     const ev = JSON.parse(raw), o = (ev.data && ev.data.object) || {};
+    if (await librosWebhook(env, ctx, ev, librosH())) return json({ received: true });   // a book bought or its author supported (metadata.vvr = "libro")
+    if (await cursosStripeEvent(env, ctx, ev, cursosH())) return json({ received: true });   // Premier and course purchases (metadata.vvr)
     let sub = null;
     if (ev.type === "checkout.session.completed" && o.mode === "subscription") sub = o.subscription;
     else if (/^customer\.subscription\./.test(ev.type)) sub = o.id;
@@ -594,7 +635,9 @@ async function api(request, env, ctx, url) {
       if (other) return json({ error: "Solo puedes tener una galería por cuenta. Edita la que ya tienes desde Mi cuenta.", galeria: other.slug }, 409);
     }
     const data = cleanMeta(meta, P);
-    if (data.error) return json({ error: data.error }, 400);
+    if (data.error) return json({ error: data.error, plan: data.plan || undefined }, 400);
+    // a book keeps its id (its sales are tied to it) while it is edited; a new one gets a new one
+    if (data.kind === "libro") data.libro.id = (mine && (JSON.parse(mine.data || "{}").libro || {}).id) || newBookId();
     const image = form.get("image"), target = form.get("target"), qr = form.get("qr");
     // its own brand logo instead of Vórtice VR (plans with brand): uploaded now or kept from the version being edited
     const logo = form.get("logo"), newLogo = logo && typeof logo !== "string" ? logo : null;
@@ -611,13 +654,13 @@ async function api(request, env, ctx, url) {
     const isNew = !mine;
     if (data.kind === "trivia" && data.trivia.logo && !image && !(mine && (JSON.parse(mine.data || "{}").trivia || {}).logo)) data.trivia.logo = false;
     if (isNew) ctx.waitUntil(bump(env, "publishes").run());
-    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu" && data.kind !== "links" && data.kind !== "ruleta" && data.kind !== "dispara" && data.kind !== "memorama" && data.kind !== "sopa" && data.kind !== "rompecabezas" && data.kind !== "galeria" && data.kind !== "superficie"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
+    if (isNew && data.kind !== "trivia" && data.kind !== "filtro" && (!image || (!target && data.kind !== "colorear" && data.kind !== "menu" && data.kind !== "links" && data.kind !== "ruleta" && data.kind !== "dispara" && data.kind !== "memorama" && data.kind !== "sopa" && data.kind !== "rompecabezas" && data.kind !== "galeria" && data.kind !== "superficie" && data.kind !== "libro"))) return json({ error: data.kind === "colorear" ? "Falta tu dibujo." : "Falta la imagen." }, 400);
     if (image && (image.size > LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(image.type))) return json({ error: "La imagen es demasiado grande." }, 400);
     if (target && target.size > LIMITS.targetBytes) return json({ error: "La imagen no se pudo preparar. Intenta con otra." }, 400);
     // each element's file: uploaded now (field f_<id>) or kept from the version being edited (same id and type)
     const oldItems = mine ? itemsOf(JSON.parse(mine.data || "{}")) : [];
     const oldById = new Map(oldItems.map(i => [i.id, i]));
-    const uploads = [];
+    const uploads = [], relock = [];
     let total = 0;
     for (const it of data.items) {
       if (it.type === "text" || it.type === "sticker" || (it.type === "pantalla" && it.key)) continue;   // a face filter's stickers and ready-made screen pictures have no upload
@@ -625,17 +668,19 @@ async function api(request, env, ctx, url) {
       if (file && typeof file !== "string") {
         if (it.type === "video" && (file.size > P.videoMB * 1048576 || !/^video\/(mp4|webm|quicktime)$/.test(file.type))) return json({ error: `Cada video debe ser MP4, WebM o MOV de máximo ${P.videoMB} MB.` }, 400);
         if (["image", "pintura", "pantalla", "foto", "pagina"].includes(it.type) && (file.size > ITEM_LIMITS.imageBytes || !/^image\/(jpeg|png|webp)$/.test(file.type))) return json({ error: "Cada imagen debe ser JPG, PNG o WebP de máximo 5 MB." }, 400);
-        if (it.type === "audio" && (file.size > ITEM_LIMITS.audioBytes || !/^audio\/(mpeg|mp3|mp4|x-m4a|m4a|aac)$/.test(file.type))) return json({ error: "Cada audio debe ser MP3 o M4A de máximo 10 MB." }, 400);
+        if (it.type === "audio" && (file.size > ITEM_LIMITS.audioBytes || !(/^audio\/(mpeg|mp3|mp4|x-m4a|m4a|aac)$/.test(file.type) || (data.kind === "libro" && /^audio\/(webm|ogg)$/.test(file.type))))) return json({ error: "Cada audio debe ser MP3 o M4A de máximo 10 MB." }, 400);   // a book's narration can be recorded right in the browser (WebM/Ogg)
         if (it.type === "model") {
           if (file.size > P.modelMB * 1048576) return json({ error: `Cada objeto 3D debe pesar máximo ${P.modelMB} MB.` }, 400);
           if (new TextDecoder().decode(new Uint8Array(await file.slice(0, 4).arrayBuffer())) !== "glTF") return json({ error: "Los objetos 3D deben ser archivos GLB." }, 400);
         }
-        it.file = "i/" + it.id; it.bytes = file.size;
+        it.file = (it.lock ? "p/" : "i/") + it.id; it.bytes = file.size;   // p/ = a file of a book's pages for sale (served signed)
         uploads.push([it.file, file, it.type === "model" ? "model/gltf-binary" : file.type]);
       } else {
         const o = oldById.get(it.id);
         if (!o || !o.file || o.type !== it.type) return json({ error: "Falta el archivo de uno de tus elementos. Vuelve a subirlo." }, 400);
         it.file = o.file; it.bytes = o.bytes || 0;
+        // a book's page that went from free to for sale (or back): its file moves between i/ and p/
+        if (data.kind === "libro" && /^[ip]\//.test(o.file) && o.file.slice(0, 2) !== (it.lock ? "p/" : "i/")) relock.push([o.file, it.file = (it.lock ? "p/" : "i/") + it.id]);
       }
       total += it.bytes;
     }
@@ -648,6 +693,7 @@ async function api(request, env, ctx, url) {
       const stale = await env.DB.prepare("SELECT slug, data FROM experiences WHERE slug = ?").bind(slug).first();
       if (stale) { await deleteMedia(env, slug, stale.data); await env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(slug).run(); }
     }
+    for (const [from, to] of relock) { const o = await env.MEDIA.get(`exp/${mine.slug}/${from}`); if (o) await env.MEDIA.put(`exp/${mine.slug}/${to}`, o.body, { httpMetadata: o.httpMetadata }); }
     // changing the name moves the files that stay
     if (mine && mine.slug !== slug) {
       const moving = new Set(data.items.map(i => i.file).filter(Boolean));
@@ -655,6 +701,7 @@ async function api(request, env, ctx, url) {
       for (const u of uploads) moving.delete(u[0]);
       for (const k of moving) { const o = await env.MEDIA.get(`exp/${mine.slug}/${k}`); if (o) await env.MEDIA.put(`exp/${slug}/${k}`, o.body, { httpMetadata: o.httpMetadata }); }
       await deleteMedia(env, mine.slug, mine.data);
+      if (relock.length) await env.MEDIA.delete(relock.map(r => `exp/${mine.slug}/${r[1]}`));
       await env.DB.batch([env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(mine.slug), env.DB.prepare("DELETE FROM clicks WHERE slug = ?").bind(slug), env.DB.prepare("UPDATE clicks SET slug = ? WHERE slug = ?").bind(slug, mine.slug),
         env.DB.prepare("DELETE FROM likes WHERE slug = ?").bind(slug), env.DB.prepare("UPDATE likes SET slug = ? WHERE slug = ?").bind(slug, mine.slug)]);
     }
@@ -678,7 +725,7 @@ async function api(request, env, ctx, url) {
     if (isNew && !me.first_pub) await env.DB.prepare("UPDATE users SET first_pub = ? WHERE id = ? AND first_pub IS NULL").bind(now, me.id).run();
     const row = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(slug).first();
     const out = ownerExp(row, request, env);
-    if (meta.sendEmail !== false) ctx.waitUntil(sendMail(env, who, data.kind === "colorear" ? "Tu dibujo para colorear está listo" : data.kind === "menu" ? "Tu menú interactivo está listo" : data.kind === "links" ? "Tu página de links está lista" : data.kind === "ruleta" ? "Tu ruleta de premios está lista" : data.kind === "dispara" ? "Tu juego Dispara y gana está listo" : data.kind === "memorama" ? "Tu memorama está listo" : data.kind === "sopa" ? "Tu sopa de letras está lista" : data.kind === "rompecabezas" ? "Tu rompecabezas está listo" : data.kind === "galeria" ? "Tu galería en 3D está lista" : data.kind === "filtro" ? "Tu filtro para la cara está listo" : data.kind === "trivia" ? "Tu trivia está lista" : "Tu experiencia de realidad aumentada está lista", linkMail(out), qr && qr.size < 300e3 ? [{ filename: `QR-${slug}.png`, content: b64(await qr.arrayBuffer()) }] : undefined));
+    // no "it's ready" e-mail: Resend is only for the sign-up and password codes (César, 4 de noviembre de 2026)
     return json({ ok: true, experience: out });
   }
 
@@ -1040,6 +1087,7 @@ function publicExp(row) {
   return out;
 }
 function publicKind(row, d) {
+  if (d.kind === "libro") return publicLibro(row, d);   // only its free pages (_libros/api.js)
   if (d.kind === "trivia") return { slug: row.slug, kind: "trivia", title: row.title, trivia: d.trivia, buttons: d.buttons, expires: row.expires };
   if (d.kind === "filtro") return { slug: row.slug, kind: "filtro", title: row.title, filtro: d.filtro, items: d.items || [], buttons: d.buttons, expires: row.expires };
   if (d.kind === "colorear") return { slug: row.slug, kind: "colorear", title: row.title, img: d.img, color: d.color, buttons: d.buttons, expires: row.expires };
@@ -1055,12 +1103,14 @@ function publicKind(row, d) {
   return { slug: row.slug, kind: "ra", title: row.title, img: d.img, place: d.place || "mesa", sparks: d.sparks, scenes: d.scenes || 1, items: itemsOf(d), buttons: d.buttons, expires: row.expires };
 }
 function ownerExp(row, request, env) {
-  return { ...publicExp(row), url: expUrl(row.slug, request, env), created: row.created, updated: row.updated, views: row.views, paused: !!row.paused, forever: row.expires >= FAR, listed: !!row.listed, hidden: !!row.hidden || undefined, likes: row.likes || 0 };
+  const pub = publicExp(row);
+  if (pub.kind === "libro") { const d = JSON.parse(row.data || "{}"); pub.libro = d.libro; pub.items = d.items || []; }   // its author edits all the pages
+  return { ...pub, url: pub.kind === "libro" ? `${new URL(request.url).origin}/biblioteca/${row.slug}/` : expUrl(row.slug, request, env), created: row.created, updated: row.updated, views: row.views, paused: !!row.paused, forever: row.expires >= FAR, listed: !!row.listed, hidden: !!row.hidden || undefined, likes: row.likes || 0 };
 }
 
 // ---------- Explora and the portals (/@nombre) ----------
 const REPORT_REASONS = { inapropiado: "Contenido inapropiado", spam: "Spam o engaño", derechos: "Usa algo que no es suyo", otro: "Otra cosa" };
-const HANDLE_RESERVED = new Set(["explora", "galerias", "educacion", "talleres", "privacidad", "terminos", "vendedor", "portal", "usuario", "usuarios", "hola", "contacto", "nosotros", "oficial", "anthropic", "claude"]);
+const HANDLE_RESERVED = new Set(["explora", "galerias", "educacion", "talleres", "privacidad", "terminos", "vendedor", "portal", "biblioteca", "libros", "usuario", "usuarios", "hola", "contacto", "nosotros", "oficial", "anthropic", "claude"]);
 // user names (vorticevr.mx/@nombre): 3 to 24 letters, numbers, "-" or "_"; handleProblem = why it cannot be used, or null
 const normHandle = v => String(v || "").trim().toLowerCase().replace(/^@/, "");
 async function handleProblem(env, h, myId) {
@@ -1106,7 +1156,7 @@ async function explore(env, request, o) {
     if (out.length >= o.n) { more = true; break; }
     const k = x[x.kind] || {};
     if (words && !at && ![k.name, r.title, r.handle].some(v => fold(v).includes(words))) continue;
-    out.push({ slug: r.slug, kind: x.kind, title: (k.name || r.title || "").slice(0, 80), url: expUrl(r.slug, request, env), updated: r.updated, views: r.views,
+    out.push({ slug: r.slug, kind: x.kind, title: (k.name || r.title || "").slice(0, 80), url: x.kind === "libro" ? `${new URL(request.url).origin}/biblioteca/${r.slug}/` : expUrl(r.slug, request, env), updated: r.updated, views: r.views,
       image: x.kind === "trivia" && !(k.logo) ? null : `/m/${r.slug}/image?v=${r.updated}`, likes: r.likes || 0,
       by: r.handle ? { name: r.name || r.handle, handle: r.handle, avatar: r.avatar ? avatarUrl(r.uid, r.avatar) : null } : null });
   }
@@ -1731,6 +1781,10 @@ function cleanMeta(m, P) {
     const rl = cleanRuleta(m.ruleta, m.items);
     return rl.error ? rl : { kind: "ruleta", title, ruleta: rl.ruleta, items: rl.items, buttons: {} };
   }
+  if (m.kind === "libro") {
+    const lb = cleanLibro(m.libro, m.items, P);
+    return lb.error ? lb : { kind: "libro", title, libro: lb.libro, items: lb.items, buttons: {} };
+  }
   if (m.kind === "memorama") {
     const mm = cleanMemorama(m.memorama, m.items);
     return mm.error ? mm : { kind: "memorama", title, memorama: mm.memorama, items: mm.items, buttons: {} };
@@ -2231,6 +2285,7 @@ async function stripeVerify(env, raw, header) {
 // Reads the subscription from Stripe (never trusts the event's copy) and applies its plan to the account.
 async function stripeSync(env, ctx, subId) {
   const sub = await stripe(env, "GET", `subscriptions/${subId}`);
+  if (sub.metadata && sub.metadata.vvr === "premier") return;   // Cursos Premier: _cursos/pagos.js
   const uid = Number(sub.metadata && sub.metadata.user_id);
   let user = uid ? await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(uid).first() : null;
   if (!user) user = await env.DB.prepare("SELECT * FROM users WHERE stripe_customer = ?").bind(sub.customer).first();
@@ -2298,12 +2353,6 @@ const shell = (body, note = "Recibiste este correo por tu cuenta en vorticevr.mx
 <p style="color:#a99bcb;font-size:12px;margin-top:28px">${note}</p></div>`;
 const codeMail = (code, purpose) => shell(`<h1 style="font-size:20px">${purpose === "reset" ? "Tu código para cambiar tu contraseña" : "Confirma tu cuenta de Vórtice VR"}</h1>
 <p style="font-size:34px;font-weight:700;letter-spacing:.3em;color:#ffbe55;margin:18px 0">${code}</p><p>Vence en ${LIMITS.codeMinutes} minutos.</p>`);
-const linkMail = e => shell(`<h1 style="font-size:20px">¡Tu experiencia de realidad aumentada está lista!</h1>
-<p><b>${esc(e.title)}</b></p><p>Comparte este link (o el código QR adjunto):</p>
-<p><a href="${esc(e.url)}" style="color:#ffbe55;font-size:20px;font-weight:700">${esc(e.url.replace(/^https:\/\//, "").replace(/\/$/, ""))}</a></p>
-<p>Ábrelo en el celular, toca <b>Abrir la cámara</b> y apunta a tu imagen.</p>
-<p>Para editarla o borrarla entra a tu cuenta en <a href="https://vorticevr.mx/cuenta/" style="color:#d2b8ff">vorticevr.mx/cuenta</a>.</p>
-<p style="color:#a99bcb">${e.forever ? "Disponible mientras tu plan esté activo." : `Disponible hasta el ${fecha(e.expires)}.`}</p>`);
 const fecha = t => new Date(t).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
 const teamMail = (owner, name, email, pw, quota, origin) => shell(`<h1 style="font-size:20px">¡Hola, ${esc(name)}! Ya tienes tu cuenta</h1>
 <p><b>${esc(owner.name || owner.email)}</b> te agregó a su equipo en Vórtice VR para que crees experiencias de realidad aumentada${quota ? ` (tienes ${expCount(quota)} disponibles)` : ""}.</p>
@@ -2314,13 +2363,14 @@ const teamMail = (owner, name, email, pw, quota, origin) => shell(`<h1 style="fo
 // 1) free experiences that expire in the next 3 days (one e-mail per account), 2) accounts 1–3 days old that have not
 // published anything yet. Each one once (table mails), at most MAIL_DAY a day so the sign-up codes always fit in Resend,
 // and never to accounts that asked to stop them (users.no_mail, link at the bottom).
-const MAIL_DAY = 50;
+const MAIL_DAY = 0;   // off: Resend is only for the codes (César, 4 de noviembre de 2026); the MAIL_DAY variable turns them back on
 const siteUrl = env => env.SITE_URL || "https://vorticevr.mx";
 async function unsubUrl(env, id) { return `${siteUrl(env)}/api/no-mail?u=${id}&s=${(await hmac(env, "nomail:" + id)).slice(0, 24)}`; }
 const remindShell = (body, unsub) => shell(`${body}<p style="color:#a99bcb;font-size:12px;margin-top:22px">¿No quieres estos avisos? <a href="${esc(unsub)}" style="color:#a99bcb">Dejar de recibirlos</a>.</p>`);
 const btnMail = (href, t) => `<p style="margin:22px 0"><a href="${esc(href)}" style="background:#ffbe55;color:#1a0d33;font-weight:700;text-decoration:none;padding:13px 22px;border-radius:999px;display:inline-block">${t}</a></p>`;
 async function reminders(env) {
-  const now = Date.now(), site = siteUrl(env); let left = MAIL_DAY;
+  const now = Date.now(), site = siteUrl(env); let left = +env.MAIL_DAY || MAIL_DAY;
+  if (left <= 0) return;
   const pause = () => new Promise(r => setTimeout(r, 600));   // Resend allows 2 per second
   // claim the keys first (two runs never send the same reminder); if the e-mail fails they are freed to retry tomorrow
   async function once(keys, to, subject, html) {

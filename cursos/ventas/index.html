@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mis ventas · Cursos Vórtice VR</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="/assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/cursos/cursos.css">
+<style>
+/* the instructor's sales panel (/cursos/ventas/): totals, sales, students per course, coupons, half-month payouts with the
+   invoice upload, and the bank account where Vórtice VR transfers (the same one the sellers use) */
+main{padding-top:28px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin:18px 0}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.kpi b{display:block;font:700 1.4rem var(--fd);margin-top:4px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 18px}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mute);font-weight:500}
+.tw{overflow-x:auto}
+form.g{display:grid;gap:12px;max-width:760px}
+@media (min-width:700px){form.g{grid-template-columns:1fr 1fr}form.g .full{grid-column:1/-1}}
+label.f{display:flex;flex-direction:column;gap:6px;font-size:.9rem;color:var(--mute)}
+label.f input,label.f select{width:100%}
+input[type=date],input[type=number]{background:var(--surface-solid);color:var(--ink);border:1px solid var(--line2);border-radius:12px;padding:10px 12px;font:inherit;font-size:.95rem;min-height:44px;color-scheme:dark}
+.st{font:600 .7rem var(--fm);letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:rgba(210,184,255,.12);color:var(--lav);white-space:nowrap}
+.st.paid,.st.ok{background:rgba(95,227,161,.14);color:var(--ok)}
+.st.bad{background:rgba(255,122,138,.14);color:var(--bad)}
+.lnk{background:none;border:0;color:var(--sun);cursor:pointer;font:600 .85rem var(--fb);padding:0}
+</style>
+</head>
+<body>
+<header class="top"></header>
+<main class="wrap" id="main"><div class="empty">Cargando…</div></main>
+<footer class="bot"></footer>
+<script src="/cursos/cursos.js"></script>
+<script>
+VC.header("instructor"); VC.footer();
+const E = VC.esc, $ = id => document.getElementById(id);
+const mx = c => "$" + ((c || 0) / 100).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " MXN";
+const day = t => t ? new Date(t).toLocaleDateString("es-MX", { timeZone: "America/Mexico_City", day: "numeric", month: "short", year: "numeric" }) : "";
+const PST = { pending: ["Sube tu factura", ""], invoice_received: ["Factura recibida", ""], paid: ["Pagado", "paid"] };
+let D, tab = location.hash.slice(1) || "ventas";
+async function load() {
+  try { D = await VC.call("ventas"); }
+  catch (e) { if (e.status === 401) { location.href = VC.loginUrl("cursos/ventas"); return; } $("main").innerHTML = `<div class="empty">${E(e.message)}</div>`; return; }
+  render();
+}
+function render() {
+  const t = D.totals;
+  $("main").innerHTML = `<a class="mono" href="/cursos/instructor/" style="text-decoration:none">← Panel de instructor</a>
+    <div class="kick" style="margin-top:14px">Mis ventas</div><h1 style="font-size:clamp(1.6rem,5vw,2.4rem)">Ventas y pagos</h1>
+    <div class="kpis"><div class="kpi"><span class="mono">Ventas</span><b>${t.sales}</b></div><div class="kpi"><span class="mono">Vendido</span><b>${mx(t.gross)}</b></div>
+      <div class="kpi"><span class="mono">Comisión (${D.commission_pct} %)</span><b>${mx(t.commission)}</b></div><div class="kpi"><span class="mono">Para ti</span><b style="color:var(--sun)">${mx(t.net)}</b></div>
+      <div class="kpi"><span class="mono">Por cortar</span><b>${mx(t.pending)}</b></div><div class="kpi"><span class="mono">Ya pagado</span><b style="color:var(--ok)">${mx(t.paidOut)}</b></div></div>
+    ${D.account ? "" : `<div class="panel" style="border-color:var(--sun);margin-bottom:14px">Para pagarte necesitamos tu cuenta: <button class="lnk" data-go="cuenta">agrega tu CLABE</button>.</div>`}
+    <div class="tabs chips">${[["ventas", "Ventas"], ["alumnos", "Alumnos"], ["cupones", "Cupones"], ["cortes", "Cortes y pagos"], ["cuenta", "¿A dónde te pagamos?"]].map(([k, n]) => `<button class="chip ${k === tab ? "on" : ""}" data-go="${k}">${n}</button>`).join("")}</div>
+    <div id="view"></div>`;
+  document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => { tab = b.dataset.go; history.replaceState(null, "", "#" + tab); render(); });
+  ({ ventas, alumnos, cupones, cortes, cuenta })[tab]();
+}
+function ventas() {
+  $("view").innerHTML = `<div class="panel tw">${D.orders.length ? `<table><thead><tr><th>Fecha</th><th>Curso</th><th>Alumno</th><th>Pagó</th><th>Comisión</th><th>Para ti</th><th>Estado</th></tr></thead><tbody>
+    ${D.orders.map(o => `<tr><td>${day(o.paid_at)}</td><td>${E(o.course)}</td><td>${E(o.student)}${o.coupon ? ' <span class="st">cupón</span>' : ""}</td><td>${mx(o.amount)}</td><td>${mx(o.commission)}</td><td>${mx(o.net)}</td>
+      <td><span class="st ${o.status === "refunded" ? "bad" : o.cut ? "ok" : ""}">${o.status === "refunded" ? "Reembolsada" : o.cut ? "En corte" : "Por cortar"}</span></td></tr>`).join("")}</tbody></table>` : `<div class="empty">Todavía no hay ventas.</div>`}</div>`;
+}
+function alumnos() {
+  $("view").innerHTML = `<div class="panel"><label class="f" style="max-width:420px">Curso<select id="ac">${D.courses.map(c => `<option value="${E(c.id)}">${E(c.title)} (${c.students})</option>`).join("")}</select></label><div id="al" class="tw" style="margin-top:12px"></div></div>`;
+  const go = async () => {
+    if (!$("ac").value) { $("al").innerHTML = `<div class="empty">Todavía no tienes cursos.</div>`; return; }
+    try {
+      const r = await VC.call("ventas/alumnos?curso=" + encodeURIComponent($("ac").value));
+      $("al").innerHTML = r.students.length ? `<table><thead><tr><th>Alumno</th><th>Inscrito</th><th>Edición</th><th>Avance</th><th>Mejor examen</th><th>Constancia</th></tr></thead><tbody>
+        ${r.students.map(s => `<tr><td>${E(s.name)}</td><td>${day(s.enrolled_at)}</td><td>${E(s.edition || "—")}</td><td>${s.progress} %</td><td>${s.best ?? "—"}</td><td>${s.folio ? E(s.folio) : "—"}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">Este curso todavía no tiene alumnos.</div>`;
+    } catch (e) { $("al").innerHTML = `<div class="empty">${E(e.message)}</div>`; }
+  };
+  $("ac").onchange = go; go();
+}
+function cupones() {
+  $("view").innerHTML = `<div class="panel"><h2>Crear un cupón</h2><form class="g" id="cf">
+      <label class="f">Código (vacío = uno al azar)<input type="text" name="code" maxlength="24" style="text-transform:uppercase" placeholder="Ej. PREVENTA20"></label>
+      <label class="f">Curso<select name="course_id"><option value="">Todos mis cursos</option>${D.courses.map(c => `<option value="${E(c.id)}">${E(c.title)}</option>`).join("")}</select></label>
+      <label class="f">Descuento en %<input type="number" name="pct_off" min="1" max="100" placeholder="Ej. 20"></label>
+      <label class="f">…o descuento en pesos<input type="number" name="amount_off" min="1" placeholder="Ej. 200"></label>
+      <label class="f">Desde (opcional)<input type="date" name="starts"></label><label class="f">Hasta (opcional)<input type="date" name="ends"></label>
+      <label class="f">Máximo de usos (opcional)<input type="number" name="max_uses" min="1"></label>
+      <div class="full"><button class="btn sun" type="submit">Crear cupón</button></div></form>
+      <p class="mute" style="font-size:.86rem;margin-bottom:0">La comisión y tu parte se calculan sobre lo que el alumno pagó de verdad. Un cupón del 100 % inscribe sin pasar por el pago.</p></div>
+    <div class="panel tw" style="margin-top:14px">${D.coupons.length ? `<table><thead><tr><th>Código</th><th>Curso</th><th>Descuento</th><th>Vigencia</th><th>Usos</th><th></th></tr></thead><tbody>
+      ${D.coupons.map(k => `<tr><td><b>${E(k.code)}</b></td><td>${E(k.course)}</td><td>${k.pct_off ? k.pct_off + " %" : mx(k.amount_off)}</td><td>${k.starts_at || k.ends_at ? `${day(k.starts_at) || "—"} → ${day(k.ends_at) || "—"}` : "Siempre"}</td><td>${k.uses}${k.max_uses ? " / " + k.max_uses : ""}</td>
+        <td><button class="lnk" data-k="${E(k.id)}" data-a="${k.active ? 0 : 1}">${k.active ? "Desactivar" : "Activar"}</button></td></tr>`).join("")}</tbody></table>` : `<div class="empty">Todavía no tienes cupones.</div>`}</div>`;
+  $("cf").onsubmit = async ev => { ev.preventDefault(); try { const r = await VC.call("ventas/cupones", { json: Object.fromEntries(new FormData(ev.target)) }); VC.toast("Cupón " + r.code + " creado."); await load(); } catch (e) { VC.toast(e.message, 5000); } };
+  document.querySelectorAll("[data-k]").forEach(b => b.onclick = async () => { try { await VC.call("ventas/cupones/" + b.dataset.k, { method: "PUT", json: { active: b.dataset.a === "1" } }); await load(); } catch (e) { VC.toast(e.message); } });
+}
+function cortes() {
+  $("view").innerHTML = `<p class="mute" style="max-width:760px">Cada quincena (del 1 al 15 y del 16 a fin de mes) hacemos un corte con tus ventas pagadas. Emite tu factura por el monto "Para ti" a nombre de Vórtice VR, súbela aquí y te transferimos a tu cuenta.</p>
+    <div class="panel tw">${D.payouts.length ? `<table><thead><tr><th>Periodo</th><th>Ventas</th><th>Vendido</th><th>Comisión</th><th>Ajustes</th><th>Para ti</th><th>Estado</th><th></th></tr></thead><tbody>
+      ${D.payouts.map(p => `<tr><td>${E(p.label)}</td><td>${p.orders}</td><td>${mx(p.gross)}</td><td>${mx(p.commission)}</td><td>${p.adjust ? mx(p.adjust) : "—"}</td><td><b>${mx(p.net)}</b></td>
+        <td><span class="st ${PST[p.status][1]}">${PST[p.status][0]}</span>${p.status === "paid" ? `<div class="mute" style="font-size:.8rem">${day(p.paid_at)} · ${E(p.reference || "")}</div>` : ""}</td>
+        <td>${p.status !== "paid" && p.net > 0 ? `<label class="lnk">${p.invoice ? "Cambiar factura" : "Subir factura"}<input type="file" data-p="${E(p.id)}" accept="application/pdf,.pdf,.xml,.zip" hidden></label>` : ""}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">Todavía no hay cortes. El primero sale al terminar la quincena de tu primera venta.</div>`}</div>`;
+  document.querySelectorAll("[data-p]").forEach(i => i.onchange = async () => {
+    const f = i.files[0]; if (!f) return;
+    const fd = new FormData(); fd.append("file", f, f.name);
+    const s = VC.session(), r = await fetch(`/api/cursos/ventas/cortes/${i.dataset.p}/factura`, { method: "POST", headers: { Authorization: "Bearer " + s.token }, body: fd });
+    const j = await r.json().catch(() => ({})); if (!r.ok) { VC.toast(j.error || "No se pudo subir.", 5000); return; }
+    VC.toast("Factura recibida. Te avisamos cuando te paguemos."); await load();
+  });
+}
+function cuenta() {
+  const a = D.account;
+  $("view").innerHTML = `<div class="panel"><h2>¿A dónde te pagamos?</h2>${a ? `<p>Cuenta actual: <b>${E(a.banco)}</b> ${E(a.clabe)} · ${E(a.titular)}</p>` : ""}
+    <form class="g" id="kf"><label class="f full">CLABE (18 números)<input type="text" name="clabe" inputmode="numeric" maxlength="22" autocomplete="off"></label>
+      <label class="f">Titular de la cuenta<input type="text" name="titular" maxlength="100"></label><label class="f">RFC (opcional)<input type="text" name="rfc" maxlength="13" style="text-transform:uppercase"></label>
+      <div class="full"><button class="btn sun" type="submit">${a ? "Cambiar cuenta" : "Guardar cuenta"}</button></div></form>
+    <p class="mute" style="font-size:.86rem;margin-bottom:0">Por seguridad solo mostramos los últimos 4 números. Es la misma cuenta que usas si también eres vendedor de Vórtice VR.</p></div>`;
+  $("kf").onsubmit = async ev => { ev.preventDefault(); try { const r = await VC.call("ventas/cuenta", { json: Object.fromEntries(new FormData(ev.target)) }); VC.toast("Cuenta guardada" + (r.banco ? " (" + r.banco + ")" : "") + "."); await load(); } catch (e) { VC.toast(e.message, 5000); } };
+}
+if (!VC.session()) location.href = VC.loginUrl("cursos/ventas"); else load();
+</script>
+</body>
+</html>

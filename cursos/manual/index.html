@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Manual · Cursos Vórtice VR</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="/assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/cursos/cursos.css">
+<style>
+/* the course manual (/cursos/manual/<curso>/), in the course's style; prints (or saves as PDF) on white paper */
+main{max-width:820px;padding-top:30px}
+.cover{padding:30px 0 20px;border-bottom:1px solid var(--line);margin-bottom:24px}
+.cover img.c{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:16px;margin-bottom:22px}
+.cover img.l{max-height:56px;width:auto;margin-bottom:12px}
+.toc{columns:2;column-gap:28px;font-size:.92rem}
+@media (max-width:600px){.toc{columns:1}}
+.toc a{color:var(--ink);text-decoration:none}
+.ch{margin-top:40px;padding-top:10px;border-top:1px solid var(--line)}
+.ch h2{font-size:1.7rem}
+.md{font-size:1.02rem;line-height:1.7}
+dl.glos dt{font-weight:600;margin-top:12px}dl.glos dd{margin:2px 0 0;color:var(--mute)}
+.aval{display:flex;align-items:center;gap:10px;color:var(--mute);font-size:.85rem;margin-top:40px}
+.aval img{height:18px;width:auto}
+@media print{
+  header.top,footer.bot,.noprint{display:none!important}
+  :root{--void:#fff!important;--ink:#111!important;--mute:#444!important;--line:#ccc!important;--surface:#fff!important}
+  body{background:#fff;color:#111;font-size:11pt}
+  body::before{display:none}
+  .ch{break-before:page;border:0}
+  a{color:#111}
+}
+</style>
+</head>
+<body>
+<header class="top"></header>
+<main class="wrap" id="main"><div class="empty">Cargando el manual…</div></main>
+<footer class="bot"></footer>
+<script src="/cursos/cursos.js"></script>
+<script src="/cursos/temas.js"></script>
+<script>
+VC.header("mis"); VC.footer();
+const E = VC.esc, slug = VC.slugFromPath();
+VC.call("manual/" + encodeURIComponent(slug)).then(r => {
+  const m = r.manual;
+  document.title = "Manual · " + r.title;
+  document.getElementById("main").innerHTML = `
+    <div class="noprint" style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><a class="mono" href="/cursos/aprender/${E(slug)}/" style="text-decoration:none">← Volver al curso</a><button class="btn sun" onclick="print()">Imprimir o guardar en PDF</button></div>
+    <div class="cover">${r.cover ? `<img class="c" src="${E(r.cover)}" alt="">` : ""}${r.logo ? `<img class="l" src="${E(r.logo)}" alt="">` : ""}
+      <div class="kick">Manual del curso</div><h1>${E(r.title)}</h1><p class="mute" style="font-size:1.1rem">${E(r.subtitle || "")}</p><p class="mute">Instructor: ${E(r.instructor)}</p></div>
+    <h3>Contenido</h3><ol class="toc">${m.chapters.map((c, i) => `<li><a href="#c${i}">${E(c.title)}</a></li>`).join("")}${m.glossary.length ? `<li><a href="#glosario">Glosario</a></li>` : ""}</ol>
+    <section class="md" style="margin-top:28px">${VC.md(m.intro_md)}</section>
+    ${m.chapters.map((c, i) => `<section class="ch" id="c${i}"><div class="kick">Capítulo ${i + 1}</div><h2>${E(c.title)}</h2><div class="md">${VC.md(c.body_md)}</div></section>`).join("")}
+    ${m.glossary.length ? `<section class="ch" id="glosario"><h2>Glosario</h2><dl class="glos">${m.glossary.map(g => `<dt>${E(g.term)}</dt><dd>${VC.inline(g.definition)}</dd>`).join("")}</dl></section>` : ""}
+    <section class="ch md">${VC.md(m.closing_md)}</section>
+    <div class="aval"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR" data-logo><span>Curso avalado por Vórtice VR</span></div>`;
+  VC_TEMAS.apply(r.theme);
+}).catch(e => {
+  if (e.status === 401) { location.href = VC.loginUrl("cursos/manual/" + slug); return; }
+  document.getElementById("main").innerHTML = `<div class="empty"><h2>${E(e.message)}</h2><a class="btn" href="/cursos/${E(slug)}/">Ver el curso</a></div>`;
+});
+</script>
+</body>
+</html>

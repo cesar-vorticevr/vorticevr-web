@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ediciones en vivo · Cursos Vórtice VR</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="/assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/cursos/cursos.css">
+<style>
+/* editions of a live or mixed course (/cursos/ediciones/?curso=…): dates, sessions, seats, the meeting link (kept private),
+   opening sales, the recording, the dated promo pieces and who signed up. Times are Mexico City's. */
+main{padding-top:28px}
+form.g{display:grid;gap:12px;max-width:820px}
+@media (min-width:700px){form.g{grid-template-columns:1fr 1fr}form.g .full{grid-column:1/-1}}
+label.f{display:flex;flex-direction:column;gap:6px;font-size:.9rem;color:var(--mute)}
+label.f input,label.f select{width:100%}
+input[type=date],input[type=time],input[type=number],input[type=url]{background:var(--surface-solid);color:var(--ink);border:1px solid var(--line2);border-radius:12px;padding:10px 12px;font:inherit;font-size:.95rem;min-height:44px;color-scheme:dark}
+textarea{width:100%;background:var(--surface-solid);color:var(--ink);border:1px solid var(--line2);border-radius:12px;padding:10px 12px;font:inherit;font-size:.92rem;min-height:90px}
+.days{display:flex;flex-wrap:wrap;gap:8px}
+.days label{display:flex;gap:6px;align-items:center;border:1px solid var(--line2);border-radius:999px;padding:6px 12px;cursor:pointer;color:var(--ink);font-size:.9rem}
+.days input{accent-color:#8b3fd6}
+.ed{margin-top:18px}
+.ss{display:grid;gap:8px;margin:12px 0}
+.s{display:grid;gap:8px;grid-template-columns:1fr;border:1px solid var(--line);border-radius:12px;padding:10px;background:rgba(5,2,11,.3)}
+@media (min-width:860px){.s{grid-template-columns:1.3fr 1fr .7fr .7fr 1.4fr;align-items:center}}
+.s input{width:100%}
+.bar2{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0}
+.st{display:inline-block;font:600 .7rem var(--fm);letter-spacing:.1em;text-transform:uppercase;border-radius:999px;padding:4px 10px;background:rgba(210,184,255,.12);color:var(--lav)}
+.st.open,.st.in_progress{background:rgba(95,227,161,.14);color:var(--ok)}
+.st.canceled{background:rgba(255,122,138,.14);color:var(--bad)}
+.copy pre{white-space:pre-wrap;font:inherit;font-size:.9rem;margin:6px 0 12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+details>summary{cursor:pointer;font-weight:600;padding:8px 0}
+.stu{list-style:none;padding:0;margin:0}
+.stu li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:.9rem}
+</style>
+</head>
+<body>
+<header class="top"></header>
+<main class="wrap" id="main"><div class="empty">Cargando…</div></main>
+<footer class="bot"></footer>
+<script src="/cursos/cursos.js"></script>
+<script>
+VC.header("instructor"); VC.footer();
+const E = VC.esc, $ = id => document.getElementById(id), CID = new URLSearchParams(location.search).get("curso");
+const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"], ST = { scheduled: "Sin abrir", open: "Inscripciones abiertas", in_progress: "En curso", finished: "Terminada", canceled: "Cancelada" };
+const when = t => new Date(t).toLocaleString("es-MX", { timeZone: "America/Mexico_City", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+let D;
+async function load() {
+  try { D = await VC.call("ediciones?curso=" + encodeURIComponent(CID)); }
+  catch (e) { if (e.status === 401) { location.href = VC.loginUrl("cursos/instructor"); return; } $("main").innerHTML = `<div class="empty">${E(e.message)}</div>`; return; }
+  render();
+}
+function render() {
+  const c = D.course;
+  $("main").innerHTML = `<a class="mono" href="/cursos/instructor/" style="text-decoration:none">← Panel de instructor</a>
+    <div class="kick" style="margin-top:14px">Ediciones en vivo</div><h1 style="font-size:clamp(1.6rem,5vw,2.4rem)">${E(c.title)}</h1>
+    ${c.modality === "recorded" ? `<div class="panel">Este curso es grabado: no lleva ediciones.</div>` : `
+    <section class="panel"><h2>Abrir una edición nueva</h2>
+      <p class="mute" style="margin-top:-6px">Las sesiones se arman solas con los días de la semana que elijas entre las dos fechas; después puedes ajustar cada una. Horario del centro de México.</p>
+      <form class="g" id="nf">
+        <label class="f full">Nombre de la edición<input type="text" name="name" maxlength="80" placeholder="Ej. Generación noviembre 2026"></label>
+        <label class="f">Primera fecha<input type="date" name="start_date" required></label>
+        <label class="f">Última fecha<input type="date" name="end_date" required></label>
+        <div class="f full"><span>Días de las sesiones</span><div class="days">${DAYS.map((d, i) => `<label><input type="checkbox" name="d" value="${i}">${d}</label>`).join("")}</div></div>
+        <label class="f">Hora de inicio<input type="time" name="start_time" value="19:00" required></label>
+        <label class="f">Hora de fin<input type="time" name="end_time" value="21:00" required></label>
+        <label class="f">Cupo (lugares; vacío = sin límite)<input type="number" name="capacity" min="1" max="5000"></label>
+        <label class="f">Liga de Zoom o Meet (privada)<input type="url" name="meeting_url" placeholder="https://zoom.us/j/…"></label>
+        <label class="f full" style="flex-direction:row;align-items:center;gap:10px;color:var(--ink)"><input type="checkbox" name="open" ${c.status === "published" ? "checked" : "disabled"} style="width:20px;height:20px;accent-color:#8b3fd6"> Abrir inscripciones ya${c.status === "published" ? "" : " (cuando tu curso esté publicado)"}</label>
+        <div class="full"><button class="btn sun" type="submit" ${D.canTeach ? "" : "disabled"}>Crear edición</button>${D.canTeach ? "" : ' <span class="mute">Necesitas tu Premier activo.</span>'}</div>
+      </form>
+      <p class="mute" style="font-size:.86rem;margin-bottom:0">La liga de la reunión nunca se muestra en tu página ni en los correos: cada inscrito la recibe al tocar "Entrar a la sesión", desde 30 minutos antes.</p></section>`}
+    ${D.editions.map(edBox).join("")}`;
+  bind();
+}
+function edBox(e) {
+  const a = e.assets;
+  return `<section class="panel ed" data-e="${E(e.id)}"><div class="bar2" style="margin-top:0;justify-content:space-between"><h2 style="margin:0">${E(e.name)}</h2><span class="st ${e.state}">${ST[e.state] || e.state}</span></div>
+    <p class="mute" style="margin:4px 0 10px">${when(e.starts_at)} → ${when(e.ends_at)} · ${e.sessions.length} sesiones · ${e.students.length}${e.capacity ? ` de ${e.capacity}` : ""} inscritos</p>
+    <form class="g">
+      <label class="f">Nombre<input type="text" name="name" value="${E(e.name)}" maxlength="80"></label>
+      <label class="f">Cupo<input type="number" name="capacity" value="${E(e.capacity ?? "")}" min="1" max="5000"></label>
+      <label class="f full">Liga de la reunión (privada)<input type="url" name="meeting_url" value="${E(e.meeting_url)}" placeholder="https://zoom.us/j/…"></label>
+      <label class="f full">Grabación (al terminar; la ven solo los inscritos)<input type="url" name="recording_url" value="${E(e.recording_url)}" placeholder="https://youtu.be/… (no listado)"></label>
+    </form>
+    <details><summary>Sesiones (${e.sessions.length})</summary><div class="ss">${e.sessions.map(s => `<div class="s" data-s="${E(s.id)}"><input type="text" data-k="title" value="${E(s.title)}" maxlength="120"><input type="date" data-k="date" value="${s.date}"><input type="time" data-k="time" value="${s.time}"><input type="time" data-k="end_time" value="${s.end_time}"><input type="url" data-k="meeting_url" value="${E(s.meeting_url)}" placeholder="Otra liga solo para esta sesión"></div>`).join("")}</div></details>
+    <div class="bar2"><button class="btn sun" data-save="${E(e.id)}">Guardar</button>
+      ${e.status === "scheduled" && D.course.status === "published" ? `<button class="btn" data-st="open">Abrir inscripciones</button>` : ""}
+      ${e.status === "open" && e.state !== "finished" ? `<button class="btn ghost" data-st="scheduled">Cerrar inscripciones</button>` : ""}
+      ${e.status === "open" && Date.now() > e.ends_at ? `<button class="btn" data-st="finished">Marcar como terminada</button>` : ""}
+      ${!e.students.length ? `<button class="btn ghost" data-del style="border-color:var(--bad);color:var(--bad)">Borrar</button>` : ""}
+      <button class="btn ghost" data-gen>✦ ${a ? "Volver a generar" : "Generar"} convocatoria</button></div>
+    ${a ? `<details><summary>Convocatoria y recordatorios</summary><div class="copy">
+      ${a.instagram_posts.map((p, i) => `<b>Instagram ${i + 1}</b> · <span class="mute">${E(p.image_headline)} — ${E(p.image_subline)}</span><pre>${E(p.caption)}</pre>`).join("")}
+      ${a.facebook_posts.map((p, i) => `<b>Facebook ${i + 1}</b><pre>${E(p.text)}</pre>`).join("")}
+      <b>WhatsApp</b><pre>${E(a.whatsapp_message.text)}</pre>
+      ${["7d", "1d", "1h"].map(k => `<b>Recordatorio ${k === "7d" ? "una semana antes" : k === "1d" ? "un día antes" : "una hora antes"}</b> <span class="mute">(se manda solo a tus inscritos)</span><pre>${E(a["reminder_" + k].subject)}\n\n${E(a["reminder_" + k].body_md)}</pre>`).join("")}
+      <p class="mute" style="font-size:.86rem">{{link}} es la página de tu curso: ${E(location.origin)}/cursos/${E(D.course.slug)}/</p></div></details>` : ""}
+    <details><summary>Inscritos (${e.students.length})</summary><ul class="stu">${e.students.map(s => `<li><span>${E(s.name)}</span><span class="mute">${s.completed ? "Aprobó" : s.progress + " %"}</span></li>`).join("") || `<li class="mute">Todavía nadie.</li>`}</ul></details></section>`;
+}
+function bind() {
+  const nf = $("nf");
+  if (nf) nf.onsubmit = async ev => {
+    ev.preventDefault(); const f = new FormData(nf), b = nf.querySelector("[type=submit]");
+    b.disabled = true;
+    try {
+      const r = await VC.call("ediciones", { json: { course: CID, name: f.get("name"), start_date: f.get("start_date"), end_date: f.get("end_date"), days: f.getAll("d").map(Number), start_time: f.get("start_time"), end_time: f.get("end_time"), capacity: f.get("capacity"), meeting_url: f.get("meeting_url"), open: !!f.get("open") } });
+      VC.toast(`Edición creada con ${r.sessions} sesiones.`); await load();
+    } catch (e) { VC.toast(e.message, 6000); b.disabled = false; }
+  };
+  document.querySelectorAll("section[data-e]").forEach(sec => {
+    const id = sec.dataset.e, e = D.editions.find(x => x.id === id);
+    const payload = status => { const f = sec.querySelector("form");
+      return { name: f.name.value, capacity: f.capacity.value, meeting_url: f.meeting_url.value, recording_url: f.recording_url.value, status: status || e.status,
+        sessions: [...sec.querySelectorAll("[data-s]")].map(r => Object.fromEntries([["id", r.dataset.s], ...[...r.querySelectorAll("[data-k]")].map(i => [i.dataset.k, i.value])])) }; };
+    const put = async (status, msg) => { try { await VC.call("ediciones/" + id, { method: "PUT", json: payload(status) }); VC.toast(msg); await load(); } catch (err) { VC.toast(err.message, 6000); } };
+    sec.querySelector("[data-save]").onclick = () => put(null, "Guardado.");
+    sec.querySelectorAll("[data-st]").forEach(b => b.onclick = () => put(b.dataset.st, b.dataset.st === "open" ? "Inscripciones abiertas: ya aparece en tu página de venta." : "Listo."));
+    const del = sec.querySelector("[data-del]"); if (del) del.onclick = async () => { if (!confirm("¿Borrar esta edición?")) return; try { await VC.call("ediciones/" + id, { method: "DELETE" }); await load(); } catch (err) { VC.toast(err.message); } };
+    sec.querySelector("[data-gen]").onclick = async ev => {
+      ev.target.disabled = true; ev.target.textContent = "Escribiendo la convocatoria…";
+      try { await VC.call(`ediciones/${id}/convocatoria`, { json: {} }); VC.toast("Convocatoria lista."); await load(); }
+      catch (err) { VC.toast(err.message, 6000); ev.target.disabled = false; ev.target.textContent = "✦ Generar convocatoria"; }
+    };
+  });
+}
+if (!VC.session()) location.href = VC.loginUrl("cursos/instructor"); else load();
+</script>
+</body>
+</html>

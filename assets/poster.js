@@ -19,6 +19,7 @@
     memorama: ["Memorama", "Encuentra todos los pares", [STEP1, "Memoriza las cartas mientras están boca arriba", "Voltea dos cartas y encuentra los pares a tiempo"]],
     sopa: ["Sopa de letras", "Encuentra todas las palabras", [STEP1, "Busca las palabras en la sopa", "Desliza el dedo sobre cada palabra para marcarla"]],
     rompecabezas: ["Rompecabezas", "Arma la imagen", [STEP1, "Arrastra cada pieza a su lugar", "Termínalo antes de que se acabe el tiempo"]],
+    libro: ["Libro interactivo", "Léelo, escúchalo y juega", [STEP1, "Pasa las páginas con el dedo y toca «Escuchar»", "Contesta las preguntas y juega entre las páginas"]],
     galeria: ["Galería en 3D", "Una exposición que se recorre", [STEP1, "Camina por la sala con el joystick o tocando el piso", "Toca una obra para acercarte y leer su ficha"]],
   };
   const hex = c => /^#[0-9a-f]{6}$/i.test(c || "") ? c : null;

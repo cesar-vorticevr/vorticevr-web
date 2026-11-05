@@ -450,8 +450,8 @@ function refCode(){ try{ const r=JSON.parse(localStorage.getItem(REFKEY)||"null"
 { const c=(Q.get("ref")||"").toUpperCase().replace(/[^A-Z0-9-]/g,""); if(c){ try{ localStorage.setItem(REFKEY,JSON.stringify({code:c,t:Date.now()})); }catch(e){} } }
 (async()=>{ const c=refCode(); if(!c) return; try{ const r=await (await fetch(`${VVR.api}/api/ref/${encodeURIComponent(c)}`)).json();
   if(r.ok){ const b=$("rInvite"); b.hidden=false; b.innerHTML=`✦ <b>${esc(r.name)}</b> te invitó: tendrás <b>${r.discount}% de descuento</b> en tu primer pago de cualquier plan.`; } }catch(e){} })();
-// siguiente=crear/ruleta (the segment pages) goes straight to that creator after signing in
-const NEXT=/^explora$/.test(Q.get("siguiente")||"")?"../explora/":/^@[a-z0-9_-]{3,24}$/i.test(Q.get("siguiente")||"")?"../"+Q.get("siguiente"):Q.get("siguiente")==="inicio"?"../":/^crear\/[a-z]+$/.test(Q.get("siguiente")||"")?"../"+Q.get("siguiente")+"/":Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":Q.get("siguiente")==="vendedor"?"../vendedor/":null;
+// siguiente=crear/ruleta (the segment pages) goes straight to that creator after signing in; siguiente=cursos/… back to the courses
+const NEXT=/^(cursos(\/[a-z0-9-]+)*|biblioteca\/[a-z0-9-]+|explora)$/.test(Q.get("siguiente")||"")?"../"+Q.get("siguiente")+"/":/^@[a-z0-9_-]{3,24}$/i.test(Q.get("siguiente")||"")?"../"+Q.get("siguiente"):Q.get("siguiente")==="inicio"?"../":/^crear\/[a-z]+$/.test(Q.get("siguiente")||"")?"../"+Q.get("siguiente")+"/":Q.get("siguiente")==="crear"?"../crear/"+(Q.get("editar")?"?editar="+encodeURIComponent(Q.get("editar")):""):Q.get("siguiente")==="admin"?"../admin/":Q.get("siguiente")==="vendedor"?"../vendedor/":null;
 // public plans: [id, name, monthly price, yearly price, what it includes] (a year is ~10 months; IVA included)
 const PLANS=[["gratis","Gratis",0,0,"Para probar la magia",["Hasta <b>3</b> experiencias de cualquier tipo","Realidad aumentada: hasta <b>3</b> elementos por imagen (video, foto, texto o 3D)","Activa <b>15 días</b>","Hasta <b>1,000</b> vistas","Videos de hasta 25 MB"]],
   ["pro","Pro",499,4990,"Para crear y vender experiencias",["<b>100</b> experiencias de cualquier tipo","Realidad aumentada: hasta <b>15</b> elementos por imagen","Cámbialas cuando quieras","Sin vencimiento mientras pagues","Vistas ilimitadas","Videos de hasta <b>50 MB</b>"]],
@@ -667,7 +667,7 @@ function handleCheck(input,out,mineId){ let t;
     out.className="hstat"; out.textContent="Revisando…";
     t=setTimeout(async()=>{ try{ const r=await fetch(`${VVR.api}/api/handle?h=${encodeURIComponent(v)}&yo=${mineId()||0}`).then(r=>r.json());
       if(input.value.trim().toLowerCase()!==v) return;
-      out.className="hstat "+(r.ok?"ok":"bad"); out.textContent=r.ok?`✓ @${v} está disponible`:r.error; }catch(e){ out.textContent=""; } },350); }); }
+      out.className="hstat "+(r.ok?"ok":"bad"); out.textContent=r.ok?(DATA&&input.id==="hIn"&&v===DATA.user.handle?"Es tu nombre de usuario actual.":`✓ @${v} está disponible`):r.error; }catch(e){ out.textContent=""; } },350); }); }
 handleCheck($("rHandle"),$("rHStat"),()=>0);
 handleCheck($("hIn"),$("hStat"),()=>DATA&&DATA.user.id);
 // suggest a user name from the name while it has not been typed
@@ -711,7 +711,7 @@ $("pUpgrade").addEventListener("click",()=>{ menu(false); openPlans(true); });
 $("plansClose").addEventListener("click",()=>openPlans(false));
 
 // kinds of experience (data.kind; "ra" when there is none)
-const KINDS={ra:["🪄","Realidad aumentada con imagen"],superficie:["🛋️","Realidad aumentada en superficie"],colorear:["🎨","Colorea mi dibujo"],trivia:["🤔","Trivia"],filtro:["🕶️","Filtro"],menu:["🍽️","Menú"],links:["🔗","Links"],ruleta:["🎡","Ruleta"],dispara:["🎯","Dispara y gana"],memorama:["🃏","Memorama"],sopa:["🔤","Sopa de letras"],rompecabezas:["🧩","Rompecabezas"],galeria:["🖼️","Galería 3D"]};
+const KINDS={ra:["🪄","Realidad aumentada con imagen"],superficie:["🛋️","Realidad aumentada en superficie"],colorear:["🎨","Colorea mi dibujo"],trivia:["🤔","Trivia"],filtro:["🕶️","Filtro"],menu:["🍽️","Menú"],links:["🔗","Links"],ruleta:["🎡","Ruleta"],dispara:["🎯","Dispara y gana"],memorama:["🃏","Memorama"],sopa:["🔤","Sopa de letras"],rompecabezas:["🧩","Rompecabezas"],galeria:["🖼️","Galería 3D"],libro:["📖","Libro"]};
 const kindOf=x=>KINDS[x.kind]?x.kind:"ra";
 let kindSel="all", visSel="";
 // experiences: kind chips, search, sort and a "paused" filter; 24 at a time
@@ -747,7 +747,7 @@ function card(exp){
     <div class="bd"><h3>${esc(exp.title)}</h3>
       <div class="meta">${exp.listed||exp.likes?`<span class="hearts" title="Corazones">♥ <b>${nf(exp.likes)}</b></span>`:""}<span><b>${nf(exp.views)}</b>${free?`/${nf(vlim)}`:""} ${exp.views===1&&!free?"vista":"vistas"}</span><span>${status}</span></div>
       <div class="acts">${exp.paused?`<button class="btn sun" type="button" data-a="up">Mejorar plan</button>`
-        :`<a class="btn" href="../crear/${exp.kind==="trivia"||exp.kind==="colorear"||exp.kind==="filtro"||exp.kind==="menu"||exp.kind==="links"||exp.kind==="ruleta"||exp.kind==="dispara"||exp.kind==="memorama"||exp.kind==="sopa"||exp.kind==="rompecabezas"||exp.kind==="galeria"?exp.kind+"/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="poster">Póster</button><button class="btn" type="button" data-a="copy">Copiar link</button><button class="btn pub${exp.listed?" on":""}" type="button" data-a="pub" title="${exp.listed?"Se muestra en Explora y en tu portal. Toca para hacerla privada.":"Solo la ve quien tenga el link. Toca para mostrarla en Explora y en tu portal."}">${exp.listed?"🌐 Pública":"🔒 Privada"}</button>`}
+        :`<a class="btn" href="../crear/${exp.kind==="trivia"||exp.kind==="colorear"||exp.kind==="filtro"||exp.kind==="menu"||exp.kind==="links"||exp.kind==="ruleta"||exp.kind==="dispara"||exp.kind==="memorama"||exp.kind==="sopa"||exp.kind==="rompecabezas"||exp.kind==="galeria"||exp.kind==="libro"?exp.kind+"/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="poster">Póster</button><button class="btn" type="button" data-a="copy">Copiar link</button><button class="btn pub${exp.listed?" on":""}" type="button" data-a="pub" title="${exp.listed?"Se muestra en Explora y en tu portal. Toca para hacerla privada.":"Solo la ve quien tenga el link. Toca para mostrarla en Explora y en tu portal."}">${exp.listed?"🌐 Pública":"🔒 Privada"}</button>`}
         <button class="btn del" type="button" data-a="del" aria-label="Borrar ${esc(exp.title)}">Borrar</button></div></div>`;
   const on=(a,f)=>{ const b=el.querySelector(`[data-a=${a}]`); if(b) b.addEventListener("click",f); };
   if(exp.demo){ // sample card: only the QR works; the rest explains itself
