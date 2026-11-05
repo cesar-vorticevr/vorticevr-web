@@ -72,6 +72,11 @@ input:focus{border-color:var(--lav);outline:none}
 .mlinks button,.memenu .mlinks a{font:inherit;text-align:left;color:var(--ink);background:none;border:0;border-radius:8px;padding:9px 8px;cursor:pointer;text-decoration:none}
 .mlinks button:hover,.memenu .mlinks a:hover{background:rgba(139,63,214,.2)}
 .mlinks #pOut{color:var(--bad)}
+/* one section of the Mi cuenta menu at a time, as its own screen: the experiences and the create bar step aside */
+#vPanel.sub #pHello,#vPanel.sub #pCreate,#vPanel.sub #pTools,#vPanel.sub #pKinds,#vPanel.sub #pList,#vPanel.sub .more{display:none!important}
+.backx{display:none;margin:18px 0 14px;padding:0;border:0;background:none;color:var(--lav);font:600 .82rem var(--fd);letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+.backx:hover{color:var(--ink)}
+#vPanel.sub .backx{display:inline-block}
 /* the main action: gold, shiny */
 .hello{margin:18px 0 16px}
 .create{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:96px;padding:18px 24px;border-radius:20px;text-decoration:none;text-align:center;color:#1a0d00;
@@ -336,6 +341,7 @@ dialog .row{justify-content:space-between}
   <!-- dashboard -->
   <section id="vPanel" hidden>
     <div class="banner" id="pBanner" hidden></div>
+    <button class="backx" id="pBack" type="button">← Mis experiencias</button>
     <h1 class="hello" id="pHello">Hola</h1>
     <a class="create" id="pCreate" href="../crear/"><b id="pCreateT">+ Crear experiencia</b><small id="pCreateS">Sube una imagen y un video, y obtén tu link y tu QR</small></a>
 
@@ -574,6 +580,16 @@ function renderPlans(){
 document.querySelectorAll("#pPeriod button").forEach(b=>b.addEventListener("click",()=>{ PERIOD=b.dataset.period; renderPlans(); }));
 // account menu
 const menu=on=>{ $("meMenu").hidden=!on; $("meBtn").setAttribute("aria-expanded",String(on)); };
+// the Mi cuenta sections open one at a time, as their own screen (they used to pile up above the experiences, with the
+// create bar always there): opening one closes the other, and while one is open the experiences step aside
+const SUBS=["plansBox","refBox","teamBox","portalBox","codeBox","helpBox","passBox"].map($);
+const subObs=new MutationObserver(ms=>{
+  const shown=ms.map(m=>m.target).filter(b=>!b.hidden);
+  if(shown.length){ const top=shown[shown.length-1]; SUBS.forEach(b=>{ if(b!==top&&!b.hidden) b.hidden=true; }); scrollTo({top:0,behavior:"smooth"}); }
+  $("vPanel").classList.toggle("sub",SUBS.some(b=>!b.hidden));
+});
+SUBS.forEach(b=>subObs.observe(b,{attributes:true,attributeFilter:["hidden"]}));
+$("pBack").addEventListener("click",()=>{ if(!$("portalBox").hidden) return $("portalClose").click(); SUBS.forEach(b=>{ b.hidden=true; }); });
 $("meBtn").addEventListener("click",e=>{ e.stopPropagation(); menu($("meMenu").hidden); });
 document.addEventListener("click",e=>{ if(!$("me").contains(e.target)) menu(false); });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") menu(false); });
