@@ -558,7 +558,7 @@ function showPanel(data){
   if(B.pastDue) banner("No pudimos cobrar tu última mensualidad. Actualiza tu tarjeta en “Administrar suscripción” para que tu plan siga activo.","warn");
   renderList();
   if(!user.handle) openPortal();
-  const pub=Q.get("publicada"); if(pub&&experiences.some(x=>x.slug===pub)){ banner("¡Listo! Tu experiencia está publicada. También te enviamos el link y el QR por correo. ¿Quieres que otros la vean? Toca «🔒 Privada» en su tarjeta para mostrarla en Explora."); history.replaceState(null,"",location.pathname); }
+  const pub=Q.get("publicada"); if(pub&&experiences.some(x=>x.slug===pub)){ banner("¡Listo! Tu experiencia está publicada: su link, su QR y su póster están en su tarjeta. ¿Quieres que otros la vean? Toca «🔒 Privada» en su tarjeta para mostrarla en Explora."); history.replaceState(null,"",location.pathname); }
   view("vPanel");
 }
 // plan cards for the chosen period; pay online with Stripe when billing.enabled, otherwise the contact form

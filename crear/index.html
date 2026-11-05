@@ -442,7 +442,8 @@ async function onImage(file){
   S.compiling=true; const bar=$("bImg"); bar.hidden=false; bar.firstElementChild.style.width="2%"; m.textContent="Preparando la imagen para la realidad aumentada…";
   try{
     compilerMod=compilerMod||await import("https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js");
-    const img=new Image(); img.src=url; await img.decode();
+    // onload, not decode(): decode() never settles while the page is in the background (switching apps on the phone)
+    const img=new Image(); await new Promise((ok,no)=>{ img.onload=ok; img.onerror=no; img.src=url; });
     const c=new compilerMod.Compiler();
     await c.compileImageTargets([img],p=>{ bar.firstElementChild.style.width=Math.max(2,p)+"%"; });
     S.target=new Blob([await c.exportData()],{type:"application/octet-stream"});
