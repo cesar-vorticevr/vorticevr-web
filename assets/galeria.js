@@ -1161,17 +1161,20 @@ export function run(o) {
     },
     setSala(i) { if (i !== salaI) { if (state === "in") goSala(i); else { salaI = clamp(i, 0, salas().length - 1); rebuild().then(() => { placeStart(); drawName(); }); } } },
     focus(s, i) { if (state !== "in") enter(); const go = () => setTimeout(() => focus(i), 60); if (s !== salaI) goSala(s, go); else go(); },
-    // a picture of the first room from its entrance (Mi cuenta), once every piece is in place
-    async shot() {
+    // a picture of the first room from its entrance (Mi cuenta), once every piece is in place; v changes the view and size
+    // (the site's own pictures of the rooms): {w, h, fov, x, dy, dz (from the entrance), pitch, yaw, type, q}
+    async shot(v = {}) {
       if (salaI !== 0) { salaI = 0; await rebuild(); placeStart(); drawName(); }
       await loading;
-      const c = document.createElement("canvas"); c.width = 800; c.height = 600;
+      const W = v.w || 800, H = v.h || 600;
+      const c = document.createElement("canvas"); c.width = W; c.height = H;
       const pr = renderer.getPixelRatio(), [w, h] = size(), cam = camera.clone();
-      cam.aspect = 4 / 3; cam.fov = 66; cam.position.set(0, spec.shot.y, spec.shot.z); cam.rotation.set(spec.shot.pitch, 0, 0); cam.updateProjectionMatrix();
-      renderer.setPixelRatio(1); renderer.setSize(800, 600, false); renderer.render(scene, cam);
+      cam.aspect = W / H; cam.fov = v.fov || 66; cam.position.set(v.x || 0, spec.shot.y + (v.dy || 0), spec.shot.z + (v.dz || 0));
+      cam.rotation.set(v.pitch ?? spec.shot.pitch, v.yaw || 0, 0); cam.updateProjectionMatrix();
+      renderer.setPixelRatio(1); renderer.setSize(W, H, false); renderer.render(scene, cam);
       c.getContext("2d").drawImage(canvas, 0, 0);
       renderer.setPixelRatio(pr); renderer.setSize(w, h, false);
-      return new Promise(r => c.toBlob(r, "image/jpeg", .86));
+      return new Promise(r => c.toBlob(r, v.type || "image/jpeg", v.q || .86));
     },
     destroy() {
       alive = false; renderer.setAnimationLoop(null); ro.disconnect(); io.disconnect(); offs.forEach(f => f()); clearTimeout(hintT); clearTimeout(toastT);
