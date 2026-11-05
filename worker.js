@@ -13,6 +13,9 @@ import { librosApi, librosWebhook, cleanLibro, publicLibro, lockedMediaOk, newBo
 
 const ROOT_DEFAULT = "vorticevr.mx";
 const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear","create","ra","x","e","m","preview","app","apps","static","assets","cdn","dev","test","staging","beta","demo","vorticevr","vortice","soporte","support","help","ayuda","blog","shop","tienda","login","cuenta","account","johara","tarjeta","proyectos","status","docs","cursos","biblioteca"]);
+// per-IP limits: a school or a workshop puts 50–300 people behind one IP, so these stay high; the real protection
+// is per email (codes, login tries) and the global sign-up cap
+const IP_LIMITS = { reg: 300, regAll: 1500, login: 600, handle: 3000 };
 const LIMITS = { imageBytes: 3 * 1024 * 1024, targetBytes: 8 * 1024 * 1024, codeMinutes: 10, codeTries: 5, sessionDays: 30, pausedDays: 30 };
 // Plans. exp = active experiences; days = how long each one lasts (0 = while the plan is active);
 // views = most times each experience can be opened (Gratis only, so a viral free QR cannot run up costs);
@@ -309,7 +312,7 @@ async function api(request, env, ctx, url) {
   }
   // is this user name free? (sign-up and Mi portal, while typing; yo = my id, so my own name counts as free)
   if (path === "/api/handle" && M === "GET") {
-    if (!(await limit(env, "hcheck:" + ip, 120, 600e3))) return json({ error: "Espera un momento." }, 429);
+    if (!(await limit(env, "hcheck:" + ip, IP_LIMITS.handle, 600e3))) return json({ error: "Espera un momento." }, 429);
     const h = normHandle(url.searchParams.get("h")), bad = await handleProblem(env, h, +url.searchParams.get("yo") || 0);
     return json({ handle: h, ok: !bad, error: bad || undefined }, 200, { "Cache-Control": "no-store" });
   }
@@ -426,7 +429,7 @@ async function api(request, env, ctx, url) {
     if (!name) return json({ error: "Escribe tu nombre." }, 400);
     if (!em) return json({ error: "Escribe un correo válido." }, 400);
     if (pw.length < 8) return json({ error: "La contraseña debe tener al menos 8 caracteres." }, 400);
-    if (!(await limit(env, "reg:" + ip, 8, 3600e3))) return json({ error: "Demasiados intentos. Espera un rato." }, 429);
+    if (!(await limit(env, "reg:" + ip, IP_LIMITS.reg, 3600e3)) || !(await limit(env, "reg:all", IP_LIMITS.regAll, 3600e3))) return json({ error: "Demasiados intentos. Espera un rato." }, 429);
     const user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(em).first();
     if (user && user.verified) return json({ error: "Ya existe una cuenta con ese correo. Inicia sesión." }, 409);
     const handle = normHandle(b.handle), hBad = await handleProblem(env, handle, user ? user.id : 0);
@@ -458,7 +461,7 @@ async function api(request, env, ctx, url) {
     const b = await request.json().catch(() => ({}));
     const em = normEmail(b.email), pw = String(b.password || "");
     if (!em || !pw) return json({ error: "Escribe tu correo y tu contraseña." }, 400);
-    if (!(await limit(env, "login:" + ip, 20, 900e3)) || !(await limit(env, "loginmail:" + em, 8, 900e3))) return json({ error: "Demasiados intentos. Espera 15 minutos." }, 429);
+    if (!(await limit(env, "login:" + ip, IP_LIMITS.login, 900e3)) || !(await limit(env, "loginmail:" + em, 8, 900e3))) return json({ error: "Demasiados intentos. Espera 15 minutos." }, 429);
     const user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(em).first();
     if (!user || !(await verifyPassword(pw, user.pass))) return json({ error: "Correo o contraseña incorrectos." }, 401);
     if (!user.verified) { const r = await sendCode(env, em, "verify"); return r.error && r.status !== 429 ? codeResponse(r) : json({ ok: true, needCode: true, dev_code: r.dev_code }); } // 429 = a code was just sent

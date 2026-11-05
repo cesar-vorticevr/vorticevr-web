@@ -127,7 +127,7 @@ export async function vivoApi(request, env, ctx, url, path, h, user, lib) {
 
   // a coupon on the sales page (shows the new price; the checkout checks it again)
   if ((m = path.match(/^\/api\/cursos\/curso\/([a-z0-9-]+)\/cupon$/)) && M === "POST") {
-    if (!(await h.limit(env, `ccup:${request.headers.get("CF-Connecting-IP") || "x"}`, 30, 3600e3))) return json({ error: "Demasiados intentos. Intenta en una hora." }, 429);
+    if (!(await h.limit(env, `ccup:${request.headers.get("CF-Connecting-IP") || "x"}`, 300, 3600e3))) return json({ error: "Demasiados intentos. Intenta en una hora." }, 429);
     const c = await lib.courseBySlug(env, m[1]);
     if (!c || c.status !== "published" || !(c.price_mxn > 0)) return json({ error: "Este curso no acepta cupones." }, 404);
     const r = await couponFor(env, c, (await body()).code);
