@@ -11,6 +11,9 @@ const JOIN_BEFORE = 30 * 60e3, JOIN_AFTER = 15 * 60e3;
 const ACTIVE = "('active', 'completed')";
 const CODE = /^[A-Z0-9][A-Z0-9-]{2,23}$/;
 const MAX_SESSIONS = 60;
+// an instructor's invoice: its type comes from its extension, never from the browser (a .pdf sent as text/html would run in the admin's session)
+const INVOICE_TYPES = { pdf: "application/pdf", xml: "application/xml", zip: "application/zip" };
+const invoiceExt = name => (String(name || "").match(/\.(pdf|xml|zip)$/i) || [])[1]?.toLowerCase();
 const J = (s, d) => { try { return JSON.parse(s || "null") ?? d; } catch { return d; } };
 const cut = (v, n) => String(v == null ? "" : v).trim().slice(0, n);
 // "2026-11-03" + "19:00" in Mexico City → ms
@@ -329,10 +332,10 @@ export async function vivoApi(request, env, ctx, url, path, h, user, lib) {
       if (!p) return json({ error: "No encontramos ese corte." }, 404);
       if (p.status === "paid") return json({ error: "Ese corte ya se pagó." }, 409);
       const f = (await request.formData()).get("file");
-      const okType = f && typeof f !== "string" && (/pdf$/.test(f.type) || /\.(pdf|xml|zip)$/i.test(f.name || ""));
-      if (!okType || f.size > 5 * 1024 * 1024) return json({ error: "Sube tu factura en PDF (o el PDF y el XML en un .zip), de menos de 5 MB." }, 400);
+      const ext = f && typeof f !== "string" && invoiceExt(f.name);
+      if (!ext || f.size > 5 * 1024 * 1024) return json({ error: "Sube tu factura en PDF (o el PDF y el XML en un .zip), de menos de 5 MB." }, 400);
       const key = `cursos/facturas/${p.id}`;
-      await env.MEDIA.put(key, await f.arrayBuffer(), { httpMetadata: { contentType: f.type || "application/octet-stream" } });
+      await env.MEDIA.put(key, await f.arrayBuffer(), { httpMetadata: { contentType: INVOICE_TYPES[ext] } });
       await env.DB.prepare("UPDATE c_payouts SET invoice_key = ?, invoice_name = ?, invoice_at = ?, status = 'invoice_received', updated_at = ? WHERE id = ?").bind(key, cut(f.name, 120), now, now, p.id).run();
       ctx.waitUntil(h.sendMail(env, env.CONTACT_TO || "hola@vorticevr.mx", `[Cursos] Factura recibida: ${user.name} · ${p.label}`, h.shell(`<h1 style="font-size:20px">Factura recibida</h1>
         <p><b>${h.esc(user.name || "")}</b> subió su factura del corte <b>${h.esc(p.label)}</b> por <b>$${(p.net_mxn / 100).toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN</b>.</p>${h.btnMail(h.siteUrl(env) + "/cursos/admin/", "Ver en el admin de cursos")}`, "Aviso automático de la plataforma de cursos.")));
@@ -387,7 +390,8 @@ export async function vivoApi(request, env, ctx, url, path, h, user, lib) {
       const p = await env.DB.prepare("SELECT invoice_key, invoice_name FROM c_payouts WHERE id = ?").bind(m[1]).first();
       const obj = p && p.invoice_key && await env.MEDIA.get(p.invoice_key);
       if (!obj) return json({ error: "No hay factura." }, 404);
-      return new Response(obj.body, { headers: { "Content-Type": obj.httpMetadata && obj.httpMetadata.contentType || "application/octet-stream", "Content-Disposition": `inline; filename="${String(p.invoice_name || "factura").replace(/["\\\r\n]/g, "")}"`, "Cache-Control": "no-store" } });
+      // by its name, never the type stored before; always a download
+      return new Response(obj.body, { headers: { "Content-Type": INVOICE_TYPES[invoiceExt(p.invoice_name)] || "application/octet-stream", "Content-Disposition": `attachment; filename="${String(p.invoice_name || "factura").replace(/["\\\r\n]/g, "")}"`, "Cache-Control": "no-store" } });
     }
     if ((m = path.match(/^\/api\/cursos\/admin\/cortes\/([\w-]+)\/pagado$/)) && M === "POST") {
       const b = await body(), ref = cut(b.reference, 120);

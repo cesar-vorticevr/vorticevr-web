@@ -136,12 +136,17 @@ export function publicLibro(row, d) {
 // ---------- signed files of the pages for sale (/m/<slug>/p/<id>?k=<until>.<sig>) ----------
 const enc = new TextEncoder();
 async function sig(env, data) {
-  const key = await crypto.subtle.importKey("raw", enc.encode(env.SESSION_SECRET || "dev"), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  if (!env.SESSION_SECRET) throw new Error("Falta SESSION_SECRET");   // never a guessable default
+  const key = await crypto.subtle.importKey("raw", enc.encode(env.SESSION_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   return btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode("libro:" + data))))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "").slice(0, 32);
 }
 export async function lockedMediaOk(env, slug, id, k) {
   const m = /^(\d{10,14})\.([\w-]{20,40})$/.exec(String(k || ""));
-  return !!m && +m[1] > Date.now() && (await sig(env, `${slug}/${id}/${m[1]}`)) === m[2];
+  if (!m || +m[1] <= Date.now()) return false;
+  const want = await sig(env, `${slug}/${id}/${m[1]}`);   // compared in constant time
+  let diff = want.length ^ m[2].length;
+  for (let i = 0; i < Math.min(want.length, m[2].length); i++) diff |= want.charCodeAt(i) ^ m[2].charCodeAt(i);
+  return diff === 0;
 }
 
 let migrated = false;

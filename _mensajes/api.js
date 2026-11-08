@@ -22,6 +22,8 @@ async function migrate(env) {
     env.DB.prepare("CREATE TABLE IF NOT EXISTS dm_blocks (user_id INTEGER NOT NULL, blocked INTEGER NOT NULL, at INTEGER, PRIMARY KEY (user_id, blocked))"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS dm_reports (id INTEGER PRIMARY KEY AUTOINCREMENT, thread INTEGER NOT NULL, by_id INTEGER NOT NULL, note TEXT, at INTEGER, done INTEGER DEFAULT 0)"),
   ]);
+  // what the chat was before a block (pending / ok / rejected): unblocking goes back to it, never straight to "ok"
+  await env.DB.prepare("ALTER TABLE dm_threads ADD COLUMN before_block TEXT").run().catch(() => {});
   migrated = true;
 }
 const clean = t => String(t || "").replace(/\r/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{4,}/g, "\n\n\n").trim().slice(0, MAX_TEXT);
@@ -133,6 +135,7 @@ export async function mensajesApi(request, env, ctx, url, path, me, h) {
       }
     } else t = await env.DB.prepare("SELECT * FROM dm_threads WHERE id = ?").bind(+m[1]).first();
     if (!mine(t, me)) return json({ error: "No existe" }, 404);
+    if (t.status !== "blocked" && await blockedBetween(env, me.id, other(t, me))) return json({ error: "No puedes escribir en esta conversación." }, 403);   // a block always wins
     if (t.status === "blocked") return json({ error: t.blocked_by === me.id ? "Bloqueaste esta conversación." : "No puedes escribir en esta conversación." }, 403);
     if (t.status === "rejected") return json({ error: t.started_by === me.id ? "Esta persona no aceptó tu solicitud." : "Rechazaste esta solicitud." }, 403);
     if (t.status === "pending") {
@@ -155,12 +158,17 @@ export async function mensajesApi(request, env, ctx, url, path, me, h) {
       if (t.status !== "pending" || t.started_by === me.id) return json({ error: "No hay una solicitud que responder." }, 400);
       await env.DB.prepare("UPDATE dm_threads SET status = ? WHERE id = ?").bind(act === "aceptar" ? "ok" : "rejected", t.id).run();
     } else if (act === "bloquear") {
+      // both can block; the chat stays with whoever blocked first (blocking back does not take it over)
       await env.DB.batch([env.DB.prepare("INSERT OR IGNORE INTO dm_blocks (user_id, blocked, at) VALUES (?, ?, ?)").bind(me.id, them, Date.now()),
-        env.DB.prepare("UPDATE dm_threads SET status = 'blocked', blocked_by = ? WHERE id = ?").bind(me.id, t.id)]);
+        env.DB.prepare("UPDATE dm_threads SET before_block = status, status = 'blocked', blocked_by = ? WHERE id = ? AND status != 'blocked'").bind(me.id, t.id)]);
     } else if (act === "desbloquear") {
-      if (t.blocked_by !== me.id) return json({ error: "No bloqueaste esta conversación." }, 400);
+      // only one's own block goes away: if the other one also blocked, it stays blocked (now theirs); if not, back to what it was
+      const mineBlock = await env.DB.prepare("SELECT 1 FROM dm_blocks WHERE user_id = ? AND blocked = ?").bind(me.id, them).first();
+      if (!mineBlock && t.blocked_by !== me.id) return json({ error: "No bloqueaste esta conversación." }, 400);
+      const theirs = await env.DB.prepare("SELECT 1 FROM dm_blocks WHERE user_id = ? AND blocked = ?").bind(them, me.id).first();
       await env.DB.batch([env.DB.prepare("DELETE FROM dm_blocks WHERE user_id = ? AND blocked = ?").bind(me.id, them),
-        env.DB.prepare("UPDATE dm_threads SET status = 'ok', blocked_by = NULL WHERE id = ?").bind(t.id)]);
+        theirs ? env.DB.prepare("UPDATE dm_threads SET status = 'blocked', blocked_by = ? WHERE id = ?").bind(them, t.id)
+          : env.DB.prepare("UPDATE dm_threads SET status = COALESCE(before_block, 'pending'), blocked_by = NULL, before_block = NULL WHERE id = ?").bind(t.id)]);
     } else {
       if (!(await limit(env, "dmrep:" + me.id, LIMIT.reportsPerDay, 864e5))) return json({ error: "Ya recibimos varios reportes tuyos hoy." }, 429);
       const b = await request.json().catch(() => ({}));

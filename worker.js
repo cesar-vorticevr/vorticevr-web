@@ -273,7 +273,7 @@ async function api(request, env, ctx, url) {
     if (P.views && row.views >= P.views) return json({ error: "Límite de vistas", limit: true }, 410);
     if (String(row.data || "").includes('"kind":"galeria"') && !galleryPlan(P)) return json({ error: "Pausada", paused: true }, 410);   // a gallery needs a paid plan
     // ?sin_vista=1: Explora reads it to draw its poster or its 3D card, which is not a visit
-    if (!url.searchParams.get("sin_vista")) ctx.waitUntil(env.DB.batch([env.DB.prepare("UPDATE experiences SET views = views + 1 WHERE slug = ?").bind(row.slug), bump(env, "views")]));
+    if (!url.searchParams.get("sin_vista") && await underCap(`v/${row.slug}/${ip}`, 100)) ctx.waitUntil(env.DB.batch([env.DB.prepare("UPDATE experiences SET views = views + 1 WHERE slug = ?").bind(row.slug), bump(env, "views")]));
     const out = publicExp(row);
     if (out.brand && !P.brand) delete out.brand;   // its own logo (or none) only while the plan includes it (brand: Premium)
     if (row.uhandle && row.upublic !== 0) out.by = { handle: row.uhandle, name: row.uname || row.uhandle, avatar: row.uavatar ? avatarUrl(row.uid, row.uavatar) : null };   // its author's portal
@@ -351,6 +351,7 @@ async function api(request, env, ctx, url) {
   // link page: one tap on a button; prize wheel: spins, each prize that came out, "lose", review… (navigator.sendBeacon); only counted while it is live
   m = path.match(/^\/api\/click\/([a-z0-9-]+)\/([a-z0-9]{1,16})$/);
   if (m && M === "POST") {
+    if (!(await underCap(`c/${m[1]}/${ip}`, 300))) return json({ ok: true });   // a script tapping without end does not inflate the counts
     ctx.waitUntil(env.DB.prepare("INSERT INTO clicks (slug, id, n) SELECT slug, ?, 1 FROM experiences WHERE slug = ? AND paused = 0 AND expires > ? AND (data LIKE '%\"kind\":\"links\"%' OR data LIKE '%\"kind\":\"ruleta\"%' OR data LIKE '%\"kind\":\"dispara\"%' OR data LIKE '%\"kind\":\"memorama\"%' OR data LIKE '%\"kind\":\"sopa\"%' OR data LIKE '%\"kind\":\"rompecabezas\"%' OR data LIKE '%\"kind\":\"galeria\"%' OR data LIKE '%\"kind\":\"libro\"%') ON CONFLICT(slug, id) DO UPDATE SET n = n + 1")
       .bind(m[2], m[1], Date.now()).run().catch(e => console.error("click", e.message)));
     return new Response(null, { status: 204 });
@@ -421,7 +422,7 @@ async function api(request, env, ctx, url) {
 
   // ---- stop the reminder e-mails (link at their bottom): GET asks, POST does it (mail scanners only open links) ----
   if (path === "/api/no-mail" && (M === "GET" || M === "POST")) {
-    const id = parseInt(url.searchParams.get("u")) || 0, ok = id && url.searchParams.get("s") === (await hmac(env, "nomail:" + id)).slice(0, 24);
+    const id = parseInt(url.searchParams.get("u")) || 0, ok = id && sameStr(url.searchParams.get("s") || "", (await hmac(env, "nomail:" + id)).slice(0, 24));
     if (ok && M === "POST") await env.DB.prepare("UPDATE users SET no_mail = 1 WHERE id = ?").bind(id).run();
     const body = !ok ? "Este link no es válido." : M === "POST" ? "Listo: ya no te mandaremos avisos. Seguirás recibiendo los correos de tu cuenta (códigos y pagos)."
       : `¿Ya no quieres recibir avisos de Vórtice VR (experiencias por vencer, ideas para empezar)?<form method="post" style="margin-top:22px"><button style="font:700 1rem Arial,sans-serif;background:#ffbe55;color:#1a0d33;border:0;border-radius:999px;padding:13px 22px;cursor:pointer">Dejar de recibirlos</button></form>`;
@@ -442,14 +443,17 @@ async function api(request, env, ctx, url) {
     if (user && user.verified) return json({ error: "Ya existe una cuenta con ese correo. Inicia sesión." }, 409);
     const handle = normHandle(b.handle), hBad = await handleProblem(env, handle, user ? user.id : 0);
     if (hBad) return json({ error: hBad, field: "handle" }, hBad.startsWith("Tu nombre") || hBad.startsWith("Elige") ? 400 : 409);
-    const hash = await hashPassword(pw);
+    // an unconfirmed account keeps its password: someone else signing up again with that e-mail must not set theirs, or the
+    // owner would confirm it with their own code and the account would end up with the other person's password.
+    // Same password = the same person trying again; a different one goes through "Olvidé mi contraseña" (a code to that e-mail).
+    if (user && user.pass && !(await verifyPassword(pw, user.pass))) return json({ error: "Ya hay un registro pendiente con ese correo. Confírmalo con el código que te mandamos, o usa «Olvidé mi contraseña» para elegir otra contraseña." }, 409);
     const code = String(b.ref || "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20);
     const by = code ? await env.DB.prepare("SELECT id, email FROM users WHERE ref_code = ?").bind(code).first() : null;
     const refBy = by && by.email !== em ? by.id : null;   // nobody refers themselves
     const origin = cleanOrigin(b.origin, refBy);
     try {
-      if (user) await env.DB.prepare("UPDATE users SET name = ?, pass = ?, handle = ?, ref_by = COALESCE(ref_by, ?), origin = COALESCE(origin, ?) WHERE id = ?").bind(name, hash, handle, refBy, origin, user.id).run();
-      else await env.DB.prepare("INSERT INTO users (email, name, pass, verified, created, ref_by, origin, handle) VALUES (?, ?, ?, 0, ?, ?, ?, ?)").bind(em, name, hash, Date.now(), refBy, origin, handle).run();
+      if (user) await env.DB.prepare("UPDATE users SET name = ?, pass = COALESCE(pass, ?), handle = ?, ref_by = COALESCE(ref_by, ?), origin = COALESCE(origin, ?) WHERE id = ?").bind(name, user.pass ? null : await hashPassword(pw), handle, refBy, origin, user.id).run();
+      else await env.DB.prepare("INSERT INTO users (email, name, pass, verified, created, ref_by, origin, handle) VALUES (?, ?, ?, 0, ?, ?, ?, ?)").bind(em, name, await hashPassword(pw), Date.now(), refBy, origin, handle).run();
     } catch { return json({ error: "Alguien más acaba de tomar ese nombre de usuario. Prueba otro.", field: "handle" }, 409); }   // unique index
     return codeResponse(await sendCode(env, em, "verify"));
   }
@@ -536,7 +540,8 @@ async function api(request, env, ctx, url) {
     if (String(b.password || "").length < 8) return json({ error: "La nueva contraseña debe tener al menos 8 caracteres." }, 400);
     const user = await env.DB.prepare("SELECT pass FROM users WHERE id = ?").bind(me.id).first();
     if (!(await verifyPassword(String(b.current || ""), user.pass))) return json({ error: "Tu contraseña actual no es correcta." }, 401);
-    await env.DB.prepare("UPDATE users SET pass = ?, temp_pw = 0 WHERE id = ?").bind(await hashPassword(String(b.password)), me.id).run();
+    await env.DB.batch([env.DB.prepare("UPDATE users SET pass = ?, temp_pw = 0 WHERE id = ?").bind(await hashPassword(String(b.password)), me.id),
+      env.DB.prepare("DELETE FROM sessions WHERE user_id = ? AND token != ?").bind(me.id, await sha256hex(bearer(request) || ""))]);   // logs out everywhere else (this one stays)
     return json({ ok: true });
   }
   m = path.match(/^\/api\/experience\/([a-z0-9-]+)$/);
@@ -2032,12 +2037,11 @@ async function migrate(env) {
   ]);
 }
 async function limit(env, key, max, windowMs) {
+  // one statement: count and check together, so many requests at once cannot all slip through between a read and a write
   const now = Date.now();
-  const row = await env.DB.prepare("SELECT n, reset FROM ratelimit WHERE k = ?").bind(key).first();
-  if (!row || row.reset < now) { await env.DB.prepare("INSERT INTO ratelimit (k, n, reset) VALUES (?, 1, ?) ON CONFLICT(k) DO UPDATE SET n = 1, reset = excluded.reset").bind(key, now + windowMs).run(); return true; }
-  if (row.n >= max) return false;
-  await env.DB.prepare("UPDATE ratelimit SET n = n + 1 WHERE k = ?").bind(key).run();
-  return true;
+  const row = await env.DB.prepare("INSERT INTO ratelimit (k, n, reset) VALUES (?, 1, ?) ON CONFLICT(k) DO UPDATE SET n = CASE WHEN reset < ? THEN 1 ELSE n + 1 END, reset = CASE WHEN reset < ? THEN excluded.reset ELSE reset END RETURNING n")
+    .bind(key, now + windowMs, now, now).first();
+  return !row || row.n <= max;
 }
 // where a new account came from (assets/origen.js): {src, med, camp, land}; a referral code counts when nothing else came
 function cleanOrigin(o, refBy) {
@@ -2072,8 +2076,24 @@ async function verifyPassword(pw, stored) {
   const [kind, it, s, h] = String(stored || "").split("$");
   if (kind !== "pbkdf2" || !h) return false;
   const got = b64(await pbkdf2(pw, Uint8Array.from(atob(s), c => c.charCodeAt(0)), Number(it)));
-  let diff = got.length ^ h.length;
-  for (let i = 0; i < Math.min(got.length, h.length); i++) diff |= got.charCodeAt(i) ^ h.charCodeAt(i);
+  return sameStr(got, h);
+}
+// at most `max` per hour for this key (views and taps per IP and experience), kept in the edge cache instead of D1 (no
+// queries on every view). A school or a workshop shares one IP, so it is a cap against scripts, not "one per person".
+async function underCap(key, max) {
+  try {
+    const req = new Request("https://cap.vorticevr.internal/" + encodeURIComponent(key)), c = caches.default;
+    const hit = await c.match(req), n = hit ? Number(await hit.text()) || 0 : 0;
+    if (n >= max) return false;
+    await c.put(req, new Response(String(n + 1), { headers: { "Cache-Control": "max-age=3600" } }));
+  } catch (e) {}   // no cache (workers.dev previews): no cap
+  return true;
+}
+// compares two secrets without leaking, by how long it takes, how much of them matched
+function sameStr(a, b) {
+  a = String(a); b = String(b);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < Math.min(a.length, b.length); i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
 }
 async function sha256hex(s) {
@@ -2414,7 +2434,7 @@ async function checkCode(env, em, purpose, code) {
   const row = await env.DB.prepare("SELECT * FROM otp WHERE email = ? AND purpose = ?").bind(em, purpose).first();
   if (!row || row.expires < Date.now()) return json({ error: "El código expiró. Pide uno nuevo." }, 400);
   if (row.tries >= LIMITS.codeTries) return json({ error: "Demasiados intentos. Pide un código nuevo." }, 429);
-  if (row.hash !== (await hashCode(env, em, purpose + String(code)))) {
+  if (!sameStr(row.hash, await hashCode(env, em, purpose + String(code)))) {
     await env.DB.prepare("UPDATE otp SET tries = tries + 1 WHERE email = ? AND purpose = ?").bind(em, purpose).run();
     return json({ error: "Código incorrecto." }, 400);
   }

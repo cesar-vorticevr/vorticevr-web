@@ -67,6 +67,13 @@ async function show(t) {
     $("view").innerHTML = `<div class="empty">${E(e.message)}</div>`;
   }
 }
+// a blob opened here runs with this page's origin (and the admin's session): only a PDF or an image opens, anything else downloads
+async function openSafe(res, w) {
+  const type = (res.headers.get("Content-Type") || "").split(";")[0].trim(), blob = new Blob([await res.arrayBuffer()], { type: /^(application\/pdf|image\/(jpeg|png|webp))$/.test(type) ? type : "application/octet-stream" });
+  const u = URL.createObjectURL(blob);
+  if (blob.type !== "application/octet-stream") { if (w) w.location = u; else location.href = u; return; }
+  w && w.close(); const a = document.createElement("a"); a.href = u; a.download = (/filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") || "") || [, "archivo"])[1]; a.click();
+}
 function instructores(r) {
   document.querySelectorAll("#tabs .chip").forEach(b => { const n = r.counts[b.dataset.t]; if (n !== undefined) b.textContent = b.textContent.replace(/ \(\d+\)$/, "") + ` (${n})`; });
   $("view").innerHTML = r.list.length ? r.list.map(i => `<div class="panel card"><div class="head"><div class="img">${i.avatar ? `<img src="${E(i.avatar)}" alt="">` : E((i.name || "?")[0])}</div>
@@ -84,7 +91,7 @@ function instructores(r) {
     const s = VC.session(), w = window.open("", "_blank");
     const r = await fetch("/api/cursos/admin/documento/" + a.dataset.doc, { headers: { Authorization: "Bearer " + s.token } });
     if (!r.ok) { w && w.close(); VC.toast("No se pudo abrir."); return; }
-    const u = URL.createObjectURL(await r.blob()); if (w) w.location = u; else location.href = u;
+    openSafe(r, w);
   });
   document.querySelectorAll("[data-a]").forEach(b => b.onclick = async () => {
     const note = $("n-" + b.dataset.u).value;
@@ -143,7 +150,7 @@ function cortes(r) {
     ev.preventDefault(); const s = VC.session(), w = window.open("", "_blank");
     const res = await fetch(`/api/cursos/admin/cortes/${a.dataset.inv}/factura`, { headers: { Authorization: "Bearer " + s.token } });
     if (!res.ok) { w && w.close(); VC.toast("No se pudo abrir."); return; }
-    const u = URL.createObjectURL(await res.blob()); if (w) w.location = u; else location.href = u;
+    openSafe(res, w);
   });
   document.querySelectorAll("[data-pay]").forEach(b => b.onclick = async () => {
     const ref = $("ref-" + b.dataset.pay).value.trim(); if (ref.length < 3) { VC.toast("Escribe la referencia de la transferencia."); return; }
