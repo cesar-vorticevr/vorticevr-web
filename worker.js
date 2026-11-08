@@ -476,6 +476,8 @@ async function api(request, env, ctx, url) {
     if (!(await limit(env, "login:" + ip, IP_LIMITS.login, 900e3)) || !(await limit(env, "loginmail:" + em, 8, 900e3))) return json({ error: "Demasiados intentos. Espera 15 minutos." }, 429);
     const user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(em).first();
     if (!user || !(await verifyPassword(pw, user.pass))) return json({ error: "Correo o contraseña incorrectos." }, 401);
+    // a password saved with fewer iterations is redone now that we have it (after the answer; only if it did not change meanwhile)
+    if (needsRehash(user.pass)) ctx.waitUntil(hashPassword(pw).then(hp => env.DB.prepare("UPDATE users SET pass = ? WHERE id = ? AND pass = ?").bind(hp, user.id, user.pass).run()).catch(() => {}));
     if (!user.verified) { const r = await sendCode(env, em, "verify"); return r.error && r.status !== 429 ? codeResponse(r) : json({ ok: true, needCode: true, dev_code: r.dev_code }); } // 429 = a code was just sent
     return json(await sessionFor(env, request, user));
   }
@@ -580,7 +582,7 @@ async function api(request, env, ctx, url) {
     const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM experiences WHERE email = ? AND paused = 0 AND expires > ?").bind(who, Date.now()).first();
     if (n.n >= LIM) return json({ error: `Tu plan ${P.name} incluye ${expCount(LIM)}. Borra una o mejora tu plan para crear otra.`, plan: true }, 403);
     const files = mediaKeys(src.slug, data).map(k => k.slice(`exp/${src.slug}/`.length));
-    if (files.length > 20) return json({ error: "Esta experiencia tiene demasiados archivos para duplicarla. Créala de nuevo desde Crear experiencia." }, 400);
+    if (files.length > 200) return json({ error: "Esta experiencia tiene demasiados archivos para duplicarla. Créala de nuevo desde Crear experiencia." }, 400);
     // the next free number: the title's own ("- 01", " 7") or 1, padded to at least 2 digits
     const tm = String(src.title || "").match(/^(.*?)[\s\-–—#_]*(\d{1,3})$/), sm = src.slug.match(/^(.*?)-?(\d{1,3})$/);
     const tBase = (tm && tm[1].trim()) || String(src.title || "").trim() || "Experiencia", width = Math.max(2, tm ? tm[2].length : 2);
@@ -2061,9 +2063,11 @@ async function hmac(env, data) {
 const hashCode = (env, email, code) => hmac(env, `code:${email}:${code}`);
 
 // ---------- accounts: passwords, sessions, one-time codes ----------
-// PBKDF2-SHA256. 16,000 iterations ≈ 8 ms in a Worker (the free plan allows ~10 ms of CPU per request).
-// The count is stored with each hash, so it can be raised later (paid plan) and old hashes keep working.
-const PBKDF2_ITER = 16000;
+// PBKDF2-SHA256. 100,000 iterations (the most a Worker's crypto allows) since Workers Paid (8 de noviembre de 2026;
+// before, 16,000 for the free plan's ~10 ms of CPU). The count is stored with each hash: old hashes keep working and
+// are redone with this count the next time their owner logs in (needsRehash).
+const PBKDF2_ITER = 100000;
+const needsRehash = stored => Number(String(stored || "").split("$")[1]) < PBKDF2_ITER;
 async function pbkdf2(pw, salt, iterations) {
   const key = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveBits"]);
   return crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations }, key, 256);
