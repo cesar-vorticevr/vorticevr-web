@@ -541,7 +541,7 @@ dialog .row{justify-content:space-between}
       <h2 id="dupState" aria-live="polite"></h2>
       <div class="dupbar"><b id="dupBar"></b></div>
       <ol class="duplist" id="dupList"></ol>
-      <div class="row"><button class="btn" id="dupStop" type="button">Detener</button><button class="btn sun" id="dupDone" type="button" hidden>Ver mis experiencias</button></div>
+      <div class="row"><button class="btn" id="dupStop" type="button">Detener</button><button class="btn sun" id="dupMore" type="button" hidden></button><button class="btn sun" id="dupDone" type="button" hidden>Ver mis experiencias</button></div>
     </div>
   </dialog>
   <dialog id="posterDlg">
@@ -918,24 +918,31 @@ $("dupCancel").addEventListener("click",()=>$("dupDlg").close());
 $("dupDlg").addEventListener("cancel",e=>{ if(dupBusy) e.preventDefault(); });   // Esc does not hide copies still being made
 $("dupStop").addEventListener("click",()=>{ dupStop=true; $("dupStop").disabled=true; $("dupStop").textContent="Deteniendo…"; });
 $("dupDone").addEventListener("click",()=>$("dupDlg").close());
-$("dupGo").addEventListener("click",async()=>{
-  const n=dupVal(), exp=dupExp, list=$("dupList"), run=$("dupRun");
-  $("dupAsk").hidden=true; run.hidden=false; run.classList.remove("done"); list.replaceChildren();
-  $("dupStop").hidden=false; $("dupStop").disabled=false; $("dupStop").textContent="Detener"; $("dupDone").hidden=true;
-  dupStop=false; dupBusy=true; let made=0;
-  const step=i=>{ $("dupState").textContent=`Haciendo la copia ${i} de ${n}…`; $("dupBar").style.width=`${Math.max(4,(i-1)/n*100)}%`; };
-  for(let i=1;i<=n&&!dupStop;i++){
-    step(i); const li=document.createElement("li"); li.textContent="Copiando…"; list.appendChild(li); li.scrollIntoView({block:"nearest"});
+// n = copies asked for; made = done so far (a stopped run can go on with the rest: "Seguir con las N que faltan")
+let dupN=0, dupMade=0;
+$("dupGo").addEventListener("click",()=>{ dupN=dupVal(); dupMade=0; $("dupList").replaceChildren(); dupRun(); });
+$("dupMore").addEventListener("click",()=>{ $("dupList").querySelectorAll("li.bad").forEach(li=>li.remove()); dupRun(); });
+async function dupRun(){
+  const n=dupN, exp=dupExp, list=$("dupList"), run=$("dupRun");
+  $("dupAsk").hidden=true; run.hidden=false; run.classList.remove("done");
+  $("dupStop").hidden=false; $("dupStop").disabled=false; $("dupStop").textContent="Detener"; $("dupDone").hidden=$("dupMore").hidden=true;
+  dupStop=false; dupBusy=true; let err="";
+  while(dupMade<n&&!dupStop){
+    $("dupState").textContent=`Haciendo la copia ${dupMade+1} de ${n}…`; $("dupBar").style.width=`${Math.max(4,dupMade/n*100)}%`;
+    const li=document.createElement("li"); li.textContent="Copiando…"; list.appendChild(li); li.scrollIntoView({block:"nearest"});
     try{ const x=(await VVR.call(`experience/${exp.slug}/duplicate`,{json:{}})).experience;
-      li.className="ok"; li.textContent=x.title; made++;
+      li.className="ok"; li.textContent=x.title; dupMade++;
       DATA.experiences.unshift(x); renderList(); }
-    catch(e){ li.className="bad"; li.textContent=e.message; break; }
+    catch(e){ li.className="bad"; li.textContent=err=e.message; li.scrollIntoView({block:"nearest"}); break; }
   }
-  dupBusy=false; run.classList.add("done"); $("dupBar").style.width=`${made/n*100}%`;
-  $("dupState").textContent=!made?"No se pudo hacer la copia":made===n?(n===1?"¡Listo! Se hizo tu copia":`¡Listo! Se hicieron las ${n} copias`):`Se hicieron ${made} de ${n} copias`;
+  const left=n-dupMade;
+  dupBusy=false; run.classList.add("done"); $("dupBar").style.width=`${dupMade/n*100}%`;
+  $("dupState").textContent=!left?(n===1?"¡Listo! Se hizo tu copia":`¡Listo! Se hicieron las ${n} copias`)
+    :`${err?"Se detuvo":"Detuviste las copias"}: van ${dupMade} de ${n}`;
   $("dupStop").hidden=true; $("dupDone").hidden=false;
+  $("dupDone").className=left?"btn":"btn sun"; $("dupMore").hidden=!left; $("dupMore").textContent=left===1?"Seguir con la que falta":`Seguir con las ${left} que faltan`;
   load();   // the real list (limits, counts) once it is done
-});
+}
 let qrExp=null;
 function openQR(exp){ qrExp=exp; $("qrTitle").textContent=exp.title; VVR.iconReady.then(()=>VVR.drawQR($("qrCanvas"),exp.url)); $("qrDlg").showModal(); }
 $("qrDown").addEventListener("click",()=>VVR.downloadCanvas($("qrCanvas"),`QR-${qrExp.slug}.png`));

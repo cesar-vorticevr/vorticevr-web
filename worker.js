@@ -564,7 +564,8 @@ async function api(request, env, ctx, url) {
   m = path.match(/^\/api\/experience\/([a-z0-9-]+)\/duplicate$/);
   if (m && M === "POST") {
     if (!who) return json({ error: "Inicia sesión de nuevo." }, 401);
-    if (!(await limit(env, "pub:" + who, 30, 3600e3))) return json({ error: "Demasiadas copias seguidas. Espera un rato." }, 429);
+    // its own limit, apart from publishing: a workshop can need 40 or more copies at once (César, 8 de noviembre de 2026)
+    if (!(await limit(env, "dup:" + who, 200, 3600e3))) return json({ error: "Llevas 200 copias en la última hora. Espera un rato y sigue con las que faltan." }, 429);
     const src = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ? AND email = ? AND expires > ?").bind(m[1], who, Date.now()).first();
     if (!src) return json({ error: "No encontramos esa experiencia en tu cuenta." }, 404);
     if (src.paused) return json({ error: "Esta experiencia está pausada: no se puede duplicar." }, 403);
