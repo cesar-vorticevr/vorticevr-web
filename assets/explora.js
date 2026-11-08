@@ -51,7 +51,8 @@
 .xv-cap{display:flex;flex-direction:column;min-width:0;padding:0 2px;font:400 13px/1.35 "IBM Plex Sans",sans-serif;color:#b3a4d2}
 .xv-cap b{font:600 15px/1.3 Sora,sans-serif;color:#f4eeff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .xv-cap a{color:#d2b8ff;text-decoration:none;width:max-content;max-width:100%;overflow:hidden;text-overflow:ellipsis}.xv-cap a:hover{text-decoration:underline}
-.xv-pv,.xv-rp{box-sizing:border-box;border:1px solid rgba(210,184,255,.4);border-radius:20px;background:#0d0620;color:#f4eeff;padding:0;font:400 15px/1.5 "IBM Plex Sans",sans-serif;max-width:none;max-height:none}
+.xv-pv,.xv-rp{box-sizing:border-box;border:1px solid rgba(210,184,255,.4);border-radius:20px;background:#0d0620;color:#f4eeff;padding:0;font:400 15px/1.5 "IBM Plex Sans",sans-serif;max-width:none;max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+html:has(.xv-pv[open]),html:has(.xv-rp[open]){overflow:hidden}
 .xv-pv::backdrop,.xv-rp::backdrop{background:rgba(5,2,11,.82);backdrop-filter:blur(4px)}
 .xv-pv{width:min(94vw,900px)}
 .xv-pv .xv-in{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:22px;padding:22px;align-items:start}
@@ -66,7 +67,7 @@
 .xv-pv .xv-b.go{background:linear-gradient(135deg,#ffe0a0,#ffbe55);color:#1b0f00;border-color:#ffbe55;font-size:13px;padding:15px 16px}
 .xv-pv .xv-b[aria-disabled=true]{opacity:.5;pointer-events:none}
 .xv-pv .xv-note{font-size:12.5px;color:#8f80b0;margin:2px 0 0}
-.xv-pv .xv-x{all:unset;position:absolute;right:12px;top:10px;width:36px;height:36px;display:grid;place-items:center;border-radius:50%;font:400 22px/1 sans-serif;color:#f4eeff;background:rgba(5,2,11,.7);cursor:pointer;z-index:2}
+.xv-pv .xv-x{all:unset;box-sizing:border-box;position:sticky;top:10px;margin:10px 12px -46px auto;width:36px;height:36px;display:grid;place-items:center;border-radius:50%;font:400 22px/1 sans-serif;color:#f4eeff;background:rgba(5,2,11,.8);border:1px solid rgba(210,184,255,.35);cursor:pointer;z-index:2}
 .xv-pv .xv-rep{all:unset;cursor:pointer;color:#8f80b0;font-size:13px;margin-top:6px;width:max-content}.xv-pv .xv-rep:hover{color:#ff8a9e}
 @media (max-width:720px){.xv-pv .xv-in{grid-template-columns:minmax(0,1fr);padding:16px}.xv-pv .xv-big{max-height:none;width:min(100%,calc(58vh * 8.5 / 11))}}
 .xv-rp{width:min(92vw,400px);padding:22px}
