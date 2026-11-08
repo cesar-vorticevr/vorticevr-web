@@ -842,7 +842,7 @@ function card(exp){
     <div class="bd"><h3>${esc(exp.title)}</h3>
       <div class="meta">${exp.listed||exp.likes?`<span class="hearts" title="Corazones">♥ <b>${nf(exp.likes)}</b></span>`:""}<span><b>${nf(exp.views)}</b>${free?`/${nf(vlim)}`:""} ${exp.views===1&&!free?"vista":"vistas"}</span><span>${status}</span></div>
       <div class="acts">${exp.paused?`<button class="btn sun" type="button" data-a="up">Mejorar plan</button>`
-        :`<a class="btn" href="../crear/${exp.kind==="trivia"||exp.kind==="colorear"||exp.kind==="filtro"||exp.kind==="menu"||exp.kind==="links"||exp.kind==="ruleta"||exp.kind==="dispara"||exp.kind==="memorama"||exp.kind==="sopa"||exp.kind==="rompecabezas"||exp.kind==="galeria"||exp.kind==="libro"?exp.kind+"/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="poster">Póster</button><button class="btn" type="button" data-a="copy">Copiar link</button><button class="btn pub${exp.listed?" on":""}" type="button" data-a="pub" title="${exp.listed?"Se muestra en Explora y en tu portal. Toca para hacerla privada.":"Solo la ve quien tenga el link. Toca para mostrarla en Explora y en tu portal."}">${exp.listed?"🌐 Pública":"🔒 Privada"}</button>`}
+        :`<a class="btn" href="../crear/${exp.kind==="trivia"||exp.kind==="colorear"||exp.kind==="filtro"||exp.kind==="menu"||exp.kind==="links"||exp.kind==="ruleta"||exp.kind==="dispara"||exp.kind==="memorama"||exp.kind==="sopa"||exp.kind==="rompecabezas"||exp.kind==="galeria"||exp.kind==="libro"?exp.kind+"/":""}?editar=${encodeURIComponent(exp.slug)}">Editar</a><button class="btn" type="button" data-a="qr">QR</button><button class="btn" type="button" data-a="poster">Póster</button><button class="btn" type="button" data-a="copy">Copiar link</button>${exp.kind==="galeria"?"":`<button class="btn" type="button" data-a="dup" title="Hace copias con el siguiente número: Nombre - 02, Nombre - 03…">Duplicar</button>`}<button class="btn pub${exp.listed?" on":""}" type="button" data-a="pub" title="${exp.listed?"Se muestra en Explora y en tu portal. Toca para hacerla privada.":"Solo la ve quien tenga el link. Toca para mostrarla en Explora y en tu portal."}">${exp.listed?"🌐 Pública":"🔒 Privada"}</button>`}
         <button class="btn del" type="button" data-a="del" aria-label="Borrar ${esc(exp.title)}">Borrar</button></div></div>`;
   const on=(a,f)=>{ const b=el.querySelector(`[data-a=${a}]`); if(b) b.addEventListener("click",f); };
   if(exp.demo){ // sample card: only the QR works; the rest explains itself
@@ -860,6 +860,18 @@ function card(exp){
       else if(want) banner(`¡Listo! “${exp.title}” ya se muestra en Explora y en tu portal vorticevr.mx/@${DATA.user.handle}.`); }
     catch(e){ alert(e.message); b.disabled=false; } });
   on("copy",async ev=>{ try{ await navigator.clipboard.writeText(exp.url); ev.target.textContent="¡Copiado!"; setTimeout(()=>ev.target.textContent="Copiar link",1600); }catch(e){ prompt("Copia tu link:",exp.url); } });
+  // copies with the next number (Nombre - 02, - 03…), one request each: private and with their own link and QR
+  on("dup",async ev=>{ const b=ev.currentTarget;
+    const lim=DATA.limit??((DATA.plan&&DATA.plan.exp)||1), free=Math.max(0,lim-DATA.experiences.filter(x=>!x.paused).length);
+    if(!free){ alert("Llegaste al límite de experiencias de tu plan. Borra una o mejora tu plan para duplicar."); return; }
+    const max=Math.min(20,free), a=prompt(`¿Cuántas copias de “${exp.title}” quieres? (1 a ${max})\nCada una tendrá su propio link y QR, con el siguiente número.`,"1");
+    if(a===null) return; const n=Math.round(Number(a));
+    if(!(n>=1&&n<=max)){ alert(`Escribe un número del 1 al ${max}.`); return; }
+    b.disabled=true; const made=[];
+    try{ for(let i=0;i<n;i++){ banner(`Duplicando “${exp.title}”… ${i+1} de ${n}`); made.push((await VVR.call(`experience/${exp.slug}/duplicate`,{json:{}})).experience); } }
+    catch(e){ alert(e.message); }
+    b.disabled=false; await load();
+    if(made.length) banner(made.length===1?`¡Listo! Se creó “${made[0].title}”.`:`¡Listo! Se crearon ${made.length} copias: de “${made[0].title}” a “${made[made.length-1].title}”.`); });
   on("del",async()=>{ if(!confirm(`¿Borrar “${exp.title}”? El link y el QR dejarán de funcionar.`)) return;
     try{ await VVR.call("experience/"+exp.slug,{method:"DELETE"}); load(); }catch(e){ alert(e.message); } });
   return el;

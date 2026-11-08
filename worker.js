@@ -559,6 +559,46 @@ async function api(request, env, ctx, url) {
     if (!r.meta.changes) return json({ error: "No encontramos esa experiencia en tu cuenta." }, 404);
     return json({ ok: true, listed: !!on });
   }
+  // a copy of one of mine with the next number ("Taller - 01" → "Taller - 02", taller-01 → taller-02): to prepare several
+  // of the same kind for a workshop. Private, no views; its files are copied. One copy per call (the page asks N times).
+  m = path.match(/^\/api\/experience\/([a-z0-9-]+)\/duplicate$/);
+  if (m && M === "POST") {
+    if (!who) return json({ error: "Inicia sesión de nuevo." }, 401);
+    if (!(await limit(env, "pub:" + who, 30, 3600e3))) return json({ error: "Demasiadas copias seguidas. Espera un rato." }, 429);
+    const src = await env.DB.prepare("SELECT * FROM experiences WHERE slug = ? AND email = ? AND expires > ?").bind(m[1], who, Date.now()).first();
+    if (!src) return json({ error: "No encontramos esa experiencia en tu cuenta." }, 404);
+    if (src.paused) return json({ error: "Esta experiencia está pausada: no se puede duplicar." }, 403);
+    const data = JSON.parse(src.data || "{}");
+    if (data.kind === "galeria") return json({ error: "Solo puedes tener una galería por cuenta, así que no se puede duplicar." }, 409);
+    const P = planOf(me), LIM = await limitOf(env, me, P);
+    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM experiences WHERE email = ? AND paused = 0 AND expires > ?").bind(who, Date.now()).first();
+    if (n.n >= LIM) return json({ error: `Tu plan ${P.name} incluye ${expCount(LIM)}. Borra una o mejora tu plan para crear otra.`, plan: true }, 403);
+    const files = mediaKeys(src.slug, data).map(k => k.slice(`exp/${src.slug}/`.length));
+    if (files.length > 20) return json({ error: "Esta experiencia tiene demasiados archivos para duplicarla. Créala de nuevo desde Crear experiencia." }, 400);
+    // the next free number: the title's own ("- 01", " 7") or 1, padded to at least 2 digits
+    const tm = String(src.title || "").match(/^(.*?)[\s\-–—#_]*(\d{1,3})$/), sm = src.slug.match(/^(.*?)-?(\d{1,3})$/);
+    const tBase = (tm && tm[1].trim()) || String(src.title || "").trim() || "Experiencia", width = Math.max(2, tm ? tm[2].length : 2);
+    let sBase = (sm && sm[1].replace(/-+$/, "")) || src.slug;
+    sBase = sBase.slice(0, 29 - width).replace(/-+$/, "");
+    const { results: used } = await env.DB.prepare("SELECT slug, title, email, expires FROM experiences WHERE slug LIKE ? OR (email = ? AND title LIKE ?)").bind(sBase + "-%", who, tBase + "%").all();
+    const taken = new Set(used.filter(r => r.expires > Date.now()).map(r => r.slug)), titles = new Set(used.filter(r => r.email === who).map(r => r.title));
+    let slug = null, title = null;
+    for (let i = tm ? Number(tm[2]) + 1 : 2; i < 1000 && !slug; i++) {
+      const num = String(i).padStart(width, "0"), s = sBase + "-" + num, t = `${tBase} - ${num}`;
+      if (SLUG.test(s) && !taken.has(s) && !RESERVED.has(s) && !ADMIN_SLUGS.has(s) && !titles.has(t)) { slug = s; title = t.slice(0, 80); }
+    }
+    if (!slug) return json({ error: "No encontramos un link libre para la copia. Cámbiale el nombre a la original e intenta de nuevo." }, 409);
+    const stale = await env.DB.prepare("SELECT data FROM experiences WHERE slug = ?").bind(slug).first();   // an expired one the cron has not deleted yet
+    if (stale) { await deleteMedia(env, slug, stale.data); await env.DB.prepare("DELETE FROM experiences WHERE slug = ?").bind(slug).run(); }
+    for (const k of files) { const o = await env.MEDIA.get(`exp/${src.slug}/${k}`); if (o) await env.MEDIA.put(`exp/${slug}/${k}`, o.body, { httpMetadata: o.httpMetadata }); }
+    data.title = title;
+    if (data.kind === "libro" && data.libro) data.libro.id = newBookId();   // its sales are tied to its own id
+    const now = Date.now();
+    await env.DB.prepare("INSERT INTO experiences (slug, email, title, data, created, updated, expires, views, paused, listed, hidden) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0)")
+      .bind(slug, who, title, JSON.stringify(data), now, now, P.days ? now + P.days * 864e5 : FAR).run();
+    ctx.waitUntil(bump(env, "publishes").run());
+    return json({ ok: true, experience: ownerExp(await env.DB.prepare("SELECT * FROM experiences WHERE slug = ?").bind(slug).first(), request, env) });
+  }
   // the portal's name: vorticevr.mx/@handle (letters, numbers, "-" and "_"; changing it breaks the old link)
   if (path === "/api/handle" && M === "POST") {
     if (!me) return json({ error: "Inicia sesión de nuevo." }, 401);
