@@ -906,9 +906,9 @@ let dupExp=null, dupMax=1, dupStop=false, dupBusy=false;
 function openDup(exp){
   const lim=DATA.limit??((DATA.plan&&DATA.plan.exp)||1), free=Math.max(0,lim-DATA.experiences.filter(x=>!x.paused).length);
   if(!free){ alert("Llegaste al límite de experiencias de tu plan. Borra una o mejora tu plan para duplicar."); return; }
-  dupExp=exp; dupMax=Math.min(20,free);
+  dupExp=exp; dupMax=Math.min(50,free);
   $("dupWhat").textContent=`¿Cuántas copias de “${exp.title}” quieres? Cada una tendrá su propio link y QR, con el siguiente número.`;
-  $("dupMax").textContent=dupMax===1?"Te queda lugar para 1 en tu plan.":`De 1 a ${dupMax}${dupMax<20?" (lo que te queda en tu plan)":""}.`;
+  $("dupMax").textContent=dupMax===1?"Te queda lugar para 1 en tu plan.":`De 1 a ${dupMax}${dupMax<50?" (lo que te queda en tu plan)":""}.`;
   $("dupN").max=dupMax; $("dupN").value=1; $("dupAsk").hidden=false; $("dupRun").hidden=true; $("dupDlg").showModal();
 }
 const dupVal=()=>Math.min(dupMax,Math.max(1,Math.round(Number($("dupN").value))||1));
