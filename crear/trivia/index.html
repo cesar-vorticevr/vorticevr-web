@@ -314,7 +314,7 @@ function check(){
   const ok=qsOk&&$("title").value.trim()&&slugOk&&S.token;
   $("publish").disabled=!ok;
   const miss=S.qs.findIndex(q=>!q.q.trim()||!q.a[0].trim()||!q.a[1].trim());
-  $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link a ${S.email}.`:miss>=0?`Completa la pregunta ${miss+1} y sus dos respuestas.`:!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
+  $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)}. Tu link y tu QR quedan en Mi cuenta.`:miss>=0?`Completa la pregunta ${miss+1} y sus dos respuestas.`:!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
 }
 { const base=check; check=function(){ base(); const mk=S.marca&&S.marca.get(); if(mk&&!mk.ok&&!$("publish").disabled){ $("publish").disabled=true; $("pubHint").textContent="Sube el logo de tu marca o elige el de Vórtice VR."; } }; }
 $("publish").addEventListener("click",async()=>{

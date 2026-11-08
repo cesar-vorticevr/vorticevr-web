@@ -329,7 +329,7 @@ function check(){
   const p=problems();
   $("n1").classList.toggle("done",!!$("dname").value.trim()); $("n2").classList.toggle("done",S.d.pairs.length>=MIN&&S.d.pairs.every(pairOk));
   $("n5").classList.toggle("done",slugOk&&!!$("title").value.trim());
-  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
+  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)}. Tu link y tu QR quedan en Mi cuenta.`;
 }
 // a card for the dashboard: some cards face up, some face down
 async function thumb(){

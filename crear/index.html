@@ -823,7 +823,7 @@ function check(){
   $("n2").classList.toggle("done",S.items.length>0&&!loading);
   $("n4").classList.toggle("done",!!($("title").value.trim()&&slugOk));
   $("publish").disabled=!ok;
-  $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link a ${S.email}.`:
+  $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)}. Tu link y tu QR quedan en Mi cuenta.`:
     S.compiling?"Estamos preparando tu imagen…":!imgOk?"Falta tu imagen.":!S.items.length?(S.sf?"Agrega al menos un objeto 3D.":"Agrega al menos un elemento: un video, una imagen, un texto o un objeto 3D."):!has3d?"Agrega al menos un objeto 3D.":loading?"Estamos abriendo tus elementos…":!wOk?`Tus elementos pasan lo que permite tu plan ${S.plan.name} (${S.plan.totalMB} MB y ${S.plan.items} elementos).`:!textOk?"Uno de tus textos está vacío.":!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
 }
 { const base=check; check=function(){ base(); const mk=S.marca&&S.marca.get(); if(mk&&!mk.ok&&!$("publish").disabled){ $("publish").disabled=true; $("pubHint").textContent="Sube el logo de tu marca o elige el de Vórtice VR."; } }; }

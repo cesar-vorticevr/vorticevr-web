@@ -691,7 +691,7 @@ async function api(request, env, ctx, url) {
 
   if (path === "/api/publish" && M === "POST") {
     if (!who) return json({ error: "Inicia sesión de nuevo." }, 401);
-    if (!(await limit(env, "pub:" + who, 30, 3600e3))) return json({ error: "Demasiadas publicaciones seguidas. Espera un rato." }, 429);
+    if (!(await limit(env, "pub:" + who, 150, 3600e3))) return json({ error: "Llevas 150 publicaciones en la última hora. Espera un rato y vuelve a intentarlo." }, 429);   // editing counts too; 150 = room for a workshop (César, 8 de noviembre de 2026; antes 30)
     const P = planOf(me), LIM = await limitOf(env, me, P);
     const form = await request.formData();
     let meta; try { meta = JSON.parse(form.get("meta") || "{}"); } catch { return json({ error: "Datos inválidos." }, 400); }

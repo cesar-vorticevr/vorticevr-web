@@ -389,7 +389,7 @@ function check(){
   $("n4").classList.toggle("done",d.prize.on&&!!d.prize.t.trim()&&d.prize.min>=10); $("n5").classList.toggle("done",d.link.on&&!!linkHref(d.link.url));
   $("n7").classList.toggle("done",slugOk&&!!$("title").value.trim());
   $("mLk").className="msg bad"; $("mLk").textContent=d.link.on&&d.link.url.trim()&&!linkHref(d.link.url)?"Revisa el link.":"";
-  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
+  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)}. Tu link y tu QR quedan en Mi cuenta.`;
 }
 // a card for the dashboard: the characters flying around a crosshair
 async function thumb(){

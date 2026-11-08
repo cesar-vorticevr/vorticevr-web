@@ -539,7 +539,7 @@ function check(){
   $("n6").classList.toggle("done",!!($("title").value.trim()&&slugOk));
   let ok=something()&&!ownMissing()&&$("title").value.trim()&&slugOk&&S.token, why=!something()?"Elige una plantilla o agrega algo a tu filtro.":ownMissing()?"Sube tu pintura (el machote pintado) o elige otra pintura.":!$("title").value.trim()?"Falta el título.":!slugOk?"Elige un link disponible.":"Inicia sesión de nuevo.";
   const mk=S.marca&&S.marca.get(); if(ok&&mk&&!mk.ok){ ok=false; why="Sube el logo de tu marca o elige el de Vórtice VR."; }
-  $("publish").disabled=!ok; $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link a ${S.email}.`:why;
+  $("publish").disabled=!ok; $("pubHint").textContent=ok?`Se publicará en ${linkFor(slugIn.value)}. Tu link y tu QR quedan en Mi cuenta.`:why;
 }
 $("publish").addEventListener("click",async()=>{
   const m=$("mPub"), bar=$("bPub"); m.className="msg"; m.textContent="Publicando…"; bar.hidden=false; $("publish").disabled=true;

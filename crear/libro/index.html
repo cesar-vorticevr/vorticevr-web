@@ -465,7 +465,7 @@ function check(){
   $("n1").classList.toggle("done",!!$("bname").value.trim()); $("n2").classList.toggle("done",S.d.pages.length>=3&&!iss.length);
   $("n4").classList.toggle("done",slugOk&&!!$("title").value.trim());
   $("issues").hidden=!iss.length; $("issues").innerHTML=iss.slice(0,8).map(t=>`<li>${esc(t)}</li>`).join("");
-  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
+  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)}. Tu link y tu QR quedan en Mi cuenta.`;
 }
 // the card for the library and the dashboard: the cover (its picture and its title)
 async function cover(){

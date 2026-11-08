@@ -470,7 +470,7 @@ function check(){
   const p=problems(), tm=totalMiss();
   $("n1").classList.toggle("done",!!$("dname").value.trim()); $("n2").classList.toggle("done",!!(S.d.salas[0].texto||"").trim());
   $("n3").classList.toggle("done",total()>0&&!tm); $("n4").classList.toggle("done",slugOk&&!!$("title").value.trim());
-  $("publish").disabled=!!p; $("pubHint").textContent=p||(tm?`Ojo: ${tm===1?"una obra no cabe y no se verá":tm+" obras no caben y no se verán"}. `:"")+`Se publicará en ${linkFor(slugIn.value)}${$("publica").checked?" y aparecerá en Galerías Vórtice VR":""}. Te enviaremos el link y el QR a ${S.email}.`;
+  $("publish").disabled=!!p; $("pubHint").textContent=p||(tm?`Ojo: ${tm===1?"una obra no cabe y no se verá":tm+" obras no caben y no se verán"}. `:"")+`Se publicará en ${linkFor(slugIn.value)}${$("publica").checked?" y aparecerá en Galerías Vórtice VR":""}. Tu link y tu QR quedan en Mi cuenta.`;
 }
 $("publish").addEventListener("click",async()=>{
   const p=problems(); if(p){ check(); return; }

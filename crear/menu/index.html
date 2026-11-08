@@ -543,7 +543,7 @@ function check(){
   const p=problems();
   $("n1").classList.toggle("done",!!$("dname").value.trim()); $("n2").classList.toggle("done",flatten(S.menu).length>0);
   $("n3").classList.toggle("done",flatten(S.menu).some(d=>d.special)); $("n4").classList.toggle("done",S.menu.helper&&flatten(S.menu).length>1); $("n5").classList.toggle("done",slugOk&&!!$("title").value.trim());
-  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
+  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)}. Tu link y tu QR quedan en Mi cuenta.`;
 }
 // a card for the dashboard: the restaurant's color, its logo and its name
 async function thumb(){

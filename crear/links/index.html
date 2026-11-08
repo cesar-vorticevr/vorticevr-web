@@ -436,7 +436,7 @@ function check(){
   $("n1").classList.toggle("done",!!$("dname").value.trim()); $("n2").classList.toggle("done",lk.social.length>0); $("n3").classList.toggle("done",lk.list.some(b=>b.type==="link"&&b.url));
   $("n4").classList.toggle("done",S.links.contact.on); $("n6").classList.toggle("done",slugOk&&!!$("title").value.trim());
   $("mVc").textContent=S.links.contact.on&&!S.links.contact.phone.trim()&&!S.links.contact.email.trim()?"Pon al menos tu teléfono o tu correo.":""; $("mVc").className="msg bad";
-  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
+  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)}. Tu link y tu QR quedan en Mi cuenta.`;
 }
 // a card for the dashboard: the page's background, its picture and its name
 async function thumb(){

@@ -376,7 +376,7 @@ function check(){
   $("n1").classList.toggle("done",!!$("dname").value.trim()); $("n2").classList.toggle("done",filled().length>=MIN);
   $("n4").classList.toggle("done",S.r.review.on&&!!linkHref(S.r.review.url)); $("n6").classList.toggle("done",slugOk&&!!$("title").value.trim());
   $("mRv").className="msg bad"; $("mRv").textContent=S.r.review.on&&S.r.review.url.trim()&&!linkHref(S.r.review.url)?"Revisa el link.":"";
-  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
+  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)}. Tu link y tu QR quedan en Mi cuenta.`;
 }
 // a card for the dashboard: the wheel on its background
 async function thumb(){

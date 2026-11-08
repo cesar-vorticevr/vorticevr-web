@@ -321,7 +321,7 @@ function check(){
   const p=problems();
   $("n1").classList.toggle("done",!!S.pic&&!!$("dname").value.trim());
   $("n5").classList.toggle("done",slugOk&&!!$("title").value.trim());
-  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)} y te enviaremos el link y el QR a ${S.email}.`;
+  $("publish").disabled=!!p; $("pubHint").textContent=p||`Se publicará en ${linkFor(slugIn.value)}. Tu link y tu QR quedan en Mi cuenta.`;
 }
 $("publish").addEventListener("click",async()=>{
   const p=problems(); if(p){ check(); return; }
