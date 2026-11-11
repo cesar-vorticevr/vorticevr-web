@@ -161,8 +161,8 @@ export async function run(o) {
   });
   mv.addEventListener("error", () => fail("No se pudo mostrar la experiencia."));
 
-  // its audio: it starts with "Verlo en tu espacio" (inside the tap, so phones let it sound) and stops when the camera
-  // closes (Android); the button on the stage plays or stops it at any time (also to try it here)
+  // its audio: on Android it starts when the object is placed (superficie-xr.js); on iPhone with "Verlo en tu espacio"
+  // (inside the tap, so it may sound; Quick Look tells the page nothing more). It stops when the camera closes (Android); the button on the stage plays or stops it at any time (also to try it here)
   const au = (cfg.items || []).find(i => i.type === "audio");
   let audio = null, sndBtn = null;
   if (au) {

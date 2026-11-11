@@ -94,7 +94,7 @@ function skeletal(usda, files, ff, { m, list }) {
   if (head < 0 || end < 0 || !geo || !sIdx || !sW) return usda;
   const g0 = geo.indexOf("{", geo.indexOf('def Mesh "Geometry"')) + 1, g1 = geo.indexOf("uniform token subdivisionScheme", g0);
   if (g0 < 1 || g1 < 0) return usda;
-  const block = usda.slice(head, end);
+  const block = usda.slice(head, end) + "\n";   // its last line ends here too
   const line = k => { const a = block.indexOf(k); return a < 0 ? "" : block.slice(a, block.indexOf("\n", a)); };
 
   const bones = m.skeleton.bones, inv = m.skeleton.boneInverses;

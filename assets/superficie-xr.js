@@ -60,7 +60,8 @@ export function startXR(o) {
   const q = s => ui.querySelector(s);
   // taps on our buttons do not place the object
   for (const s of [".sx-top", ".sx-bot", ".sx-sheet", ".sx-size"]) q(s).addEventListener("beforexrselect", e => e.preventDefault());
-  if (o.audio) { try { o.audio.currentTime = 0; } catch (e) {} o.audio.play().catch(() => {}); }   // inside the tap
+  // the music sounds once it is placed; a silent play inside the tap lets it sound later
+  if (o.audio) { const au = o.audio; au.pause(); try { au.currentTime = 0; } catch (e) {} au.muted = true; au.play().then(() => { if (!o.placed) au.pause(); }).catch(() => {}).finally(() => { au.muted = false; }); }
 
   // the session first (it needs the tap); the rest after
   const req = navigator.xr.requestSession("immersive-ar", { requiredFeatures: ["hit-test"], optionalFeatures: ["dom-overlay", "camera-access"], domOverlay: { root: ui } });
@@ -135,6 +136,7 @@ async function run(session, ui, q, o) {
     const p = new THREE.Vector3().setFromMatrixPosition(hit), cam = new THREE.Vector3().setFromMatrixPosition(renderer.xr.getCamera().matrixWorld);
     content.position.copy(p); content.rotation.set(0, Math.atan2(cam.x - p.x, cam.z - p.z), 0);   // facing you
     content.visible = true; placed = true; reticle.visible = false; sfx.appear();
+    if (o.audio && !o.placed) { o.placed = true; try { o.audio.currentTime = 0; } catch (e) {} o.audio.play().catch(() => {}); }
     hint.textContent = "Pellizca con dos dedos para cambiar su tamaño · toca otro lugar para moverlo";
     q(".sx-size").hidden = false; q(".sx-bot").hidden = !camOk;
   });

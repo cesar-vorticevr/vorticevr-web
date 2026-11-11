@@ -43,6 +43,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 /* with the camera the logo is already on top: the author goes centered under it, without a second logo */
 body:is(.k-ra,.k-filtro,.k-trivia,.k-colorear,.k-superficie) #byx{left:50%;translate:-50% 0;top:calc(46px + env(safe-area-inset-top,0px));max-width:calc(100vw - 32px)}
 body:is(.k-ra,.k-filtro,.k-trivia,.k-colorear,.k-superficie) #byx .vx{display:none}
+body.k-superficie:has(#byx:not([hidden])) .sf-top{padding-top:calc(104px + env(safe-area-inset-top,0px))}   /* the author pill goes under the logo, above the title */
 body:is(.k-ra,.k-filtro,.k-trivia,.k-colorear,.k-superficie) #byx a{padding-right:12px}
 /* games with their own logo or title on top, centered: compact, in the corner, without a second logo */
 body:is(.k-sopa,.k-memorama,.k-rompecabezas,.k-dispara,.k-menu) #byx{max-width:calc(50vw - 78px)}
