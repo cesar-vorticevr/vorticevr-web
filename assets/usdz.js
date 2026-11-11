@@ -85,8 +85,11 @@ export async function sceneUSDZ(world, clips, audio) {
 // A character with its animation (a dance, walking…): three's USDZExporter writes the mesh still, in its bind pose (the
 // "T"), so its Xform becomes a SkelRoot with the mesh inline, its Skeleton and a SkelAnimation (UsdSkel, which Quick
 // Look plays). Three draws world = Σ w · bone.matrixWorld · boneInverse · bindMatrix · v; here the skeleton's space is
-// the mesh's (M), so each joint is M⁻¹ · bone.matrixWorld, its bind transform is boneInverse⁻¹ and geomBindTransform is
-// bindMatrix. Joints go parents first (UsdSkel needs it), so the vertices' joint indices are renumbered.
+// the mesh's (M), so each joint is M⁻¹ · bone.matrixWorld (S). Quick Look puts the lowest point of the mesh *without*
+// skinning on the floor, so the points are written already where the root joint has them in the first frame
+// (v' = A · v, A = S_root · boneInverse_root · bindMatrix; without it the character floated half its height) and each
+// bind transform is A · bindMatrix⁻¹ · boneInverse⁻¹, which keeps the same result. Joints go parents first (UsdSkel
+// needs it), so the vertices' joint indices are renumbered.
 function skeletal(usda, files, ff, { m, list }) {
   const head = usda.indexOf(`def Xform "Object_${m.id}"`), end = usda.indexOf("\n}\n", head);
   const geoName = `geometries/Geometry_${m.geometry.id}.usda`, geo = files[geoName] && ff.strFromU8(files[geoName]);
@@ -108,6 +111,12 @@ function skeletal(usda, files, ff, { m, list }) {
   const Minv = m.matrixWorld.clone().invert(), tmp = new THREE.Matrix4();
   const local = (fr, i) => parent[i] < 0 ? tmp.multiplyMatrices(Minv, fr[i]).clone() : tmp.copy(fr[parent[i]]).invert().multiply(fr[i]).clone();
   const p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3();
+  const r0 = order[0], A = Minv.clone().multiply(list[0][r0]).multiply(inv[r0]).multiply(m.bindMatrix);
+  const toA = A.clone().multiply(m.bindMatrix.clone().invert()), bindOf = i => toA.clone().multiply(inv[i].clone().invert());
+  const N = new THREE.Matrix3().getNormalMatrix(A), attr = m.geometry.attributes;
+  const vec = (a, mt, normal) => { const out = []; for (let v = 0; v < a.count; v++) { p.fromBufferAttribute(a, v); if (normal) p.applyMatrix3(mt).normalize(); else p.applyMatrix4(mt); out.push(`(${n6(p.x)}, ${n6(p.y)}, ${n6(p.z)})`); } return out.join(", "); };
+  let body = geo.slice(g0, g1).trimEnd().replace(/point3f\[\] points = \[[^\]]*\]/, () => `point3f[] points = [${vec(attr.position, A)}]`);
+  if (attr.normal) body = body.replace(/normal3f\[\] normals = \[[^\]]*\]/, () => `normal3f[] normals = [${vec(attr.normal, N, true)}]`);
   const T = [], R = [], S = [];
   list.forEach((fr, f) => {
     const t = [], r = [], sc = [];
@@ -137,7 +146,7 @@ function skeletal(usda, files, ff, { m, list }) {
 	)
 	{
 		uniform token[] joints = ${joints}
-		uniform matrix4d[] bindTransforms = [${order.map(i => matrix(inv[i].clone().invert())).join(", ")}]
+		uniform matrix4d[] bindTransforms = [${order.map(i => matrix(bindOf(i))).join(", ")}]
 		uniform matrix4d[] restTransforms = [${order.map(i => matrix(local(list[0], i))).join(", ")}]
 		rel skel:animationSource = <${at}/Anim>
 	}
@@ -159,7 +168,7 @@ ${S.join("\n")}
 	def Mesh "Geometry" (
 		prepend apiSchemas = ["SkelBindingAPI"]
 	)
-	{${geo.slice(g0, g1).trimEnd()}
+	{${body}
 		int[] primvars:skel:jointIndices = [${ji.join(", ")}] (
 			elementSize = 4
 			interpolation = "vertex"
@@ -168,7 +177,7 @@ ${S.join("\n")}
 			elementSize = 4
 			interpolation = "vertex"
 		)
-		matrix4d primvars:skel:geomBindTransform = ${matrix(m.bindMatrix)}
+		matrix4d primvars:skel:geomBindTransform = ${matrix(new THREE.Matrix4())}
 		rel skel:skeleton = <${at}/Skel>
 		uniform token subdivisionScheme = "none"
 	}`;
