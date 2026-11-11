@@ -3,7 +3,8 @@
 // The elements are built with assets/escena.js (same placement as the editor; 1 unit = 1 meter), joined into one GLB
 // in the phone (GLTFExporter) and shown with <model-viewer>: Android opens it with WebXR (floor detection, walk around
 // it) and iPhone with Quick Look, with our own USDZ (assets/usdz.js): the motions and sparkles as time samples and the
-// music inside the file, which model-viewer's USDZ leaves out (the 3D's own animations are still not kept there).
+// music inside the file, and the 3D's own animation (a dance, walking…) as a skeleton, all of which model-viewer's USDZ
+// leaves out.
 import * as THREE from "three";
 import * as ESC from "./escena.js";
 
@@ -24,7 +25,7 @@ function glowing(m) {
 
 // items → { world, clips }: the scene and its animations. url(it): its file. sparks: the experience's sparkles ({c, n}) or none.
 // The motions in a loop and the sparkles go in one clip ("magia", 12 s, first, so model-viewer plays it); our Android
-// view plays every clip. Quick Look has no animations: things stay still and the sparkles (scale 0 at rest) do not show.
+// view plays every clip, and so does our USDZ for iPhone (assets/usdz.js; the sparkles rest at scale 0).
 const MAGIC_S = 12;
 export async function sceneParts(items, url, sparks) {
   items = items.filter(i => i.type !== "audio");   // the page plays it
@@ -140,7 +141,7 @@ export async function run(o) {
   let usdzOk = false, usdzWait = null;
   if (IOS) {
     btn.disabled = true; btn.querySelector("span").textContent = "Preparando…";
-    usdzWait = import("./usdz.js").then(U => U.sceneUSDZ(parts.world, parts.magic, au0 && IN_FILE ? { url: o.url(au0), loop: au0.loop !== false } : null))
+    usdzWait = import("./usdz.js").then(U => U.sceneUSDZ(parts.world, parts.clips, au0 && IN_FILE ? { url: o.url(au0), loop: au0.loop !== false } : null))
       .then(b => { mv.setAttribute("ios-src", URL.createObjectURL(b)); usdzOk = true; }).catch(e => console.error(e))
       .finally(() => { btn.disabled = false; btn.querySelector("span").textContent = "Verlo en tu espacio"; });
   }
