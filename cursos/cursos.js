@@ -72,7 +72,7 @@
     const opts = { tag: "Cursos", login: loginUrl(location.pathname.replace(/^\/|\/$/g, "")), cta: { href: "/cursos/", t: "Ver cursos", en: "See courses" },
       sub: [{ href: "/cursos/", t: "Catálogo", on: active === "catalogo" }, { href: "/cursos/mi-aprendizaje/", t: "Mi aprendizaje", on: active === "mis" }, { href: "/cursos/instructor/", t: "Dar cursos", on: active === "instructor" }] };
     if (window.VVRMenu) return VVRMenu.mount(el, opts);
-    const sc = document.createElement("script"); sc.src = "/assets/navegacion.js?v=2"; sc.onload = () => VVRMenu.mount(el, opts); document.head.appendChild(sc);
+    const sc = document.createElement("script"); sc.src = "/assets/navegacion.js?v=3"; sc.onload = () => VVRMenu.mount(el, opts); document.head.appendChild(sc);
   }
   function footer() {
     const el = document.querySelector("footer.bot"); if (!el) return;

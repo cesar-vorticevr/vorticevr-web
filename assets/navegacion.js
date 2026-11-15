@@ -11,6 +11,7 @@
     ["explora/", "Explora", "Explore"],
     ["biblioteca/", "Biblioteca", "Library"],
     ["galerias/", "Galerías", "Galleries"],
+    ["realidad-virtual/", "Realidad virtual", "Virtual reality"],
   ];
   const EDU = [
     ["educacion/", "Proyectos educativos", "Education projects", "Experiencias para aprender jugando", "Learn by playing"],
@@ -26,12 +27,12 @@
 header.vm{position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:40!important;display:block!important;max-width:none!important;margin:0!important;padding:0!important;height:auto!important;background:transparent;border-bottom:1px solid transparent;transition:background .35s,border-color .35s}
 header.vm.vm-solid,header.vm.solid{background:rgba(5,2,11,.84);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom-color:rgba(210,184,255,.14)}
 .vm-space{height:64px}
-header.vm .vm-bar{box-sizing:border-box;display:flex;align-items:center;gap:18px;max-width:1240px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top,0px)) clamp(16px,3vw,32px) 12px;font-family:'Sora',system-ui,sans-serif}
+header.vm .vm-bar{box-sizing:border-box;display:flex;align-items:center;gap:12px;max-width:1240px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top,0px)) clamp(16px,3vw,32px) 12px;font-family:'Sora',system-ui,sans-serif}
 header.vm .vm-brand{display:flex;align-items:center;gap:10px;flex:none;text-decoration:none;color:#f3ecff}
 header.vm .vm-brand img{height:36px;width:auto;display:block}
 header.vm .vm-tag{font:600 .74rem 'Sora',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#ffbe55;border-left:1px solid rgba(210,184,255,.25);padding-left:10px}
-header.vm .vm-links{display:flex;align-items:center;gap:4px;margin-left:12px}
-header.vm .vm-l,header.vm .vm-ddb{display:inline-flex;align-items:center;gap:6px;padding:9px 13px;border:0;border-radius:999px;background:transparent;color:#b9acd6;font:600 .78rem 'Sora',sans-serif;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;white-space:nowrap;cursor:pointer;transition:color .2s,background .2s}
+header.vm .vm-links{display:flex;align-items:center;gap:2px;margin-left:4px}
+header.vm .vm-l,header.vm .vm-ddb{display:inline-flex;align-items:center;gap:6px;padding:9px 10px;border:0;border-radius:999px;background:transparent;color:#b9acd6;font:600 .78rem 'Sora',sans-serif;letter-spacing:.07em;text-transform:uppercase;text-decoration:none;white-space:nowrap;cursor:pointer;transition:color .2s,background .2s}
 header.vm .vm-l:hover,header.vm .vm-ddb:hover,header.vm .vm-dd.on .vm-ddb{color:#f3ecff;background:rgba(139,63,214,.18)}
 header.vm .vm-l.on,header.vm .vm-ddb.on{color:#f3ecff;box-shadow:inset 0 -2px 0 #ffbe55;border-radius:6px}
 header.vm .vm-ddb::after{content:"";width:6px;height:6px;border:solid currentColor;border-width:0 1.6px 1.6px 0;transform:translateY(-2px) rotate(45deg);transition:transform .2s}
@@ -42,7 +43,7 @@ header.vm .vm-dd.on .vm-ddp{opacity:1;transform:none;pointer-events:auto}
 header.vm .vm-ddp a{display:block;padding:11px 14px;border-radius:12px;text-decoration:none;color:#f3ecff;font:600 .9rem 'Sora',sans-serif}
 header.vm .vm-ddp a small{display:block;margin-top:2px;font:400 .76rem 'IBM Plex Sans',sans-serif;color:#a99bcb}
 header.vm .vm-ddp a:hover,header.vm .vm-ddp a.on{background:rgba(139,63,214,.22)}
-header.vm .vm-acts{display:flex;align-items:center;gap:10px;margin-left:auto}
+header.vm .vm-acts{display:flex;align-items:center;gap:8px;margin-left:auto}
 header.vm .vm-cta{display:inline-block;line-height:1.2;padding:10px 18px;border-radius:999px;background:linear-gradient(135deg,#ffd27f,#ff9f3a);color:#1a0d00;font:700 .78rem 'Sora',sans-serif;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;white-space:nowrap;box-shadow:0 6px 24px rgba(255,159,58,.28)}
 header.vm .vm-cta:hover{filter:brightness(1.07)}
 header.vm .vm-acct{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;border:1px solid rgba(210,184,255,.28);background:transparent;color:#f3ecff;font:600 .78rem 'Sora',sans-serif;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;white-space:nowrap}
@@ -69,7 +70,8 @@ header.vm .vm-sub a:hover{color:#f3ecff}header.vm .vm-sub a.on{color:#1a0d00;bac
 .vm-panel hr{border:0;border-top:1px solid rgba(210,184,255,.14);margin:6px 10px}
 .vm-panel a.vm-pcta{margin-top:6px;justify-content:center;background:linear-gradient(135deg,#ffd27f,#ff9f3a);color:#1a0d00}
 .vm-panel a.vm-pcta::after{content:none}
-@media (max-width:980px){header.vm .vm-links{display:none}header.vm .vm-burger{display:inline-flex}}
+@media (max-width:1180px){header.vm .vm-cta .l2,header.vm .vm-tag{display:none}}
+@media (max-width:1060px){header.vm .vm-links{display:none}header.vm .vm-burger{display:inline-flex}}
 @media (max-width:560px){header.vm .vm-bar{gap:8px;padding-inline:14px}header.vm .vm-brand img{height:26px}header.vm .vm-tag{display:none}header.vm .vm-acts{gap:6px}header.vm .vm-cta{padding:8px 12px;font-size:.68rem;letter-spacing:.06em}header.vm .vm-cta .l2{display:none}header.vm .vm-acct{padding:8px 12px;font-size:.68rem}header.vm .vm-acct.in{padding:4px}header.vm .vm-acct.in .nm{display:none}header.vm .vm-burger{width:36px;height:36px}header.vm .lang{min-width:38px!important;height:34px!important;padding-inline:6px!important}}
 @media (max-width:370px){header.vm .vm-acct:not(.in){display:none}}
 @media (prefers-reduced-motion:reduce){header.vm,header.vm .vm-ddp,.vm-panel,header.vm .vm-burger i::before,header.vm .vm-burger i::after{transition:none}}
