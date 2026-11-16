@@ -91,6 +91,7 @@ export const TEXTOS = {
     cambiar_avatar: "Cambiar mi avatar", cambiar_pais: "Cambiar país",
     reiniciar: "Reiniciar demo", reiniciar_sub: "Borra tu avance y empieza de cero", confirmar_reinicio: "Toca otra vez para borrar todo tu avance",
     nota_demo: "Las 50 marcas de este demo son ficticias.",
+    mision: "Misión", mision_extra: "Misión extra", explora_todo: "¡Lo completaste todo! Sigue visitando los 50 stands", ir_mision: "Ir ▶", tocalo: "¡Tócalo! Sigue la flecha dorada", toca_planta_sol: "Toca una planta que brille en la granja de Sol", mision_cumplida_g: "¡MISIÓN CUMPLIDA!", polen_dos: "polen dorado", te_recomienda: "te recomienda", llevame: "Llévame ▶", cerrar: "Cerrar", valla_cta: "¡Visítanos! ▶", regalo_diario: "Regalo diario", racha_dias: "Racha: {n} día(s) seguidos. ¡Vuelve mañana por más!", dia: "Día", toca_cofre: "¡Toca el regalo para abrirlo!", dia_n: "¡REGALO DEL DÍA {n}!", sigue_mision: "Sigue tu misión de arriba: toca «Ir ▶»",
     nav_buscar: "Buscar", nav_granja: "Terreno", nav_inventario: "Mochila", nav_taller: "Taller", nav_misiones: "Misiones", nav_uni: "Aprender",
   },
   en: {
@@ -184,6 +185,7 @@ export const TEXTOS = {
     cambiar_avatar: "Change my avatar", cambiar_pais: "Change country",
     reiniciar: "Reset demo", reiniciar_sub: "Erase your progress and start over", confirmar_reinicio: "Tap again to erase all your progress",
     nota_demo: "The 50 brands in this demo are fictional.",
+    mision: "Mission", mision_extra: "Bonus mission", explora_todo: "You did it all! Keep visiting the 50 stands", ir_mision: "Go ▶", tocalo: "Tap it! Follow the golden arrow", toca_planta_sol: "Tap a glowing plant on Sol's farm", mision_cumplida_g: "MISSION COMPLETE!", polen_dos: "golden pollen", te_recomienda: "recommends", llevame: "Take me ▶", cerrar: "Close", valla_cta: "Visit us! ▶", regalo_diario: "Daily gift", racha_dias: "Streak: {n} day(s) in a row. Come back tomorrow for more!", dia: "Day", toca_cofre: "Tap the gift to open it!", dia_n: "DAY {n} GIFT!", sigue_mision: "Follow your mission at the top: tap “Go ▶”",
     nav_buscar: "Search", nav_granja: "Plot", nav_inventario: "Backpack", nav_taller: "Workshop", nav_misiones: "Missions", nav_uni: "Learn",
   },
 };

@@ -425,6 +425,31 @@ export const MISIONES = [
   { id: "registrada", meta: 1, icono: "🏷️", lunas: 1, es: "Siembra una semilla registrada", en: "Plant a registered seed" },
 ];
 
+// Misiones guiadas: una a la vez, siempre visibles arriba, con botón "Ir" y flecha en el mapa.
+// destino: a dónde lleva el botón "Ir". {marca} se cambia por la marca recomendada.
+export const GUIA = [
+  { id: "arbol", icono: "🌳", hojas: 20, destino: "arbol", es: "Toca el Árbol de Luz", en: "Tap the Tree of Light" },
+  { id: "stand", icono: "🏛️", hojas: 15, destino: "marca", es: "Entra al stand de {marca}", en: "Enter the {marca} stand" },
+  { id: "regalo", icono: "🎁", lunas: 1, destino: "marca", es: "Abre el regalo de {marca}", en: "Open {marca}'s gift" },
+  { id: "sembrar", icono: "🌱", hojas: 15, destino: "granja", es: "Siembra en tu terreno", en: "Plant on your plot" },
+  { id: "jugar", icono: "🎰", hojas: 20, destino: "marca", es: "Juega el minijuego de {marca}", en: "Play {marca}'s mini-game" },
+  { id: "cosechar", icono: "🧺", hojas: 20, destino: "granja", es: "Cosecha tu planta", en: "Harvest your plant" },
+  { id: "ayudar", icono: "🤝", lunas: 1, destino: "vecino", es: "Ayuda a Sol a cosechar", en: "Help Sol harvest" },
+  { id: "transformar", icono: "⚗️", hojas: 25, destino: "taller", es: "Haz una cuerda en el Taller", en: "Make a rope in the Workshop" },
+  { id: "vender", icono: "🪙", hojas: 15, destino: "taller", es: "Vende algo en el Mercado", en: "Sell something at the Market" },
+  { id: "leccion", icono: "🎓", lunas: 2, destino: "universidad", es: "Aprende algo en la Universidad", en: "Learn something at the University" },
+  { id: "visitar", icono: "✦", lunas: 2, destino: "nueva", es: "Visita 5 stands", en: "Visit 5 stands" },
+];
+
+// Lo que dicen los personajes que recomiendan marcas
+export const RECOMENDADORES = ["Lía", "Bruno", "Maite", "Kai", "Zoe", "Teo", "Ama", "Gael"];
+export const FRASES_RECO = [
+  { es: "¡Oye! En {marca} te regalan {regalo} gratis 🎁", en: "Hey! {marca} gives you a free {regalo} 🎁" },
+  { es: "Jugué {juego} en {marca} y ¡me salió premio! 🎰", en: "I played {juego} at {marca} and won! 🎰" },
+  { es: "Me encantó {producto} de {marca} ✨", en: "I loved {producto} from {marca} ✨" },
+  { es: "¿Ya fuiste a {marca}? Su stand está precioso 💚", en: "Have you been to {marca}? Their stand is gorgeous 💚" },
+];
+
 export const LOOKS = {
   pieles: ["#f6d5b8", "#e3b088", "#c68a5e", "#8d5a3b", "#5c3a24"],
   pelos: ["#2b1d14", "#7a4520", "#e0b04a", "#cfd0da", "#ff7ad9"],

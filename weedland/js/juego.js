@@ -1,5 +1,5 @@
 // Weedland · demo jugable. Interfaz, stands, minijuegos, cultivo, vecinos, taller y mercado.
-import { PAISES, ZONAS, PLANTILLAS, OBJETOS, SEMILLAS, RECETAS, CATEGORIAS_RECETA, QUIZ_GENERAL, LUGARES, VECINOS, LECCIONES, MISIONES, LOOKS } from "./datos.js";
+import { PAISES, ZONAS, PLANTILLAS, OBJETOS, SEMILLAS, RECETAS, CATEGORIAS_RECETA, QUIZ_GENERAL, LUGARES, VECINOS, LECCIONES, MISIONES, LOOKS, GUIA, RECOMENDADORES, FRASES_RECO } from "./datos.js";
 import { TEXTOS } from "./textos.js";
 import * as E from "./estado.js";
 import { crearMapa } from "./mapa.js";
@@ -114,6 +114,196 @@ function revisarMisiones() {
     demora += 900;
   }
   guardar(); hud();
+  setTimeout(revisarGuia, 700);
+}
+
+// ---------- misión guiada (siempre visible arriba) ----------
+const ayer = () => new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+function marcaGuia() {
+  if (!juego.guiaMarca || !marcaPorId(juego.guiaMarca)) {
+    const buenas = marcas.filter((m) => m.juego === "ruleta" && m.regalo !== "luna" && OBJETOS[m.regalo]?.tipo === "ingrediente");
+    juego.guiaMarca = (buenas.length ? buenas : marcas)[Math.floor(Math.random() * (buenas.length || marcas.length))].id;
+    guardar();
+  }
+  return marcaPorId(juego.guiaMarca);
+}
+const nuevaMarca = () => marcas.find((m) => !juego.visitados.includes(m.id)) || marcas[Math.floor(Math.random() * marcas.length)];
+const condGuia = {
+  arbol: () => (juego.stats.arbol || 0) >= 1,
+  stand: () => juego.visitados.includes(juego.guiaMarca),
+  regalo: () => juego.regalos.includes(juego.guiaMarca),
+  sembrar: () => juego.stats.sembradas >= 1,
+  jugar: () => juego.stats.partidas >= 1,
+  cosechar: () => juego.stats.cosechas >= 1,
+  ayudar: () => juego.stats.ayudas >= 1,
+  transformar: () => juego.stats.transformados >= 1,
+  vender: () => juego.stats.vendidos >= 1,
+  leccion: () => juego.lecciones.length >= 1,
+  visitar: () => juego.visitados.length >= 5,
+};
+const DESTINO_MISION = { visitar: "nueva", sembrar: "granja", cosechar: "granja", jugar: "nueva", leccion: "universidad", transformar: "taller", vender: "taller", ayudar: "vecino", registrada: "registrada" };
+
+function misionActual() {
+  const g = juego.guia || 0;
+  if (g < GUIA.length) {
+    const p = GUIA[g], m = marcaGuia();
+    return { id: p.id, icono: p.icono, texto: tx(p).replace("{marca}", m.nombre), premio: { hojas: p.hojas || 0, lunas: p.lunas || 0 }, destino: p.destino, paso: `${t("mision")} ${g + 1}/${GUIA.length}`, guia: true };
+  }
+  const m = MISIONES.find((x) => !juego.misiones.includes(x.id));
+  if (m) return { id: m.id, icono: m.icono, texto: `${tx(m)} (${Math.min(m.meta, avance[m.id]())}/${m.meta})`, premio: { hojas: m.hojas || 0, lunas: m.lunas || 0 }, destino: DESTINO_MISION[m.id] || "nueva", paso: t("mision_extra") };
+  return { id: "explorar", icono: "✦", texto: t("explora_todo"), premio: { hojas: 0, lunas: 0 }, destino: "nueva", paso: t("mision_extra") };
+}
+
+function objetivoDe(destino, id) {
+  if (destino === "arbol") return { tipo: "centro" };
+  if (destino === "marca") return { tipo: "edificio", id: juego.guiaMarca };
+  if (destino === "taller" || destino === "universidad") return { tipo: "edificio", id: destino };
+  if (destino === "granja") {
+    const lista = juego.parcelas.findIndex((p) => p && etapa(p) === 4);
+    const vacia = juego.parcelas.findIndex((p, i) => !p && i < juego.abiertas);
+    return { tipo: "parcela", dueno: "yo", i: id === "cosechar" ? (lista >= 0 ? lista : Math.max(0, juego.parcelas.findIndex((p) => p))) : vacia >= 0 ? vacia : 0 };
+  }
+  if (destino === "vecino") { const i = juego.vecinos?.sol?.findIndex((p) => p && etapa(p) === 4); return { tipo: "parcela", dueno: "sol", i: i >= 0 ? i : 0 }; }
+  if (destino === "registrada") return { tipo: "edificio", id: (marcas.find((m) => m.semilla && !tiene("reg:" + m.id)) || marcas.find((m) => m.semilla)).id };
+  return { tipo: "edificio", id: nuevaMarca().id };
+}
+
+function pintarMision(nueva = false) {
+  const el = $("#mision-actual");
+  if (!el || !mundo) return;
+  const m = misionActual();
+  const obj0 = objetivoDe(m.destino, m.id);
+  const clave = m.id + m.texto + lang;
+  if (!nueva && el.dataset.clave === clave && !el.hidden) { mundo.setObjetivo(obj0); return; }
+  el.dataset.clave = clave;
+  const premio = [m.premio.hojas ? `+${m.premio.hojas} 🍃` : "", m.premio.lunas ? `+${m.premio.lunas} 🌟` : ""].filter(Boolean).join(" ");
+  el.innerHTML = `<span class="mi-icono">${m.icono}</span>
+    <div class="mi-texto"><small>${m.paso}</small><b>${esc(m.texto)}</b>${premio ? `<span class="mi-premio">${premio}</span>` : ""}</div>
+    <button id="mi-ir" class="mi-ir">${t("ir_mision")}</button>`;
+  el.hidden = false;
+  if (nueva) { el.classList.remove("nueva"); void el.offsetWidth; el.classList.add("nueva"); }
+  const obj = objetivoDe(m.destino, m.id);
+  el.dataset.objetivo = JSON.stringify(obj);
+  mundo.setObjetivo(obj);
+  $("#mi-ir").onclick = () => { sonido.tap(); irAMision(m, obj); };
+}
+
+function irAMision(m, obj) {
+  const d = m.destino;
+  if (d === "arbol") { cerrarHoja(); sonido.teleport(); mundo.teletransportar(40, 42, () => { mundo.efectoYo("teleport", "#c6f36b"); toast(`👆 ${t("tocalo")}`); }); return; }
+  if (d === "granja") {
+    teletransporte("granja", null, () => {
+      if (m.id === "sembrar") { const v = juego.parcelas.findIndex((p, i) => !p && i < juego.abiertas); if (v >= 0) return abrirSembrar(v); }
+      if (m.id === "cosechar") {
+        const l = juego.parcelas.findIndex((p) => p && etapa(p) === 4);
+        if (l >= 0) return cosechar(l);
+        const c = juego.parcelas.findIndex((p) => p);
+        if (c >= 0) return abrirCreciendo(c);
+        const v = juego.parcelas.findIndex((p, i) => !p && i < juego.abiertas);
+        if (v >= 0) return abrirSembrar(v);
+      }
+      abrirGranja();
+    });
+    return;
+  }
+  if (d === "vecino") { cerrarHoja(); sonido.teleport(); mundo.teletransportar(54, 51, () => { mundo.efectoYo("teleport", "#ffd8a8"); toast(`👆 ${t("toca_planta_sol")}`); }); return; }
+  if (d === "taller") return teletransporte("taller", m.id === "vender" ? "mercado" : "recetas");
+  if (d === "marca") return teletransporte(juego.guiaMarca, m.id === "regalo" ? "regalo" : m.id === "jugar" ? "juego" : "inicio");
+  if (d === "registrada") return teletransporte(obj.id, "regalo");
+  teletransporte(obj.id || nuevaMarca().id);
+}
+
+let revisandoGuia = false;
+function revisarGuia() {
+  if (revisandoGuia || !mundo) return;
+  const g = juego.guia || 0;
+  if (g >= GUIA.length) { pintarMision(); return; }
+  const p = GUIA[g];
+  if (!condGuia[p.id]()) { pintarMision(); return; }
+  revisandoGuia = true;
+  juego.guia = g + 1;
+  const msg = dar({ hojas: p.hojas || 0, lunas: p.lunas || 0 });
+  sonido.jackpot();
+  cartel({ titulo: t("mision_cumplida_g"), sub: `${p.icono} ${esc(tx(p).replace("{marca}", marcaGuia().nombre))} · ${msg}`, tipo: "dorada", ms: 2000 });
+  const el = $("#mision-actual");
+  if (el) { const c = centro(el); if (p.hojas) volar("🍃", 8, c, "#hojas"); if (p.lunas) volar("🌟", 4, c, "#lunas"); }
+  setTimeout(() => { revisandoGuia = false; pintarMision(true); setTimeout(revisarGuia, 600); }, 2100);
+}
+
+// ---------- recomendaciones de personajes y vallas ----------
+let ultimaReco = Date.now(), recoTimer = null;
+const promotoresDatos = [];
+function fraseReco(m) {
+  const f = FRASES_RECO[Math.floor(Math.random() * FRASES_RECO.length)];
+  const r = regaloDe(m);
+  return tx(f).replace("{marca}", m.nombre).replace("{regalo}", r.obj ? tx(objeto(r.obj)) : t("polen_dos")).replace("{juego}", t("juego_" + m.juego)).replace("{producto}", tx(m.productos[0].nombre));
+}
+function mostrarReco(m, { quien, anuncio = false } = {}) {
+  const el = $("#reco");
+  if (!el || !m) return;
+  clearTimeout(recoTimer);
+  ultimaReco = Date.now();
+  const nombre = quien || RECOMENDADORES[Math.floor(Math.random() * RECOMENDADORES.length)];
+  el.style.setProperty("--c", m.color);
+  el.innerHTML = `
+    <div class="reco-cara">${anuncio ? esc(m.productos[0].icono) : esc(nombre.slice(0, 1))}</div>
+    <div class="reco-texto"><small>${anuncio ? `📣 ${t("anuncio")} · ${esc(m.nombre)}` : `💬 ${esc(nombre)} ${t("te_recomienda")}`}</small>
+      <p>${anuncio ? esc(`${m.productos[0].icono} ${tx(m.productos[0].nombre)} · ${tx(m.categoria)}`) : esc(fraseReco(m))}</p>
+      <div class="reco-botones"><button class="btn pequeno" id="reco-ir">${t("llevame")}</button><button class="reco-cerrar" id="reco-x" aria-label="${t("cerrar")}">✕</button></div></div>`;
+  el.hidden = false;
+  el.classList.remove("entra"); void el.offsetWidth; el.classList.add("entra");
+  sonido.pop();
+  const cerrar = () => { el.hidden = true; clearTimeout(recoTimer); };
+  $("#reco-x").onclick = cerrar;
+  $("#reco-ir").onclick = () => { E.sumar(m.id, anuncio ? "vallas" : "recos"); cerrar(); teletransporte(m.id); };
+  recoTimer = setTimeout(cerrar, 14000);
+}
+function recoAutomatica() {
+  if (!mundo || document.hidden || !$("#hoja").hidden || document.querySelector(".video, .cartel")) return;
+  if (Date.now() - ultimaReco < 45000) return;
+  const pendientes = marcas.filter((m) => !juego.visitados.includes(m.id));
+  const lista = pendientes.length ? pendientes : marcas;
+  mostrarReco(lista[Math.floor(Math.random() * lista.length)]);
+}
+// anuncios de las vallas: rotan cada 7 segundos
+const ordenAnuncios = [...marcas].sort((a, b) => (a.id.length * 7 + a.id.charCodeAt(1)) % 13 - (b.id.length * 7 + b.id.charCodeAt(1)) % 13);
+const anuncioEnValla = [];
+function anuncio(i, tiempo) {
+  const m = ordenAnuncios[(i * 5 + Math.floor(tiempo / 7)) % ordenAnuncios.length];
+  const actual = marcaPorId(m.id) || m;
+  anuncioEnValla[i] = actual.id;
+  return { nombre: actual.nombre, color: actual.color, icono: actual.productos[0].icono, lema: tx(actual.productos[0].nombre), cta: t("valla_cta"), fase: tiempo % 7 };
+}
+
+// ---------- regalo diario ----------
+const PREMIO_DIA = [{ hojas: 15 }, { hojas: 20 }, { hojas: 20, lunas: 1 }, { hojas: 30 }, { hojas: 35 }, { hojas: 40 }, { hojas: 60, lunas: 3 }];
+function abrirCofre(alTerminar) {
+  const racha = juego.diario === ayer() ? (juego.racha || 0) + 1 : 1;
+  const dia = ((racha - 1) % 7) + 1, p = PREMIO_DIA[dia - 1];
+  const c = abrirHoja(`
+    <div class="cofre">
+      <h2>🎁 ${t("regalo_diario")}</h2>
+      <p>${t("racha_dias", { n: racha })}</p>
+      <div class="cofre-dias">${PREMIO_DIA.map((x, i) => `<div class="dia ${i + 1 < dia ? "pasado" : i + 1 === dia ? "hoy" : ""}"><small>${t("dia")} ${i + 1}</small><b>${x.lunas ? "🌟" : "🍃"}</b><span>${x.hojas}${x.lunas ? `+${x.lunas}🌟` : ""}</span></div>`).join("")}</div>
+      <button class="cofre-caja" id="cofre" aria-label="${t("abrir_regalo")}">🎁</button>
+      <p class="centrado"><b>${t("toca_cofre")}</b></p>
+    </div>`, { color: "#f2c45a", entrada: true });
+  $("#hoja-cerrar").hidden = true;
+  $("#cofre", c).onclick = async (ev) => {
+    const b = ev.currentTarget; b.disabled = true;
+    b.classList.add("sacude"); sonido.sacudir();
+    await espera(450);
+    juego.diario = hoy(); juego.racha = racha; guardar();
+    const msg = dar(p);
+    sonido.jackpot();
+    cartel({ titulo: t("dia_n", { n: dia }), sub: msg, tipo: "dorada", ms: 1800 });
+    const pos = centro(b);
+    volar("🍃", 10, pos, "#hojas"); if (p.lunas) setTimeout(() => volar("🌟", 4, pos, "#lunas"), 300);
+    await espera(1600);
+    $("#hoja-cerrar").hidden = false;
+    cerrarHoja();
+    alTerminar && alTerminar();
+  };
 }
 
 // ---------- hoja (panel inferior) ----------
@@ -246,6 +436,10 @@ function iniciarVecinos() {
 function arrancar() {
   $("#juego").hidden = false;
   iniciarVecinos();
+  marcaGuia();
+  // 8 personajes que recomiendan marcas (primero las que no has visitado)
+  const orden = [...marcas].sort(() => Math.random() - 0.5).sort((a, b) => juego.visitados.includes(a.id) - juego.visitados.includes(b.id));
+  RECOMENDADORES.forEach((nombre, i) => { const m = orden[i % orden.length]; promotoresDatos.push({ nombre, marca: m.id, color: m.color, icono: ["💬", "🎁", "✨", "🎰"][i % 4] }); });
   hud();
   mundo = crearMundo($("#mundo"), {
     mapa, info: infoEdificios(), look: perfil.look, looks: LOOKS, vecinos: VECINOS,
@@ -262,30 +456,51 @@ function arrancar() {
     alEntrar: (id) => entrar(id),
     alParcela: (dueno, i) => (dueno === "yo" ? tocarParcela(i) : tocarVecino(dueno, i)),
     alLetrero: (d) => (d === "yo" ? abrirGranja() : toast(t("granja_vecino", { n: vecino(d).nombre }))),
-    alCentro: (c) => { sonido.abrir(); mundo.efectoYo("magia", c.color || "#c6f36b"); toast(c.tipo === "arbolLuz" ? t("arbol_luz") : `✨ ${tx(ZONAS[c.zona])}: ${t("zona_" + c.zona)}`, 4000); },
+    alCentro: (c) => {
+      sonido.abrir(); mundo.efectoYo("magia", c.color || "#c6f36b");
+      toast(c.tipo === "arbolLuz" ? t("arbol_luz") : `✨ ${tx(ZONAS[c.zona])}: ${t("zona_" + c.zona)}`, 4000);
+      if (c.tipo === "arbolLuz") { juego.stats.arbol = (juego.stats.arbol || 0) + 1; guardar(); revisarMisiones(); }
+    },
+    alSaltar: () => sonido.teleport(),
+    promotores: promotoresDatos,
+    alPromotor: (i) => { const p = promotoresDatos[i]; mostrarReco(marcaPorId(p.marca), { quien: p.nombre }); },
+    anuncio,
+    alValla: (i) => { const m = marcaPorId(anuncioEnValla[i]); if (m) { E.sumar(m.id, "vallas"); mostrarReco(m, { anuncio: true }); } },
   });
   procesarAvisos();
   const deep = decodeURIComponent(location.hash.slice(1));
-  if (deep && marcaPorId(deep)) setTimeout(() => teletransporte(deep), 400);
-  else if (!juego.visitados.length && !juego.stats.sembradas) setTimeout(abrirBienvenida, 500);
+  const despues = () => { pintarMision(true); setTimeout(revisarGuia, 800); };
+  if (deep && marcaPorId(deep)) { setTimeout(() => teletransporte(deep), 400); despues(); }
+  else if (juego.diario !== hoy()) setTimeout(() => abrirCofre(() => { despues(); toast(`☝️ ${t("sigue_mision")}`, 4500); }), 500);
+  else despues();
   setInterval(tickVecinos, 3000);
-  setInterval(hud, 4000);
+  setInterval(() => { hud(); pintarMision(); }, 4000);
+  setInterval(recoAutomatica, 8000);
+  ultimaReco = Date.now() - 20000;
 }
 
-function entrar(id) {
+function entrar(id, vista) {
   sonido.entrar();
   mundo.efectoEdificio(id, "entrar");
-  setTimeout(() => (id === "universidad" ? abrirUniversidad() : id === "taller" ? abrirTaller() : abrirStand(id)), quieto ? 0 : 380);
+  setTimeout(() => {
+    if (id === "universidad") abrirUniversidad();
+    else if (id === "taller") abrirTaller(vista === "mercado" ? "mercado" : "recetas");
+    else {
+      abrirStand(id);
+      if (vista && vista !== "inicio") setTimeout(() => abrirStand(id, vista), quieto ? 0 : 500);
+    }
+  }, quieto ? 0 : 380);
 }
 
-function teletransporte(id) {
+function teletransporte(id, vista, alLlegar) {
   cerrarHoja();
+  $("#reco") && ($("#reco").hidden = true);
   sonido.teleport();
   const f = $("#fundido");
   f.classList.add("activo");
   setTimeout(() => {
-    if (id === "granja") mundo.teletransportar(48, 48, () => { mundo.efectoYo("teleport", "#c6f36b"); abrirGranja(); });
-    else mundo.teletransportarA(id, (eid) => { mundo.efectoYo("teleport", marcaPorId(eid)?.color || "#c6f36b"); entrar(eid); });
+    if (id === "granja") mundo.teletransportar(48, 48, () => { mundo.efectoYo("teleport", "#c6f36b"); alLlegar ? alLlegar() : abrirGranja(); });
+    else mundo.teletransportarA(id, (eid) => { mundo.efectoYo("teleport", marcaPorId(eid)?.color || "#c6f36b"); entrar(eid, vista); });
     f.classList.remove("activo");
   }, quieto ? 0 : 300);
 }
@@ -920,6 +1135,7 @@ function montarMostrador(m, c) {
       caja.classList.add("abierta", "explota");
       caja.innerHTML = `<div class="regalo-abierto revela"><span class="prod-grande">${r.obj ? objeto(r.obj).icono : "🌟"}</span><h3>${r.obj ? tx(objeto(r.obj)) : t("dos_lunas")}</h3><p>${msg}</p>${r.obj ? `<small>${tx(objeto(r.obj).efecto)}</small>` : ""}</div>`;
       confeti(28);
+      setTimeout(revisarMisiones, 900);
       volar("🍃", 3, pos, "#hojas");
       if (r.obj) setTimeout(() => volar(objeto(r.obj).icono, 3, pos, "#btn-inventario"), 200);
       if (r.lunas) setTimeout(() => volar("🌟", 4, pos, "#lunas"), 200);

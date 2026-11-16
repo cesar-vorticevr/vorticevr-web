@@ -29,7 +29,7 @@ function pintarMetricas() {
   const prom = m.calif?.length ? (m.calif.reduce((a, b) => a + b, 0) / m.calif.length).toFixed(1) + " ★" : "–";
   const datos = [
     ["Visitas al stand", m.visitas], ["Partidas jugadas", m.partidas], ["Cupones guardados", m.cupones],
-    ["Videos vistos completos", m.videos || 0], ["Me gusta en productos", m.favoritos || 0], ["Semillas registradas sembradas", m.semillas || 0], ["Compras registradas", m.canjes], ["Calificación", prom],
+    ["Videos vistos completos", m.videos || 0], ["Me gusta en productos", m.favoritos || 0], ["Semillas registradas sembradas", m.semillas || 0], ["Clics en vallas", m.vallas || 0], ["Recomendaciones seguidas", m.recos || 0], ["Compras registradas", m.canjes], ["Calificación", prom],
   ];
   $("#metricas").innerHTML = datos.map(([k, v]) => `<div class="metrica"><b>${v}</b><span>${k}</span></div>`).join("");
   const j = E.leerJuego();

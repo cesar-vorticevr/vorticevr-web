@@ -145,6 +145,20 @@ export function crearMapa(marcas) {
   // Faroles a lo largo de los caminos
   const deco = [];
   const libre = (x, y) => dentro(x, y) && !bloq[id(x, y)] && !camino[id(x, y)] && !reservado[id(x, y)] && enIsla(x + 0.5, y + 0.5, 1.5);
+
+  // Vallas publicitarias junto a los caminos principales (del centro a cada zona y a los lugares)
+  const vallas = [];
+  const principales = [0, 2, 4, 6, 8, 9].map((i) => caminos[i]).filter(Boolean);
+  principales.forEach((pts, n) => {
+    for (const k of [0.38, 0.72]) {
+      const i = Math.floor(k * (pts.length - 1)), a = pts[i], b = pts[i + 1];
+      const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1;
+      for (const lado of n % 2 ? [1, -1] : [-1, 1]) {
+        const x = Math.floor(a.x - (dy / L) * 2.3 * lado), y = Math.floor(a.y + (dx / L) * 2.3 * lado);
+        if (libre(x, y)) { vallas.push({ x: x + 0.5, y: y + 0.5 }); bloq[id(x, y)] = 1; marcarCirculo(reservado, x + 0.5, y + 0.5, 1.6); break; }
+      }
+    }
+  });
   for (const pts of caminos) {
     let acum = 0;
     for (let i = 1; i < pts.length; i++) {
@@ -189,5 +203,5 @@ export function crearMapa(marcas) {
   const contorno = [];
   for (let i = 0; i < 160; i++) { const a = (i / 160) * Math.PI * 2, r = radioIsla(a) - 0.4; contorno.push({ x: C.x + Math.cos(a) * r, y: C.y + Math.sin(a) * r }); }
 
-  return { N, bloq, edificios, plazas, centros, caminos, granjas, letreros, estanques, deco, flores, manchas, contorno };
+  return { N, bloq, edificios, plazas, centros, caminos, granjas, letreros, estanques, deco, flores, manchas, contorno, vallas };
 }

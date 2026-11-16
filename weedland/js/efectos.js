@@ -14,14 +14,10 @@ function audio() {
   if (mudo) return null;
   try {
     if (!ac) {
-      ac = new (window.AudioContext || window.webkitAudioContext)();
-      // eco suave para que suene "mágico"
-      salida = ac.createGain(); salida.gain.value = 0.55;
-      const eco = ac.createDelay(); eco.delayTime.value = 0.16;
-      const fb = ac.createGain(); fb.gain.value = 0.28;
-      const filtro = ac.createBiquadFilter(); filtro.type = "lowpass"; filtro.frequency.value = 2600;
+      // Seco y con la menor latencia posible (sin eco)
+      ac = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "interactive" });
+      salida = ac.createGain(); salida.gain.value = 0.6;
       salida.connect(ac.destination);
-      salida.connect(eco); eco.connect(filtro); filtro.connect(fb); fb.connect(eco); filtro.connect(ac.destination);
     }
     if (ac.state === "suspended") ac.resume();
     return ac;
@@ -29,7 +25,7 @@ function audio() {
 }
 function nota(f, t0, dur, { tipo = "sine", vol = 0.18, a = f } = {}) {
   const c = audio(); if (!c) return;
-  const o = c.createOscillator(), g = c.createGain(), t = c.currentTime + t0;
+  const o = c.createOscillator(), g = c.createGain(), t = c.currentTime + 0.005 + t0;
   o.type = tipo;
   o.frequency.setValueAtTime(f, t);
   if (a !== f) o.frequency.exponentialRampToValueAtTime(a, t + dur);
@@ -48,6 +44,12 @@ function ruido(t0, dur, vol = 0.08, frec = 1800) {
   s.buffer = buf; s.connect(f); f.connect(g); g.connect(salida);
   s.start(c.currentTime + t0);
 }
+// El navegador solo deja sonar después del primer toque: se "despierta" el audio
+// en ese primer toque para que el primer sonido no llegue tarde.
+for (const ev of ["pointerdown", "keydown", "touchstart"]) {
+  window.addEventListener(ev, () => { const c = audio(); if (c && c.state === "suspended") c.resume(); }, { capture: true, passive: true });
+}
+
 const ESCALA = [523, 587, 659, 784, 880, 1047, 1175, 1319, 1568, 1760, 2093];
 
 export const sonido = {

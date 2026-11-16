@@ -123,7 +123,7 @@ export function crearMundo(canvas, cfg) {
   ajustar();
 
   // ---------- entidades ----------
-  const yo = { x: inicio.x, y: inicio.y, ruta: [], fase: 0, dir: 1, vel: 5, look: cfg.look, alLlegar: null, salto: 0 };
+  const yo = { x: inicio.x, y: inicio.y, ruta: [], fase: 0, dir: 1, vel: 6.5, look: cfg.look, alLlegar: null, salto: 0 };
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   const lookAzar = () => ({ piel: pick(cfg.looks.pieles), pelo: pick(cfg.looks.pelos), ropa: pick(cfg.looks.ropas), gorra: Math.random() > 0.6 });
   const npcs = [];
@@ -137,6 +137,18 @@ export function crearMundo(canvas, cfg) {
     const v = cfg.vecinos.find((x) => x.id === l.dueno);
     return { x: l.x + 1.5, y: l.y + 0.5, look: v.look, nombre: v.nombre, fase: Math.random() * 6, dir: 1, ruta: [], vel: 1.2, espera: 2, casa: { x: l.x + 1, y: l.y } };
   });
+
+  // Personajes que recomiendan marcas (con globito de diálogo)
+  const promotores = (cfg.promotores || []).map((pr, i) => {
+    const pl = mapa.plazas[i % mapa.plazas.length];
+    let x = 0, y = 0, k = 0;
+    do {
+      const a = Math.random() * Math.PI * 2, r = pl.r + 1.2 + Math.random() * 2;
+      x = Math.floor(pl.x + Math.cos(a) * r); y = Math.floor(pl.y + Math.sin(a) * r); k++;
+    } while ((!dentro(x, y) || bloq[id(x, y)]) && k < 80);
+    return { ...pr, i, x: x + 0.5, y: y + 0.5, casa: { x, y }, fase: 0, dir: 1, ruta: [], vel: 1.3, espera: Math.random() * 3, look: { piel: pick(cfg.looks.pieles), pelo: pick(cfg.looks.pelos), ropa: pr.color, gorra: true } };
+  });
+  let objetivo = null;
 
   // ---------- partículas ----------
   const parts = [];
@@ -287,6 +299,15 @@ export function crearMundo(canvas, cfg) {
     if (sx === destino.x && sy === destino.y) { yo.ruta = []; alLlegar && alLlegar(); return; }
     const r = camino(sx, sy, destino.x, destino.y);
     if (!r) return;
+    // Viajes largos: salto mágico en vez de caminar tanto
+    if (r.length > 22) {
+      efecto("teleport", yo.x, yo.y, "#c6f36b");
+      yo.x = destino.x + 0.5; yo.y = destino.y + 0.5; yo.ruta = []; seguir = true;
+      efecto("teleport", yo.x, yo.y, "#c6f36b");
+      cfg.alSaltar && cfg.alSaltar();
+      alLlegar && setTimeout(alLlegar, 250);
+      return;
+    }
     yo.ruta = r; yo.alLlegar = alLlegar || null; seguir = true;
     marca = { x: destino.x + 0.5, y: destino.y + 0.5, t: 0 };
   }
@@ -310,11 +331,19 @@ export function crearMundo(canvas, cfg) {
       return Math.abs(w.x - c.x) < RX * 0.6 && w.y > c.y - 75 && w.y < c.y + RY * 0.6;
     }) || parcelaEn(gx, gy);
     if (pa) { caminarA(pa.x, pa.y, () => cfg.alParcela(pa.dueno, pa.i)); return; }
+    for (const pr of promotores) {
+      const c = iso(pr.x, pr.y);
+      if (Math.abs(w.x - c.x) < 26 && w.y < c.y + 10 && w.y > c.y - 100) { pr.dir = c.x > iso(yo.x, yo.y).x ? -1 : 1; cfg.alPromotor && cfg.alPromotor(pr.i); return; }
+    }
+    for (let i = 0; i < (mapa.vallas || []).length; i++) {
+      const c = iso(mapa.vallas[i].x, mapa.vallas[i].y);
+      if (Math.abs(w.x - c.x) < 76 && w.y > c.y - 150 && w.y < c.y + 6) { cfg.alValla && cfg.alValla(i); return; }
+    }
     const orden = [...mapa.edificios].sort((a, b) => b.x + b.y - (a.x + a.y));
     for (const e of orden) { const b = caja(e); if (w.x > b.x0 && w.x < b.x1 && w.y > b.y0 && w.y < b.y1) { irA(e.id); return; } }
     for (const c of mapa.centros) {
       const p = iso(c.x, c.y);
-      if (Math.abs(w.x - p.x) < 70 && w.y < p.y + 20 && w.y > p.y - 170) { caminarA(Math.floor(c.x), Math.floor(c.y), () => cfg.alCentro && cfg.alCentro(c)); return; }
+      if (Math.abs(w.x - p.x) < 70 && w.y < p.y + 20 && w.y > p.y - 170) { caminarA(Math.floor(c.x), Math.floor(c.y)); cfg.alCentro && cfg.alCentro(c); return; }
     }
     const le = mapa.letreros.find((l) => l.x === gx && l.y === gy);
     if (le) { caminarA(gx, gy, () => cfg.alLetrero && cfg.alLetrero(le.dueno)); return; }
@@ -364,7 +393,7 @@ export function crearMundo(canvas, cfg) {
     mover(yo, dt);
     if (antes && !yo.ruta.length) { marca = null; const cb = yo.alLlegar; yo.alLlegar = null; cb && cb(); }
     if (yo.salto > 0) yo.salto = Math.max(0, yo.salto - dt * 60);
-    for (const n of [...npcs, ...granjeros]) {
+    for (const n of [...npcs, ...granjeros, ...promotores]) {
       if (!mover(n, dt)) {
         n.espera -= dt;
         if (n.espera <= 0) {
@@ -911,6 +940,94 @@ export function crearMundo(canvas, cfg) {
     ctx.restore();
   }
 
+  // ---------- vallas publicitarias ----------
+  function dibujarValla(v, i, t) {
+    const p = iso(v.x, v.y);
+    if (!visible(p, 160)) return;
+    const ad = cfg.anuncio(i, t);
+    if (!ad) return;
+    const w = 150, h = 84, x0 = p.x - w / 2, y0 = p.y - 150;
+    // patas
+    ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.beginPath(); ctx.ellipse(p.x, p.y, 50, 14, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#2c2540"; ctx.fillRect(p.x - 46, y0 + h - 4, 7, 150 - h + 4); ctx.fillRect(p.x + 39, y0 + h - 4, 7, 150 - h + 4);
+    // giro al cambiar de anuncio
+    const flip = quieto ? 1 : Math.min(1, ad.fase / 0.35);
+    ctx.save(); ctx.translate(p.x, y0 + h / 2); ctx.scale(Math.max(0.05, flip), 1); ctx.translate(-p.x, -(y0 + h / 2));
+    brillo(p.x, y0 + h / 2, 110, alfa(ad.color, 0.25));
+    ctx.fillStyle = "#1d1233"; rrect(ctx, x0 - 6, y0 - 6, w + 12, h + 12, 12); ctx.fill();
+    const g = ctx.createLinearGradient(x0, y0, x0 + w, y0 + h);
+    g.addColorStop(0, tono(ad.color, 0.25)); g.addColorStop(1, tono(ad.color, -0.25));
+    ctx.fillStyle = g; rrect(ctx, x0, y0, w, h, 8); ctx.fill();
+    const txt = esClaro(ad.color) ? "#160f2b" : "#fff";
+    ctx.font = "38px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(ad.icono, x0 + 30, y0 + h / 2 + (quieto ? 0 : Math.sin(t * 3) * 3));
+    ctx.fillStyle = txt; ctx.textAlign = "left";
+    let fs = 17; ctx.font = `700 ${fs}px Fredoka, Nunito, sans-serif`;
+    while (ctx.measureText(ad.nombre).width > w - 62 && fs > 10) { fs--; ctx.font = `700 ${fs}px Fredoka, Nunito, sans-serif`; }
+    ctx.fillText(ad.nombre, x0 + 56, y0 + 28);
+    fs = 11; ctx.font = `700 ${fs}px Nunito, sans-serif`;
+    while (ctx.measureText(ad.lema).width > w - 62 && fs > 8) { fs--; ctx.font = `700 ${fs}px Nunito, sans-serif`; }
+    ctx.fillText(ad.lema, x0 + 56, y0 + 48);
+    ctx.fillStyle = "#160f2b"; rrect(ctx, x0 + 56, y0 + 58, 64, 18, 9); ctx.fill();
+    ctx.fillStyle = "#ffe27a"; ctx.font = "800 10px Nunito, sans-serif"; ctx.fillText(ad.cta, x0 + 63, y0 + 67.5);
+    ctx.restore();
+    // focos de casino alrededor
+    for (let k = 0; k < 18; k++) {
+      const per = 2 * (w + h + 24), d = (k / 18) * per;
+      let bx, by;
+      if (d < w + 12) { bx = x0 - 6 + d; by = y0 - 6; }
+      else if (d < w + h + 24) { bx = x0 + w + 6; by = y0 - 6 + (d - w - 12); }
+      else if (d < 2 * w + h + 36) { bx = x0 + w + 6 - (d - w - h - 24); by = y0 + h + 6; }
+      else { bx = x0 - 6; by = y0 + h + 6 - (d - 2 * w - h - 36); }
+      const on = quieto || (Math.floor(t * 5) + k) % 3 !== 0;
+      ctx.fillStyle = on ? "#fff3a8" : "#6a5a30"; ctx.beginPath(); ctx.arc(bx, by, 3, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  function dibujarPromotor(pr, t) {
+    const p = iso(pr.x, pr.y);
+    if (!visible(p, 80)) return;
+    dibujarPersona(ctx, p.x, p.y, pr.look, pr.fase, pr.dir, pr.ruta.length > 0);
+    const b = quieto ? 0 : Math.sin(t * 3 + pr.i) * 4;
+    const by = p.y - 98 + b;
+    ctx.fillStyle = "#fff"; rrect(ctx, p.x - 20, by - 16, 40, 30, 12); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(p.x - 6, by + 13); ctx.lineTo(p.x, by + 22); ctx.lineTo(p.x + 5, by + 13); ctx.fill();
+    ctx.font = "18px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(pr.icono || "💬", p.x, by - 1);
+    ctx.strokeStyle = pr.color; ctx.lineWidth = 2.5; rrect(ctx, p.x - 20, by - 16, 40, 30, 12); ctx.stroke();
+  }
+
+  // Flecha dorada que marca el objetivo de la misión
+  function dibujarObjetivo(t) {
+    if (!objetivo) return;
+    const p = iso(objetivo.x, objetivo.y);
+    const k = quieto ? 0 : (t * 1.2) % 1;
+    ctx.strokeStyle = `rgba(255,226,122,${1 - k})`; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.ellipse(p.x, p.y, 20 + k * 40, (20 + k * 40) / 2, 0, 0, Math.PI * 2); ctx.stroke();
+    const b = quieto ? 0 : Math.abs(Math.sin(t * 3.5)) * -18;
+    const ay = p.y - (objetivo.alto || 130) + b;
+    brillo(p.x, ay, 46, "rgba(255,226,122,.55)");
+    ctx.fillStyle = "#ffe27a"; ctx.strokeStyle = "#5a3a00"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(p.x - 13, ay - 30); ctx.lineTo(p.x + 13, ay - 30); ctx.lineTo(p.x + 13, ay - 6); ctx.lineTo(p.x + 26, ay - 6); ctx.lineTo(p.x, ay + 22); ctx.lineTo(p.x - 26, ay - 6); ctx.lineTo(p.x - 13, ay - 6); ctx.closePath();
+    ctx.stroke(); ctx.fill();
+  }
+  function dibujarFlechaBorde(t) {
+    if (!objetivo) return;
+    const p = iso(objetivo.x, objetivo.y);
+    const sx = W / 2 + (p.x - cam.x) * cam.z, sy = H / 2 + (p.y - 60 - cam.y) * cam.z;
+    const m = 46, top = 190, bot = 130;
+    if (sx > m && sx < W - m && sy > top && sy < H - bot) return;
+    const cx = Math.max(m, Math.min(W - m, sx)), cy = Math.max(top, Math.min(H - bot, sy));
+    const a = Math.atan2(sy - cy || (sy - H / 2), sx - cx || (sx - W / 2));
+    const pul = quieto ? 1 : 1 + Math.sin(t * 6) * 0.08;
+    brillo(cx, cy, 40, "rgba(255,226,122,.45)");
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(pul, pul);
+    ctx.fillStyle = "#ffe27a"; ctx.strokeStyle = "#5a3a00"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.rotate(a); ctx.fillStyle = "#5a3a00";
+    ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(-7, -10); ctx.lineTo(-3, 0); ctx.lineTo(-7, 10); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
   // ---------- bucle ----------
   let tiempo = 0, previo = performance.now();
   function cuadro(ahora) {
@@ -947,6 +1064,8 @@ export function crearMundo(canvas, cfg) {
     for (const o of mapa.deco) cosas.push({ k: o.x + o.y, f: () => dibujarDeco(o, t) });
     for (const o of mapa.centros) cosas.push({ k: o.x + o.y, f: () => dibujarCentro(o, t) });
     for (const l of mapa.letreros) cosas.push({ k: l.x + l.y + 1, f: () => dibujarLetrero(l) });
+    (mapa.vallas || []).forEach((v, i) => cosas.push({ k: v.x + v.y, f: () => dibujarValla(v, i, t) }));
+    for (const pr of promotores) cosas.push({ k: pr.x + pr.y + 0.01, f: () => dibujarPromotor(pr, t) });
     for (const pa of parcelas) cosas.push({ k: pa.x + pa.y + 1, f: () => dibujarPlanta(pa, t) });
     for (const n of npcs) { const p = iso(n.x, n.y); if (visible(p, 60)) cosas.push({ k: n.x + n.y + 0.01, f: () => dibujarPersona(ctx, p.x, p.y, n.look, n.fase, n.dir, n.ruta.length > 0) }); }
     for (const g of granjeros) {
@@ -983,6 +1102,9 @@ export function crearMundo(canvas, cfg) {
     }
     ctx.globalCompositeOperation = "source-over";
     dibujarParticulas();
+    dibujarObjetivo(t);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    dibujarFlechaBorde(t);
   }
   requestAnimationFrame(cuadro);
 
@@ -1011,6 +1133,13 @@ export function crearMundo(canvas, cfg) {
     efectoYo(nombre, color) { efecto(nombre, yo.x, yo.y, color); },
     saltar() { yo.salto = 30; },
     setLook(l) { yo.look = l; },
+    // objetivo de la misión: {tipo:"edificio",id} | {tipo:"parcela",dueno,i} | {tipo:"centro"} | null
+    setObjetivo(o) {
+      if (!o) { objetivo = null; return; }
+      if (o.tipo === "edificio") { const e = mapa.edificios.find((x) => x.id === o.id); objetivo = e ? { x: e.x, y: e.y, alto: (ALTO[info[e.id]?.plantilla] || 130) + 70 } : null; }
+      else if (o.tipo === "parcela") { const pa = parcelas.find((p) => p.dueno === o.dueno && p.i === o.i); objetivo = pa ? { x: pa.x + 0.5, y: pa.y + 0.5, alto: 90 } : null; }
+      else if (o.tipo === "centro") objetivo = { x: C.x, y: C.y, alto: 230 };
+    },
     setInfo(i) { info = i; },
     zoom(f) { cam.z = Math.min(1.6, Math.max(0.35, cam.z * f)); },
     centrar() { seguir = true; },
