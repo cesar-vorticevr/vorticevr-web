@@ -148,7 +148,7 @@ function pantallaEntrada() {
     const edad = PAISES.find((p) => p.id === pais)?.edad || 18;
     el.innerHTML = `
       <div class="caja-entrada">
-        <div class="hojas-entrada" aria-hidden="true">${"🍃🌿✨🍀🍃✨".split("").filter((c) => c.trim()).map((c, i) => `<span style="--i:${i}">${c}</span>`).join("")}</div>
+        <div class="hojas-entrada" aria-hidden="true">${["🍃", "🌿", "✨", "🍀", "🍃", "✨"].map((c, i) => `<span style="--i:${i}">${c}</span>`).join("")}</div>
         <div class="logo-grande"><span class="hoja-logo">✦</span>Weedland</div>
         <p class="lema">${t("lema")}</p>
         <div class="idiomas">
@@ -989,7 +989,7 @@ function abrirTaller(pestana = "recetas", cat = "textil") {
 async function transformar(r, cat) {
   for (const [k, n] of Object.entries(r.pide)) juego.inv[k] -= n;
   guardar();
-  const c = abrirHoja(`<div class="caldero"><div class="olla">⚗️</div><div class="remolino">${"🍃✨🌿✨🍃✨".split("").filter((x) => x.trim()).map((x, i) => `<span style="--i:${i}">${x}</span>`).join("")}</div><p>${t("transformando")}</p></div>`, { color: "#ffb35c" });
+  const c = abrirHoja(`<div class="caldero"><div class="olla">⚗️</div><div class="remolino">${["🍃", "✨", "🌿", "✨", "🍃", "✨"].map((x, i) => `<span style="--i:${i}">${x}</span>`).join("")}</div><p>${t("transformando")}</p></div>`, { color: "#ffb35c" });
   for (let i = 0; i < 6; i++) { sonido.burbuja(); await espera(220); }
   agregar(r.id); juego.stats.transformados++;
   if (r.lunas) juego.lunas += r.lunas;
