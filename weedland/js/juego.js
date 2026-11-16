@@ -269,7 +269,8 @@ function recoAutomatica() {
 const ordenAnuncios = [...marcas].sort((a, b) => (a.id.length * 7 + a.id.charCodeAt(1)) % 13 - (b.id.length * 7 + b.id.charCodeAt(1)) % 13);
 const anuncioEnValla = [];
 function anuncio(i, tiempo) {
-  const m = ordenAnuncios[(i * 5 + Math.floor(tiempo / 7)) % ordenAnuncios.length];
+  const n = ordenAnuncios.length;
+  const m = ordenAnuncios[(((i * 5 + Math.floor(Math.max(0, tiempo) / 7)) % n) + n) % n];
   const actual = marcaPorId(m.id) || m;
   anuncioEnValla[i] = actual.id;
   return { nombre: actual.nombre, color: actual.color, icono: actual.productos[0].icono, lema: tx(actual.productos[0].nombre), cta: t("valla_cta"), fase: tiempo % 7 };

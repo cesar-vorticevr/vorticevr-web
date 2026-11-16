@@ -1031,9 +1031,9 @@ export function crearMundo(canvas, cfg) {
   // ---------- bucle ----------
   let tiempo = 0, previo = performance.now();
   function cuadro(ahora) {
-    const dt = Math.min(0.05, (ahora - previo) / 1000); previo = ahora; tiempo += dt;
-    actualizar(dt);
-    dibujar(tiempo);
+    const dt = Math.max(0, Math.min(0.05, (ahora - previo) / 1000)); previo = ahora; tiempo += dt;
+    // Un error al dibujar nunca debe congelar el mundo
+    try { actualizar(dt); dibujar(tiempo); } catch (e) { console.error(e); }
     requestAnimationFrame(cuadro);
   }
   const lunaFondo = { x: 0.82, y: 0.14 };
