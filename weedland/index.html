@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Weedland Station</title>
+<meta name="description" content="Demo de Weedland Station: expo interactiva en 3D donde las marcas legales del sector cannábico tienen su stand, su catálogo y sus actividades.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0b0620">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilo.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<!-- La verificación de edad va en la pantalla de entrada (edad mínima según el país). -->
+<div id="entrada" class="entrada" hidden></div>
+
+<main id="app" hidden>
+  <canvas id="escena" aria-label="Weedland Station en 3D"></canvas>
+  <div id="etiquetas"></div>
+  <div id="cargando" class="cargando"><div class="anillo"></div><p>Cargando la estación…</p></div>
+
+  <header class="hud">
+    <button id="btn-inicio" class="logo" aria-label="Volver a la plaza"><span class="logo-marca">W</span><span class="logo-texto">Weedland<small>STATION</small></span></button>
+    <div class="hud-der">
+      <button id="btn-polen" class="polen" title="Tus estrellas: tócalas para ver qué puedes canjear"><span>🌟</span><b id="polen">0</b></button>
+      <button id="btn-ayuda" class="redondo" aria-label="Ayuda">?</button>
+      <button id="btn-sonido" class="redondo" aria-label="Sonido">🔊</button>
+    </div>
+  </header>
+
+  <nav class="nav">
+    <button data-ir="plaza"><span>🛰️</span><small>Plaza</small></button>
+    <button data-ir="directorio"><span>🧭</span><small>Marcas</small></button>
+    <button data-ir="cultivo"><span>🌱</span><small>Cultivo</small></button>
+    <button data-ir="mercado"><span>🛒</span><small>Mercado</small></button>
+    <button data-ir="nave"><span>🚀</span><small>Nave</small></button>
+    <button data-ir="premios"><span>🎁</span><small>Premios</small></button>
+  </nav>
+
+  <div id="stick" class="stick" aria-label="Joystick para caminar"><div class="bola"></div></div>
+  <button id="entrar" class="entrar" hidden></button>
+  <div id="guia" class="guia" hidden></div>
+
+  <aside id="panel" class="panel" hidden role="dialog" aria-modal="false">
+    <button id="panel-cerrar" class="cerrar" aria-label="Cerrar">✕</button>
+    <div id="panel-cuerpo" class="panel-cuerpo"></div>
+  </aside>
+  <div id="modal" class="modal" hidden><div id="modal-caja" class="modal-caja"></div></div>
+  <div id="toasts" aria-live="polite"></div>
+  <div id="tour-ui" class="tour-ui" hidden><p id="subtitulo" aria-live="polite"></p><button id="saltar-tour" class="btn sec chico">Saltar ⏭</button></div>
+  <div id="destello" class="destello"></div>
+</main>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
