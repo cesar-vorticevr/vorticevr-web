@@ -27,10 +27,21 @@ export function semillasRegistradas(marcas) {
       tipo: canamo ? "canamo" : "flor", costo: 20 + (p.nombre.length % 4) * 5,
     });
   }));
+  // Las marcas del pabellón Cáñamo registran su semilla de cáñamo industrial (da fibra y grano para los talleres)
+  CANAMO_MARCAS.forEach(([mid, nombre]) => {
+    const m = marcas.find((x) => x.id === mid);
+    if (m) lista.push({ id: `s:${mid}-canamo`, producto: null, marca: mid, nombre, icono: "🌾", tipo: "canamo", costo: 25 });
+  });
   // una sola entrada por variedad (los paquetes 3/5/10 son la misma semilla)
   const vistos = new Set();
   return lista.filter((s) => { const k = s.marca + "|" + s.nombre; if (vistos.has(k)) return false; vistos.add(k); return true; });
 }
+const CANAMO_MARCAS = [["hilo-natural", "Cáñamo textil"], ["nativa", "Cáñamo para grano"], ["canamo-vivo", "Cáñamo para construcción"], ["papel-verde", "Cáñamo para papel"], ["telaverde", "Cáñamo de fibra larga"]];
+// Qué se cosecha de cada tipo de semilla (para explicarlo en el juego)
+export const TIPOS_SEMILLA = {
+  flor: { nombre: "Flor", icono: "🌼", da: "flores", para: "la Botica (bálsamos, tinturas y aceites aromáticos)" },
+  canamo: { nombre: "Cáñamo", icono: "🌾", da: "fibra y grano", para: "el Taller textil (cuerda, papel, tela, bolsas, bloques) y la Cocina (aceite y proteína)" },
+};
 
 // ---------- aditamentos (los venden las marcas de Cultivo en el Mercado) ----------
 // vel: fracción de tiempo que ahorra · rinde: material extra al cosechar

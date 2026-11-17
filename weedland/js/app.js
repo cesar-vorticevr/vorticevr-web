@@ -3,7 +3,7 @@ import { PAISES, PABELLONES, PREMIO_DIA, catalogo, preguntasMarca, nombrePais, v
 import { leerPerfil, guardarPerfil, leerJuego, guardarJuego, marcas, sumar, codigo, CLAVES, registrarVista } from "./estado.js";
 import { urlDe } from "./medios.js";
 import { sonido, volar, cartel, confeti, flotante, contar, alternarSonido, estaMudo } from "./efectos.js";
-import { semillasRegistradas, ADITAMENTOS, aditamento, OBJETOS, PUESTOS, puesto, claseDe, progreso, faltan, rinde, factorVel, tiempoTexto, MAX_VIDEOS, COMPRADORES, MAX_TIENDA, PRECIO_MAX, precioJusto, esperaVenta } from "./cultivo.js";
+import { semillasRegistradas, ADITAMENTOS, aditamento, OBJETOS, PUESTOS, puesto, claseDe, progreso, faltan, rinde, factorVel, tiempoTexto, MAX_VIDEOS, COMPRADORES, MAX_TIENDA, PRECIO_MAX, precioJusto, esperaVenta, TIPOS_SEMILLA } from "./cultivo.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -756,9 +756,15 @@ function irLugar(tipo, id, cb, saltar = true) {
 
 function abrirCultivo() {
   refrescarCultivo();
+  const primeraVez = !J.regaloSemilla;
   if (!J.regaloSemilla) {
     const s = semillasDe()[0];
     if (s) { J.regaloSemilla = true; sumarInv("semillas", s.id); guardar(); setTimeout(() => { cartel({ titulo: "¡SEMILLA DE REGALO!", sub: `🌱 ${s.nombre} de ${marca(s.marca).nombre}`, ms: 2200 }); sonido.premio(); }, 500); }
+  }
+  // regalo de una semilla de cáñamo (también a quien ya tenía la de flor): con ella se descubre el Taller textil y la Cocina
+  if (!J.regaloCanamo) {
+    const s = semillasDe().find((x) => x.tipo === "canamo");
+    if (s) { J.regaloCanamo = true; sumarInv("semillas", s.id); guardar(); setTimeout(() => { cartel({ titulo: "¡SEMILLA DE CÁÑAMO!", sub: `🌾 ${s.nombre}: da fibra y grano para el Taller textil y la Cocina`, ms: 2800 }); sonido.premio(); }, primeraVez ? 2900 : 600); }
   }
   const celdas = J.parcelas.map((p, i) => {
     if (!p) return `<button class="parcela-c" data-parcela="${i}"><span class="pc-ico">🟫</span><b>Parcela ${i + 1}</b><small>Vacía · sembrar</small></button>`;
@@ -982,22 +988,34 @@ function abrirMercado() {
   { tipo: "mercado", nav: "mercado", c: "--c:#ffd76a" });
   $$("[data-puesto]").forEach((b) => (b.onclick = () => { sonido.tap(); irLugar("puesto", b.dataset.puesto, () => abrirPuesto(b.dataset.puesto), false); }));
 }
+let tipoSem = "todas"; // filtro del Banco de semillas: todas, canamo o flor
 function abrirPuesto(id, filtro = "") {
   const pu = puesto(id); if (!pu) return;
   const pat = pu.marca ? marca(pu.marca) : null;
   let cuerpo = "";
   if (pu.tipo === "semillas") {
-    const todas = semillasDe();
-    const lista = todas.filter((s) => !filtro || (s.nombre + " " + marca(s.marca).nombre).toLowerCase().includes(filtro));
-    cuerpo = `<input class="buscar" id="q-sem" placeholder="Buscar entre ${todas.length} semillas registradas…" value="${esc(filtro)}" autocomplete="off">
+    // cáñamo primero (da fibra y grano para el Taller textil y la Cocina), luego flor
+    const todas = semillasDe().slice().sort((a, b) => (a.tipo === "canamo" ? 0 : 1) - (b.tipo === "canamo" ? 0 : 1));
+    const n = (t) => todas.filter((s) => s.tipo === t).length;
+    const lista = todas.filter((s) => (tipoSem === "todas" || s.tipo === tipoSem) && (!filtro || (s.nombre + " " + marca(s.marca).nombre).toLowerCase().includes(filtro)));
+    cuerpo = `<div class="tipos-sem">${Object.entries(TIPOS_SEMILLA).map(([k, t]) => `<div class="tipo-sem"><b>${t.icono} ${t.nombre}</b><small>Cosechas ${t.da} para ${t.para}.</small></div>`).join("")}</div>
+      <div class="chips" style="margin-top:10px">${[["todas", `Todas · ${todas.length}`], ["canamo", `🌾 Cáñamo · ${n("canamo")}`], ["flor", `🌼 Flor · ${n("flor")}`]].map(([k, t]) => `<button data-tipo-sem="${k}" class="${tipoSem === k ? "activo" : ""}">${t}</button>`).join("")}</div>
+      <input class="buscar" id="q-sem" placeholder="Buscar entre ${todas.length} semillas registradas…" value="${esc(filtro)}" autocomplete="off" style="margin-top:8px">
       <div class="lista-m" style="margin-top:10px">${lista.slice(0, 40).map((s) => { const m = marca(s.marca); const n = J.semillas[s.id] || 0; return `<div class="item-m" style="${vars(m)}"><div class="logo-m">${s.icono}</div><div class="txt"><b>${esc(s.nombre)}</b><small>${esc(m.nombre)} · ${s.tipo === "canamo" ? "fibra y grano" : "flor"}${n ? ` · tienes ${n}` : ""}</small></div><button class="btn chico oro" data-comprar-s="${s.id}" ${J.polen < s.costo ? "disabled" : ""}>${s.costo} ⭐</button></div>`; }).join("")}</div>
       ${lista.length > 40 ? `<p class="suave chico-t">…y ${lista.length - 40} más. Usa el buscador.</p>` : ""}`;
   } else if (pu.tipo === "aditamentos") {
     cuerpo = `<div class="lista-m">${ADITAMENTOS.map((a) => { const m = marca(a.marca) || { color: "#6ff0ff", color2: "#0c3d5a", nombre: "" }; const n = J.aditamentos[a.id] || 0; return `<div class="item-m" style="${vars(m)}"><div class="logo-m">${a.icono}</div><div class="txt"><b>${esc(a.nombre)}</b><small>${esc(m.nombre)} · ${esc(a.desc)}${n ? ` · tienes ${n}` : ""}</small></div><button class="btn chico oro" data-comprar-a="${a.id}" ${J.polen < a.costo ? "disabled" : ""}>${a.costo} ⭐</button></div>`; }).join("")}</div>`;
   } else {
-    cuerpo = `<div class="lista-m">${pu.recetas.map(([prod, ing]) => {
+    // ¿De dónde sale cada material? fibra y grano = semillas de cáñamo; flor = semillas de flor
+    const faltan = new Set();
+    pu.recetas.forEach(([, ing]) => Object.entries(ing).forEach(([k, n]) => { if ((J.inv[k] || 0) < n) faltan.add(k); }));
+    const deCanamo = ["fibra", "grano"].some((k) => faltan.has(k)), deFlor = faltan.has("flor");
+    cuerpo = `${deCanamo || deFlor ? `<div class="tarjeta pista-mat"><b>${deCanamo ? "🌾 La fibra y el grano salen de las semillas de cáñamo" : "🌼 Las flores salen de las semillas de flor"}</b>
+        <small>Cómpralas en el Banco de semillas, siémbralas en Mi cultivo y, al cosechar, regresa aquí.${deCanamo ? " Las semillas de flor solo dan flores." : ""}</small>
+        <button class="btn chico" data-ir-semillas="${deCanamo ? "canamo" : "flor"}">${deCanamo ? "🌾 Ver semillas de cáñamo" : "🌼 Ver semillas de flor"}</button></div>` : ""}
+      <div class="lista-m">${pu.recetas.map(([prod, ing]) => {
       const ok = Object.entries(ing).every(([k, n]) => (J.inv[k] || 0) >= n);
-      return `<div class="item-m"><div class="logo-m" style="--c:${pu.color};--c2:#1e1446">${OBJETOS[prod].icono}</div><div class="txt"><b>${esc(OBJETOS[prod].nombre)}</b><small>${Object.entries(ing).map(([k, n]) => `${OBJETOS[k].icono}${J.inv[k] || 0}/${n}`).join(" · ")} · vale ~${OBJETOS[prod].valor} ⭐</small></div><button class="btn chico" data-hacer="${prod}" ${ok ? "" : "disabled"}>Hacer</button></div>`;
+      return `<div class="item-m"><div class="logo-m" style="--c:${pu.color};--c2:#1e1446">${OBJETOS[prod].icono}</div><div class="txt"><b>${esc(OBJETOS[prod].nombre)}</b><small>${Object.entries(ing).map(([k, n]) => `${OBJETOS[k].icono} ${OBJETOS[k].nombre.replace(" de cáñamo", "")} ${J.inv[k] || 0}/${n}`).join(" · ")} · vale ~${OBJETOS[prod].valor} ⭐</small></div><button class="btn chico" data-hacer="${prod}" ${ok ? "" : "disabled"}>Hacer</button></div>`;
     }).join("")}</div>
     ${pat ? `<button class="tarjeta fila-t ancho" id="video-taller" style="text-align:left;margin-top:10px;${vars(pat)}"><span class="grande">🎬</span><span class="txt"><b>Así se hace · video de ${esc(pat.nombre)}</b><small>Patrocinador del ${esc(pu.nombre)}</small></span><span class="costo">${J.talleresVistos.includes(id) ? "✓" : "+10 ⭐"}</span></button>` : ""}`;
   }
@@ -1009,6 +1027,8 @@ function abrirPuesto(id, filtro = "") {
       ${clase ? `<button class="btn chico sec" id="aprender">${J.sabias.includes(id) ? "✓ Ya aprendiste esto" : "Aprende más · +10 ⭐"}</button>` : ""}</div>
     <div class="seccion">${cuerpo}</div>
     <p class="nota">Saldo: ${J.polen} ⭐ · Todo es virtual dentro del juego.</p>`, { tipo: "puesto", id, nav: "mercado", c: `--c:${pu.color}` });
+  $$("[data-tipo-sem]").forEach((b) => (b.onclick = () => { sonido.tap(); tipoSem = b.dataset.tipoSem; abrirPuesto(id, filtro); }));
+  $$("[data-ir-semillas]").forEach((b) => (b.onclick = () => { sonido.tap(); tipoSem = b.dataset.irSemillas; irLugar("puesto", "semillas", () => abrirPuesto("semillas"), false); }));
   const q = $("#q-sem"); if (q) { q.oninput = (e) => { const v = e.target.value.trim().toLowerCase(); abrirPuesto(id, v); const nq = $("#q-sem"); nq.focus(); nq.setSelectionRange(v.length, v.length); }; }
   $$("[data-comprar-s]").forEach((b) => (b.onclick = () => {
     const s = semillaPorId(b.dataset.comprarS); if (!s || !gastar(s.costo)) return;

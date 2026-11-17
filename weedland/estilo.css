@@ -329,3 +329,11 @@ h1, h2, h3, h4 { font-family: Fredoka, system-ui, sans-serif; font-weight: 600; 
 .rep-real.llenar video { object-fit: cover; }
 .rr-prog { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: rgba(255,255,255,.15); }
 .rr-prog i { display: block; height: 100%; width: 0; background: var(--c, var(--cian)); transition: width .25s linear; }
+.tipos-sem { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tipo-sem { padding: 10px; border-radius: 14px; background: var(--panel-2); border: 1px solid var(--borde); }
+.tipo-sem b { display: block; font-size: .9rem; }
+.tipo-sem small { color: var(--suave); font-size: .74rem; line-height: 1.35; display: block; margin-top: 2px; }
+.pista-mat { display: grid; gap: 6px; margin-bottom: 10px; border-color: var(--oro); }
+.pista-mat small { color: var(--suave); }
+.pista-mat .btn { justify-self: start; }
+@media (max-width: 440px) { .tipos-sem { grid-template-columns: 1fr; } }
