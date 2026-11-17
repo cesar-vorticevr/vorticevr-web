@@ -4,6 +4,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { PABELLONES, catalogo } from "./datos.js";
 import { PUESTOS } from "./cultivo.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { mediosDe, dibujarEn, tieneMedios } from "./medios.js";
 
 const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
 // Medidas: plaza central, pabellones (12 stands en círculo) y módulos exteriores (universidad e islas de marca)
@@ -23,7 +25,7 @@ function texCanvas(w, h, s = 1) {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   const g = c.getContext("2d"); g.scale(s, s);
-  return { c, g, t };
+  return { c, g, t, wl: w, hl: h };
 }
 function ajustar(g, texto, max, tam, peso = 700) {
   let s = tam;
@@ -440,7 +442,7 @@ export function crearEstacion(canvas, cfg) {
     const most = new THREE.Mesh(new THREE.BoxGeometry(premium ? 3.4 : 2.6, 1.05, 0.9), [blanco, blanco, blanco, blanco, conMapa(s.mt.t), blanco]);
     most.position.set(0.6, 0.82, P / 2 - 2.2); g.add(most);
     const holo = holograma(m, 0.6, 2.55, P / 2 - 2.2, premium ? 1.3 : 1); g.add(holo); s.anim.push(holo.userData.animar);
-    const rob = robot(m.color, -(premium ? 2.6 : 1.9), P / 2 - 1.5); g.add(rob); s.anim.push(rob.userData.animar);
+    const rob = robot(m.color, -(premium ? 2.6 : 1.9), P / 2 - 1.5); g.add(rob); s.anim.push(rob.userData.animar); s.rob = rob;
     s.saludar = rob.userData.saludar;
     if (premium) { const rob2 = robot(m.color, 3.4, P / 2 - 1.5, 0.9); g.add(rob2); s.anim.push(rob2.userData.animar); }
     // Macetas
@@ -490,8 +492,8 @@ export function crearEstacion(canvas, cfg) {
     const letrero = new THREE.Mesh(new THREE.PlaneGeometry(12, 2.35), new THREE.MeshBasicMaterial({ map: s.lt.t, toneMapped: false, side: THREE.DoubleSide }));
     letrero.position.set(0, 9.6, -RM + 0.6); g.add(letrero);
     // Logo gigante flotando con anillos
-    const logo = spriteEmoji(m.icono, 6); logo.position.set(0, 13.5, -3); g.add(logo);
-    const halo = spriteBrillo(m.color, 12); halo.position.copy(logo.position); halo.material.opacity = 0.55; g.add(halo);
+    const logo = spriteEmoji(m.icono, 6); logo.position.set(0, 13.5, -3); g.add(logo); s.logoSprite = logo;
+    const halo = spriteBrillo(m.color, 12); halo.position.copy(logo.position); halo.material.opacity = 0.55; g.add(halo); s.logoHalo = halo;
     const aros = [0, 1].map((k) => { const a = new THREE.Mesh(new THREE.TorusGeometry(3.6 + k * 0.8, 0.08, 8, 64), neon(k ? "#ffffff" : m.color)); a.position.copy(logo.position); g.add(a); return a; });
     s.anim.push((t) => { logo.position.y = 13.5 + Math.sin(t * 1.1) * 0.4; aros[0].rotation.set(t * 0.6, t * 0.4, 0); aros[1].rotation.set(-t * 0.3, 0, t * 0.5); aros.forEach((a) => a.position.y = logo.position.y); });
     // Mostrador central con holograma
@@ -515,7 +517,7 @@ export function crearEstacion(canvas, cfg) {
     [[-1, 0.3], [1, -0.3]].forEach(([sg, r]) => g.add(totem(m, s, sg * 5.5, 5, r, 3.4)));
     [[-5.5, 5], [5.5, 5]].forEach(([x, z]) => obst.push({ caja: g, x0: x - 0.9, x1: x + 0.9, z0: z - 0.5, z1: z + 0.5 }));
     // Robots anfitriones
-    [[-2.8, -1], [2.8, -1]].forEach(([x, z], i) => { const r = robot(m.color, x, z, 1.1); g.add(r); s.anim.push(r.userData.animar); if (!i) s.saludar = r.userData.saludar; });
+    [[-2.8, -1], [2.8, -1]].forEach(([x, z], i) => { const r = robot(m.color, x, z, 1.1); g.add(r); s.anim.push(r.userData.animar); if (!i) { s.saludar = r.userData.saludar; s.rob = r; } });
     // Arco de entrada en la punta del puente
     const ent = new THREE.Group(); ent.position.set(0, 0, R_ISLA - 1.2); g.add(ent);
     [-2.6, 2.6].forEach((x) => { const c = new THREE.Mesh(new THREE.BoxGeometry(0.6, 5, 0.6), blanco); c.position.set(x, 2.5, 0); ent.add(c); const l = new THREE.Mesh(new THREE.BoxGeometry(0.12, 4.6, 0.65), neon(m.color)); l.position.set(x, 2.5, 0); ent.add(l); obst.push({ caja: g, x0: x - 0.6, x1: x + 0.6, z0: R_ISLA - 1.8, z1: R_ISLA - 0.6 }); });
@@ -534,19 +536,162 @@ export function crearEstacion(canvas, cfg) {
   }
 
   function pintarStand(s, cambiarSlide = false) {
-    if (cambiarSlide) s.slide = (s.slide + 1) % 3;
-    dibujarPantalla(s.pt.g, 1024, 576, s.m, s.slide, s.productos); s.pt.t.needsUpdate = true;
-    s.lt.g.clearRect(0, 0, 1024, 200); dibujarLetrero(s.lt.g, 1024, 200, s.m); s.lt.t.needsUpdate = true;
-    if (s.entrada) { s.entrada.g.clearRect(0, 0, 1024, 200); dibujarLetrero(s.entrada.g, 1024, 200, s.m); s.entrada.t.needsUpdate = true; }
-    dibujarMostrador(s.mt.g, 512, 256, s.m); s.mt.t.needsUpdate = true;
+    const md = s.med, promos = (s.m.promos || []).filter(promoVigente);
+    if (cambiarSlide) { s.slide = (s.slide + 1) % 3; if (s.slide === 2) s.promoI = (s.promoI || 0) + 1; }
+    if (!s.vidPantalla) {
+      dibujarPantalla(s.pt.g, 1024, 576, s.m, s.slide, s.productos);
+      if (md && md.pantalla && s.slide === 0) { dibujarEn(s.pt.g, md.pantalla, 0, 0, 1024, 576, "llenar"); s.pt.g.strokeStyle = s.m.color; s.pt.g.lineWidth = 10; s.pt.g.strokeRect(5, 5, 1014, 566); }
+      if (s.slide === 2 && promos.length) { const p = promos[(s.promoI || 0) % promos.length]; dibujarPromo(s.pt.g, 1024, 576, s.m, p, md && md.promos && md.promos[p.id]); }
+      if (md && md.logo && !(md.pantalla && s.slide === 0)) { s.pt.g.fillStyle = "rgba(255,255,255,.92)"; rr(s.pt.g, 1024 - 150, 22, 128, 128, 22); s.pt.g.fill(); dibujarEn(s.pt.g, md.logo, 1024 - 142, 30, 112, 112, "contener"); }
+      s.pt.t.needsUpdate = true;
+    }
+    const letrero = (tx) => {
+      tx.g.clearRect(0, 0, 1024, 200); dibujarLetrero(tx.g, 1024, 200, s.m);
+      if (md && md.logo) { // logo a la izquierda y el nombre a su lado
+        const f = tx.g.createLinearGradient(0, 0, 1024, 0); f.addColorStop(0, s.m.color); f.addColorStop(1, mezclar(s.m.color, 0.25, "#ffffff"));
+        tx.g.fillStyle = f; tx.g.fillRect(0, 0, 1024, 200);
+        tx.g.fillStyle = "#fff"; rr(tx.g, 18, 14, 172, 172, 28); tx.g.fill(); dibujarEn(tx.g, md.logo, 26, 22, 156, 156, "contener");
+        tx.g.fillStyle = s.m.color2; tx.g.textAlign = "center"; tx.g.textBaseline = "middle"; ajustar(tx.g, s.m.nombre, 780, 76); tx.g.fillText(s.m.nombre, 610, 104);
+      }
+      tx.t.needsUpdate = true;
+    };
+    letrero(s.lt); if (s.entrada) letrero(s.entrada);
+    dibujarMostrador(s.mt.g, 512, 256, s.m);
+    if (md && md.logo) { s.mt.g.fillStyle = s.m.color2; s.mt.g.fillRect(0, 0, 512, 256); dibujarEn(s.mt.g, md.logo, 156, 28, 200, 200, "contener"); }
+    s.mt.t.needsUpdate = true;
     pintarTotems(s); pintarVideos(s, 0);
   }
   function pintarTotems(s) {
-    const lista = s.productos.length ? s.productos : [{ icono: s.m.icono, nombre: s.m.nombre, precio: "", cat: "" }];
-    s.totems.forEach((tt, i) => { dibujarTotem(tt.g, 256, 512, s.m, lista[(s.totemI + i * 5) % lista.length]); tt.t.needsUpdate = true; });
+    const md = s.med, lista = s.productos.length ? s.productos : [{ icono: s.m.icono, nombre: s.m.nombre, precio: "", cat: "" }];
+    s.totems.forEach((tt, i) => {
+      if (s.vidTotem) return; // los tótems están pasando un video vertical
+      if (md && md.totem && (i === 0 || s.totemI % 2)) { tt.g.fillStyle = "#0b0718"; tt.g.fillRect(0, 0, 256, 512); dibujarEn(tt.g, md.totem, 0, 0, 256, 512, "llenar"); tt.g.strokeStyle = s.m.color; tt.g.lineWidth = 6; tt.g.strokeRect(3, 3, 250, 506); }
+      else dibujarTotem(tt.g, 256, 512, s.m, lista[(s.totemI + i * 5) % lista.length]);
+      tt.t.needsUpdate = true;
+    });
   }
   function pintarVideos(s, dt) {
-    s.videos.forEach((v) => { v.avance = (v.avance + dt / 12) % 1; dibujarVideo(v.tx.g, 1024, 576, s.m, v.k, v.avance, s.productos); v.tx.t.needsUpdate = true; });
+    s.videos.forEach((v) => {
+      if (v.real) return; // esta pantalla pasa un video de la marca (se dibuja en cada cuadro)
+      v.avance = (v.avance + dt / 12) % 1; dibujarVideo(v.tx.g, 1024, 576, s.m, v.k, v.avance, s.productos); v.tx.t.needsUpdate = true;
+    });
+  }
+
+  // ---------- lo que sube cada marca: imágenes, videos, modelo 3D y promociones ----------
+  const hoyMx = () => new Date(Date.now() - 6 * 3600e3).toISOString().slice(0, 10);
+  function promoVigente(p) { return p && p.titulo && (!p.hasta || p.hasta >= hoyMx()); }
+  function dibujarPromo(g, w, h, m, p, img) {
+    const f = g.createLinearGradient(0, 0, w, h); f.addColorStop(0, m.color2); f.addColorStop(1, "#06030f");
+    g.fillStyle = f; g.fillRect(0, 0, w, h);
+    let x0 = 56;
+    if (img) { g.save(); rr(g, w - h + 40, 40, h - 80, h - 80, 30); g.clip(); dibujarEn(g, img, w - h + 40, 40, h - 80, h - 80, "llenar"); g.restore(); }
+    const ancho = (img ? w - h : w) - 90;
+    g.textAlign = "left"; g.textBaseline = "middle";
+    g.fillStyle = "#ffd76a"; g.font = `700 34px ${FUENTE}`; g.fillText("🔥 PROMOCIÓN", x0, h * 0.18);
+    g.fillStyle = "#fff"; ajustar(g, p.titulo, ancho, 76); g.fillText(p.titulo, x0, h * 0.38);
+    if (p.texto) {
+      g.fillStyle = "rgba(255,255,255,.85)"; g.font = `600 30px ${FUENTE}`;
+      const pal = String(p.texto).split(/\s+/), lineas = []; let l = "";
+      pal.forEach((x) => { const t = l ? l + " " + x : x; if (g.measureText(t).width > ancho && l) { lineas.push(l); l = x; } else l = t; });
+      if (l) lineas.push(l);
+      lineas.slice(0, 3).forEach((t, i) => g.fillText(t, x0, h * 0.56 + i * 40));
+    }
+    if (p.hasta) { g.fillStyle = m.color; g.font = `700 26px ${FUENTE}`; g.fillText(`Válida hasta el ${p.hasta.split("-").reverse().join("/")}`, x0, h * 0.86); }
+    g.strokeStyle = m.color; g.lineWidth = 10; g.strokeRect(5, 5, w - 10, h - 10);
+  }
+  // más resolución para el canvas de una pantalla cuando trae fotos o video de la marca
+  function nitido(tx, w, h) {
+    if (tx.c.width >= w) return;
+    tx.c.width = w; tx.c.height = h; tx.g.setTransform(w / tx.wl, 0, 0, h / tx.hl, 0, 0);
+    tx.t.dispose(); tx.t.needsUpdate = true;
+  }
+  const gltf = new GLTFLoader();
+  async function aplicarMedios(s) {
+    const m = s.m, clave = JSON.stringify([m.medios || null, m.videosMarca || null, m.promos || null]);
+    if (s.clave === clave) return;
+    s.clave = clave;
+    const md = await mediosDe(m);
+    if (s.clave !== clave) return; // llegó otro cambio mientras cargaba
+    // videos: se detienen los de antes
+    (s.vidEls || []).forEach((x) => { x.el.pause(); x.el.removeAttribute("src"); x.el.load(); });
+    s.vidEls = []; s.vidPantalla = null; s.vidTotem = null;
+    s.videos.forEach((v) => (v.real = null));
+    s.med = md;
+    if (md.pantalla || md.logo) { nitido(s.pt, 1024, 576); nitido(s.lt, 1024, 200); nitido(s.mt, 512, 256); if (s.entrada) nitido(s.entrada, 1024, 200); }
+    if (md.totem) s.totems.forEach((tt) => nitido(tt, 512, 1024));
+    // en las islas, el logo gigante que flota es el de la marca
+    if (s.logoSprite) {
+      if (!s.logoEmoji) s.logoEmoji = s.logoSprite.material.map;
+      if (md.logo) { const t = new THREE.Texture(md.logo); t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true; s.logoSprite.material.map = t; }
+      else s.logoSprite.material.map = s.logoEmoji;
+      s.logoSprite.material.needsUpdate = true; s.logoSprite.material.toneMapped = !md.logo;
+      if (s.logoHalo) { s.logoHalo.material.opacity = md.logo ? 0.18 : 0.55; s.logoHalo.position.z = md.logo ? -3.6 : -3; }
+    }
+    const nuevoVideo = (v) => {
+      const el = document.createElement("video");
+      el.muted = true; el.loop = true; el.playsInline = true; el.preload = "auto"; el.src = v.url;
+      const x = { el, v }; s.vidEls.push(x); return x;
+    };
+    const H = md.videos.filter((v) => v.orient !== "vertical"), V = md.videos.filter((v) => v.orient === "vertical");
+    if (H.length) {
+      if (s.videos.length) s.videos.forEach((pv, i) => { pv.real = nuevoVideo(H[i % H.length]); nitido(pv.tx, 1024, 576); });
+      else { s.vidPantalla = nuevoVideo(H[0]); nitido(s.pt, 1024, 576); }
+    }
+    if (V.length) { s.vidTotem = s.totems.map((tt, i) => nuevoVideo(V[i % V.length])); s.totems.forEach((tt) => nitido(tt, 512, 1024)); }
+    // modelo 3D en lugar del robot (con su animación, si tiene)
+    if (s.modelo) { s.modelo.removeFromParent(); s.anim.splice(s.anim.indexOf(s.modeloAnim), 1); s.modelo = null; }
+    if (s.rob) s.rob.visible = true;
+    if (md.modelo && s.rob) {
+      try {
+        const r = await gltf.loadAsync(md.modelo.url);
+        if (s.clave !== clave) return;
+        const obj = r.scene, caja = new THREE.Box3().setFromObject(obj), tam = caja.getSize(new THREE.Vector3());
+        const k = (md.modelo.alto || 2) / Math.max(tam.y, 0.001);
+        obj.scale.setScalar(k);
+        const c = caja.getCenter(new THREE.Vector3());
+        const cont = new THREE.Group(); cont.add(obj);
+        obj.position.set(-c.x * k, -caja.min.y * k, -c.z * k);
+        cont.position.copy(s.rob.position); cont.position.y = 0.3; cont.rotation.y = md.modelo.giro ? rad(md.modelo.giro) : 0;
+        s.rob.parent.add(cont); s.rob.visible = false;
+        let mixer = null;
+        if (r.animations.length && md.modelo.anim !== "ninguna") {
+          mixer = new THREE.AnimationMixer(obj);
+          const clip = r.animations.find((a) => a.name === md.modelo.anim) || r.animations[0];
+          mixer.clipAction(clip).play();
+        }
+        s.modelo = cont;
+        s.modeloAnim = (t, dt) => { if (mixer && !quieto) mixer.update(dt); };
+        s.anim.push(s.modeloAnim);
+      } catch (e) { console.warn("No se pudo cargar el modelo 3D de", m.nombre, e); }
+    }
+    pintarStand(s);
+    drones.filter((d) => d.m.id === m.id).forEach((d) => pintarDron(d));
+    revisarVideos();
+  }
+  // Los videos de la marca solo corren en los stands cercanos (o el que tienes enfocado)
+  function revisarVideos() {
+    Object.values(stands).forEach((s) => {
+      if (!s.vidEls || !s.vidEls.length) return;
+      const d = Math.hypot(yo.position.x - s.pos.x, yo.position.z - s.pos.z);
+      const ver = d < 34 || (enfocado && enfoqueId === s.m.id);
+      s.vidEls.forEach((x) => { if (ver && x.el.paused) x.el.play().catch(() => {}); else if (!ver && !x.el.paused) x.el.pause(); });
+      s.vidVivo = ver;
+    });
+  }
+  function dibujarVideosReales() {
+    for (const s of Object.values(stands)) {
+      if (!s.vidVivo) continue;
+      const cuadro = (x, tx, w, h) => {
+        if (!x || x.el.readyState < 2) return;
+        tx.g.fillStyle = "#000"; tx.g.fillRect(0, 0, w, h);
+        dibujarEn(tx.g, x.el, 0, 0, w, h, x.v.ajuste === "llenar" ? "llenar" : "contener");
+        tx.g.strokeStyle = s.m.color; tx.g.lineWidth = 6; tx.g.strokeRect(3, 3, w - 6, h - 6);
+        tx.t.needsUpdate = true;
+      };
+      if (s.vidPantalla) cuadro(s.vidPantalla, s.pt, 1024, 576);
+      s.videos.forEach((pv) => cuadro(pv.real, pv.tx, 1024, 576));
+      if (s.vidTotem) s.totems.forEach((tt, i) => cuadro(s.vidTotem[i], tt, 256, 512));
+    }
   }
 
   // Lugares a los que se puede ir caminando (puestos, parcelas, tu tienda, la nave): id -> { p, mirar, entrar }
@@ -861,6 +1006,13 @@ export function crearEstacion(canvas, cfg) {
 
   // ----- drones con publicidad -----
   const drones = [];
+  function pintarDron(d) {
+    const img = (stands[d.m.id] && stands[d.m.id].med || {}).banner;
+    d.bt.g.clearRect(0, 0, 640, 240);
+    if (img) { d.bt.g.save(); rr(d.bt.g, 0, 0, 640, 240, 26); d.bt.g.clip(); dibujarEn(d.bt.g, img, 0, 0, 640, 240, "llenar"); d.bt.g.restore(); }
+    else dibujarBanner(d.bt.g, 640, 240, d.m);
+    d.bt.t.needsUpdate = true;
+  }
   function crearDron(m, i, total) {
     const g = new THREE.Group(); g.userData = { tipo: "dron", id: m.id };
     scene.add(g); tocables.push(g);
@@ -1064,7 +1216,7 @@ export function crearEstacion(canvas, cfg) {
     }
     return null;
   }
-  function aEstrella(desde, hasta) {
+  function aEstrella(desde, hasta, max = 60000) {
     const a = celdaCercana(desde), b = celdaCercana(hasta);
     if (!a || !b) return null;
     const h = (i, j) => { const dx = Math.abs(i - b[0]), dz = Math.abs(j - b[1]); return Math.max(dx, dz) + 0.414 * Math.min(dx, dz); };
@@ -1083,7 +1235,7 @@ export function crearEstacion(canvas, cfg) {
     g.set(ka, 0); push([h(a[0], a[1]), ka]);
     const VEC = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.414], [1, -1, 1.414], [-1, 1, 1.414], [-1, -1, 1.414]];
     let vueltas = 0;
-    while (heap.length && vueltas++ < 60000) {
+    while (heap.length && vueltas++ < max) {
       const k = pop()[1];
       if (cerrado.has(k)) continue;
       cerrado.add(k);
@@ -1104,21 +1256,40 @@ export function crearEstacion(canvas, cfg) {
     return null;
   }
   // deja solo los puntos donde cambia de dirección (cada tramo recto, despejado)
-  function suavizar(desde, pts, hasta) {
+  // tramo libre según la cuadrícula ya calculada (rápido; lo usan los bots)
+  function despejadoCeldas(a, b) {
+    const d = Math.hypot(b.x - a.x, b.z - a.z), n = Math.max(1, Math.ceil(d / 0.25));
+    for (let i = 0; i <= n; i++) {
+      const x = (a.x + (b.x - a.x) * (i / n)) / CELDA, z = (a.z + (b.z - a.z) * (i / n)) / CELDA;
+      if (!celdaLibre(Math.round(x), Math.round(z))) return false;
+    }
+    return true;
+  }
+  function suavizar(desde, pts, hasta, rapido) {
+    const libreTramo = rapido ? despejadoCeldas : despejado;
     const todos = [desde, ...pts];
     if (despejado(pts[pts.length - 1], hasta)) todos.push(hasta);
     const out = []; let k = 0;
     while (k < todos.length - 1) {
       let lejos = k + 1;
-      for (let m = k + 2; m < todos.length && despejado(todos[k], todos[m]); m++) lejos = m;
+      for (let m = k + 2; m < todos.length && libreTramo(todos[k], todos[m]); m++) lejos = m;
       out.push(todos[lejos].clone()); k = lejos;
     }
     return out;
   }
-  function planear(desde, hasta) {
+  // calcula la cuadrícula completa poco a poco (unas celdas por cuadro) para que luego planear rutas sea instantáneo
+  const LIM = Math.ceil((D_EXT + R_ISLA + 2) / CELDA);
+  let calI = -LIM, calJ = -LIM;
+  function precalentar(n) {
+    while (n-- > 0 && calI <= LIM) {
+      celdaLibre(calI, calJ);
+      if (++calJ > LIM) { calJ = -LIM; calI++; }
+    }
+  }
+  function planear(desde, hasta, max) {
     if (despejado(desde, hasta)) return [hasta.clone()];
-    const pts = aEstrella(desde, hasta);
-    return pts && pts.length ? suavizar(desde, pts, hasta) : trazar(desde, hasta);
+    const pts = aEstrella(desde, hasta, max);
+    return pts && pts.length ? suavizar(desde, pts, hasta, !!max) : max ? [] : trazar(desde, hasta);
   }
 
   let ruta = [], alLlegar = null, atorado = 0, rapido = false, intentos = 0, metaRuta = null;
@@ -1145,6 +1316,87 @@ export function crearEstacion(canvas, cfg) {
   let chispaT = 1;
   function destello() { chispaT = 0; }
 
+  // ---------- otros visitantes (bots): recorren la expo, se detienen en los stands y siguen ----------
+  const NOMBRES_BOT = ["Kim", "Sol", "Tomi", "Luna", "Rafa", "Vale", "Nico", "Abril", "Leo", "Maia", "Iker", "Dani", "Emi", "Zoe"];
+  const COLORES_BOT = ["#ff7ad9", "#6ff0ff", "#7dffb3", "#ffd76a", "#b18cff", "#ff9a6a", "#8fb3ff", "#f2c45a"];
+  const AVISOS_BOT = ["⭐", "💜", "🎰", "🛍️", "🌱", "🎟️", "👋", "📸"];
+  const geoBot = {
+    torso: new THREE.CapsuleGeometry(0.34, 0.42, 4, 10), pierna: new THREE.CapsuleGeometry(0.13, 0.34, 3, 8),
+    casco: new THREE.SphereGeometry(0.4, 16, 12), visor: new THREE.SphereGeometry(0.35, 16, 8, -1, 2, 1.05, 1),
+    sombra: new THREE.CircleGeometry(0.5, 16),
+  };
+  const matVisor = new THREE.MeshStandardMaterial({ color: "#2a1660", roughness: 0.1, metalness: 0.6, emissive: "#6ff0ff", emissiveIntensity: 0.3 });
+  const matSombra = new THREE.MeshBasicMaterial({ color: "#000", transparent: true, opacity: 0.2, depthWrite: false });
+  const bots = [], matGlobo = {};
+  function crearBot(k) {
+    const color = COLORES_BOT[k % COLORES_BOT.length];
+    const traj = new THREE.MeshStandardMaterial({ color: "#f4f1ff", roughness: 0.4 }), acc = new THREE.MeshStandardMaterial({ color, roughness: 0.45, emissive: color, emissiveIntensity: 0.15 });
+    const g = new THREE.Group(); g.scale.setScalar(0.92 + Math.random() * 0.12); scene.add(g);
+    const pies = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * 0.19, 0.6, 0); g.add(p); const m = new THREE.Mesh(geoBot.pierna, acc); m.position.y = -0.28; p.add(m); return p; });
+    const torso = new THREE.Mesh(geoBot.torso, k % 3 ? traj : acc); torso.position.y = 1.1; g.add(torso);
+    const cab = new THREE.Group(); cab.position.y = 1.86; g.add(cab);
+    cab.add(new THREE.Mesh(geoBot.casco, k % 3 ? acc : traj));
+    const vi = new THREE.Mesh(geoBot.visor, matVisor); vi.position.z = 0.07; cab.add(vi);
+    const so = new THREE.Mesh(geoBot.sombra, matSombra); so.rotation.x = -Math.PI / 2; so.position.y = 0.02; g.add(so);
+    const globo = spriteEmoji("⭐", 0.7); globo.position.y = 2.75; globo.visible = false; g.add(globo);
+    return { g, pies, cab, globo, nombre: NOMBRES_BOT[k % NOMBRES_BOT.length], ruta: [], espera: 1 + Math.random() * 4, paso: Math.random() * 6, vel: 3.2 + Math.random() * 1.6, globoT: 0, mira: null };
+  }
+  // destinos: frente a los stands (lo más visitado), los puestos del Mercado, la plaza y las islas
+  function destinoBot(cerca) {
+    // casi siempre algo cercano (rutas cortas: no traban la animación); a veces cruzan a otra zona
+    if (cerca && Math.random() < 0.8) { for (let t = 0; t < 12; t++) { const d = destinoBot(); if (d.p.distanceTo(cerca) < 32) return d; } }
+    const ids = Object.keys(stands), r = Math.random();
+    if (r < 0.65 && ids.length) { const s = stands[ids[Math.floor(Math.random() * ids.length)]]; return { p: s.puerta.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2.4, 0, (Math.random() - 0.5) * 2.4)), mira: s.mira || s.pos }; }
+    const ks = Object.keys(lugares);
+    if (r < 0.85 && ks.length) { const L = lugares[ks[Math.floor(Math.random() * ks.length)]]; return { p: L.p.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2)), mira: L.mirar }; }
+    const a = Math.random() * Math.PI * 2, d = 4 + Math.random() * 8;
+    return { p: new THREE.Vector3(Math.cos(a) * d, 0, Math.sin(a) * d), mira: new THREE.Vector3(0, 0, 0) };
+  }
+
+  function moverBots(dt) {
+    let planesEsteCuadro = 0;
+    for (const b of bots) {
+      if (!b.ruta.length) {
+        b.espera -= dt;
+        // de pie: mira lo que fue a ver y a veces "reacciona"
+        if (b.mira) { const dA = Math.atan2(b.mira.x - b.g.position.x, b.mira.z - b.g.position.z) - b.g.rotation.y; b.g.rotation.y += Math.atan2(Math.sin(dA), Math.cos(dA)) * Math.min(1, dt * 4); }
+        b.pies.forEach((p) => (p.rotation.x *= 0.8));
+        if (b.espera <= 0 && planesEsteCuadro < 1) { // un plan por cuadro para no trabar la animación
+          planesEsteCuadro++;
+          const d = destinoBot(b.g.position);
+          if (libre(d.p.x, d.p.z)) {
+            const desde = b.g.position.clone(); desde.y = 0;
+            b.ruta = planear(desde, d.p, 4000); b.mira = d.mira;
+          }
+          b.espera = 4 + Math.random() * 9;
+        }
+      } else {
+        const q = b.ruta[0], dx = q.x - b.g.position.x, dz = q.z - b.g.position.z, d = Math.hypot(dx, dz), st = b.vel * dt;
+        if (d <= st) { b.g.position.x = q.x; b.g.position.z = q.z; b.ruta.shift(); if (!b.ruta.length && Math.random() < 0.6) { const e = AVISOS_BOT[Math.floor(Math.random() * AVISOS_BOT.length)]; b.globo.material = matGlobo[e] || (matGlobo[e] = spriteEmoji(e, 0.7).material); b.globo.visible = true; b.globoT = 2.4; } }
+        else {
+          b.g.position.x += (dx / d) * st; b.g.position.z += (dz / d) * st;
+          const dA = Math.atan2(dx, dz) - b.g.rotation.y; b.g.rotation.y += Math.atan2(Math.sin(dA), Math.cos(dA)) * Math.min(1, dt * 8);
+        }
+        b.paso += dt * 9;
+        const sw = Math.sin(b.paso);
+        b.pies[0].rotation.x = sw * 0.6; b.pies[1].rotation.x = -sw * 0.6;
+      }
+      b.g.position.y = altura(b.g.position.x, b.g.position.z) + Math.abs(Math.sin(b.paso)) * (b.ruta.length ? 0.05 : 0);
+      if (b.globoT > 0) { b.globoT -= dt; b.globo.position.y = 2.75 + (2.4 - b.globoT) * 0.25; if (b.globoT <= 0) b.globo.visible = false; }
+    }
+  }
+  function crearBots() {
+    const n = innerWidth < 760 ? 8 : 16;
+    for (let k = 0; k < n; k++) {
+      const b = crearBot(k), d = destinoBot();
+      const c = celdaCercana(d.p); // aparecen ya repartidos por la estación
+      if (c) b.g.position.set(c[0] * CELDA, 0, c[1] * CELDA);
+      b.mira = d.mira; b.g.rotation.y = Math.random() * Math.PI * 2;
+      bots.push(b);
+    }
+  }
+  if (!cfg.replica) setTimeout(crearBots, 600);
+
   // Entrada: teclado y joystick
   const teclas = {};
   addEventListener("keydown", (e) => { if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; teclas[e.key.toLowerCase()] = true; });
@@ -1153,7 +1405,7 @@ export function crearEstacion(canvas, cfg) {
   const stick = { x: 0, y: 0 };
 
   // ---------- cámara ----------
-  let listo = false, enfoque = null, enfocado = false, vuelo = null, desp = { x: 0, y: 0 }, despObj = { x: 0, y: 0 };
+  let enfoqueId = null, listo = false, enfoque = null, enfocado = false, vuelo = null, desp = { x: 0, y: 0 }, despObj = { x: 0, y: 0 };
   const offset = canvas.clientWidth / canvas.clientHeight < 0.8 ? new THREE.Vector3(0, 9, 16) : new THREE.Vector3(0, 6.5, 11); // cámara respecto al avatar (más lejos en celular)
   function volar(pos, obj, ms = 1300) {
     controls.autoRotate = false;
@@ -1170,7 +1422,7 @@ export function crearEstacion(canvas, cfg) {
     const mira = s.mira || s.pos;
     if (Math.hypot(yo.position.x - s.puerta.x, yo.position.z - s.puerta.z) > 6) saltarA(s.puerta, mira);
     else { ruta = []; aro.visible = false; yo.rotation.y = Math.atan2(mira.x - yo.position.x, mira.z - yo.position.z); }
-    enfoque = s.m.pab; enfocado = true;
+    enfoque = s.m.pab; enfocado = true; enfoqueId = id; setTimeout(revisarVideos, 50);
     const f = s.frente.clone(), vertical = canvas.clientWidth / canvas.clientHeight < 0.8;
     // la distancia depende del tamaño: stand, premium o isla completa
     const k = s.ancho / 7, centro = s.isla ? s.pos.clone().addScaledVector(f, -3) : s.pos;
@@ -1206,6 +1458,7 @@ export function crearEstacion(canvas, cfg) {
   let inicio = null;
   canvas.addEventListener("pointerdown", (e) => { inicio = { x: e.clientX, y: e.clientY, t: performance.now() }; controls.autoRotate = false; });
   canvas.addEventListener("pointerup", (e) => {
+    if (cfg.replica) { inicio = null; return; } // en la réplica solo se gira la cámara
     if (!inicio) return;
     const mov = Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y);
     const dur = performance.now() - inicio.t;
@@ -1345,6 +1598,9 @@ export function crearEstacion(canvas, cfg) {
         }
       }
       moverYo(dt);
+      if (!quieto) moverBots(dt);
+      precalentar(500);
+      dibujarVideosReales();
       if (vuelo) {
         const k = Math.min(1, (ahora - vuelo.t0) / vuelo.ms), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
         camera.position.lerpVectors(vuelo.p0, vuelo.p1, e);
@@ -1369,9 +1625,9 @@ export function crearEstacion(canvas, cfg) {
         relojVideo = 0;
       }
       if (relojStand > 4.5) {
-        relojStand = 0;
+        relojStand = 0; revisarVideos();
         Object.values(stands).forEach((s, i) => {
-          s.cerca = Math.hypot(yo.position.x - s.pos.x, yo.position.z - s.pos.z) < 42;
+          s.cerca = Math.hypot(yo.position.x - s.pos.x, yo.position.z - s.pos.z) < 42 || (enfocado && enfoqueId === s.m.id);
           if (!s.cerca) return;
           s.totemI++; pintarTotems(s); if (i % 2 === (Math.floor(t / 4.5) % 2)) pintarStand(s, true);
         });
@@ -1399,16 +1655,21 @@ export function crearEstacion(canvas, cfg) {
     } catch (err) { console.error(err); }
   }
   requestAnimationFrame(cuadro);
-  if (document.fonts) document.fonts.ready.then(() => { Object.values(stands).forEach((s) => pintarStand(s)); drones.forEach((d) => { dibujarBanner(d.bt.g, 640, 240, d.m); d.bt.t.needsUpdate = true; }); rotarPantallas(); });
+  if (document.fonts) document.fonts.ready.then(() => { Object.values(stands).forEach((s) => pintarStand(s)); drones.forEach((d) => pintarDron(d)); rotarPantallas(); });
+  // fotos, videos, modelo 3D y promociones que subió cada marca
+  Object.values(stands).forEach((s) => { if (tieneMedios(s.m) || (s.m.promos && s.m.promos.length)) aplicarMedios(s); });
 
-  // Al cargar: vista general y luego la cámara baja hasta el avatar
+  // Al cargar: vista general y luego la cámara baja hasta el avatar.
+  // Modo réplica (panel de marca): directo al stand de esa marca, sin visitantes, para girarlo y verlo mientras se edita.
   controls.autoRotate = false;
-  setTimeout(() => seguir(quieto ? 0 : 2200), 900);
+  if (cfg.replica && stands[cfg.replica]) {
+    setTimeout(() => { enfocarStand(cfg.replica); if (vuelo) { camera.position.copy(vuelo.p1); controls.target.copy(vuelo.o1); vuelo = null; } listo = true; }, 50);
+  } else setTimeout(() => seguir(quieto ? 0 : 2200), 900);
 
   return {
     irA, enfocarStand, seguir, setParcelas, setTienda, venta, iniciarTour,
     enTour: () => !!tour,
-    _prueba: { libre, trazar, yo, lugares, stands, modulos, ruta: () => ruta, mover: (dt) => moverYo(dt) },
+    _prueba: { libre, trazar, yo, lugares, stands, modulos, ruta: () => ruta, mover: (dt) => moverYo(dt), bots, moverBots, precalentar },
     saltarTour: () => terminarTour(),
     setStick(x, y) { stick.x = x; stick.y = y; },
     setDesplazamiento(x, y) { despObj.x = x; despObj.y = y; },
@@ -1418,8 +1679,8 @@ export function crearEstacion(canvas, cfg) {
       lista = nuevas;
       nuevas.forEach((m) => {
         const s = stands[m.id];
-        if (s) { s.m = m; s.productos = catalogo(m); pintarStand(s); }
-        drones.filter((d) => d.m.id === m.id).forEach((d) => { d.m = m; d.bt.g.clearRect(0, 0, 640, 240); dibujarBanner(d.bt.g, 640, 240, m); d.bt.t.needsUpdate = true; });
+        if (s) { s.m = m; s.productos = catalogo(m); pintarStand(s); aplicarMedios(s); }
+        drones.filter((d) => d.m.id === m.id).forEach((d) => { d.m = m; pintarDron(d); });
       });
       rotarPantallas();
     },

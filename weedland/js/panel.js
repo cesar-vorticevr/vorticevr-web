@@ -1,13 +1,15 @@
-// Panel de marca del demo: editar stand, catálogo y ver métricas.
+// Panel de marca del demo: réplica 3D en vivo del stand y su editor (stand, imágenes, videos, modelo 3D, promociones, catálogo) y métricas.
 import { PABELLONES, catalogo, videosDe } from "./datos.js";
 import { esSemilla, semillasRegistradas, ADITAMENTOS, PUESTOS } from "./cultivo.js";
 import { marcas, guardarMarca, restaurarMarca, metricas, CAMPOS, CLAVES, vistasMarca } from "./estado.js";
+import { editorImagenes, editorVideos, editorModelo, editorPromos } from "./editor.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const ICONOS = ["⭐", "🌱", "🧢", "👕", "🎒", "♨️", "🔮", "📜", "🧴", "🧼", "💡", "🪴", "💧", "📘", "🎁"];
 
 let id = new URLSearchParams(location.hash.slice(1)).get("marca") || marcas()[0].id;
+if (!marcas().some((x) => x.id === id)) id = marcas()[0].id;
 
 function pintar() {
   const lista = marcas(), m = lista.find((x) => x.id === id) || lista[0];
@@ -42,11 +44,13 @@ function pintar() {
     ${cat.filter((p) => !p.id.includes("-x")).slice(0, 6).map((p) => `<div class="prod-fila"><span>${p.icono}</span><div><b>${esc(p.nombre)}</b><small>${esc(p.cat)} · ${esc(p.precio)}</small></div></div>`).join("")}
     <p class="suave chico-t">… y ${Math.max(0, cat.length - extra.length - 6)} más</p></div>`;
 
-  $("#c-vista").innerHTML = `<h2>👀 Así se ve tu pantalla</h2>
-    <div class="vista"><span class="e">${m.icono}</span><b>${esc(m.nombre)}</b><p>${esc(m.lema)}</p></div>
-    <a class="btn chico" style="margin-top:12px" href="../" target="weedland">Abrir la estación ↗</a>`;
-
   pintarVistas(m);
+  const listo = (t) => { pintar(); aviso(t); avisarReplica(); };
+  editorImagenes($("#c-imagenes"), m, listo);
+  editorVideos($("#c-videos"), m, listo);
+  editorModelo($("#c-modelo"), m, listo);
+  editorPromos($("#c-promos"), m, listo);
+  ponerReplica(m.id);
   const met = metricas()[id] || {};
   $("#c-met").innerHTML = `<h2>📊 Métricas</h2><div class="metricas">${CAMPOS.map(([k, t]) => `<div class="met"><b>${met[k] || 0}</b><small>${t}</small></div>`).join("")}</div>
     <p class="nota">Esto es lo que se le reporta a la marca cada mes. Demo: solo cuenta lo que pasa en este navegador.</p>`;
@@ -58,10 +62,10 @@ function pintar() {
       cupon: { texto: $("#f-cupon").value.trim() || m.cupon.texto, costo: Math.max(10, Math.min(500, +$("#f-costo").value || m.cupon.costo)) },
       sorteo: $("#f-sorteo").value.trim() || m.sorteo,
     });
-    pintar(); aviso("Guardado ✓");
+    pintar(); aviso("Guardado ✓"); avisarReplica();
   };
   $("#restaurar").onclick = (e) => {
-    if (e.currentTarget.dataset.ok) { restaurarMarca(id); pintar(); aviso("Restaurado"); return; }
+    if (e.currentTarget.dataset.ok) { restaurarMarca(id); pintar(); aviso("Restaurado"); avisarReplica(); return; }
     e.currentTarget.dataset.ok = "1"; e.currentTarget.textContent = "Toca otra vez para confirmar";
   };
   $("#agregar").onclick = () => {
@@ -78,6 +82,8 @@ function pintar() {
 // Reproducciones de los videos de la marca: cuántas veces y cuántas personas distintas (del servidor si hay)
 const num = (n) => Number(n || 0).toLocaleString("es-MX");
 function nombreVideo(m, vid) {
+  const pv = (m.videosMarca || []).find((x) => vid === `${m.id}#v-${x.slot}`);
+  if (pv) return `${pv.orient === "vertical" ? "📱" : "🎬"} ${pv.titulo || "Tu video"}`;
   const v = videosDe(m).find((x) => x.id === vid);
   if (v) return `${v.icono} ${v.titulo}`;
   const a = ADITAMENTOS.find((x) => vid === `${m.id}#adi-${x.id}`);
@@ -108,6 +114,31 @@ function aviso(t) {
   el.style.cssText = "position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:50";
   document.body.appendChild(el); setTimeout(() => el.remove(), 1800);
 }
-$("#sel").onchange = (e) => { id = e.target.value; location.hash = "marca=" + id; pintar(); };
-addEventListener("storage", (e) => { if (e.key === CLAVES.metricas || e.key === CLAVES.marcas) pintar(); });
+// ---------- réplica 3D: la misma estación, en modo réplica, enfocada en este stand ----------
+let replicaDe = null;
+function ponerReplica(mid, forzar = false) {
+  if (replicaDe === mid && !forzar) return;
+  replicaDe = mid;
+  $("#replica").src = `../?replica=${encodeURIComponent(mid)}&v=${Date.now().toString(36)}`;
+}
+// la réplica escucha los cambios (storage); además se le avisa directo por si el navegador no manda el evento al iframe
+function avisarReplica() { try { $("#replica").contentWindow.postMessage("weedland:actualizar", location.origin); } catch {} }
+$("#recargar-replica").onclick = () => ponerReplica(id, true);
+
+// ---------- pestañas del editor ----------
+let pestaña = new URLSearchParams(location.hash.slice(1)).get("ed") || "stand";
+function verPestaña(p) {
+  pestaña = p;
+  document.querySelectorAll("#ed-tabs button").forEach((b) => b.classList.toggle("activo", b.dataset.ed === p));
+  document.querySelectorAll("[data-panel]").forEach((s) => (s.hidden = s.dataset.panel !== p));
+  history.replaceState(null, "", `#marca=${id}&ed=${p}`);
+}
+document.querySelectorAll("#ed-tabs button").forEach((b) => (b.onclick = () => verPestaña(b.dataset.ed)));
+
+$("#sel").onchange = (e) => { id = e.target.value; pintar(); verPestaña(pestaña); };
+addEventListener("storage", (e) => {
+  if (e.key === CLAVES.marcas) pintar();
+  else if (e.key === CLAVES.metricas && !document.activeElement.closest("[data-panel]")) pintar(); // no estorbar mientras escribes
+});
 pintar();
+verPestaña(pestaña);

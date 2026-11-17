@@ -1,6 +1,7 @@
 // Weedland Station: interfaz (entrada, stands, catálogo, juegos, premios, cultivo, mercado, tienda, nave, pasaporte).
 import { PAISES, PABELLONES, PREMIO_DIA, catalogo, preguntasMarca, nombrePais, videosDe, NIVELES } from "./datos.js";
 import { leerPerfil, guardarPerfil, leerJuego, guardarJuego, marcas, sumar, codigo, CLAVES, registrarVista } from "./estado.js";
+import { urlDe } from "./medios.js";
 import { sonido, volar, cartel, confeti, flotante, contar, alternarSonido, estaMudo } from "./efectos.js";
 import { semillasRegistradas, ADITAMENTOS, aditamento, OBJETOS, PUESTOS, puesto, claseDe, progreso, faltan, rinde, factorVel, tiempoTexto, MAX_VIDEOS, COMPRADORES, MAX_TIENDA, PRECIO_MAX, precioJusto, esperaVenta } from "./cultivo.js";
 
@@ -9,6 +10,9 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const hoy = () => new Date().toISOString().slice(0, 10);
 const movil = () => innerWidth < 760;
+// ?replica=<marca>: el panel de marca muestra aquí, en un iframe, la réplica de su stand
+const REPLICA = new URLSearchParams(location.search).get("replica");
+if (REPLICA) document.documentElement.classList.add("replica");
 
 let J = leerJuego();
 let MARCAS = marcas();
@@ -59,11 +63,12 @@ async function iniciar() {
     const { crearEstacion } = await import("./estacion.js");
     est = crearEstacion($("#escena"), {
       marcas: MARCAS,
+      replica: REPLICA,
       etiqueta: crearEtiqueta,
-      alTocar,
-      alCerca,
+      alTocar: REPLICA ? () => {} : alTocar,
+      alCerca: REPLICA ? () => {} : alCerca,
       alSoltar: () => { if (actual && actual.tipo === "stand") cerrarPanel(); },
-      alPaso: () => sonido.paso(),
+      alPaso: () => { if (!REPLICA) sonido.paso(); },
     });
   } catch (e) {
     console.error(e);
@@ -72,6 +77,11 @@ async function iniciar() {
   }
   if (/[?&]prueba\b/.test(location.search)) window.__ws = est; // solo para probar desde la consola
   setTimeout(() => $("#cargando").classList.add("fuera"), 300);
+  if (REPLICA) { // réplica del stand dentro del panel de marca: solo la escena, que se actualiza al guardar
+    addEventListener("storage", (e) => { if (e.key === CLAVES.marcas) { MARCAS = marcas(); est.actualizarMarcas(MARCAS); } });
+    addEventListener("message", (e) => { if (e.origin === location.origin && e.data === "weedland:actualizar") { MARCAS = marcas(); est.actualizarMarcas(MARCAS); } });
+    return;
+  }
   conectarHud();
   conectarStick();
   revisarVentas(true);
@@ -276,7 +286,7 @@ function abrirStand(id, tab = "inicio", volarCam = true) {
   if (volarCam) { est && est.enfocarStand(id); sonido.entrar(); }
   const cat = catalogo(m);
   abrirPanel(`
-    <div class="cab-marca"><div class="logo-m">${m.icono}</div>
+    <div class="cab-marca"><div class="logo-m" data-logo="${m.id}">${m.icono}</div>
       <div><h2>${esc(m.nombre)}</h2><p>${esc(m.lema)}</p>
       <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">${m.nivel ? `<span class="chip c">${m.nivel === "isla" ? "🏝️" : "⭐"} ${NIVELES[m.nivel]}</span>` : ""}<span class="chip">${pab(m.pab).icono} ${esc(pab(m.pab).nombre)}</span><span class="chip">${esc(nombrePais(m.pais))}</span></div></div></div>
     <div class="tabs">
@@ -289,6 +299,7 @@ function abrirStand(id, tab = "inicio", volarCam = true) {
   actual.tab = tab;
   $$(".tabs button").forEach((b) => (b.onclick = () => { sonido.tap(); pintarTab(m, b.dataset.tab); }));
   pintarTab(m, tab);
+  ponerLogos($("#panel-cuerpo"));
   // Primera visita: sello + polen
   if (!J.visitados.includes(id)) {
     J.visitados.push(id); guardar(); sumar(id, "visitas");
@@ -314,15 +325,16 @@ function tabInicio(m, caja) {
   const cat = catalogo(m), sigue = J.siguiendo.includes(m.id);
   const visto = (v) => J.videos.includes(v.id);
   // primero los videos que esta persona no ha visto, para que cada video de la marca sume vistas
-  const vids = videosDe(m).map((v, k) => ({ v, k })).sort((a, b) => (visto(a.v) - visto(b.v)) || (vecesVisto(a.v.id) - vecesVisto(b.v.id)) || a.k - b.k).map((x) => x.v);
+  const vids = videosStand(m).map((v, k) => ({ v, k })).sort((a, b) => (visto(a.v) - visto(b.v)) || (vecesVisto(a.v.id) - vecesVisto(b.v.id)) || a.k - b.k).map((x) => x.v);
   caja.innerHTML = `
     <button class="video ancho" data-video="0">
       <div><div class="play">▶</div></div>
-      <span class="lbl">${esc(vids[0].titulo)} · 10 s</span>
+      <span class="lbl">${esc(vids[0].titulo)} · ${vids[0].propio && vids[0].propio.dur ? Math.max(1, Math.round(vids[0].propio.dur)) : 10} s</span>
       <span class="premio-v chip ${visto(vids[0]) ? "" : "c"}">${visto(vids[0]) ? "✓ visto" : "+15 🌟"}</span>
     </button>
     ${vids.length > 1 ? `<div class="mini-videos">${vids.slice(1).map((v, i) => `<button class="mini-v" data-video="${i + 1}"><span class="mv-ico">${v.icono}</span><b>${esc(v.titulo)}</b><small>${visto(v) ? "✓ visto" : "+15 🌟"}</small></button>`).join("")}</div>` : ""}
     <p style="margin:12px 0 0">${esc(m.desc)}</p>
+    ${promosHtml(m)}
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
       <button class="btn chico" id="seguir">${sigue ? "✓ Siguiendo" : "＋ Seguir marca"}</button>
       <button class="btn chico sec" id="web">🌐 Su tienda en línea</button>
@@ -340,7 +352,7 @@ function tabInicio(m, caja) {
     guardar(); tabInicio(m, caja);
   };
   $("#web").onclick = () => { sumar(m.id, "web"); modal(`<div class="ico-g">🌐</div><h3>Ir a la tienda de ${esc(m.nombre)}</h3><p class="suave">En la versión real este botón abre la tienda en línea de la marca. Weedland no vende: solo te lleva con ella.</p><div class="acciones"><button class="btn" onclick="this.closest('.modal').hidden=true">Entendido</button></div>`, vars(m)); };
-  conectarTabs(caja, m); conectarProds(caja, m);
+  conectarTabs(caja, m); conectarProds(caja, m); ponerPromos(caja, m);
 }
 const nombreJuego = (a) => ({ ruleta: "Ruleta de la marca", quiz: "Trivia relámpago", rasca: "Rasca y gana" })[a];
 function conectarTabs(r, m) { $$("[data-ir-tab]", r).forEach((b) => (b.onclick = () => { sonido.tap(); pintarTab(m, b.dataset.irTab); $("#panel-cuerpo").scrollTop = 0; })); }
@@ -404,8 +416,67 @@ function empezoVideo(marcaId, video, origen) {
   registrarVista(marcaId, video, "inicio", origen);
 }
 
-// ---------- video de marca (simulado: en la versión real es el video que sube la marca) ----------
-function verVideo(m, v = videosDe(m)[0]) {
+// Logo que subió la marca (si no hay, se queda su ícono)
+function ponerLogos(r = document) {
+  $$("[data-logo]", r).forEach(async (el) => {
+    const m = marca(el.dataset.logo), v = m && m.medios && m.medios.logo;
+    if (!v) return;
+    const url = await urlDe(m.id, "logo", v);
+    if (url) el.innerHTML = `<img src="${url}" alt="${esc(m.nombre)}" class="logo-img">`;
+  });
+}
+// Promociones vigentes de la marca (las edita en su panel)
+const hoyMx = () => new Date(Date.now() - 6 * 3600e3).toISOString().slice(0, 10);
+const promosDe = (m) => (m.promos || []).filter((p) => p.titulo && (!p.hasta || p.hasta >= hoyMx()));
+function promosHtml(m) {
+  const ps = promosDe(m);
+  if (!ps.length) return "";
+  return `<div class="seccion"><h3>🔥 Promociones</h3><div class="promos">${ps.map((p) => `
+    <div class="promo" style="${vars(m)}">${p.img ? `<div class="promo-img" data-promo-img="${esc(p.id)}"></div>` : ""}
+      <div class="promo-txt"><b>${esc(p.titulo)}</b>${p.texto ? `<p>${esc(p.texto)}</p>` : ""}${p.hasta ? `<small>Válida hasta el ${esc(p.hasta.split("-").reverse().join("/"))}</small>` : ""}</div></div>`).join("")}</div></div>`;
+}
+function ponerPromos(r, m) {
+  $$("[data-promo-img]", r).forEach(async (el) => {
+    const p = (m.promos || []).find((x) => x.id === el.dataset.promoImg);
+    const url = p && p.img && (await urlDe(m.id, "promo-" + p.id, p.img));
+    if (url) el.style.backgroundImage = `url("${url}")`;
+  });
+}
+
+// Videos de una marca: los que subió en su panel (horizontales o verticales) o, si no ha subido, los de ejemplo
+function videosStand(m) {
+  const propios = (m.videosMarca || []).map((v) => ({ id: `${m.id}#v-${v.slot}`, titulo: v.titulo || "Video de la marca", icono: v.orient === "vertical" ? "📱" : "🎬", propio: v }));
+  return propios.length ? propios : videosDe(m);
+}
+const propioDe = (m, id) => (m.videosMarca || []).find((v) => id === `${m.id}#v-${v.slot}`);
+// Reproductor de un video que subió la marca: vertical u horizontal, con su ajuste (completo o llenando el cuadro)
+async function verVideoReal(m, propio, videoId, origen, alTerminar, pie = "") {
+  empezoVideo(m.id, videoId, origen);
+  const caja = modal(`
+    <div class="rep-real ${propio.orient === "vertical" ? "vertical" : ""} ${propio.ajuste === "llenar" ? "llenar" : ""}">
+      <video playsinline preload="auto"></video>
+      <div class="rr-prog"><i></i></div>
+    </div>
+    <p class="chico-t" style="margin:10px 0 0"><b>${esc(propio.titulo || m.nombre)}</b> · ${esc(m.nombre)}${pie ? ` · <span class="suave">${pie}</span>` : ""}</p>
+    <div class="acciones"><button class="btn sec" data-x>Cerrar</button></div>`, vars(m) + ";max-width:" + (propio.orient === "vertical" ? "380px" : "640px"));
+  const vid = $("video", caja), barra = $(".rr-prog i", caja);
+  let terminado = false;
+  const fin = () => {
+    if (terminado) return; terminado = true;
+    registrarVista(m.id, videoId, "fin", origen);
+    cerrarModal(); alTerminar && alTerminar();
+  };
+  $("[data-x]", caja).onclick = () => { terminado = true; vid.pause(); cerrarModal(); };
+  vid.src = await urlDe(m.id, propio.slot, propio.v) || "";
+  vid.ontimeupdate = () => { if (vid.duration) barra.style.width = (vid.currentTime / vid.duration) * 100 + "%"; };
+  vid.onended = fin;
+  vid.onerror = () => { $(".rep-real", caja).innerHTML = `<p class="suave" style="padding:30px;text-align:center">No se pudo reproducir este video en este navegador.</p>`; };
+  vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
+}
+
+// ---------- video de marca (simulado si la marca no ha subido los suyos) ----------
+function verVideo(m, v = videosStand(m)[0]) {
+  if (v.propio) return verVideoReal(m, v.propio, v.id, "stand", () => premioVideo(m, v));
   empezoVideo(m.id, v.id, "stand");
   const cat = catalogo(m).filter((p) => p.destacado);
   const k = Math.max(0, videosDe(m).findIndex((x) => x.id === v.id)), p0 = cat[k % Math.max(1, cat.length)] || {};
@@ -429,6 +500,13 @@ function verVideo(m, v = videosDe(m)[0]) {
       if (actual && actual.tipo === "stand" && actual.id === m.id) pintarTab(m, "inicio");
     } else { $(".acciones", caja).innerHTML = `<button class="btn" data-x>Listo</button>`; $("[data-x]", caja).onclick = cerrarModal; }
   }, matchMedia("(prefers-reduced-motion: reduce)").matches ? 1500 : 10200);
+}
+// premio por ver completo un video que subió la marca (una vez por video)
+function premioVideo(m, v) {
+  if (J.videos.includes(v.id)) return;
+  J.videos.push(v.id); guardar();
+  ganar(15, "Video completo", { x: innerWidth / 2, y: innerHeight / 2 }); sonido.premio();
+  if (actual && actual.tipo === "stand" && actual.id === m.id) pintarTab(m, "inicio");
 }
 
 // ---------- juegos ----------
@@ -868,7 +946,7 @@ function anunciosDe(p, i) {
   const elegir = (lista) => lista.map((a, k) => ({ a, k: (k - i + lista.length * 8) % lista.length }))
     .sort((x, y) => (vecesVisto(x.a.video) - vecesVisto(y.a.video)) || (enUso.has(x.a.video) - enUso.has(y.a.video)) || x.k - y.k)[0].a;
   const mm = marca(p.marca);
-  const deMarca = videosDe(mm).map((v, k) => ({ marca: mm.id, video: v.id, titulo: k ? `${mm.nombre} · ${v.titulo}` : v.titulo, icono: v.icono, tipo: "marca" }));
+  const deMarca = videosStand(mm).map((v, k) => ({ marca: mm.id, video: v.id, titulo: k || v.propio ? `${mm.nombre} · ${v.titulo}` : v.titulo, icono: v.icono, tipo: "marca", propio: v.propio }));
   p.anuncios = [elegir(deMarca), elegir(videosComplemento())];
   // plantas sembradas antes de este cambio: los videos que ya había visto cuentan
   if (p.videos && !p.vistos.length) p.vistos = p.anuncios.slice(0, Math.min(MAX_VIDEOS, p.videos)).map((a) => a.video);
@@ -878,6 +956,8 @@ function anunciosDe(p, i) {
 // Video patrocinado de 10 segundos (simulado). opts: { video, origen, titulo, icono }
 function verAnuncio(m, alTerminar, opts = {}) {
   const video = opts.video || m.id, origen = opts.origen || "cultivo";
+  const propio = propioDe(m, video);
+  if (propio) return verVideoReal(m, propio, video, origen, alTerminar, origen === "cultivo" ? "tu planta crece 15 min más rápido" : "");
   empezoVideo(m.id, video, origen);
   const prod = catalogo(m)[0] || {};
   const caja = modal(`
@@ -1115,4 +1195,4 @@ document.addEventListener("touchend", (e) => {
 }, { passive: false });
 
 // ---------- inicio ----------
-if (leerPerfil()) iniciar(); else entrada();
+if (leerPerfil() || REPLICA) iniciar(); else entrada();

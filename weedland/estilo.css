@@ -309,3 +309,23 @@ h1, h2, h3, h4 { font-family: Fredoka, system-ui, sans-serif; font-weight: 600; 
   .polen { padding: 6px 11px; font-size: 1rem; }
 }
 .fila-boton { display: flex; gap: 10px; align-items: center; flex: 1; min-width: 0; text-align: left; }
+
+/* ---------- réplica del stand (dentro del panel de marca) ---------- */
+.replica .hud, .replica .nav, .replica #etiquetas, .replica .stick, .replica .entrar, .replica .guia, .replica #toasts { display: none !important; }
+.replica #escena { cursor: grab; }
+
+/* ---------- lo que sube cada marca ---------- */
+.logo-m .logo-img { width: 82%; height: 82%; object-fit: contain; border-radius: 10px; }
+.promos { display: grid; gap: 10px; }
+.promo { display: flex; gap: 12px; align-items: stretch; padding: 10px; border-radius: 16px; background: linear-gradient(135deg, color-mix(in srgb, var(--c) 22%, transparent), var(--panel-2)); border: 1px solid var(--c); }
+.promo-img { flex: none; width: 92px; aspect-ratio: 1; border-radius: 12px; background: var(--panel) center / cover no-repeat; }
+.promo-txt { min-width: 0; }
+.promo-txt b { display: block; font: 700 1.05rem Fredoka, sans-serif; }
+.promo-txt p { margin: 4px 0 0; font-size: .88rem; color: var(--texto); }
+.promo-txt small { display: block; margin-top: 6px; color: var(--c); font-weight: 800; font-size: .76rem; }
+.rep-real { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden; background: #000; }
+.rep-real.vertical { aspect-ratio: 9 / 16; max-height: 70vh; margin: 0 auto; }
+.rep-real video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
+.rep-real.llenar video { object-fit: cover; }
+.rr-prog { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: rgba(255,255,255,.15); }
+.rr-prog i { display: block; height: 100%; width: 0; background: var(--c, var(--cian)); transition: width .25s linear; }
