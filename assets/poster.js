@@ -1,6 +1,7 @@
 // Printable poster of an experience (letter size, 8.5 × 11 in at 300 dpi = 2550 × 3300):
 // its image, name, logo, how-to steps for its kind and a big QR. Downloads as PDF (the JPEG inside a one-page PDF) or PNG.
-// Usage: VVRPoster.draw(canvas, exp, { api, base, plan, by }) → Promise (by = the owner's user name: "por @nombre" under the name); VVRPoster.pdf(canvas, name); VVRPoster.png(canvas, name).
+// Usage: VVRPoster.draw(canvas, exp, { api, base, plan, by, edu }) → Promise (by = the owner's user name: "por @nombre" under the name;
+// edu = {label, sub, steps, pic, code, foot}: one of Vórtice VR's own educational experiences, see assets/educativas.js); VVRPoster.pdf(canvas, name); VVRPoster.png(canvas, name).
 // Needs qrcode-generator (window.qrcode) and the Sora / IBM Plex fonts on the page.
 (function () {
   const W = 2550, H = 3300, BAND = 1850, INK = "#1b0a36";
@@ -40,12 +41,13 @@
 
   async function draw(canvas, exp, o = {}) {
     const api = o.api || "..", base = o.base || "../assets/", plan = o.plan || {};
-    const kind = KINDS[exp.kind] ? exp.kind : "ra", K = KINDS[kind], d = exp[kind] || {};
+    const edu = o.edu;   // a Vórtice VR educational experience (assets/educativas.js): its own label, steps, picture and short code
+    const kind = edu ? "edu" : KINDS[exp.kind] ? exp.kind : "ra", K = edu ? [edu.label, edu.sub, edu.steps] : KINDS[kind], d = exp[kind] || {};
     const name = (d.name || exp.title || "").trim(), sub = (d.sub || (kind === "galeria" && d.autor ? "Presenta: " + d.autor : "") || K[1]).trim();
     const accent = hex(d.color) || "#8b3fd6", R = rnd(exp.slug || name);
     const brand = plan.brand && (exp.brand === "own" || exp.brand === "none") ? exp.brand : "vortice";
     const v = exp.updated || exp.created || "";
-    const picSrc = kind === "trivia" && !(d.logo) ? base + "trivia.svg" : `${api}/m/${exp.slug}/image?v=${v}`;
+    const picSrc = edu ? edu.pic : kind === "trivia" && !(d.logo) ? base + "trivia.svg" : `${api}/m/${exp.slug}/image?v=${v}`;
     await Promise.all(["700 100px Sora", "600 100px Sora", "500 100px 'IBM Plex Sans'", "600 100px 'IBM Plex Sans'"].map(f => document.fonts ? document.fonts.load(f).catch(() => {}) : 0));
     // "superficie": the 3D objects themselves, rendered clean (assets/poster-3d.js), instead of the editor's shot with its grid
     const hero = kind === "superficie" ? import(new URL(base + "poster-3d.js?v=4", location.href).href).then(m => m.render(exp, api)).catch(() => null) : null;
@@ -125,11 +127,19 @@
     }
     // bottom: how it works (left) and the QR (right)
     const foot = brand === "vortice" ? 3110 : 3200, by = Math.max(iy + ih + below, 2000);
-    const qs = Math.max(540, Math.min(900, foot - by - 330)), qx = W - 170 - qs, lx = 190;
+    const qs = Math.max(540, Math.min(900, foot - by - 330 - (edu ? 300 : 0))), qx = W - 170 - qs, lx = 190;
     x.textAlign = "left"; x.fillStyle = INK; x.font = "700 96px Sora"; x.fillText("¿Cómo funciona?", lx, by + 90);
     drawSteps(x, steps, lx, by + 200, qx - lx - 130, accent, { r: 62, f: 62, lh: 78 });
     drawQR(x, exp.url, qx, by + 110, qs, accent, icon);
-    drawFooter(x, foot, brand, logo);
+    if (edu) drawCode(x, edu.code, qx + qs / 2, by + 110 + qs + 40, accent);
+    drawFooter(x, foot, brand, logo, edu && edu.foot);
+  }
+  // under the QR: the short code to type at vorticevr.mx/codigo (on a computer or a headset, where scanning is not an option)
+  function drawCode(x, code, cx, y) {
+    x.textAlign = "center"; x.fillStyle = "#2d1b4e"; x.font = "500 46px 'IBM Plex Sans'"; x.fillText("o escribe en vorticevr.mx/codigo", cx, y + 90);
+    x.font = "700 110px Sora"; if ("letterSpacing" in x) x.letterSpacing = "14px";
+    const w = x.measureText(code).width + 140; x.fillStyle = "#ffbe55"; rr(x, cx - w / 2, y + 125, w, 160, 80); x.fill();
+    x.fillStyle = "#1a0d00"; x.fillText(code, cx + 7, y + 245); if ("letterSpacing" in x) x.letterSpacing = "0px";
   }
 
   // AR with an image: the printed image is what the camera looks for, so it is as big as the page allows. No kind label
@@ -189,10 +199,10 @@
     x.fillStyle = accent; rr(x, qx + qs / 2 - ew / 2, qy - 150, ew, 104, 52); x.fill(); x.fillStyle = "#fff"; x.fillText(et, qx + qs / 2, qy - 76);
   }
   // footer: made with Vórtice VR (not with the brand's own logo or none)
-  function drawFooter(x, foot, brand, logo) {
+  function drawFooter(x, foot, brand, logo, text) {
     if (brand !== "vortice") return;
     x.fillStyle = "#eadff8"; x.fillRect(190, foot, W - 380, 4);
-    x.fillStyle = "#6b279b"; x.font = "500 48px 'IBM Plex Sans'"; x.textAlign = "left"; const ft = "Crea la tuya en vorticevr.mx";
+    x.fillStyle = "#6b279b"; x.font = "500 48px 'IBM Plex Sans'"; x.textAlign = "left"; const ft = text || "Crea la tuya en vorticevr.mx";
     const lw = logo ? 300 : 0, lh = logo ? lw * logo.naturalHeight / logo.naturalWidth : 0, tw = x.measureText(ft).width, gx = (W - (tw + lw + 60)) / 2;
     x.fillText(ft, gx, foot + 115); if (logo) x.drawImage(logo, gx + tw + 60, foot + 100 - lh / 2, lw, lh);
   }

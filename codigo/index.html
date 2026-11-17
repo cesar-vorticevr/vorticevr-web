@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Escribe tu código | Vórtice VR</title>
+<meta name="description" content="¿Te dieron un código de Vórtice VR? Escríbelo aquí para abrir la experiencia educativa en tu computadora, celular o visor de realidad virtual.">
+<link rel="canonical" href="https://vorticevr.mx/codigo/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Vórtice VR">
+<meta property="og:locale" content="es_MX">
+<meta property="og:url" content="https://vorticevr.mx/codigo/">
+<meta property="og:title" content="Escribe tu código · Vórtice VR">
+<meta property="og:description" content="Escribe el código de la experiencia para abrirla en tu computadora, celular o visor.">
+<meta property="og:image" content="https://vorticevr.mx/assets/proyectos/observatorio.webp">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --void:#05020b; --surface-solid:#120826; --line:rgba(190,150,255,.18); --line2:rgba(190,150,255,.42);
+  --vortex:#8b3fd6; --lav:#d2b8ff; --ink:#f2ecff; --mute:#a99bcb; --sun:#ffbe55;
+  --fd:"Sora",ui-sans-serif,system-ui,sans-serif; --fb:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --fm:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:radial-gradient(1200px 700px at 50% -10%,rgba(139,63,214,.35),transparent 60%),var(--void);color:var(--ink);font-family:var(--fb);font-size:17px;line-height:1.6;overflow-x:hidden}
+a{color:var(--sun)}
+.wrap{width:min(1180px,100% - 32px);margin:0 auto}
+header.top{padding:18px 0}
+header.top .wrap{display:flex;align-items:center;justify-content:space-between}
+header.top .brand img{height:30px;display:block}
+main{min-height:calc(100dvh - 160px);display:grid;place-items:center;padding:110px 16px 60px}
+.box{width:min(620px,100%);text-align:center}
+.kick{font:500 .76rem/1 var(--fm);letter-spacing:.18em;text-transform:uppercase;color:var(--lav)}
+h1{font:700 clamp(2rem,6vw,3.2rem)/1.1 var(--fd);margin:14px 0 12px;letter-spacing:-.01em}
+.lead{color:var(--mute);margin:0 auto 30px;max-width:480px}
+form{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+input{flex:1 1 280px;min-width:0;padding:20px 22px;border-radius:18px;border:2px solid var(--line2);background:rgba(18,8,38,.85);color:#fff;font:700 clamp(1.6rem,6vw,2.3rem)/1 var(--fd);letter-spacing:.16em;text-align:center;text-transform:uppercase;outline:none;transition:border-color .2s,box-shadow .2s}
+input::placeholder{color:rgba(210,184,255,.35);letter-spacing:.1em}
+input:focus{border-color:var(--sun);box-shadow:0 0 0 5px rgba(255,190,85,.18)}
+button.go{flex:0 0 auto;padding:0 30px;min-height:72px;border-radius:18px;border:0;background:var(--sun);color:#1a0d00;font:700 1.15rem var(--fd);cursor:pointer}
+button.go:hover{filter:brightness(1.07)}
+.msg{min-height:1.6em;margin:16px 0 0;color:#ff9aa8;font-weight:500}
+.msg.ok{color:var(--sun)}
+.shake{animation:sh .4s}
+@keyframes sh{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.note{margin:38px auto 0;color:var(--mute);font-size:.95rem;max-width:520px}
+footer{padding:26px 0 34px;border-top:1px solid var(--line);color:var(--mute);font-size:.86rem}
+footer .wrap{display:flex;gap:14px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+footer img{height:22px}
+footer a{color:var(--mute)}
+@media (prefers-reduced-motion:reduce){.shake{animation:none}}
+</style>
+</head>
+<body>
+<header data-menu class="top" id="top"><div class="wrap">
+  <a class="brand" href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
+</div></header>
+<script src="../assets/navegacion.js?v=3"></script>
+
+<main><div class="box">
+  <span class="kick">Experiencias educativas</span>
+  <h1>Escribe tu código</h1>
+  <p class="lead">¿Tu maestra, tu maestro o un póster te dio un código? Escríbelo aquí y entra a la experiencia.</p>
+  <form id="f" autocomplete="off">
+    <label for="c" class="sr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Código</label>
+    <input id="c" name="c" maxlength="16" placeholder="CÓDIGO" autocapitalize="characters" spellcheck="false" enterkeyhint="go" autofocus>
+    <button class="go" type="submit">Entrar →</button>
+  </form>
+  <p class="msg" id="m" role="status" aria-live="polite"></p>
+  <p class="note">¿Eres docente? En <a href="../educacion/">Educación</a> cada experiencia tiene su botón <b>Compartir</b> con el QR, el código y un póster para imprimir.</p>
+</div></main>
+
+<footer><div class="wrap"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span>© Vórtice VR</span><span class="legal"><a href="../privacidad/">Privacidad</a> · <a href="../terminos/">Términos</a></span></div></footer>
+
+<script src="../assets/educativas.js?v=2"></script>
+<script>
+(function(){
+  const f=document.getElementById("f"), c=document.getElementById("c"), m=document.getElementById("m");
+  function go(code){ const e=VVREdu.find(code); if(!e) return false; m.className="msg ok"; m.textContent="Abriendo "+e.name+"…"; location.href="../"+e.path; return true; }
+  const q=new URLSearchParams(location.search).get("c"); if(q){ c.value=VVREdu.norm(q); go(q); }
+  c.addEventListener("input",()=>{ m.textContent=""; });
+  f.addEventListener("submit",ev=>{ ev.preventDefault(); const v=c.value.trim();
+    if(!v){ m.className="msg"; m.textContent="Escribe el código."; c.focus(); return; }
+    if(!go(v)){ m.className="msg"; m.textContent="Ese código no existe. Revisa que esté bien escrito."; c.classList.remove("shake"); void c.offsetWidth; c.classList.add("shake"); c.select(); } });
+})();
+</script>
+</body>
+</html>

@@ -218,7 +218,7 @@ section{position:relative;padding-block:110px}
 
 /* experiences */
 .xgrid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:20px}
-.xcard{grid-column:span 6;perspective:1100px}
+.xcard{grid-column:span 6;perspective:1100px;position:relative}
 .xcard.wide{grid-column:span 12}
 @media (max-width:860px){.xcard,.xcard.wide{grid-column:span 12}}
 .xin{position:relative;display:flex;flex-direction:column;height:100%;border-radius:18px;overflow:hidden;border:1px solid var(--line2);background:var(--surface-solid);text-decoration:none;transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .5s var(--ease),border-color .3s,box-shadow .4s}
@@ -424,9 +424,9 @@ footer .explore a{color:var(--mute);text-decoration:none}footer .explore a:hover
 
   <section id="experiencias"><div class="wrap">
     <div class="shead reveal"><span class="kick" data-en="Experiences">Experiencias</span><h2 data-en="Put on your headset and live it.">Ponte el visor y vívelo.</h2></div>
-    <!-- Una tarjeta por experiencia: copiar el bloque .xcard y cambiar el link, la imagen (assets/proyectos/) y los textos. -->
+    <!-- Una tarjeta por experiencia: copiar el bloque .xcard y cambiar el link, la imagen (assets/proyectos/) y los textos. Su botón Compartir (QR, código y póster) sale de assets/educativas.js: agregarla ahí con su código. -->
     <div class="xgrid">
-      <div class="xcard wide reveal"><a class="xin" href="cacao/">
+      <div class="xcard wide reveal"><button class="ve-share" type="button" data-compartir="CACAO">Compartir</button><a class="xin" href="cacao/">
         <div class="xmedia"><span class="xnum" data-en="Mixed reality">Realidad mixta</span><img src="../assets/proyectos/cacao-chocolate.webp" alt="Del Cacao al Chocolate, experiencia de realidad mixta" data-en-alt="From Cacao to Chocolate, a mixed reality experience" loading="lazy"></div>
         <div class="xbody">
           <h3 data-en="From Cacao to Chocolate">Del Cacao al Chocolate</h3>
@@ -442,7 +442,7 @@ footer .explore a{color:var(--mute);text-decoration:none}footer .explore a:hover
     <div class="shead reveal"><span class="kick" data-en="Step by step">Paso a paso</span><h2 data-en="How to enter from your headset">Cómo entrar desde tu visor</h2></div>
     <div class="mkgrid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))">
       <div class="mkstep reveal"><span class="num">1</span><h3 data-en="Turn on hand tracking">Activa el seguimiento de manos</h3><p data-en="In your headset settings, turn on hand tracking and set the controllers aside.">En la configuración del visor, enciende el seguimiento de manos y deja los controles a un lado.</p></div>
-      <div class="mkstep reveal"><span class="num">2</span><h3 data-en="Open the browser">Abre el navegador</h3><p data-en="Open your headset's browser and go to <b>vorticevr.mx/realidad-virtual</b>.">Abre el navegador del visor y entra a <b>vorticevr.mx/realidad-virtual</b>.</p></div>
+      <div class="mkstep reveal"><span class="num">2</span><h3 data-en="Open the browser">Abre el navegador</h3><p data-en="Open your headset&#39;s browser, go to <b>vorticevr.mx/codigo</b> and type the code <b>CACAO</b> (or go to <b>vorticevr.mx/realidad-virtual</b>).">Abre el navegador del visor, entra a <b>vorticevr.mx/codigo</b> y escribe el código <b>CACAO</b> (o entra a <b>vorticevr.mx/realidad-virtual</b>).</p></div>
       <div class="mkstep reveal"><span class="num">3</span><h3 data-en="Choose the experience">Elige la experiencia</h3><p data-en="Tap the experience and then “Entrar en Realidad Mixta” (Enter mixed reality).">Toca la experiencia y luego “Entrar en Realidad Mixta”.</p></div>
       <div class="mkstep reveal"><span class="num">4</span><h3 data-en="Accept the permission">Acepta el permiso</h3><p data-en="The headset asks for permission to start an immersive session: accept it and you're in.">El visor pide permiso para iniciar una sesión inmersiva: acéptalo y listo.</p></div>
     </div>
@@ -536,5 +536,6 @@ footer .explore a{color:var(--mute);text-decoration:none}footer .explore a:hover
 <script src="../assets/cuenta-chip.js"></script>
 <script src="../assets/magia.js" defer></script>
 
+<script src="../assets/educativas.js?v=2"></script>
 </body>
 </html>
