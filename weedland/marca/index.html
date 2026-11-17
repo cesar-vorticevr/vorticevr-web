@@ -36,6 +36,10 @@
   .vista b { font: 700 1.6rem Fredoka, sans-serif; max-width: 65%; }
   label.check { display: flex; gap: 8px; align-items: center; font-weight: 700; color: var(--texto); margin-top: 12px; }
   label.check input { width: auto; }
+  .tabla-v { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: .88rem; }
+  .tabla-v th, .tabla-v td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--borde); }
+  .tabla-v th { color: var(--suave); font-weight: 800; font-size: .76rem; }
+  .tabla-v td + td, .tabla-v th + th { text-align: right; white-space: nowrap; }
   .vista p { color: var(--c); margin: 4px 0 0; font-weight: 700; max-width: 65%; }
 </style>
 </head>
@@ -52,6 +56,7 @@
     </div>
     <div>
       <section class="caja" id="c-vista"></section>
+      <section class="caja" style="margin-top:16px" id="c-vistas"></section>
       <section class="caja" style="margin-top:16px" id="c-met"></section>
     </div>
   </div>

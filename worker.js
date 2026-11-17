@@ -348,6 +348,30 @@ async function api(request, env, ctx, url) {
     return json({ ok: true });
   }
 
+  // Weedland (demo en /weedland/): cada reproducción de un video de una marca; uid = número anónimo del navegador (personas distintas)
+  if (path === "/api/weedland/vista" && M === "POST") {
+    const b = await request.json().catch(() => ({}));
+    const marca = String(b.marca || ""), video = String(b.video || ""), uid = String(b.uid || ""), fin = b.fase === "fin" ? 1 : 0;
+    const origen = ["stand", "cultivo", "taller"].includes(b.origen) ? b.origen : "stand";
+    if (!/^[a-z0-9-]{1,32}$/.test(marca) || !/^[a-z0-9#:_-]{1,48}$/.test(video) || !/^[a-z0-9]{8,32}$/.test(uid)) return json({ error: "Datos inválidos" }, 400);
+    if (!(await underCap(`wl/${ip}`, 600))) return new Response(null, { status: 204 });
+    await weedlandTabla(env);
+    const now = Date.now();
+    ctx.waitUntil(env.DB.prepare("INSERT INTO wl_vistas (marca, video, uid, origen, n, fin, primera, ultima) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(marca, video, uid) DO UPDATE SET n = n + ?, fin = fin + ?, ultima = ?")
+      .bind(marca, video, uid, origen, 1 - fin, fin, now, now, 1 - fin, fin, now).run().catch(e => console.error("weedland", e.message)));
+    return new Response(null, { status: 204 });
+  }
+  if (path === "/api/weedland/vistas" && M === "GET") {
+    const marca = url.searchParams.get("marca") || "";
+    if (!/^[a-z0-9-]{1,32}$/.test(marca)) return json({ error: "Marca inválida" }, 400);
+    await weedlandTabla(env);
+    const [tot, por] = await env.DB.batch([
+      env.DB.prepare("SELECT COALESCE(SUM(n), 0) AS reproducciones, COALESCE(SUM(fin), 0) AS completas, COUNT(DISTINCT uid) AS personas FROM wl_vistas WHERE marca = ?").bind(marca),
+      env.DB.prepare("SELECT video, SUM(n) AS reproducciones, SUM(fin) AS completas, COUNT(DISTINCT uid) AS personas FROM wl_vistas WHERE marca = ? GROUP BY video ORDER BY reproducciones DESC LIMIT 50").bind(marca),
+    ]);
+    return json({ ...(tot.results[0] || {}), videos: por.results });
+  }
+
   // link page: one tap on a button; prize wheel: spins, each prize that came out, "lose", review… (navigator.sendBeacon); only counted while it is live
   m = path.match(/^\/api\/click\/([a-z0-9-]+)\/([a-z0-9]{1,16})$/);
   if (m && M === "POST") {
@@ -1937,6 +1961,15 @@ function cleanButtons(b) {
 }
 
 // ---------- helpers ----------
+// Weedland: una fila por marca, video y persona (n = veces que empezó, fin = veces que lo vio completo)
+let wlReady = false;
+async function weedlandTabla(env) {
+  if (wlReady) return;
+  await env.DB.batch([
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS wl_vistas (marca TEXT NOT NULL, video TEXT NOT NULL, uid TEXT NOT NULL, origen TEXT, n INTEGER DEFAULT 0, fin INTEGER DEFAULT 0, primera INTEGER, ultima INTEGER, PRIMARY KEY (marca, video, uid))"),
+  ]);
+  wlReady = true;
+}
 let schemaReady = false;
 async function schema(env) {
   if (schemaReady) return;

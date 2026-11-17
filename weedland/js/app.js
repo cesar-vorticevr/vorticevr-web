@@ -1,8 +1,8 @@
 // Weedland Station: interfaz (entrada, stands, catálogo, juegos, premios, cultivo, mercado, tienda, nave, pasaporte).
 import { PAISES, PABELLONES, PREMIO_DIA, catalogo, preguntasMarca, nombrePais, videosDe, NIVELES } from "./datos.js";
-import { leerPerfil, guardarPerfil, leerJuego, guardarJuego, marcas, sumar, codigo, CLAVES } from "./estado.js";
+import { leerPerfil, guardarPerfil, leerJuego, guardarJuego, marcas, sumar, codigo, CLAVES, registrarVista } from "./estado.js";
 import { sonido, volar, cartel, confeti, flotante, contar, alternarSonido, estaMudo } from "./efectos.js";
-import { semillasRegistradas, ADITAMENTOS, aditamento, OBJETOS, PUESTOS, puesto, claseDe, progreso, faltan, rinde, factorVel, tiempoTexto, MAX_VIDEOS, COMPRADORES, MAX_TIENDA, esperaVenta } from "./cultivo.js";
+import { semillasRegistradas, ADITAMENTOS, aditamento, OBJETOS, PUESTOS, puesto, claseDe, progreso, faltan, rinde, factorVel, tiempoTexto, MAX_VIDEOS, COMPRADORES, MAX_TIENDA, PRECIO_MAX, precioJusto, esperaVenta } from "./cultivo.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -16,7 +16,7 @@ let est = null; // escena 3D
 let actual = null; // { tipo, id, tab }
 const marca = (id) => MARCAS.find((m) => m.id === id);
 const pab = (id) => PABELLONES.find((p) => p.id === id);
-const guardar = () => guardarJuego(J);
+const guardar = () => { guardarJuego(J); contadores(); };
 const vars = (m) => `--c:${m.color};--c2:${m.color2}`;
 
 // ---------- entrada (edad según país) ----------
@@ -70,6 +70,7 @@ async function iniciar() {
     $("#cargando").innerHTML = `<p>No se pudo cargar el 3D en este dispositivo.</p><button class="btn" onclick="location.reload()">Reintentar</button>`;
     return;
   }
+  if (/[?&]prueba\b/.test(location.search)) window.__ws = est; // solo para probar desde la consola
   setTimeout(() => $("#cargando").classList.add("fuera"), 300);
   conectarHud();
   conectarStick();
@@ -86,7 +87,7 @@ function crearEtiqueta({ id, icono, nombre, color, isla }) {
   b.className = "etiqueta" + (isla ? " isla" : ""); b.style.setProperty("--c", color);
   if (isla) { b.innerHTML = `<span>${icono}</span>${esc(nombre)}<em>ISLA</em>`; b.onclick = () => { sonido.tap(); caminarA("stand", id, () => abrirStand(id)); }; $("#etiquetas").appendChild(b); return b; }
   b.innerHTML = `<span>${icono}</span>${esc(nombre)}`;
-  b.onclick = () => { sonido.tap(); if (id === "plaza") irPlaza(); else if (id === "mercado") caminarA("mercado", null, () => abrirMercado()); else if (id === "cultivo") caminarA("cultivo", null, () => abrirCultivo()); else if (id === "nave") caminarA("nave", null, () => abrirNave()); else caminarA("pabellon", id); };
+  b.onclick = () => { sonido.tap(); if (id === "plaza") irPlaza(); else if (id === "mercado") caminarA("mercado", null, () => abrirMercado()); else if (id === "micultivo") caminarA("micultivo", null, () => abrirCultivo()); else if (id === "nave") caminarA("nave", null, () => abrirNave()); else caminarA("pabellon", id); };
   $("#etiquetas").appendChild(b);
   return b;
 }
@@ -95,13 +96,16 @@ function conectarHud() {
   $("#btn-inicio").onclick = () => { sonido.tap(); irPlaza(); };
   $("#btn-polen").onclick = () => { sonido.tap(); abrirPremios(); };
   $("#btn-ayuda").onclick = () => { sonido.tap(); guia(0); };
+  $("#btn-inv").onclick = () => { sonido.tap(); abrirInventario(); };
+  $("#btn-fav").onclick = () => { sonido.tap(); abrirFavoritos(); };
+  contadores();
   $("#btn-sonido").onclick = () => { $("#btn-sonido").textContent = alternarSonido() ? "🔇" : "🔊"; sonido.tap(); };
   $$(".nav button").forEach((b) => (b.onclick = () => {
     sonido.tap();
     const ir = b.dataset.ir;
     if (ir === "plaza") irPlaza();
     else if (ir === "directorio") abrirDirectorio();
-    else if (ir === "cultivo") irLugar("cultivo", null, () => abrirCultivo());
+    else if (ir === "cultivo") irLugar("micultivo", null, () => abrirCultivo());
     else if (ir === "mercado") irLugar("mercado", null, () => abrirMercado());
     else if (ir === "nave") irLugar("nave", null, () => abrirNave());
     else if (ir === "premios") abrirPremios();
@@ -307,8 +311,10 @@ function pintarTab(m, tab) {
 }
 
 function tabInicio(m, caja) {
-  const cat = catalogo(m), sigue = J.siguiendo.includes(m.id), vids = videosDe(m);
+  const cat = catalogo(m), sigue = J.siguiendo.includes(m.id);
   const visto = (v) => J.videos.includes(v.id);
+  // primero los videos que esta persona no ha visto, para que cada video de la marca sume vistas
+  const vids = videosDe(m).map((v, k) => ({ v, k })).sort((a, b) => (visto(a.v) - visto(b.v)) || (vecesVisto(a.v.id) - vecesVisto(b.v.id)) || a.k - b.k).map((x) => x.v);
   caja.innerHTML = `
     <button class="video ancho" data-video="0">
       <div><div class="play">▶</div></div>
@@ -367,6 +373,7 @@ function verProducto(m, pid) {
     const i = J.favoritos.indexOf(pid);
     if (i >= 0) J.favoritos.splice(i, 1); else { J.favoritos.push(pid); sumar(m.id, "favoritos"); sonido.bien(); }
     guardar(); e.currentTarget.textContent = J.favoritos.includes(pid) ? "💜 En favoritos" : "🤍 Favorito";
+    if (actual && actual.tipo === "favoritos") abrirFavoritos();
   };
 }
 
@@ -389,8 +396,17 @@ function tabCatalogo(m, caja) {
   pintar();
 }
 
+// ---------- reproducciones: cuántas veces vio esta persona cada video (para poner primero los que no ha visto) ----------
+const vecesVisto = (video) => (J.anuncios && J.anuncios[video]) || 0;
+function empezoVideo(marcaId, video, origen) {
+  J.anuncios = J.anuncios || {};
+  J.anuncios[video] = (J.anuncios[video] || 0) + 1; guardar();
+  registrarVista(marcaId, video, "inicio", origen);
+}
+
 // ---------- video de marca (simulado: en la versión real es el video que sube la marca) ----------
 function verVideo(m, v = videosDe(m)[0]) {
+  empezoVideo(m.id, v.id, "stand");
   const cat = catalogo(m).filter((p) => p.destacado);
   const k = Math.max(0, videosDe(m).findIndex((x) => x.id === v.id)), p0 = cat[k % Math.max(1, cat.length)] || {};
   const caja = modal(`
@@ -404,7 +420,7 @@ function verVideo(m, v = videosDe(m)[0]) {
     <div class="acciones"><button class="btn sec" data-x>Cerrar</button></div>`, vars(m));
   $("[data-x]", caja).onclick = () => { clearTimeout(fin); cerrarModal(); };
   const fin = setTimeout(() => {
-    sumar(m.id, "videos");
+    registrarVista(m.id, v.id, "fin", "stand");
     if (!J.videos.includes(v.id)) {
       J.videos.push(v.id); guardar();
       cerrarModal();
@@ -566,7 +582,7 @@ function abrirPremios() {
       <div class="tarjeta"><div class="fila-t"><span class="grande">🏛️</span><div class="txt"><b>Visita un stand nuevo</b><small>${J.visitados.length} de ${MARCAS.length} visitados</small></div><span class="costo">+10</span></div></div>
       <div class="tarjeta"><div class="fila-t"><span class="grande">🎬</span><div class="txt"><b>Ve el video de una marca</b><small>10 segundos</small></div><span class="costo">+15</span></div></div>
       <div class="tarjeta"><div class="fila-t"><span class="grande">🎰</span><div class="txt"><b>Juega en cada stand</b><small>Una partida gratis al día por stand</small></div><span class="costo">hasta 30</span></div></div>
-      <div class="tarjeta"><div class="fila-t"><span class="grande">🏪</span><div class="txt"><b>Vende en tu tienda</b><small>Cosecha, transforma en el Mercado y vende</small></div><span class="costo">+12 a +40</span></div></div>
+      <div class="tarjeta"><div class="fila-t"><span class="grande">🏪</span><div class="txt"><b>Vende en tu tienda</b><small>Cosecha, transforma en el Mercado y vende</small></div><span class="costo">+30 a +100</span></div></div>
       <div class="tarjeta"><div class="fila-t"><span class="grande">💡</span><div class="txt"><b>Aprende en el Mercado</b><small>Cada puesto te cuenta algo</small></div><span class="costo">+10</span></div></div>
       <div class="tarjeta"><div class="fila-t"><span class="grande">🪪</span><div class="txt"><b>Completa un pabellón</b><small>Visita todos sus stands</small></div><span class="costo">+50</span></div></div>
     </div>
@@ -614,7 +630,6 @@ const semillaPorId = (id) => semillasDe().find((s) => s.id === id);
 const objNombre = (k) => (OBJETOS[k] ? `${OBJETOS[k].icono} ${OBJETOS[k].nombre}` : k);
 const total = (o) => Object.values(o || {}).reduce((a, b) => a + b, 0);
 function sumarInv(bolsa, k, n = 1) { J[bolsa][k] = (J[bolsa][k] || 0) + n; if (J[bolsa][k] <= 0) delete J[bolsa][k]; }
-const PATROCINIO_CULTIVO = ["lumen", "tierra", "aqua", "clima-grow", "sensor-verde", "maceta-viva", "abono-andino", "luz-solar-pro", "hidro-lab"];
 
 function estadoParcelas() {
   return J.parcelas.map((p) => p && { tipo: p.tipo, prog: progreso(p), listo: progreso(p) >= 1, aditamentos: p.aditamentos || [] });
@@ -675,7 +690,7 @@ function abrirCultivo() {
   }).join("");
   abrirPanel(`
     <div class="cab-marca"><div class="logo-m" style="--c:#7dffb3;--c2:#0f5d43">🌱</div>
-      <div><h2>Mi cultivo</h2><p>Cada planta tarda 2 horas. Los aditamentos y los videos de las marcas la aceleran.</p></div></div>
+      <div><h2>Mi cultivo</h2><p>Cada planta tarda 45 minutos. Cada semilla trae 2 videos (su marca y un complemento): cada uno la adelanta 15 minutos. Los aditamentos también la aceleran.</p></div></div>
     <div class="parcelas">${celdas}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
       <button class="btn chico" id="ir-mercado">🛒 Ir al Mercado</button>
@@ -694,6 +709,70 @@ function mochila() {
     <div class="mochila"><b>Semillas</b><div>${sem || `<span class="suave chico-t">Ninguna. Cómpralas en el Banco de semillas del Mercado.</span>`}</div>
     <b>Aditamentos</b><div>${adi || `<span class="suave chico-t">Ninguno. Están en la Tienda de cultivo.</span>`}</div>
     <b>Cosecha y productos</b><div>${inv || `<span class="suave chico-t">Aún nada. Cosecha y transforma en los talleres.</span>`}</div></div></div>`;
+}
+
+// ---------- inventario: todo lo que tienes (mochila y tu tienda) ----------
+const suma = (o) => Object.values(o || {}).reduce((a, b) => a + b, 0);
+function contadores() {
+  const bi = $("#btn-inv"), bf = $("#btn-fav");
+  if (bi) bi.dataset.n = String(suma(J.semillas) + suma(J.aditamentos) + suma(J.inv) + J.tienda.length || "");
+  if (bf) bf.dataset.n = String(J.favoritos.length + J.siguiendo.length || "");
+}
+function abrirInventario() {
+  const ahora = Date.now();
+  const celda = (ico, nombre, n, sub, c = "") => `<div class="inv-item" style="${c}"><span class="n">×${n}</span><div class="ico">${ico}</div><b>${esc(nombre)}</b>${sub ? `<small>${sub}</small>` : ""}</div>`;
+  const sem = Object.entries(J.semillas).map(([id, n]) => { const s = semillaPorId(id), m = s && marca(s.marca); return s ? celda(s.icono, s.nombre, n, esc(m.nombre), vars(m)) : ""; }).join("");
+  const adi = Object.entries(J.aditamentos).map(([id, n]) => { const a = aditamento(id); return a ? celda(a.icono, a.nombre, n, a.vel ? `+${Math.round(a.vel * 100)}% velocidad` : `+${a.rinde} cosecha`, "--c:#6ff0ff") : ""; }).join("");
+  const inv = Object.entries(J.inv).filter(([k]) => OBJETOS[k]).map(([k, n]) => celda(OBJETOS[k].icono, OBJETOS[k].nombre, n, `vale ~${precioJusto(k)} ⭐`, "--c:#ffd76a")).join("");
+  const venta = J.tienda.map((it) => `<div class="item-m"><div class="logo-m" style="--c:#7dffb3;--c2:#0f5d43">${OBJETOS[it.item].icono}</div><div class="txt"><b>${esc(OBJETOS[it.item].nombre)}</b><small>${it.vence <= ahora ? "Vendiéndose…" : "Esperando comprador"}</small></div><span class="costo">${it.precio} ⭐</span></div>`).join("");
+  const valor = Object.entries(J.inv).reduce((a, [k, n]) => a + (OBJETOS[k] ? precioJusto(k) * n : 0), 0) + J.tienda.reduce((a, it) => a + it.precio, 0);
+  const plantas = J.parcelas.filter(Boolean).length;
+  abrirPanel(`
+    <div class="cab-marca"><div class="logo-m" style="--c:#ffd76a;--c2:#5a4310">🎒</div>
+      <div><h2>Tu inventario</h2><p>Todo lo que tienes: semillas, aditamentos, tu cosecha y lo que pusiste en tu tienda.</p></div></div>
+    <div class="resumen-inv">
+      <div style="--c:#7dffb3"><b>${suma(J.semillas)}</b><small>Semillas</small></div>
+      <div style="--c:#ffd76a"><b>${suma(J.inv)}</b><small>Cosecha y productos</small></div>
+      <div style="--c:#ff9ae6"><b>${J.tienda.length}/${MAX_TIENDA}</b><small>En tu tienda</small></div>
+    </div>
+    <p class="chico-t suave" style="margin:8px 0 0">${plantas} de ${J.parcelas.length} parcelas sembradas · tu mercancía vale unas ${valor} ⭐ · ${J.ventas.length ? `última venta: ${esc(J.ventas[0].quien)}` : "aún no vendes nada"}</p>
+    <div class="seccion"><h3>🏪 En tu tienda (${J.tienda.length}/${MAX_TIENDA})</h3>${venta ? `<div class="lista-m">${venta}</div>` : `<p class="inv-vacio">Tu tienda está vacía.</p>`}</div>
+    <div class="seccion"><h3>🧺 Cosecha y productos (${suma(J.inv)})</h3>${inv ? `<div class="inv-lista">${inv}</div>` : `<p class="inv-vacio">Aún nada. Cosecha tus parcelas y transforma en los talleres del Mercado.</p>`}</div>
+    <div class="seccion"><h3>🌱 Semillas (${suma(J.semillas)})</h3>${sem ? `<div class="inv-lista">${sem}</div>` : `<p class="inv-vacio">Ninguna. Cómpralas en el Banco de semillas del Mercado.</p>`}</div>
+    <div class="seccion"><h3>💡 Aditamentos (${suma(J.aditamentos)})</h3>${adi ? `<div class="inv-lista">${adi}</div>` : `<p class="inv-vacio">Ninguno. Están en la Tienda de cultivo del Mercado.</p>`}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+      <button class="btn chico" id="inv-tienda">🏪 Ir a tu tienda</button>
+      <button class="btn chico sec" id="inv-cultivo">🌱 Mi cultivo</button>
+      <button class="btn chico sec" id="inv-mercado">🛒 Mercado</button>
+    </div>`, { tipo: "inventario", c: "--c:#ffd76a", alto: true });
+  $("#inv-tienda").onclick = () => irLugar("tienda", null, () => abrirTienda());
+  $("#inv-cultivo").onclick = () => irLugar("micultivo", null, () => abrirCultivo());
+  $("#inv-mercado").onclick = () => irLugar("mercado", null, () => abrirMercado());
+}
+
+// ---------- favoritos: productos que marcaste con 💜 y marcas que sigues ----------
+function productoPorId(pid) {
+  for (const m of MARCAS) { const p = catalogo(m).find((x) => x.id === pid); if (p) return { m, p }; }
+  return null;
+}
+function abrirFavoritos() {
+  const prods = J.favoritos.map(productoPorId).filter(Boolean);
+  const sigo = J.siguiendo.map(marca).filter(Boolean);
+  abrirPanel(`
+    <div class="cab-marca"><div class="logo-m" style="--c:#ff9ae6;--c2:#5a1149">💜</div>
+      <div><h2>Tus favoritos</h2><p>Los productos que marcaste con 💜 y las marcas que sigues.</p></div></div>
+    <div class="seccion"><h3>Productos (${prods.length})</h3>
+      ${prods.length ? `<div class="lista-m">${prods.map(({ m, p }) => `<div class="item-m" style="${vars(m)}"><button class="fila-boton" data-favp="${m.id}|${p.id}"><div class="logo-m">${p.icono}</div><div class="txt"><b>${esc(p.nombre)}</b><small>${esc(m.nombre)} · ${esc(p.precio)}</small></div></button><button class="fav-quitar" data-quitar-fav="${p.id}" aria-label="Quitar de favoritos" title="Quitar de favoritos">✕</button></div>`).join("")}</div>`
+        : `<p class="inv-vacio">Aún no tienes productos favoritos. Abre un producto en el catálogo de un stand y toca 🤍 Favorito.</p>`}</div>
+    <div class="seccion"><h3>Marcas que sigues (${sigo.length})</h3>
+      ${sigo.length ? `<div class="lista-m">${sigo.map(itemMarca).join("")}</div>` : `<p class="inv-vacio">No sigues ninguna marca. En cada stand está el botón ＋ Seguir marca.</p>`}</div>`,
+  { tipo: "favoritos", c: "--c:#ff9ae6", alto: true });
+  conectarItems($("#panel-cuerpo"));
+  $$("[data-favp]").forEach((b) => (b.onclick = () => { sonido.tap(); const [mid, pid] = b.dataset.favp.split("|"); verProducto(marca(mid), pid); }));
+  $$("[data-quitar-fav]").forEach((b) => (b.onclick = () => {
+    const i = J.favoritos.indexOf(b.dataset.quitarFav); if (i >= 0) J.favoritos.splice(i, 1);
+    guardar(); sonido.tap(); abrirFavoritos();
+  }));
 }
 
 function abrirParcela(i) {
@@ -720,11 +799,20 @@ function abrirParcela(i) {
     return;
   }
   const tengo = Object.entries(J.aditamentos).map(([id, n]) => ({ a: aditamento(id), n })).filter((x) => x.a && !p.aditamentos.includes(x.a.id));
-  const sponsor = marca(PATROCINIO_CULTIVO[(p.videos + i) % PATROCINIO_CULTIVO.length]) || m;
+  const anuncios = anunciosDe(p, i);
+  // los que no has visto nunca van primero
+  const pendientes = anuncios.filter((a) => !p.vistos.includes(a.video)).sort((a, b) => vecesVisto(a.video) - vecesVisto(b.video));
   abrirPanel(`${cab(`${esc(p.nombre)} de ${esc(m.nombre)}`)}
-    <div class="tarjeta" style="margin-top:12px"><div class="fila-t"><span class="grande">⏳</span><div class="txt"><b>Faltan <span id="cuenta-atras">${tiempoTexto(faltan(p))}</span></b><small>Velocidad: ${Math.round((1 / factorVel(p)) * 100)}% · videos vistos ${p.videos}/${MAX_VIDEOS}</small></div></div>
+    <div class="tarjeta" style="margin-top:12px"><div class="fila-t"><span class="grande">⏳</span><div class="txt"><b>Faltan <span id="cuenta-atras">${tiempoTexto(faltan(p))}</span></b><small>Velocidad: ${Math.round((1 / factorVel(p)) * 100)}% · videos vistos ${p.vistos.length}/${MAX_VIDEOS}</small></div></div>
       <div class="barra" style="margin-top:10px"><i id="barra-parcela" style="width:${pr * 100}%"></i></div></div>
-    ${p.videos < MAX_VIDEOS ? `<button class="tarjeta fila-t ancho" id="ver-anuncio" style="text-align:left;margin-top:10px;${vars(sponsor)}"><span class="grande">📺</span><span class="txt"><b>Ver video de ${esc(sponsor.nombre)}</b><small>10 segundos y tu planta crece 15 minutos</small></span><span class="costo">−15 min</span></button>` : ""}
+    <div class="seccion"><h3>📺 Adelanta tu cosecha <small class="suave">15 min por video</small></h3>
+      ${[...pendientes, ...anuncios.filter((a) => p.vistos.includes(a.video))].map((a) => {
+        const mm = marca(a.marca), hecho = p.vistos.includes(a.video), nuevo = !vecesVisto(a.video);
+        return `<button class="tarjeta fila-t ancho video-semilla ${hecho ? "hecho" : ""}" data-anuncio="${esc(a.video)}" ${hecho ? "disabled" : ""} style="text-align:left;margin-top:8px;${vars(mm)}">
+          <span class="grande">${hecho ? "✅" : a.icono}</span><span class="txt"><b>${esc(a.titulo)}</b><small>${a.tipo === "marca" ? "Video de la marca de tu semilla" : "Complemento de la Tienda de cultivo"} · ${esc(mm.nombre)}${!hecho && nuevo ? " · <em class='nuevo-v'>nuevo para ti</em>" : ""}</small></span>
+          <span class="costo">${hecho ? "✓ visto" : "−15 min"}</span></button>`;
+      }).join("")}
+    </div>
     <div class="seccion"><h3>Aditamentos</h3>
       ${p.aditamentos.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${p.aditamentos.map((id) => `<span class="chip c">${aditamento(id).icono} ${esc(aditamento(id).nombre)} ✓</span>`).join("")}</div>` : ""}
       ${tengo.length ? `<div class="lista-m">${tengo.map(({ a, n }) => `<button class="item-m" data-aplicar="${a.id}"><div class="logo-m" style="--c:#6ff0ff;--c2:#0c3d5a">${a.icono}</div><div class="txt"><b>${esc(a.nombre)} ×${n}</b><small>${esc(a.desc)}</small></div><span class="costo">Usar</span></button>`).join("")}</div>`
@@ -736,13 +824,21 @@ function abrirParcela(i) {
     sonido.burbuja(); flotante(`${a.icono} ¡${a.vel ? "más rápido" : "más cosecha"}!`, centroDe(b).x, centroDe(b).y, "#6ff0ff");
     refrescarCultivo(); abrirParcela(i);
   }));
-  const va = $("#ver-anuncio"); if (va) va.onclick = () => verAnuncio(sponsor, () => { p.videos++; guardar(); sumar(sponsor.id, "videos"); flotante("−15 min ⏩", innerWidth / 2, innerHeight / 2, "#6ff0ff"); sonido.premio(); refrescarCultivo(); abrirParcela(i); });
+  $$("[data-anuncio]").forEach((b) => (b.onclick = () => {
+    const a = anuncios.find((x) => x.video === b.dataset.anuncio); if (!a || p.vistos.includes(a.video)) return;
+    sonido.tap();
+    verAnuncio(marca(a.marca), () => {
+      if (!p.vistos.includes(a.video)) p.vistos.push(a.video);
+      p.videos = p.vistos.length; guardar();
+      flotante("−15 min ⏩", innerWidth / 2, innerHeight / 2, "#6ff0ff"); sonido.premio(); refrescarCultivo(); abrirParcela(i);
+    }, { video: a.video, origen: "cultivo", titulo: a.titulo, icono: a.icono });
+  }));
   const ia = $("#ir-aditamentos"); if (ia) ia.onclick = () => irLugar("puesto", "aditamentos", () => abrirPuesto("aditamentos"));
 }
 function sembrar(i, sid) {
   const s = semillaPorId(sid); if (!s || !J.semillas[sid]) return;
   sumarInv("semillas", sid, -1);
-  J.parcelas[i] = { semilla: sid, marca: s.marca, nombre: s.nombre, tipo: s.tipo, plantada: Date.now(), aditamentos: [], videos: 0 };
+  J.parcelas[i] = { semilla: sid, marca: s.marca, nombre: s.nombre, tipo: s.tipo, plantada: Date.now(), aditamentos: [], videos: 0, vistos: [] };
   guardar(); sumar(s.marca, "sembradas");
   sonido.siembra(); confeti(10);
   refrescarCultivo(); abrirParcela(i);
@@ -760,18 +856,40 @@ function cosechar(i, desde) {
   refrescarCultivo();
   setTimeout(() => abrirParcela(i), 600);
 }
-// Video patrocinado de 10 segundos (simulado)
-function verAnuncio(m, alTerminar) {
+// Cada semilla trae 2 videos: uno de la marca de la semilla y uno de un complemento (aditamento) de la Tienda de cultivo.
+// Se eligen los que esta persona ha visto menos y que no estén ya esperando en otra parcela, así las vistas se reparten entre marcas.
+function videosComplemento() {
+  return ADITAMENTOS.filter((a) => marca(a.marca)).map((a) => ({ marca: a.marca, video: `${a.marca}#adi-${a.id}`, titulo: `${a.nombre} · ${marca(a.marca).nombre}`, icono: a.icono, tipo: "complemento" }));
+}
+function anunciosDe(p, i) {
+  p.vistos = p.vistos || [];
+  if (p.anuncios && p.anuncios.length === 2 && p.anuncios.every((a) => marca(a.marca))) return p.anuncios;
+  const enUso = new Set(J.parcelas.filter((q) => q && q !== p && q.anuncios).flatMap((q) => q.anuncios.filter((a) => !(q.vistos || []).includes(a.video)).map((a) => a.video)));
+  const elegir = (lista) => lista.map((a, k) => ({ a, k: (k - i + lista.length * 8) % lista.length }))
+    .sort((x, y) => (vecesVisto(x.a.video) - vecesVisto(y.a.video)) || (enUso.has(x.a.video) - enUso.has(y.a.video)) || x.k - y.k)[0].a;
+  const mm = marca(p.marca);
+  const deMarca = videosDe(mm).map((v, k) => ({ marca: mm.id, video: v.id, titulo: k ? `${mm.nombre} · ${v.titulo}` : v.titulo, icono: v.icono, tipo: "marca" }));
+  p.anuncios = [elegir(deMarca), elegir(videosComplemento())];
+  // plantas sembradas antes de este cambio: los videos que ya había visto cuentan
+  if (p.videos && !p.vistos.length) p.vistos = p.anuncios.slice(0, Math.min(MAX_VIDEOS, p.videos)).map((a) => a.video);
+  guardar();
+  return p.anuncios;
+}
+// Video patrocinado de 10 segundos (simulado). opts: { video, origen, titulo, icono }
+function verAnuncio(m, alTerminar, opts = {}) {
+  const video = opts.video || m.id, origen = opts.origen || "cultivo";
+  empezoVideo(m.id, video, origen);
+  const prod = catalogo(m)[0] || {};
   const caja = modal(`
     <div class="rep">
       <div class="esc"><div class="e">${m.icono}</div><b>${esc(m.nombre)}</b><span>${esc(m.lema)}</span></div>
-      <div class="esc"><div class="e">${(catalogo(m)[0] || {}).icono || m.icono}</div><b>${esc((catalogo(m)[0] || {}).nombre || m.nombre)}</b><span>${esc(m.anuncio)}</span></div>
-      <div class="esc"><div class="e">🌱</div><b>¡Gracias por ver!</b><span>Tu planta creció un poco más</span></div>
+      <div class="esc"><div class="e">${opts.icono || prod.icono || m.icono}</div><b>${esc(opts.titulo || prod.nombre || m.nombre)}</b><span>${esc(m.anuncio)}</span></div>
+      <div class="esc"><div class="e">${origen === "cultivo" ? "🌱" : m.icono}</div><b>¡Gracias por ver!</b><span>${origen === "cultivo" ? "Tu planta crece 15 minutos más rápido" : esc(m.lema)}</span></div>
       <div class="prog"></div>
     </div>
     <p class="suave chico-t" style="margin:10px 0 0">Video de ejemplo de la marca.</p>
     <div class="acciones"><button class="btn sec" data-x>Cerrar</button></div>`, vars(m));
-  const fin = setTimeout(() => { cerrarModal(); alTerminar(); }, matchMedia("(prefers-reduced-motion: reduce)").matches ? 1500 : 10200);
+  const fin = setTimeout(() => { registrarVista(m.id, video, "fin", origen); cerrarModal(); alTerminar(); }, matchMedia("(prefers-reduced-motion: reduce)").matches ? 1500 : 10200);
   $("[data-x]", caja).onclick = () => { clearTimeout(fin); cerrarModal(); };
 }
 
@@ -836,7 +954,7 @@ function abrirPuesto(id, filtro = "") {
     sumar(pat.id, "talleres");
     if (!J.talleresVistos.includes(id)) { J.talleresVistos.push(id); guardar(); ganar(10, "Video del taller"); }
     abrirPuesto(id);
-  });
+  }, { video: `${pat.id}#taller-${id}`, origen: "taller", titulo: `Así se hace · ${pu.nombre}`, icono: "🎬" });
   const ap = $("#aprender"); if (ap && clase) ap.onclick = () => aprender(clase, id);
 }
 function aprender(c, pid) {
@@ -876,7 +994,7 @@ function abrirTienda() {
       ${J.tienda.length ? `<div class="lista-m">${J.tienda.map((it, k) => `<div class="item-m"><div class="logo-m" style="--c:#7dffb3;--c2:#0f5d43">${OBJETOS[it.item].icono}</div><div class="txt"><b>${esc(OBJETOS[it.item].nombre)}</b><small>Esperando comprador…</small></div><span class="costo">${it.precio} ⭐</span><button class="btn chico sec" data-quitar="${k}">✕</button></div>`).join("")}</div>` : `<p class="suave chico-t">Tu tienda está vacía.</p>`}
     </div>
     <div class="seccion"><h3>Poner a la venta</h3>
-      ${vendibles.length ? `<div class="lista-m">${vendibles.map(([k, n]) => `<div class="item-m"><div class="logo-m" style="--c:#ffd76a;--c2:#5a4310">${OBJETOS[k].icono}</div><div class="txt"><b>${esc(OBJETOS[k].nombre)} ×${n}</b><small>Precio justo: ${OBJETOS[k].valor} ⭐ (si lo subes, tarda más en venderse)</small></div>
+      ${vendibles.length ? `<div class="lista-m">${vendibles.map(([k, n]) => `<div class="item-m"><div class="logo-m" style="--c:#ffd76a;--c2:#5a4310">${OBJETOS[k].icono}</div><div class="txt"><b>${esc(OBJETOS[k].nombre)} ×${n}</b><small>Precio justo: ${OBJETOS[k].valor} ⭐ · puedes pedir hasta ${OBJETOS[k].valor * PRECIO_MAX} ⭐ (más caro tarda más)</small></div>
         <div class="precio-ctl"><button data-menos="${k}">−</button><span id="pr-${k}">${OBJETOS[k].valor}</span><button data-mas="${k}">＋</button></div><button class="btn chico oro" data-vender="${k}" ${J.tienda.length >= MAX_TIENDA ? "disabled" : ""}>Vender</button></div>`).join("")}</div>`
         : `<p class="suave chico-t">No tienes nada para vender. Cosecha en tus parcelas y transforma en los talleres del Mercado.</p>`}
     </div>
@@ -884,9 +1002,9 @@ function abrirTienda() {
     <p class="nota">Demo: los compradores son simulados. En la versión real serán otros jugadores.</p>`, { tipo: "tienda", nav: "cultivo", c: "--c:#7dffb3" });
   const precios = {};
   vendibles.forEach(([k]) => (precios[k] = OBJETOS[k].valor));
-  const ajustar = (k, d) => { precios[k] = Math.max(1, Math.min(OBJETOS[k].valor * 3, precios[k] + d)); $("#pr-" + k).textContent = precios[k]; sonido.tick(); };
-  $$("[data-menos]").forEach((b) => (b.onclick = () => ajustar(b.dataset.menos, -1)));
-  $$("[data-mas]").forEach((b) => (b.onclick = () => ajustar(b.dataset.mas, 1)));
+  const ajustar = (k, d) => { precios[k] = Math.max(1, Math.min(OBJETOS[k].valor * PRECIO_MAX, precios[k] + d)); $("#pr-" + k).textContent = precios[k]; sonido.tick(); };
+  $$("[data-menos]").forEach((b) => (b.onclick = () => ajustar(b.dataset.menos, -Math.max(1, Math.round(OBJETOS[b.dataset.menos].valor * 0.1)))));
+  $$("[data-mas]").forEach((b) => (b.onclick = () => ajustar(b.dataset.mas, Math.max(1, Math.round(OBJETOS[b.dataset.mas].valor * 0.1)))));
   $$("[data-vender]").forEach((b) => (b.onclick = () => {
     const k = b.dataset.vender; if (J.tienda.length >= MAX_TIENDA || !J.inv[k]) return;
     sumarInv("inv", k, -1);

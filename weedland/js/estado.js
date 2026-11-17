@@ -52,7 +52,7 @@ export function restaurarMarca(id) {
 
 // Métricas por marca (lo que se le reporta a cada marca)
 export const CAMPOS = [
-  ["visitas", "Visitas al stand"], ["videos", "Videos vistos"], ["producto", "Productos abiertos"],
+  ["visitas", "Visitas al stand"], ["reproducciones", "Reproducciones de sus videos"], ["videos", "Videos vistos completos"], ["producto", "Productos abiertos"],
   ["web", "Clics a su tienda"], ["favoritos", "Favoritos"], ["seguidores", "Seguidores"],
   ["partidas", "Partidas jugadas"], ["cupones", "Cupones canjeados"], ["boletos", "Boletos de sorteo"],
   ["drones", "Clics en drones"], ["pantallas", "Clics en pantallas"], ["talleres", "Videos de taller"],
@@ -65,6 +65,42 @@ export function sumar(id, campo, n = 1) {
   m[id] = m[id] || {};
   m[id][campo] = (m[id][campo] || 0) + n;
   escribir(K.metricas, m);
+}
+
+// ---------- reproducciones de los videos (anuncios) de cada marca ----------
+// Cada navegador tiene un número anónimo (ws-uid) para contar personas distintas, sin pedir datos.
+export function uid() {
+  try {
+    let u = localStorage.getItem("ws-uid");
+    if (!u) { u = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, "0")).join(""); localStorage.setItem("ws-uid", u); }
+    return u;
+  } catch { return Math.random().toString(16).slice(2, 18).padEnd(16, "0"); }
+}
+// En vorticevr.mx las vistas de todos se juntan en el servidor (worker.js, /api/weedland/). Sin servidor, solo cuenta este navegador.
+const API = new URL("../../api/weedland/", import.meta.url).href;
+// fase: "inicio" (empezó a reproducirse) o "fin" (lo vio completo) · origen: stand, cultivo, taller
+export function registrarVista(marca, video, fase = "inicio", origen = "stand") {
+  if (!marca || !video) return;
+  const m = metricas();
+  const r = (m[marca] = m[marca] || {});
+  if (fase === "inicio") { r.reproducciones = (r.reproducciones || 0) + 1; r.porVideo = r.porVideo || {}; r.porVideo[video] = (r.porVideo[video] || 0) + 1; }
+  else r.videos = (r.videos || 0) + 1;
+  escribir(K.metricas, m);
+  try {
+    fetch(API + "vista", { method: "POST", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ marca, video, fase, origen, uid: uid() }) }).catch(() => {});
+  } catch {}
+}
+// Lo que ve la marca en su panel: del servidor si responde, si no, lo de este navegador
+export async function vistasMarca(marca) {
+  try {
+    const r = await fetch(API + "vistas?marca=" + encodeURIComponent(marca), { cache: "no-store" });
+    if (r.ok && (r.headers.get("content-type") || "").includes("json")) return { ...(await r.json()), fuente: "servidor" };
+  } catch {}
+  const r = metricas()[marca] || {}, por = r.porVideo || {};
+  return {
+    fuente: "local", reproducciones: r.reproducciones || 0, completas: r.videos || 0, personas: r.reproducciones ? 1 : 0,
+    videos: Object.entries(por).map(([video, n]) => ({ video, reproducciones: n, personas: 1 })),
+  };
 }
 
 export function borrarTodo() {

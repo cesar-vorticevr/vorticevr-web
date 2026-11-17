@@ -1,12 +1,12 @@
 // Cultivo, Mercado y tienda virtual del demo de Weedland Station.
 // Todo es virtual: las semillas son las que cada marca registra en su catálogo,
-// las plantas crecen en tiempo real (2 horas) y los aditamentos de las marcas aceleran o aumentan la cosecha.
+// las plantas crecen en tiempo real (45 minutos) y los aditamentos de las marcas aceleran o aumentan la cosecha.
 import { catalogo, CLASES } from "./datos.js";
 
 export const HORA = 3600 * 1000;
-export const TIEMPO_BASE = 2 * HORA; // una planta tarda 2 horas sin aditamentos
+export const TIEMPO_BASE = 45 * 60 * 1000; // una planta tarda 45 minutos sin aditamentos
 export const MIN_VIDEO = 15 * 60 * 1000; // cada video patrocinado le quita 15 minutos
-export const MAX_VIDEOS = 4;
+export const MAX_VIDEOS = 2; // cada semilla trae 2 videos: el de su marca y el de un complemento de la Tienda de cultivo
 export const PARCELAS = 8;
 
 // ---------- registro de semillas ----------
@@ -47,19 +47,19 @@ export const aditamento = (id) => ADITAMENTOS.find((a) => a.id === id);
 
 // ---------- materiales y productos ----------
 export const OBJETOS = {
-  flor: { nombre: "Flor", icono: "🌼", valor: 4 },
-  fibra: { nombre: "Fibra de cáñamo", icono: "🧵", valor: 3 },
-  grano: { nombre: "Grano de cáñamo", icono: "🌰", valor: 3 },
-  cuerda: { nombre: "Cuerda", icono: "🪢", valor: 14 },
-  tela: { nombre: "Tela", icono: "🧶", valor: 20 },
-  papel: { nombre: "Papel", icono: "📄", valor: 12 },
-  bolsa: { nombre: "Bolsa de tela", icono: "👜", valor: 38 },
-  balsamo: { nombre: "Bálsamo", icono: "🧴", valor: 16 },
-  tintura: { nombre: "Tintura", icono: "🫙", valor: 24 },
-  esencia: { nombre: "Aceite aromático", icono: "💧", valor: 22 },
-  aceite: { nombre: "Aceite de cocina", icono: "🫒", valor: 18 },
-  proteina: { nombre: "Proteína", icono: "🥣", valor: 14 },
-  bloque: { nombre: "Bloque de construcción", icono: "🧱", valor: 28 },
+  flor: { nombre: "Flor", icono: "🌼", valor: 10 },
+  fibra: { nombre: "Fibra de cáñamo", icono: "🧵", valor: 8 },
+  grano: { nombre: "Grano de cáñamo", icono: "🌰", valor: 8 },
+  cuerda: { nombre: "Cuerda", icono: "🪢", valor: 35 },
+  tela: { nombre: "Tela", icono: "🧶", valor: 50 },
+  papel: { nombre: "Papel", icono: "📄", valor: 30 },
+  bolsa: { nombre: "Bolsa de tela", icono: "👜", valor: 95 },
+  balsamo: { nombre: "Bálsamo", icono: "🧴", valor: 40 },
+  tintura: { nombre: "Tintura", icono: "🫙", valor: 60 },
+  esencia: { nombre: "Aceite aromático", icono: "💧", valor: 55 },
+  aceite: { nombre: "Aceite de cocina", icono: "🫒", valor: 45 },
+  proteina: { nombre: "Proteína", icono: "🥣", valor: 35 },
+  bloque: { nombre: "Bloque de construcción", icono: "🧱", valor: 70 },
 };
 export const COSECHA = { flor: { flor: 3 }, canamo: { fibra: 3, grano: 2 } };
 
@@ -89,7 +89,7 @@ export function factorVel(p) {
   return Math.max(0.25, 1 - ahorro);
 }
 export function duracion(p) {
-  return Math.max(10 * 60 * 1000, TIEMPO_BASE * factorVel(p) - (p.videos || 0) * MIN_VIDEO);
+  return Math.max(5 * 60 * 1000, TIEMPO_BASE * factorVel(p) - (p.videos || 0) * MIN_VIDEO);
 }
 export function progreso(p, ahora = Date.now()) {
   if (!p) return 0;
@@ -113,8 +113,10 @@ export function tiempoTexto(ms) {
 // Los visitantes (simulados) compran lo que pones a la venta. Si el precio es justo, se vende más rápido.
 export const COMPRADORES = ["Kim", "Sol", "Tomi", "Luna", "Rafa", "Vale", "Nico", "Abril", "Leo", "Maia"];
 export const MAX_TIENDA = 6;
+export const PRECIO_MAX = 4; // puedes pedir hasta 4 veces el precio justo (tarda más en venderse)
+export const precioJusto = (k) => (OBJETOS[k] ? OBJETOS[k].valor : 0);
 export function esperaVenta(item, precio) {
   const base = OBJETOS[item].valor, caro = precio / base;
-  const min = (2 + Math.random() * 6) * Math.max(0.6, caro * caro); // minutos
+  const min = (2 + Math.random() * 6) * Math.max(0.6, Math.pow(caro, 1.6)); // minutos
   return min * 60 * 1000;
 }

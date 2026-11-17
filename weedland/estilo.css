@@ -283,3 +283,29 @@ h1, h2, h3, h4 { font-family: Fredoka, system-ui, sans-serif; font-weight: 600; 
 .destello.on { animation: destello 1.2s ease-out; }
 @keyframes destello { 0% { opacity: 0; } 15% { opacity: .85; } 100% { opacity: 0; } }
 @media (max-width: 440px) { .nav button small { font-size: .62rem; } .parcelas { grid-template-columns: repeat(4, 1fr); gap: 6px; } }
+
+/* ---------- inventario y favoritos ---------- */
+.redondo.con-n { position: relative; font-size: 1.05rem; }
+.redondo.con-n[data-n]:not([data-n=""])::after { content: attr(data-n); position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--oro); color: #3a2400; font: 800 .68rem Nunito, sans-serif; display: grid; place-items: center; }
+.resumen-inv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.resumen-inv div { padding: 10px 8px; border-radius: 14px; background: var(--panel-2); border: 1px solid var(--borde); text-align: center; }
+.resumen-inv b { display: block; font: 700 1.35rem Fredoka, sans-serif; color: var(--c, var(--cian)); }
+.resumen-inv small { color: var(--suave); font-size: .72rem; font-weight: 700; }
+.inv-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.inv-item { position: relative; padding: 10px 6px 8px; border-radius: 14px; background: var(--panel-2); border: 1px solid var(--borde); text-align: center; }
+.inv-item .ico { font-size: 1.7rem; line-height: 1.2; }
+.inv-item b { display: block; font-size: .78rem; line-height: 1.2; margin-top: 2px; }
+.inv-item small { display: block; color: var(--suave); font-size: .68rem; margin-top: 2px; }
+.inv-item .n { position: absolute; top: 6px; right: 6px; padding: 1px 7px; border-radius: 999px; background: var(--c, var(--cian)); color: #0b0620; font: 800 .72rem Nunito, sans-serif; }
+.inv-vacio { color: var(--suave); font-size: .85rem; padding: 6px 0; }
+.fav-quitar { flex: none; width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.06); border: 1px solid var(--borde); }
+.video-semilla.hecho { opacity: .6; }
+.nuevo-v { font-style: normal; color: var(--oro); font-weight: 800; }
+@media (max-width: 440px) {
+  .logo { padding: 4px; }
+  .logo-texto { display: none; }
+  .hud-der { gap: 6px; }
+  .redondo { width: 36px; height: 36px; }
+  .polen { padding: 6px 11px; font-size: 1rem; }
+}
+.fila-boton { display: flex; gap: 10px; align-items: center; flex: 1; min-width: 0; text-align: left; }

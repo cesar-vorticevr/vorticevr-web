@@ -1,7 +1,7 @@
 // Panel de marca del demo: editar stand, catálogo y ver métricas.
-import { PABELLONES, catalogo } from "./datos.js";
-import { esSemilla, semillasRegistradas } from "./cultivo.js";
-import { marcas, guardarMarca, restaurarMarca, metricas, CAMPOS, CLAVES } from "./estado.js";
+import { PABELLONES, catalogo, videosDe } from "./datos.js";
+import { esSemilla, semillasRegistradas, ADITAMENTOS, PUESTOS } from "./cultivo.js";
+import { marcas, guardarMarca, restaurarMarca, metricas, CAMPOS, CLAVES, vistasMarca } from "./estado.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -46,6 +46,7 @@ function pintar() {
     <div class="vista"><span class="e">${m.icono}</span><b>${esc(m.nombre)}</b><p>${esc(m.lema)}</p></div>
     <a class="btn chico" style="margin-top:12px" href="../" target="weedland">Abrir la estación ↗</a>`;
 
+  pintarVistas(m);
   const met = metricas()[id] || {};
   $("#c-met").innerHTML = `<h2>📊 Métricas</h2><div class="metricas">${CAMPOS.map(([k, t]) => `<div class="met"><b>${met[k] || 0}</b><small>${t}</small></div>`).join("")}</div>
     <p class="nota">Esto es lo que se le reporta a la marca cada mes. Demo: solo cuenta lo que pasa en este navegador.</p>`;
@@ -73,6 +74,34 @@ function pintar() {
   document.querySelectorAll("[data-quitar]").forEach((b) => (b.onclick = () => {
     const e2 = extra.slice(); e2.splice(+b.dataset.quitar, 1); guardarMarca(id, { extra: e2 }); pintar();
   }));
+}
+// Reproducciones de los videos de la marca: cuántas veces y cuántas personas distintas (del servidor si hay)
+const num = (n) => Number(n || 0).toLocaleString("es-MX");
+function nombreVideo(m, vid) {
+  const v = videosDe(m).find((x) => x.id === vid);
+  if (v) return `${v.icono} ${v.titulo}`;
+  const a = ADITAMENTOS.find((x) => vid === `${m.id}#adi-${x.id}`);
+  if (a) return `${a.icono} ${a.nombre} (Tienda de cultivo)`;
+  const pu = PUESTOS.find((x) => vid === `${m.id}#taller-${x.id}`);
+  if (pu) return `🎬 Así se hace · ${pu.nombre}`;
+  return vid;
+}
+let pedido = 0;
+async function pintarVistas(m) {
+  const caja = $("#c-vistas"), yo = ++pedido;
+  if (!caja.innerHTML) caja.innerHTML = `<h2>🎬 Reproducciones de tus videos</h2><p class="suave">Cargando…</p>`;
+  const r = await vistasMarca(m.id);
+  if (yo !== pedido) return;
+  const lista = (r.videos || []).slice().sort((a, b) => b.reproducciones - a.reproducciones);
+  caja.innerHTML = `<h2>🎬 Reproducciones de tus videos</h2>
+    <div class="metricas">
+      <div class="met"><b>${num(r.reproducciones)}</b><small>Veces que se reprodujo tu anuncio</small></div>
+      <div class="met"><b>${num(r.personas)}</b><small>Personas distintas que lo vieron</small></div>
+      <div class="met"><b>${num(r.completas)}</b><small>Vistas completas</small></div>
+    </div>
+    ${lista.length ? `<table class="tabla-v"><thead><tr><th>Video</th><th>Veces</th><th>Personas</th></tr></thead><tbody>${lista.map((v) => `<tr><td>${esc(nombreVideo(m, v.video))}</td><td>${num(v.reproducciones)}</td><td>${num(v.personas)}</td></tr>`).join("")}</tbody></table>`
+      : `<p class="suave chico-t" style="margin-top:10px">Todavía nadie ve tus videos. Salen en tu stand y en Mi cultivo (cada semilla trae 2 videos y se muestran primero los que la persona no ha visto).</p>`}
+    <p class="nota">${r.fuente === "servidor" ? "Datos de todos los visitantes de la estación. Cada persona se cuenta por su navegador, sin pedirle datos." : "Demo sin servidor: solo cuenta lo que pasa en este navegador."}</p>`;
 }
 function aviso(t) {
   const el = document.createElement("div"); el.className = "toast"; el.textContent = t;

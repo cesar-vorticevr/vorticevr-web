@@ -620,7 +620,7 @@ export function crearEstacion(canvas, cfg) {
   const parcelas3d = [];
   let tienda3d = null;
   function crearCultivo() {
-    const mod = modulo("cultivo", 270, D_EXT, R_ISLA, "#7dffb3");
+    const mod = modulo("micultivo", 270, D_EXT, R_ISLA, "#7dffb3");
     const g = new THREE.Group(); g.position.set(mod.centro.x, 0.6, mod.centro.z); g.lookAt(0, 0.6, 0);
     scene.add(g);
     const pasto = new THREE.Mesh(new THREE.CircleGeometry(R_ISLA - 1.5, 64), new THREE.MeshStandardMaterial({ color: "#2f6b3e", roughness: 0.9 }));
@@ -656,8 +656,8 @@ export function crearEstacion(canvas, cfg) {
     obst.push({ caja: g, x0: -4.2, x1: 4.2, z0: -12.6, z1: -9.4 });
     lugar("tienda", g, new THREE.Vector3(0, 0, -7.6), new THREE.Vector3(0, 0, -11));
     tienda3d = { productos, rob };
-    etiquetas.push({ el: cfg.etiqueta({ id: "cultivo", icono: "🌱", nombre: "Mi cultivo", color: "#7dffb3" }), pos: new THREE.Vector3(mod.centro.x, 12, mod.centro.z) });
-    lugar("cultivo", g, new THREE.Vector3(0, 0, 3.5), new THREE.Vector3(0, 0, -3), false);
+    etiquetas.push({ el: cfg.etiqueta({ id: "micultivo", icono: "🌱", nombre: "Mi cultivo", color: "#7dffb3" }), pos: new THREE.Vector3(mod.centro.x, 12, mod.centro.z) });
+    lugar("micultivo", g, new THREE.Vector3(0, 0, 3.5), new THREE.Vector3(0, 0, -3), false);
   }
   // Dibuja las plantas según el estado (lo manda la interfaz)
   function setParcelas(lista) {
@@ -982,7 +982,15 @@ export function crearEstacion(canvas, cfg) {
     for (const o of obst) {
       if (o.c) { if (Math.hypot(x - o.c[0], z - o.c[1]) < o.c[2] + RADIO) return false; }
       else {
-        local.set(x, o.caja.position.y, z); o.caja.worldToLocal(local);
+        // los obstáculos no se mueven: su matriz inversa y un círculo que los envuelve se calculan una sola vez
+        if (!o.inv) {
+          o.caja.updateWorldMatrix(true, false);
+          o.inv = o.caja.matrixWorld.clone().invert();
+          const c = new THREE.Vector3((o.x0 + o.x1) / 2, 0, (o.z0 + o.z1) / 2).applyMatrix4(o.caja.matrixWorld);
+          o.cx = c.x; o.cz = c.z; o.cr = Math.hypot(o.x1 - o.x0, o.z1 - o.z0) / 2 + RADIO + 0.1;
+        }
+        if (Math.abs(x - o.cx) > o.cr || Math.abs(z - o.cz) > o.cr) continue;
+        local.set(x, o.caja.position.y, z).applyMatrix4(o.inv);
         if (local.x > o.x0 - RADIO && local.x < o.x1 + RADIO && local.z > o.z0 - RADIO && local.z < o.z1 + RADIO) return false;
       }
     }
@@ -1033,10 +1041,92 @@ export function crearEstacion(canvas, cfg) {
     return [...pts, ...dentroDe(zh, bocaModulo(zh), hasta)];
   }
 
-  let ruta = [], alLlegar = null, atorado = 0, rapido = false;
-  function caminarA(destino, cb) {
+  // Ruta continua: A* sobre una cuadrícula del piso caminable (se recuerda qué celdas están libres) y luego
+  // se quitan los puntos que sobran, dejando solo tramos rectos despejados. Si no encuentra, usa el trazado por zonas.
+  const CELDA = 0.5, libreCache = new Map();
+  const llave = (i, j) => (i + 2000) * 4000 + (j + 2000);
+  const deLlave = (k) => [Math.floor(k / 4000) - 2000, (k % 4000) - 2000];
+  function celdaLibre(i, j) {
+    const k = llave(i, j);
+    let v = libreCache.get(k);
+    if (v === undefined) { v = libre(i * CELDA, j * CELDA); libreCache.set(k, v); }
+    return v;
+  }
+  function celdaCercana(p) {
+    const i0 = Math.round(p.x / CELDA), j0 = Math.round(p.z / CELDA);
+    for (let r = 0; r <= 8; r++) {
+      let mejor = null, dmin = Infinity;
+      for (let i = i0 - r; i <= i0 + r; i++) for (let j = j0 - r; j <= j0 + r; j++) {
+        if (Math.max(Math.abs(i - i0), Math.abs(j - j0)) !== r || !celdaLibre(i, j)) continue;
+        const d = Math.hypot(i * CELDA - p.x, j * CELDA - p.z); if (d < dmin) { dmin = d; mejor = [i, j]; }
+      }
+      if (mejor) return mejor;
+    }
+    return null;
+  }
+  function aEstrella(desde, hasta) {
+    const a = celdaCercana(desde), b = celdaCercana(hasta);
+    if (!a || !b) return null;
+    const h = (i, j) => { const dx = Math.abs(i - b[0]), dz = Math.abs(j - b[1]); return Math.max(dx, dz) + 0.414 * Math.min(dx, dz); };
+    const heap = []; // montículo binario de [f, llave]
+    const push = (n) => { let k = heap.length; heap.push(n); while (k) { const p = (k - 1) >> 1; if (heap[p][0] <= n[0]) break; heap[k] = heap[p]; k = p; } heap[k] = n; };
+    const pop = () => {
+      const top = heap[0], last = heap.pop();
+      if (heap.length) {
+        let k = 0;
+        for (;;) { const l = 2 * k + 1, r = l + 1; let m = -1, mv = last[0]; if (l < heap.length && heap[l][0] < mv) { m = l; mv = heap[l][0]; } if (r < heap.length && heap[r][0] < mv) m = r; if (m < 0) break; heap[k] = heap[m]; k = m; }
+        heap[k] = last;
+      }
+      return top;
+    };
+    const g = new Map(), de = new Map(), cerrado = new Set(), ka = llave(a[0], a[1]), kb = llave(b[0], b[1]);
+    g.set(ka, 0); push([h(a[0], a[1]), ka]);
+    const VEC = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.414], [1, -1, 1.414], [-1, 1, 1.414], [-1, -1, 1.414]];
+    let vueltas = 0;
+    while (heap.length && vueltas++ < 60000) {
+      const k = pop()[1];
+      if (cerrado.has(k)) continue;
+      cerrado.add(k);
+      if (k === kb) {
+        const pts = []; let c = k;
+        while (c !== undefined) { const [ii, jj] = deLlave(c); pts.push(new THREE.Vector3(ii * CELDA, 0, jj * CELDA)); c = de.get(c); }
+        return pts.reverse();
+      }
+      const [i, j] = deLlave(k), gk = g.get(k);
+      for (const [di, dj, w] of VEC) {
+        const ni = i + di, nj = j + dj;
+        if (!celdaLibre(ni, nj)) continue;
+        if (di && dj && (!celdaLibre(i + di, j) || !celdaLibre(i, j + dj))) continue; // sin cortar esquinas
+        const nk = llave(ni, nj), ng = gk + w;
+        if (ng < (g.has(nk) ? g.get(nk) : Infinity)) { g.set(nk, ng); de.set(nk, k); push([ng + h(ni, nj), nk]); }
+      }
+    }
+    return null;
+  }
+  // deja solo los puntos donde cambia de dirección (cada tramo recto, despejado)
+  function suavizar(desde, pts, hasta) {
+    const todos = [desde, ...pts];
+    if (despejado(pts[pts.length - 1], hasta)) todos.push(hasta);
+    const out = []; let k = 0;
+    while (k < todos.length - 1) {
+      let lejos = k + 1;
+      for (let m = k + 2; m < todos.length && despejado(todos[k], todos[m]); m++) lejos = m;
+      out.push(todos[lejos].clone()); k = lejos;
+    }
+    return out;
+  }
+  function planear(desde, hasta) {
+    if (despejado(desde, hasta)) return [hasta.clone()];
+    const pts = aEstrella(desde, hasta);
+    return pts && pts.length ? suavizar(desde, pts, hasta) : trazar(desde, hasta);
+  }
+
+  let ruta = [], alLlegar = null, atorado = 0, rapido = false, intentos = 0, metaRuta = null;
+  function caminarA(destino, cb, reintento = false) {
     const d = destino.clone(); d.y = 0;
-    ruta = trazar(yo.position.clone(), d); alLlegar = cb || null; atorado = 0;
+    const desde = yo.position.clone(); desde.y = 0;
+    ruta = planear(desde, d); alLlegar = cb || null; atorado = 0; metaRuta = d;
+    if (!reintento) intentos = 0;
     let largo = 0, prev = yo.position;
     ruta.forEach((q) => { largo += Math.hypot(q.x - prev.x, q.z - prev.z); prev = q; });
     rapido = largo > 30;
@@ -1182,12 +1272,16 @@ export function crearEstacion(canvas, cfg) {
       mover.addScaledVector(fwd, iy / Math.max(1, Math.hypot(ix, iy))).addScaledVector(der, ix / Math.max(1, Math.hypot(ix, iy)));
       mover.multiplyScalar(mag);
     } else if (ruta.length) {
-      const q = ruta[0], dx = q.x - yo.position.x, dz = q.z - yo.position.z, d = Math.hypot(dx, dz);
-      if (d < 0.35) {
-        ruta.shift();
-        if (!ruta.length) { aro.visible = false; const cb = alLlegar; alLlegar = null; cb && cb(); }
-      } else mover.set(dx / d, 0, dz / d);
       vel = rapido ? 16 : 10;
+      const paso1 = vel * Math.max(dt, 1e-3);
+      let q = ruta[0], dx = q.x - yo.position.x, dz = q.z - yo.position.z, d = Math.hypot(dx, dz);
+      // al alcanzar un punto pasa al siguiente en el mismo cuadro: sin frenar ni zigzaguear
+      while (d < Math.max(0.08, paso1 * 0.5)) {
+        ruta.shift();
+        if (!ruta.length) { aro.visible = false; const cb = alLlegar; alLlegar = null; cb && cb(); break; }
+        q = ruta[0]; dx = q.x - yo.position.x; dz = q.z - yo.position.z; d = Math.hypot(dx, dz);
+      }
+      if (ruta.length && d > 1e-4) mover.set(dx / d, 0, dz / d).multiplyScalar(Math.min(1, d / paso1));
     }
     if (mover.lengthSq() > 0) {
       const sx = mover.x * vel * dt, sz = mover.z * vel * dt, x = yo.position.x, z = yo.position.z;
@@ -1197,9 +1291,16 @@ export function crearEstacion(canvas, cfg) {
       const objetivo = Math.atan2(mover.x, mover.z);
       let dA = objetivo - yo.rotation.y; while (dA > Math.PI) dA -= Math.PI * 2; while (dA < -Math.PI) dA += Math.PI * 2;
       yo.rotation.y += dA * Math.min(1, dt * 12);
-      // si sigue una ruta y no avanza, salta al siguiente punto
+      // si sigue una ruta y no avanza, la vuelve a calcular desde donde está (sin brincar); si tampoco, se queda ahí
       const avance = Math.hypot(yo.position.x - x, yo.position.z - z);
-      if (ruta.length && avance < vel * dt * 0.2) { atorado += dt; if (atorado > 0.5) { const q = ruta[0]; yo.position.x = q.x; yo.position.z = q.z; atorado = 0; } } else atorado = 0;
+      if (ruta.length && avance < vel * dt * 0.2 * mover.length()) {
+        atorado += dt;
+        if (atorado > 0.4) {
+          const cb = alLlegar;
+          if (intentos++ < 2 && metaRuta) caminarA(metaRuta, cb, true);
+          else { ruta = []; alLlegar = null; aro.visible = false; cb && cb(); }
+        }
+      } else atorado = 0;
     }
     yo.position.y = altura(yo.position.x, yo.position.z);
     // animación de caminar
@@ -1307,6 +1408,7 @@ export function crearEstacion(canvas, cfg) {
   return {
     irA, enfocarStand, seguir, setParcelas, setTienda, venta, iniciarTour,
     enTour: () => !!tour,
+    _prueba: { libre, trazar, yo, lugares, stands, modulos, ruta: () => ruta, mover: (dt) => moverYo(dt) },
     saltarTour: () => terminarTour(),
     setStick(x, y) { stick.x = x; stick.y = y; },
     setDesplazamiento(x, y) { despObj.x = x; despObj.y = y; },
