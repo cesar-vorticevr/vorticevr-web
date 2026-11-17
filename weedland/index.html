@@ -30,7 +30,7 @@
   <header class="hud">
     <button id="btn-inicio" class="logo" aria-label="Volver a la plaza"><span class="logo-marca">W</span><span class="logo-texto">Weedland<small>STATION</small></span></button>
     <div class="hud-der">
-      <button id="btn-polen" class="polen" title="Tu polen dorado: tócalo para ver qué puedes canjear"><span>🌟</span><b id="polen">0</b></button>
+      <button id="btn-polen" class="polen" title="Tus estrellas: tócalas para ver qué puedes canjear"><span>🌟</span><b id="polen">0</b></button>
       <button id="btn-ayuda" class="redondo" aria-label="Ayuda">?</button>
       <button id="btn-sonido" class="redondo" aria-label="Sonido">🔊</button>
     </div>
@@ -39,9 +39,10 @@
   <nav class="nav">
     <button data-ir="plaza"><span>🛰️</span><small>Plaza</small></button>
     <button data-ir="directorio"><span>🧭</span><small>Marcas</small></button>
-    <button data-ir="universidad"><span>🎓</span><small>Universidad</small></button>
+    <button data-ir="cultivo"><span>🌱</span><small>Cultivo</small></button>
+    <button data-ir="mercado"><span>🛒</span><small>Mercado</small></button>
+    <button data-ir="nave"><span>🚀</span><small>Nave</small></button>
     <button data-ir="premios"><span>🎁</span><small>Premios</small></button>
-    <button data-ir="pasaporte"><span>🪪</span><small>Pasaporte</small></button>
   </nav>
 
   <div id="stick" class="stick" aria-label="Joystick para caminar"><div class="bola"></div></div>
@@ -54,6 +55,8 @@
   </aside>
   <div id="modal" class="modal" hidden><div id="modal-caja" class="modal-caja"></div></div>
   <div id="toasts" aria-live="polite"></div>
+  <div id="tour-ui" class="tour-ui" hidden><p id="subtitulo" aria-live="polite"></p><button id="saltar-tour" class="btn sec chico">Saltar ⏭</button></div>
+  <div id="destello" class="destello"></div>
 </main>
 
 <script type="module" src="js/app.js"></script>

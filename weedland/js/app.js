@@ -1,7 +1,8 @@
-// Weedland Station: interfaz (entrada, stands, catálogo, juegos, premios, universidad, pasaporte).
-import { PAISES, PABELLONES, UNIVERSIDAD, CLASES, TALLERES, CONFERENCIAS, PREMIO_DIA, catalogo, preguntasMarca, nombrePais, videosDe, NIVELES } from "./datos.js";
+// Weedland Station: interfaz (entrada, stands, catálogo, juegos, premios, cultivo, mercado, tienda, nave, pasaporte).
+import { PAISES, PABELLONES, PREMIO_DIA, catalogo, preguntasMarca, nombrePais, videosDe, NIVELES } from "./datos.js";
 import { leerPerfil, guardarPerfil, leerJuego, guardarJuego, marcas, sumar, codigo, CLAVES } from "./estado.js";
 import { sonido, volar, cartel, confeti, flotante, contar, alternarSonido, estaMudo } from "./efectos.js";
+import { semillasRegistradas, ADITAMENTOS, aditamento, OBJETOS, PUESTOS, puesto, claseDe, progreso, faltan, rinde, factorVel, tiempoTexto, MAX_VIDEOS, COMPRADORES, MAX_TIENDA, esperaVenta } from "./cultivo.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -72,6 +73,11 @@ async function iniciar() {
   setTimeout(() => $("#cargando").classList.add("fuera"), 300);
   conectarHud();
   conectarStick();
+  revisarVentas(true);
+  est.setTienda(J.tienda.map((it) => ({ icono: OBJETOS[it.item].icono })));
+  refrescarCultivo();
+  setInterval(relojGranja, 1000);
+  $("#saltar-tour").onclick = () => est.saltarTour();
   setTimeout(() => { if (!regaloDiario() && !J.guia) guia(0); }, 900);
 }
 
@@ -80,7 +86,7 @@ function crearEtiqueta({ id, icono, nombre, color, isla }) {
   b.className = "etiqueta" + (isla ? " isla" : ""); b.style.setProperty("--c", color);
   if (isla) { b.innerHTML = `<span>${icono}</span>${esc(nombre)}<em>ISLA</em>`; b.onclick = () => { sonido.tap(); caminarA("stand", id, () => abrirStand(id)); }; $("#etiquetas").appendChild(b); return b; }
   b.innerHTML = `<span>${icono}</span>${esc(nombre)}`;
-  b.onclick = () => { sonido.tap(); if (id === "plaza") irPlaza(); else if (id === "universidad") abrirUniversidad(); else caminarA("pabellon", id); };
+  b.onclick = () => { sonido.tap(); if (id === "plaza") irPlaza(); else if (id === "mercado") caminarA("mercado", null, () => abrirMercado()); else if (id === "cultivo") caminarA("cultivo", null, () => abrirCultivo()); else if (id === "nave") caminarA("nave", null, () => abrirNave()); else caminarA("pabellon", id); };
   $("#etiquetas").appendChild(b);
   return b;
 }
@@ -95,9 +101,10 @@ function conectarHud() {
     const ir = b.dataset.ir;
     if (ir === "plaza") irPlaza();
     else if (ir === "directorio") abrirDirectorio();
-    else if (ir === "universidad") abrirUniversidad();
+    else if (ir === "cultivo") irLugar("cultivo", null, () => abrirCultivo());
+    else if (ir === "mercado") irLugar("mercado", null, () => abrirMercado());
+    else if (ir === "nave") irLugar("nave", null, () => abrirNave());
     else if (ir === "premios") abrirPremios();
-    else if (ir === "pasaporte") abrirPasaporte();
   }));
   $("#panel-cerrar").onclick = () => { sonido.tap(); cerrarPanel(); };
   $("#modal").onclick = (e) => { if (e.target.id === "modal") cerrarModal(); };
@@ -116,22 +123,27 @@ function alTocar(tipo, id) {
   if (tipo === "pantalla") sumar(id, "pantallas");
   if (tipo === "stand" || tipo === "dron" || tipo === "pantalla") caminarA("stand", id, () => abrirStand(id));
   else if (tipo === "pabellon") caminarA("pabellon", id);
-  else if (tipo === "uni") caminarA("universidad", "universidad", () => abrirUniversidad());
+  else if (tipo === "parcela") caminarA("parcela", id, () => abrirParcela(id));
+  else if (tipo === "puesto") caminarA("puesto", id, () => abrirPuesto(id));
+  else if (tipo === "tienda") caminarA("tienda", null, () => abrirTienda());
+  else if (tipo === "nave") caminarA("nave", null, () => abrirNave());
 }
 function caminarA(tipo, id, cb) {
   if (actual) cerrarPanel();
   est && est.irA(tipo, id, { cb });
 }
-// Botón "Entrar" cuando el avatar está frente a un stand o la Universidad
+// Botón "Entrar" cuando el avatar está frente a un stand, un puesto del Mercado, tu tienda o la nave
 let cercaDe = null;
 function alCerca(id) {
   cercaDe = id;
   const b = $("#entrar");
   if (!id) { b.hidden = true; return; }
   const m = marca(id);
-  b.innerHTML = m ? `<span class="logo-mini" style="${vars(m)}">${m.icono}</span> Entrar a ${esc(m.nombre)} ▶` : `🎓 Entrar a la Universidad ▶`;
-  b.style.cssText = m ? vars(m) : `--c:${UNIVERSIDAD.color}`;
-  b.hidden = actual && (actual.id === id || actual.tipo === "uni");
+  const pu = id.startsWith("puesto:") ? puesto(id.slice(7)) : null;
+  b.innerHTML = m ? `<span class="logo-mini" style="${vars(m)}">${m.icono}</span> Entrar a ${esc(m.nombre)} ▶`
+    : pu ? `${pu.icono} ${esc(pu.nombre)} ▶` : id === "tienda" ? "🏪 Abrir tu tienda ▶" : "🚀 Subir a la nave ▶";
+  b.style.cssText = m ? vars(m) : `--c:${pu ? pu.color : id === "tienda" ? "#7dffb3" : "#6ff0ff"}`;
+  b.hidden = !!actual || document.body.classList.contains("en-tour");
   if (!b.hidden) sonido.burbuja();
 }
 function conectarStick() {
@@ -152,7 +164,14 @@ function conectarStick() {
   });
   base.addEventListener("pointermove", (e) => { if (e.pointerId === id) mover(e); });
   base.addEventListener("pointerup", soltar); base.addEventListener("pointercancel", soltar);
-  $("#entrar").onclick = () => { sonido.tap(); if (cercaDe === "universidad") abrirUniversidad(); else if (cercaDe) abrirStand(cercaDe); };
+  $("#entrar").onclick = () => {
+    sonido.tap();
+    if (!cercaDe) return;
+    if (cercaDe.startsWith("puesto:")) abrirPuesto(cercaDe.slice(7));
+    else if (cercaDe === "tienda") abrirTienda();
+    else if (cercaDe === "nave") abrirNave();
+    else abrirStand(cercaDe);
+  };
 }
 
 function marcarNav(ir) { $$(".nav button").forEach((b) => b.classList.toggle("activo", b.dataset.ir === ir)); }
@@ -209,7 +228,7 @@ function ganar(n, motivo, desde) {
   const r = desde || { x: innerWidth / 2, y: innerHeight / 2 };
   volar("🌟", Math.min(10, Math.ceil(n / 4)), r, "#btn-polen", () => contar($("#polen"), J.polen));
   flotante(`+${n} 🌟`, r.x, r.y, "#ffd76a");
-  if (motivo) toast(`${motivo}: +${n} polen dorado`);
+  if (motivo) toast(`${motivo}: +${n} estrellas`);
 }
 function gastar(n) {
   if (J.polen < n) return false;
@@ -378,7 +397,7 @@ function verVideo(m, v = videosDe(m)[0]) {
     <div class="rep">
       <div class="esc"><div class="e">${m.icono}</div><b>${esc(m.nombre)}</b><span>${esc(m.lema)}</span></div>
       <div class="esc"><div class="e">${k ? v.icono : p0.icono || m.icono}</div><b>${esc(k ? v.titulo : p0.nombre || m.nombre)}</b><span>${esc(m.anuncio)}</span></div>
-      <div class="esc"><div class="e">🎟️</div><b>${esc(m.cupon.texto)}</b><span>Canjéalo con tu polen en este stand</span></div>
+      <div class="esc"><div class="e">🎟️</div><b>${esc(m.cupon.texto)}</b><span>Canjéalo con tus estrellas en este stand</span></div>
       <div class="prog"></div>
     </div>
     <p class="suave chico-t" style="margin:10px 0 0">Video de ejemplo. Aquí va el video que sube cada marca.</p>
@@ -484,10 +503,12 @@ function tabPremios(m, caja) {
   caja.innerHTML = `
     <div class="tarjeta"><div class="fila-t"><span class="grande">🎟️</span><div class="txt"><b>${esc(m.cupon.texto)}</b><small>Cupón para la tienda de ${esc(m.nombre)}</small></div><span class="costo">${m.cupon.costo} 🌟</span></div>
       <button class="btn oro ancho" style="margin-top:10px" id="canjear" ${J.polen < m.cupon.costo ? "disabled" : ""}>${J.polen < m.cupon.costo ? `Te faltan ${m.cupon.costo - J.polen} 🌟` : "Canjear cupón"}</button></div>
+    ${semillasDe().some((x) => x.marca === m.id) ? `<button class="tarjeta fila-t ancho" id="semillas-marca" style="text-align:left"><span class="grande">🌱</span><span class="txt"><b>Semillas de ${esc(m.nombre)} para tu cultivo</b><small>${semillasDe().filter((x) => x.marca === m.id).length} variedades registradas · se compran con estrellas</small></span><span class="costo">▶</span></button>` : ""}
     <div class="tarjeta"><div class="fila-t"><span class="grande">🎁</span><div class="txt"><b>Sorteo: ${esc(m.sorteo)}</b><small>Cada boleto es una oportunidad. Tienes ${bol}.</small></div><span class="costo">20 🌟</span></div>
-      <button class="btn ancho" style="margin-top:10px" id="boleto" ${J.polen < 20 ? "disabled" : ""}>Comprar boleto con polen</button></div>
+      <button class="btn ancho" style="margin-top:10px" id="boleto" ${J.polen < 20 ? "disabled" : ""}>Comprar boleto con estrellas</button></div>
     ${mios.length ? `<div class="seccion"><h3>Tus cupones de ${esc(m.nombre)}</h3>${mios.map((c) => `<div class="tarjeta"><b>${esc(c.texto)}</b><div style="margin-top:8px"><span class="codigo">${c.codigo}</span></div></div>`).join("")}</div>` : ""}
-    <p class="nota">¿Te falta polen? Gánalo visitando stands (+10), viendo videos (+15), jugando (hasta 30) y tomando clases en la Universidad (+20). Cupones sujetos a los términos de la marca y a la ley de tu país.</p>`;
+    <p class="nota">¿Te faltan estrellas? Gánalas visitando stands (+10), viendo videos (+15), jugando (hasta 30), aprendiendo en el Mercado (+10) y vendiendo en tu tienda. Cupones sujetos a los términos de la marca y a la ley de tu país.</p>`;
+  const sm = $("#semillas-marca"); if (sm) sm.onclick = () => irLugar("puesto", "semillas", () => abrirPuesto("semillas", m.nombre.toLowerCase()));
   $("#canjear").onclick = (e) => {
     if (!gastar(m.cupon.costo)) return;
     const c = { marca: m.id, texto: m.cupon.texto, codigo: codigo(m.sigla), fecha: hoy() };
@@ -531,28 +552,31 @@ function abrirDirectorio() {
   pintar();
 }
 
-// ---------- premios (tienda de polen) ----------
+// ---------- premios (canje de estrellas) ----------
 function abrirPremios() {
   const cupones = MARCAS.slice().sort((a, b) => a.cupon.costo - b.cupon.costo);
   abrirPanel(`
     <h2>🎁 Premios</h2>
     <div class="tarjeta" style="margin-top:12px;text-align:center;border-color:var(--oro)">
       <div style="font:700 2.2rem Fredoka,sans-serif;color:var(--oro)">🌟 ${J.polen}</div>
-      <div class="suave">polen dorado</div>
+      <div class="suave">estrellas</div>
       <p style="margin:10px 0 0;font-size:.9rem">Cámbialo por <b>cupones reales</b> en la tienda de cada marca o por <b>boletos para sus sorteos</b>.</p>
     </div>
     <div class="seccion"><h3>¿Cómo gano más?</h3>
       <div class="tarjeta"><div class="fila-t"><span class="grande">🏛️</span><div class="txt"><b>Visita un stand nuevo</b><small>${J.visitados.length} de ${MARCAS.length} visitados</small></div><span class="costo">+10</span></div></div>
       <div class="tarjeta"><div class="fila-t"><span class="grande">🎬</span><div class="txt"><b>Ve el video de una marca</b><small>10 segundos</small></div><span class="costo">+15</span></div></div>
       <div class="tarjeta"><div class="fila-t"><span class="grande">🎰</span><div class="txt"><b>Juega en cada stand</b><small>Una partida gratis al día por stand</small></div><span class="costo">hasta 30</span></div></div>
-      <div class="tarjeta"><div class="fila-t"><span class="grande">🎓</span><div class="txt"><b>Toma una clase</b><small>En la Universidad</small></div><span class="costo">+20</span></div></div>
+      <div class="tarjeta"><div class="fila-t"><span class="grande">🏪</span><div class="txt"><b>Vende en tu tienda</b><small>Cosecha, transforma en el Mercado y vende</small></div><span class="costo">+12 a +40</span></div></div>
+      <div class="tarjeta"><div class="fila-t"><span class="grande">💡</span><div class="txt"><b>Aprende en el Mercado</b><small>Cada puesto te cuenta algo</small></div><span class="costo">+10</span></div></div>
       <div class="tarjeta"><div class="fila-t"><span class="grande">🪪</span><div class="txt"><b>Completa un pabellón</b><small>Visita todos sus stands</small></div><span class="costo">+50</span></div></div>
     </div>
     ${J.cupones.length ? `<div class="seccion"><h3>Mis cupones (${J.cupones.length})</h3>${J.cupones.map((c) => { const m = marca(c.marca); return `<div class="tarjeta" style="${vars(m)}"><div class="fila-t"><span class="grande">${m.icono}</span><div class="txt"><b>${esc(c.texto)}</b><small>${esc(m.nombre)}</small></div></div><div style="margin-top:8px"><span class="codigo">${c.codigo}</span></div></div>`; }).join("")}</div>` : ""}
     <div class="seccion"><h3>Cupones de las marcas</h3><div class="lista-m">
       ${cupones.map((m) => `<button class="item-m" data-cupon="${m.id}" style="${vars(m)}"><div class="logo-m">${m.icono}</div><div class="txt"><b>${esc(m.cupon.texto)}</b><small>${esc(m.nombre)}</small></div><span class="costo">${m.cupon.costo} 🌟</span></button>`).join("")}
     </div></div>
+    <button class="btn sec ancho" id="ver-pasaporte" style="margin-top:14px">🪪 Ver tu pasaporte</button>
     <p class="nota">Los cupones son descuentos o regalos en la tienda de cada marca, sujetos a sus términos y a la ley de tu país. Weedland no vende productos.</p>`, { tipo: "premios", nav: "premios" });
+  $("#ver-pasaporte").onclick = () => { sonido.tap(); abrirPasaporte(); };
   $$("[data-cupon]").forEach((b) => (b.onclick = () => { sonido.tap(); abrirStand(b.dataset.cupon, "premios"); }));
 }
 
@@ -570,7 +594,7 @@ function abrirPasaporte() {
     <h2>🪪 Tu pasaporte</h2>
     <p class="suave" style="margin:4px 0 10px">Cada stand que visitas te pone un sello. Completa un pabellón y ganas 50 🌟.</p>
     <div class="barra"><i style="width:${(vistos / total) * 100}%"></i></div>
-    <p class="chico-t suave" style="margin:6px 0 0">${vistos} de ${total} stands · ${J.cupones.length} cupones · ${Object.values(J.boletos).reduce((a, b) => a + b, 0)} boletos · ${J.clases.length} clases</p>
+    <p class="chico-t suave" style="margin:6px 0 0">${vistos} de ${total} stands · ${J.cupones.length} cupones · ${Object.values(J.boletos).reduce((a, b) => a + b, 0)} boletos · ${J.sabias.length} lecciones del Mercado</p>
     ${PABELLONES.map((p) => {
       const ms = MARCAS.filter((m) => enPabellon(m, p.id));
       return `<div class="grupo-t" style="--c:${p.color}">${p.icono} ${esc(p.nombre)} ${J.bonos.includes(p.id) ? `<span class="hecho">✓ completo</span>` : ""}</div>
@@ -578,90 +602,342 @@ function abrirPasaporte() {
     }).join("")}
     <div class="grupo-t" style="--c:#ffd76a">🏝️ Islas de marca</div>
     <div class="sellos">${MARCAS.filter((m) => m.nivel === "isla").map((m) => `<button class="sello ${J.visitados.includes(m.id) ? "si" : ""}" data-marca="${m.id}" style="${vars(m)}"><div><span>${J.visitados.includes(m.id) ? m.icono : "？"}</span>${esc(m.nombre)}</div></button>`).join("")}</div>
-    <div class="grupo-t" style="--c:${UNIVERSIDAD.color}">🎓 Universidad</div>
-    <div class="sellos">${CLASES.map((c) => `<div class="sello ${J.clases.includes(c.id) ? "si" : ""}" style="--c:${UNIVERSIDAD.color}"><div><span>${J.clases.includes(c.id) ? c.icono : "？"}</span>${esc(c.titulo.split(":")[0])}</div></div>`).join("")}</div>`,
-  { tipo: "pasaporte", nav: "pasaporte", alto: true });
+    <div class="grupo-t" style="--c:#ffd76a">🛒 Mercado</div>
+    <div class="sellos">${PUESTOS.map((pu) => `<div class="sello ${J.sabias.includes(pu.id) || J.talleresVistos.includes(pu.id) ? "si" : ""}" style="--c:${pu.color}"><div><span>${pu.icono}</span>${esc(pu.nombre)}</div></div>`).join("")}</div>`,
+  { tipo: "pasaporte", nav: "premios", alto: true });
   conectarItems($("#panel-cuerpo"));
 }
 
-// ---------- universidad ----------
-function abrirUniversidad(tab = "clases") {
-  if (cercaDe !== "universidad" && (!actual || actual.tipo !== "uni")) { est && est.irA("universidad", "universidad", { caminar: false }); sonido.teleport(); }
-  abrirPanel(`
-    <div class="cab-marca"><div class="logo-m" style="--c:${UNIVERSIDAD.color};--c2:#2a1660">🎓</div>
-      <div><h2>Universidad Weedland</h2><p>Aprende, mira talleres de las marcas y apúntate a conferencias.</p></div></div>
-    <div class="tabs"><button data-t="clases">Clases</button><button data-t="talleres">Talleres</button><button data-t="conferencias">Conferencias</button></div>
-    <div id="utab"></div>`, { tipo: "uni", nav: "universidad", c: `--c:${UNIVERSIDAD.color}` });
-  const pintar = (t) => {
-    $$(".tabs button").forEach((b) => b.classList.toggle("activo", b.dataset.t === t));
-    const caja = $("#utab");
-    if (t === "clases") {
-      caja.innerHTML = CLASES.map((c) => `<button class="tarjeta fila-t ancho" data-clase="${c.id}" style="text-align:left"><span class="grande">${c.icono}</span><span class="txt"><b>${esc(c.titulo)}</b><small>${c.pasos.length} pasos + 1 pregunta</small></span>${J.clases.includes(c.id) ? `<span class="hecho">✓</span>` : `<span class="costo">+${c.polen} 🌟</span>`}</button>`).join("");
-      $$("[data-clase]", caja).forEach((b) => (b.onclick = () => { sonido.tap(); clase(CLASES.find((c) => c.id === b.dataset.clase)); }));
-    } else if (t === "talleres") {
-      caja.innerHTML = TALLERES.map((ta) => { const m = marca(ta.marca); return `<button class="tarjeta fila-t ancho" data-taller="${ta.id}" style="text-align:left;${vars(m)}"><span class="grande">${ta.icono}</span><span class="txt"><b>${esc(ta.titulo)}</b><small>Taller de ${esc(m.nombre)} · ${ta.dur}</small></span>${J.talleres.includes(ta.id) ? `<span class="hecho">✓</span>` : `<span class="costo">+10 🌟</span>`}</button>`; }).join("") +
-        `<p class="nota">Cada taller lo patrocina una marca: es otro espacio que se les vende.</p>`;
-      $$("[data-taller]", caja).forEach((b) => (b.onclick = () => { sonido.tap(); taller(TALLERES.find((x) => x.id === b.dataset.taller)); }));
-    } else {
-      caja.innerHTML = CONFERENCIAS.map((c) => `<div class="tarjeta"><span class="chip c">${esc(c.fecha)}</span><h3 style="margin:8px 0 2px;font-size:1.05rem">${esc(c.titulo)}</h3><p class="suave" style="margin:0 0 10px">${esc(c.ponente)}</p>
-        <button class="btn chico ${J.recordar.includes(c.id) ? "sec" : ""}" data-rec="${c.id}">${J.recordar.includes(c.id) ? "✓ Te avisaremos" : "🔔 Recordarme"}</button></div>`).join("") +
-        `<p class="nota">Conferencias en vivo dentro de la estación. Fechas de ejemplo.</p>`;
-      $$("[data-rec]", caja).forEach((b) => (b.onclick = () => { const i = J.recordar.indexOf(b.dataset.rec); if (i >= 0) J.recordar.splice(i, 1); else { J.recordar.push(b.dataset.rec); sonido.bien(); } guardar(); pintar("conferencias"); }));
-    }
-  };
-  $$(".tabs button").forEach((b) => (b.onclick = () => { sonido.tap(); pintar(b.dataset.t); }));
-  pintar(tab);
+// ---------- cultivo, mercado, tienda y nave ----------
+const semillasDe = () => semillasRegistradas(MARCAS);
+const semillaPorId = (id) => semillasDe().find((s) => s.id === id);
+const objNombre = (k) => (OBJETOS[k] ? `${OBJETOS[k].icono} ${OBJETOS[k].nombre}` : k);
+const total = (o) => Object.values(o || {}).reduce((a, b) => a + b, 0);
+function sumarInv(bolsa, k, n = 1) { J[bolsa][k] = (J[bolsa][k] || 0) + n; if (J[bolsa][k] <= 0) delete J[bolsa][k]; }
+const PATROCINIO_CULTIVO = ["lumen", "tierra", "aqua", "clima-grow", "sensor-verde", "maceta-viva", "abono-andino", "luz-solar-pro", "hidro-lab"];
+
+function estadoParcelas() {
+  return J.parcelas.map((p) => p && { tipo: p.tipo, prog: progreso(p), listo: progreso(p) >= 1, aditamentos: p.aditamentos || [] });
 }
-function clase(c) {
+function refrescarCultivo() {
+  if (!est) return;
+  est.setParcelas(estadoParcelas());
+  const listas = J.parcelas.filter((p) => p && progreso(p) >= 1).length;
+  const b = $('.nav [data-ir="cultivo"]'); if (b) b.dataset.aviso = listas ? String(listas) : "";
+}
+// Reloj: plantas que crecen y compradores que llegan a tu tienda
+function relojGranja() {
+  refrescarCultivo();
+  const c = $("#cuenta-atras");
+  if (c && actual && actual.tipo === "parcela") {
+    const p = J.parcelas[actual.id];
+    if (!p) return;
+    if (progreso(p) >= 1) abrirParcela(actual.id);
+    else { c.textContent = tiempoTexto(faltan(p)); const bar = $("#barra-parcela"); if (bar) bar.style.width = progreso(p) * 100 + "%"; }
+  }
+  revisarVentas(false);
+}
+function revisarVentas(silencioso) {
+  const ahora = Date.now(), vendidos = J.tienda.filter((it) => it.vence <= ahora);
+  if (!vendidos.length) return;
+  J.tienda = J.tienda.filter((it) => it.vence > ahora);
+  let suma = 0;
+  vendidos.forEach((it) => {
+    const quien = COMPRADORES[Math.floor(Math.random() * COMPRADORES.length)];
+    J.ventas.unshift({ item: it.item, precio: it.precio, quien, fecha: Date.now() }); suma += it.precio;
+    if (!silencioso) { toast(`🛍️ ${quien} compró tu ${OBJETOS[it.item].nombre}: +${it.precio} ⭐`); est && est.venta(); }
+  });
+  J.ventas = J.ventas.slice(0, 12);
+  if (silencioso) { J.polen += suma; guardar(); contar($("#polen"), J.polen); setTimeout(() => toast(`Mientras no estabas, tu tienda vendió ${vendidos.length}: +${suma} ⭐`), 2500); }
+  else { ganar(suma); sonido.moneda(); }
+  est && est.setTienda(J.tienda.map((it) => ({ icono: OBJETOS[it.item].icono })));
+  if (actual && actual.tipo === "tienda") abrirTienda();
+}
+
+// Ir a un lugar de las islas: caminando si estás cerca, de un salto si estás lejos
+function irLugar(tipo, id, cb, saltar = true) {
+  if (actual) cerrarPanel();
+  est && est.irA(tipo, id, { caminar: !saltar, cb });
+  if (saltar) sonido.teleport();
+}
+
+function abrirCultivo() {
+  refrescarCultivo();
+  if (!J.regaloSemilla) {
+    const s = semillasDe()[0];
+    if (s) { J.regaloSemilla = true; sumarInv("semillas", s.id); guardar(); setTimeout(() => { cartel({ titulo: "¡SEMILLA DE REGALO!", sub: `🌱 ${s.nombre} de ${marca(s.marca).nombre}`, ms: 2200 }); sonido.premio(); }, 500); }
+  }
+  const celdas = J.parcelas.map((p, i) => {
+    if (!p) return `<button class="parcela-c" data-parcela="${i}"><span class="pc-ico">🟫</span><b>Parcela ${i + 1}</b><small>Vacía · sembrar</small></button>`;
+    const pr = progreso(p);
+    return `<button class="parcela-c ${pr >= 1 ? "lista" : ""}" data-parcela="${i}"><span class="pc-ico">${pr >= 1 ? "✨" : p.tipo === "canamo" ? "🌾" : "🌱"}</span><b>${esc(p.nombre)}</b>
+      <small>${pr >= 1 ? "¡Lista para cosechar!" : `${Math.floor(pr * 100)}% · ${tiempoTexto(faltan(p))}`}</small><i style="width:${pr * 100}%"></i></button>`;
+  }).join("");
+  abrirPanel(`
+    <div class="cab-marca"><div class="logo-m" style="--c:#7dffb3;--c2:#0f5d43">🌱</div>
+      <div><h2>Mi cultivo</h2><p>Cada planta tarda 2 horas. Los aditamentos y los videos de las marcas la aceleran.</p></div></div>
+    <div class="parcelas">${celdas}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn chico" id="ir-mercado">🛒 Ir al Mercado</button>
+      <button class="btn chico sec" id="ir-tienda">🏪 Tu tienda (${J.tienda.length})</button>
+    </div>
+    ${mochila()}`, { tipo: "cultivo", nav: "cultivo", c: "--c:#7dffb3" });
+  $$("[data-parcela]").forEach((b) => (b.onclick = () => { sonido.tap(); abrirParcela(+b.dataset.parcela); }));
+  $("#ir-mercado").onclick = () => irLugar("mercado", null, () => abrirMercado());
+  $("#ir-tienda").onclick = () => irLugar("tienda", null, () => abrirTienda(), false);
+}
+function mochila() {
+  const sem = Object.entries(J.semillas).map(([id, n]) => { const s = semillaPorId(id); return s ? `<span class="chip">${s.icono} ${esc(s.nombre)} ×${n}</span>` : ""; }).join("");
+  const adi = Object.entries(J.aditamentos).map(([id, n]) => { const a = aditamento(id); return a ? `<span class="chip">${a.icono} ${esc(a.nombre)} ×${n}</span>` : ""; }).join("");
+  const inv = Object.entries(J.inv).map(([k, n]) => `<span class="chip">${objNombre(k)} ×${n}</span>`).join("");
+  return `<div class="seccion"><h3>🎒 Tu mochila</h3>
+    <div class="mochila"><b>Semillas</b><div>${sem || `<span class="suave chico-t">Ninguna. Cómpralas en el Banco de semillas del Mercado.</span>`}</div>
+    <b>Aditamentos</b><div>${adi || `<span class="suave chico-t">Ninguno. Están en la Tienda de cultivo.</span>`}</div>
+    <b>Cosecha y productos</b><div>${inv || `<span class="suave chico-t">Aún nada. Cosecha y transforma en los talleres.</span>`}</div></div></div>`;
+}
+
+function abrirParcela(i) {
+  const p = J.parcelas[i];
+  const cab = (sub) => `<div class="cab-marca"><div class="logo-m" style="--c:#7dffb3;--c2:#0f5d43">${p ? (p.tipo === "canamo" ? "🌾" : "🌱") : "🟫"}</div><div><h2>Parcela ${i + 1}</h2><p>${sub}</p></div></div>`;
+  if (!p) {
+    const mias = Object.entries(J.semillas).map(([id, n]) => ({ s: semillaPorId(id), n })).filter((x) => x.s);
+    abrirPanel(`${cab("Vacía: elige una semilla de tu mochila")}
+      ${mias.length ? `<div class="lista-m" style="margin-top:12px">${mias.map(({ s, n }) => { const m = marca(s.marca); return `<button class="item-m" data-sembrar="${s.id}" style="${vars(m)}"><div class="logo-m">${s.icono}</div><div class="txt"><b>${esc(s.nombre)}</b><small>${esc(m.nombre)} · tienes ${n}</small></div><span class="costo">Sembrar</span></button>`; }).join("")}</div>`
+        : `<div class="tarjeta" style="margin-top:12px;text-align:center"><div style="font-size:2.4rem">🌰</div><b>No tienes semillas</b><p class="suave">Las semillas son las que registran las marcas. Cómpralas con estrellas en el Banco de semillas.</p><button class="btn" id="ir-banco">🌱 Ir al Banco de semillas</button></div>`}
+      <p class="nota">Juego virtual: aquí no se venden semillas reales.</p>`, { tipo: "parcela", id: i, nav: "cultivo", c: "--c:#7dffb3" });
+    $$("[data-sembrar]").forEach((b) => (b.onclick = () => sembrar(i, b.dataset.sembrar)));
+    const ib = $("#ir-banco"); if (ib) ib.onclick = () => irLugar("puesto", "semillas", () => abrirPuesto("semillas"));
+    return;
+  }
+  const m = marca(p.marca), pr = progreso(p);
+  if (pr >= 1) {
+    const r = rinde(p);
+    abrirPanel(`${cab(`${esc(p.nombre)} de ${esc(m.nombre)}`)}
+      <div class="tarjeta lista-cosecha"><div style="font-size:3rem">✨🌿✨</div><h3>¡Lista para cosechar!</h3>
+      <p class="suave">Vas a recibir: ${Object.entries(r).map(([k, n]) => `${objNombre(k)} ×${n}`).join(" · ")}</p>
+      <button class="btn oro ancho" id="cosechar">🧺 Cosechar</button></div>`, { tipo: "parcela", id: i, nav: "cultivo", c: "--c:#7dffb3" });
+    $("#cosechar").onclick = (e) => cosechar(i, centroDe(e.currentTarget));
+    return;
+  }
+  const tengo = Object.entries(J.aditamentos).map(([id, n]) => ({ a: aditamento(id), n })).filter((x) => x.a && !p.aditamentos.includes(x.a.id));
+  const sponsor = marca(PATROCINIO_CULTIVO[(p.videos + i) % PATROCINIO_CULTIVO.length]) || m;
+  abrirPanel(`${cab(`${esc(p.nombre)} de ${esc(m.nombre)}`)}
+    <div class="tarjeta" style="margin-top:12px"><div class="fila-t"><span class="grande">⏳</span><div class="txt"><b>Faltan <span id="cuenta-atras">${tiempoTexto(faltan(p))}</span></b><small>Velocidad: ${Math.round((1 / factorVel(p)) * 100)}% · videos vistos ${p.videos}/${MAX_VIDEOS}</small></div></div>
+      <div class="barra" style="margin-top:10px"><i id="barra-parcela" style="width:${pr * 100}%"></i></div></div>
+    ${p.videos < MAX_VIDEOS ? `<button class="tarjeta fila-t ancho" id="ver-anuncio" style="text-align:left;margin-top:10px;${vars(sponsor)}"><span class="grande">📺</span><span class="txt"><b>Ver video de ${esc(sponsor.nombre)}</b><small>10 segundos y tu planta crece 15 minutos</small></span><span class="costo">−15 min</span></button>` : ""}
+    <div class="seccion"><h3>Aditamentos</h3>
+      ${p.aditamentos.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${p.aditamentos.map((id) => `<span class="chip c">${aditamento(id).icono} ${esc(aditamento(id).nombre)} ✓</span>`).join("")}</div>` : ""}
+      ${tengo.length ? `<div class="lista-m">${tengo.map(({ a, n }) => `<button class="item-m" data-aplicar="${a.id}"><div class="logo-m" style="--c:#6ff0ff;--c2:#0c3d5a">${a.icono}</div><div class="txt"><b>${esc(a.nombre)} ×${n}</b><small>${esc(a.desc)}</small></div><span class="costo">Usar</span></button>`).join("")}</div>`
+        : `<p class="suave chico-t">No tienes aditamentos para esta planta. <button class="enlace" id="ir-aditamentos">Cómpralos en la Tienda de cultivo →</button></p>`}
+    </div>`, { tipo: "parcela", id: i, nav: "cultivo", c: "--c:#7dffb3" });
+  $$("[data-aplicar]").forEach((b) => (b.onclick = () => {
+    const a = aditamento(b.dataset.aplicar);
+    p.aditamentos.push(a.id); sumarInv("aditamentos", a.id, -1); sumar(a.marca, "aditamentosUsados"); guardar();
+    sonido.burbuja(); flotante(`${a.icono} ¡${a.vel ? "más rápido" : "más cosecha"}!`, centroDe(b).x, centroDe(b).y, "#6ff0ff");
+    refrescarCultivo(); abrirParcela(i);
+  }));
+  const va = $("#ver-anuncio"); if (va) va.onclick = () => verAnuncio(sponsor, () => { p.videos++; guardar(); sumar(sponsor.id, "videos"); flotante("−15 min ⏩", innerWidth / 2, innerHeight / 2, "#6ff0ff"); sonido.premio(); refrescarCultivo(); abrirParcela(i); });
+  const ia = $("#ir-aditamentos"); if (ia) ia.onclick = () => irLugar("puesto", "aditamentos", () => abrirPuesto("aditamentos"));
+}
+function sembrar(i, sid) {
+  const s = semillaPorId(sid); if (!s || !J.semillas[sid]) return;
+  sumarInv("semillas", sid, -1);
+  J.parcelas[i] = { semilla: sid, marca: s.marca, nombre: s.nombre, tipo: s.tipo, plantada: Date.now(), aditamentos: [], videos: 0 };
+  guardar(); sumar(s.marca, "sembradas");
+  sonido.siembra(); confeti(10);
+  refrescarCultivo(); abrirParcela(i);
+}
+function cosechar(i, desde) {
+  const p = J.parcelas[i]; if (!p || progreso(p) < 1) return;
+  const r = rinde(p);
+  Object.entries(r).forEach(([k, n]) => sumarInv("inv", k, n));
+  const vuelve = Math.random() < 0.35;
+  if (vuelve) sumarInv("semillas", p.semilla, 1);
+  J.parcelas[i] = null; guardar();
+  cartel({ titulo: "¡COSECHA!", sub: Object.entries(r).map(([k, n]) => `${OBJETOS[k].icono}×${n}`).join("  ") + (vuelve ? "  +🌱 semilla" : ""), tipo: "dorada", ms: 2200 });
+  sonido.cosecha();
+  Object.entries(r).forEach(([k, n]) => volar(OBJETOS[k].icono, n, desde, '.nav [data-ir="cultivo"]'));
+  refrescarCultivo();
+  setTimeout(() => abrirParcela(i), 600);
+}
+// Video patrocinado de 10 segundos (simulado)
+function verAnuncio(m, alTerminar) {
+  const caja = modal(`
+    <div class="rep">
+      <div class="esc"><div class="e">${m.icono}</div><b>${esc(m.nombre)}</b><span>${esc(m.lema)}</span></div>
+      <div class="esc"><div class="e">${(catalogo(m)[0] || {}).icono || m.icono}</div><b>${esc((catalogo(m)[0] || {}).nombre || m.nombre)}</b><span>${esc(m.anuncio)}</span></div>
+      <div class="esc"><div class="e">🌱</div><b>¡Gracias por ver!</b><span>Tu planta creció un poco más</span></div>
+      <div class="prog"></div>
+    </div>
+    <p class="suave chico-t" style="margin:10px 0 0">Video de ejemplo de la marca.</p>
+    <div class="acciones"><button class="btn sec" data-x>Cerrar</button></div>`, vars(m));
+  const fin = setTimeout(() => { cerrarModal(); alTerminar(); }, matchMedia("(prefers-reduced-motion: reduce)").matches ? 1500 : 10200);
+  $("[data-x]", caja).onclick = () => { clearTimeout(fin); cerrarModal(); };
+}
+
+// ---------- Mercado ----------
+function abrirMercado() {
+  abrirPanel(`
+    <div class="cab-marca"><div class="logo-m" style="--c:#ffd76a;--c2:#5a4310">🛒</div>
+      <div><h2>Mercado</h2><p>Compra semillas y aditamentos, y transforma tu cosecha en productos para tu tienda.</p></div></div>
+    <div class="lista-m" style="margin-top:12px">${PUESTOS.map((pu) => `<button class="item-m" data-puesto="${pu.id}" style="--c:${pu.color};--c2:#1e1446"><div class="logo-m">${pu.icono}</div><div class="txt"><b>${esc(pu.nombre)}</b><small>${pu.marca ? `Patrocina ${esc(marca(pu.marca).nombre)}` : pu.tipo === "semillas" ? "Semillas registradas por las marcas" : "Aditamentos de las marcas de Cultivo"}</small></div><span class="costo">▶</span></button>`).join("")}</div>`,
+  { tipo: "mercado", nav: "mercado", c: "--c:#ffd76a" });
+  $$("[data-puesto]").forEach((b) => (b.onclick = () => { sonido.tap(); irLugar("puesto", b.dataset.puesto, () => abrirPuesto(b.dataset.puesto), false); }));
+}
+function abrirPuesto(id, filtro = "") {
+  const pu = puesto(id); if (!pu) return;
+  const pat = pu.marca ? marca(pu.marca) : null;
+  let cuerpo = "";
+  if (pu.tipo === "semillas") {
+    const todas = semillasDe();
+    const lista = todas.filter((s) => !filtro || (s.nombre + " " + marca(s.marca).nombre).toLowerCase().includes(filtro));
+    cuerpo = `<input class="buscar" id="q-sem" placeholder="Buscar entre ${todas.length} semillas registradas…" value="${esc(filtro)}" autocomplete="off">
+      <div class="lista-m" style="margin-top:10px">${lista.slice(0, 40).map((s) => { const m = marca(s.marca); const n = J.semillas[s.id] || 0; return `<div class="item-m" style="${vars(m)}"><div class="logo-m">${s.icono}</div><div class="txt"><b>${esc(s.nombre)}</b><small>${esc(m.nombre)} · ${s.tipo === "canamo" ? "fibra y grano" : "flor"}${n ? ` · tienes ${n}` : ""}</small></div><button class="btn chico oro" data-comprar-s="${s.id}" ${J.polen < s.costo ? "disabled" : ""}>${s.costo} ⭐</button></div>`; }).join("")}</div>
+      ${lista.length > 40 ? `<p class="suave chico-t">…y ${lista.length - 40} más. Usa el buscador.</p>` : ""}`;
+  } else if (pu.tipo === "aditamentos") {
+    cuerpo = `<div class="lista-m">${ADITAMENTOS.map((a) => { const m = marca(a.marca) || { color: "#6ff0ff", color2: "#0c3d5a", nombre: "" }; const n = J.aditamentos[a.id] || 0; return `<div class="item-m" style="${vars(m)}"><div class="logo-m">${a.icono}</div><div class="txt"><b>${esc(a.nombre)}</b><small>${esc(m.nombre)} · ${esc(a.desc)}${n ? ` · tienes ${n}` : ""}</small></div><button class="btn chico oro" data-comprar-a="${a.id}" ${J.polen < a.costo ? "disabled" : ""}>${a.costo} ⭐</button></div>`; }).join("")}</div>`;
+  } else {
+    cuerpo = `<div class="lista-m">${pu.recetas.map(([prod, ing]) => {
+      const ok = Object.entries(ing).every(([k, n]) => (J.inv[k] || 0) >= n);
+      return `<div class="item-m"><div class="logo-m" style="--c:${pu.color};--c2:#1e1446">${OBJETOS[prod].icono}</div><div class="txt"><b>${esc(OBJETOS[prod].nombre)}</b><small>${Object.entries(ing).map(([k, n]) => `${OBJETOS[k].icono}${J.inv[k] || 0}/${n}`).join(" · ")} · vale ~${OBJETOS[prod].valor} ⭐</small></div><button class="btn chico" data-hacer="${prod}" ${ok ? "" : "disabled"}>Hacer</button></div>`;
+    }).join("")}</div>
+    ${pat ? `<button class="tarjeta fila-t ancho" id="video-taller" style="text-align:left;margin-top:10px;${vars(pat)}"><span class="grande">🎬</span><span class="txt"><b>Así se hace · video de ${esc(pat.nombre)}</b><small>Patrocinador del ${esc(pu.nombre)}</small></span><span class="costo">${J.talleresVistos.includes(id) ? "✓" : "+10 ⭐"}</span></button>` : ""}`;
+  }
+  const clase = claseDe(pu);
+  abrirPanel(`
+    <div class="cab-marca"><div class="logo-m" style="--c:${pu.color};--c2:#1e1446">${pu.icono}</div>
+      <div><h2>${esc(pu.nombre)}</h2><p>${pat ? `Patrocinado por ${esc(pat.nombre)}` : "Mercado de Weedland"}</p></div></div>
+    <div class="tarjeta sabias"><b>💡 ¿Sabías que…?</b><p>${esc(pu.sabias)}</p>${pu.aviso ? `<p class="nota">⚠️ ${esc(pu.aviso)}</p>` : ""}
+      ${clase ? `<button class="btn chico sec" id="aprender">${J.sabias.includes(id) ? "✓ Ya aprendiste esto" : "Aprende más · +10 ⭐"}</button>` : ""}</div>
+    <div class="seccion">${cuerpo}</div>
+    <p class="nota">Saldo: ${J.polen} ⭐ · Todo es virtual dentro del juego.</p>`, { tipo: "puesto", id, nav: "mercado", c: `--c:${pu.color}` });
+  const q = $("#q-sem"); if (q) { q.oninput = (e) => { const v = e.target.value.trim().toLowerCase(); abrirPuesto(id, v); const nq = $("#q-sem"); nq.focus(); nq.setSelectionRange(v.length, v.length); }; }
+  $$("[data-comprar-s]").forEach((b) => (b.onclick = () => {
+    const s = semillaPorId(b.dataset.comprarS); if (!s || !gastar(s.costo)) return;
+    sumarInv("semillas", s.id); sumar(s.marca, "semillas"); guardar();
+    sonido.moneda(); flotante(`🌱 +1 ${s.nombre}`, centroDe(b).x, centroDe(b).y, "#7dffb3");
+    abrirPuesto(id, filtro);
+  }));
+  $$("[data-comprar-a]").forEach((b) => (b.onclick = () => {
+    const a = aditamento(b.dataset.comprarA); if (!a || !gastar(a.costo)) return;
+    sumarInv("aditamentos", a.id); sumar(a.marca, "aditamentos"); guardar();
+    sonido.moneda(); flotante(`${a.icono} +1`, centroDe(b).x, centroDe(b).y, "#6ff0ff");
+    abrirPuesto(id);
+  }));
+  $$("[data-hacer]").forEach((b) => (b.onclick = () => {
+    const prod = b.dataset.hacer, ing = pu.recetas.find((r) => r[0] === prod)[1];
+    if (!Object.entries(ing).every(([k, n]) => (J.inv[k] || 0) >= n)) return;
+    Object.entries(ing).forEach(([k, n]) => sumarInv("inv", k, -n));
+    sumarInv("inv", prod, 1); guardar(); if (pat) sumar(pat.id, "transformados");
+    cartel({ titulo: "¡LISTO!", sub: `${OBJETOS[prod].icono} ${OBJETOS[prod].nombre}`, ms: 1400 }); sonido.abrir();
+    abrirPuesto(id);
+  }));
+  const vt = $("#video-taller"); if (vt) vt.onclick = () => verAnuncio(pat, () => {
+    sumar(pat.id, "talleres");
+    if (!J.talleresVistos.includes(id)) { J.talleresVistos.push(id); guardar(); ganar(10, "Video del taller"); }
+    abrirPuesto(id);
+  });
+  const ap = $("#aprender"); if (ap && clase) ap.onclick = () => aprender(clase, id);
+}
+function aprender(c, pid) {
   let i = 0;
-  const c2 = `--c:${UNIVERSIDAD.color}`;
   const paso = () => {
     if (i < c.pasos.length) {
       const caja = modal(`<button class="cerrar" data-x>✕</button><div class="ico-g">${c.icono}</div><h3>${esc(c.titulo)}</h3>
         <p style="font-size:1.1rem;margin:14px 0">${esc(c.pasos[i])}</p><p class="suave chico-t">${i + 1} / ${c.pasos.length}</p>
-        <div class="acciones"><button class="btn" data-sig>Siguiente ▶</button></div>`, c2);
+        <div class="acciones"><button class="btn" data-sig>Siguiente ▶</button></div>`);
       $("[data-x]", caja).onclick = cerrarModal;
       $("[data-sig]", caja).onclick = () => { sonido.tap(); i++; paso(); };
-    } else {
-      const q = c.pregunta;
-      const caja = modal(`<button class="cerrar" data-x>✕</button><div class="ico-g">❓</div><h3>${esc(q.p)}</h3>${q.ops.map((o, k) => `<button class="op" data-k="${k}">${esc(o)}</button>`).join("")}`, c2);
-      $("[data-x]", caja).onclick = cerrarModal;
-      $$(".op", caja).forEach((b) => (b.onclick = () => {
-        const k = +b.dataset.k;
-        if (k !== q.ok) { b.classList.add("mal"); sonido.mal(); return; }
-        b.classList.add("bien"); sonido.bien();
-        setTimeout(() => {
-          cerrarModal();
-          if (!J.clases.includes(c.id)) {
-            J.clases.push(c.id); guardar();
-            cartel({ titulo: "¡CLASE APROBADA!", sub: `${c.icono} +${c.polen} 🌟`, ms: 1800 }); sonido.premio(); ganar(c.polen);
-          } else toast("Clase repasada");
-          if (actual && actual.tipo === "uni") abrirUniversidad("clases");
-        }, 700);
-      }));
+      return;
     }
+    const q = c.pregunta;
+    const caja = modal(`<button class="cerrar" data-x>✕</button><div class="ico-g">❓</div><h3>${esc(q.p)}</h3>${q.ops.map((o, k) => `<button class="op" data-k="${k}">${esc(o)}</button>`).join("")}`);
+    $("[data-x]", caja).onclick = cerrarModal;
+    $$(".op", caja).forEach((b) => (b.onclick = () => {
+      if (+b.dataset.k !== q.ok) { b.classList.add("mal"); sonido.mal(); return; }
+      b.classList.add("bien"); sonido.bien();
+      setTimeout(() => {
+        cerrarModal();
+        if (!J.sabias.includes(pid)) { J.sabias.push(pid); guardar(); cartel({ titulo: "¡APRENDISTE!", sub: `${c.icono} +10 ⭐`, ms: 1600 }); ganar(10); }
+        abrirPuesto(pid);
+      }, 700);
+    }));
   };
   paso();
 }
-function taller(ta) {
-  const m = marca(ta.marca);
-  const caja = modal(`
-    <div class="rep">
-      <div class="esc"><div class="e">${ta.icono}</div><b>${esc(ta.titulo)}</b><span>Taller de ${esc(m.nombre)}</span></div>
-      <div class="esc"><div class="e">${m.icono}</div><b>${esc(m.nombre)}</b><span>${esc(m.lema)}</span></div>
-      <div class="esc"><div class="e">🎓</div><b>¡Gracias por ver!</b><span>Visita su stand en el pabellón ${esc(pab(m.pab).nombre)}</span></div>
-      <div class="prog"></div>
+
+// ---------- tu tienda virtual ----------
+function abrirTienda() {
+  const vendibles = Object.entries(J.inv).filter(([k, n]) => n > 0 && OBJETOS[k]);
+  abrirPanel(`
+    <div class="cab-marca"><div class="logo-m" style="--c:#7dffb3;--c2:#0f5d43">🏪</div>
+      <div><h2>Tu tienda</h2><p>Pon a la venta lo que cosechas y fabricas. Los visitantes de la estación llegan a comprar y te pagan en estrellas.</p></div></div>
+    <div class="seccion"><h3>En venta (${J.tienda.length}/${MAX_TIENDA})</h3>
+      ${J.tienda.length ? `<div class="lista-m">${J.tienda.map((it, k) => `<div class="item-m"><div class="logo-m" style="--c:#7dffb3;--c2:#0f5d43">${OBJETOS[it.item].icono}</div><div class="txt"><b>${esc(OBJETOS[it.item].nombre)}</b><small>Esperando comprador…</small></div><span class="costo">${it.precio} ⭐</span><button class="btn chico sec" data-quitar="${k}">✕</button></div>`).join("")}</div>` : `<p class="suave chico-t">Tu tienda está vacía.</p>`}
     </div>
-    <p class="suave chico-t" style="margin:10px 0 0">Vista previa de ejemplo. Aquí va el video completo del taller.</p>
-    <div class="acciones"><button class="btn sec" data-x>Cerrar</button></div>`, vars(m));
-  const fin = setTimeout(() => {
-    sumar(m.id, "talleres");
-    if (!J.talleres.includes(ta.id)) { J.talleres.push(ta.id); guardar(); ganar(10, "Taller visto"); sonido.premio(); }
-    $(".acciones", caja).innerHTML = `<button class="btn" data-stand>Ir al stand de ${esc(m.nombre)}</button><button class="btn sec" data-x>Cerrar</button>`;
-    $("[data-stand]", caja).onclick = () => { cerrarModal(); abrirStand(m.id); };
-    $("[data-x]", caja).onclick = () => { cerrarModal(); if (actual && actual.tipo === "uni") abrirUniversidad("talleres"); };
-  }, matchMedia("(prefers-reduced-motion: reduce)").matches ? 1500 : 10200);
-  $("[data-x]", caja).onclick = () => { clearTimeout(fin); cerrarModal(); };
+    <div class="seccion"><h3>Poner a la venta</h3>
+      ${vendibles.length ? `<div class="lista-m">${vendibles.map(([k, n]) => `<div class="item-m"><div class="logo-m" style="--c:#ffd76a;--c2:#5a4310">${OBJETOS[k].icono}</div><div class="txt"><b>${esc(OBJETOS[k].nombre)} ×${n}</b><small>Precio justo: ${OBJETOS[k].valor} ⭐ (si lo subes, tarda más en venderse)</small></div>
+        <div class="precio-ctl"><button data-menos="${k}">−</button><span id="pr-${k}">${OBJETOS[k].valor}</span><button data-mas="${k}">＋</button></div><button class="btn chico oro" data-vender="${k}" ${J.tienda.length >= MAX_TIENDA ? "disabled" : ""}>Vender</button></div>`).join("")}</div>`
+        : `<p class="suave chico-t">No tienes nada para vender. Cosecha en tus parcelas y transforma en los talleres del Mercado.</p>`}
+    </div>
+    ${J.ventas.length ? `<div class="seccion"><h3>Ventas recientes</h3>${J.ventas.slice(0, 6).map((v) => `<p class="chico-t" style="margin:4px 0">🛍️ <b>${esc(v.quien)}</b> compró ${OBJETOS[v.item].icono} ${esc(OBJETOS[v.item].nombre)} · <span style="color:var(--oro)">+${v.precio} ⭐</span></p>`).join("")}</div>` : ""}
+    <p class="nota">Demo: los compradores son simulados. En la versión real serán otros jugadores.</p>`, { tipo: "tienda", nav: "cultivo", c: "--c:#7dffb3" });
+  const precios = {};
+  vendibles.forEach(([k]) => (precios[k] = OBJETOS[k].valor));
+  const ajustar = (k, d) => { precios[k] = Math.max(1, Math.min(OBJETOS[k].valor * 3, precios[k] + d)); $("#pr-" + k).textContent = precios[k]; sonido.tick(); };
+  $$("[data-menos]").forEach((b) => (b.onclick = () => ajustar(b.dataset.menos, -1)));
+  $$("[data-mas]").forEach((b) => (b.onclick = () => ajustar(b.dataset.mas, 1)));
+  $$("[data-vender]").forEach((b) => (b.onclick = () => {
+    const k = b.dataset.vender; if (J.tienda.length >= MAX_TIENDA || !J.inv[k]) return;
+    sumarInv("inv", k, -1);
+    J.tienda.push({ item: k, precio: precios[k], vence: Date.now() + esperaVenta(k, precios[k]) }); guardar();
+    sonido.pop(); est && est.setTienda(J.tienda.map((it) => ({ icono: OBJETOS[it.item].icono })));
+    abrirTienda();
+  }));
+  $$("[data-quitar]").forEach((b) => (b.onclick = () => {
+    const it = J.tienda.splice(+b.dataset.quitar, 1)[0]; if (it) sumarInv("inv", it.item, 1); guardar();
+    est && est.setTienda(J.tienda.map((x) => ({ icono: OBJETOS[x.item].icono }))); abrirTienda();
+  }));
+}
+
+// ---------- nave: tour espacial ----------
+const COSTO_TOUR = 25;
+function abrirNave() {
+  const caja = modal(`<div class="ico-g">🚀</div><h3>Tour espacial</h3>
+    <p class="suave">Nova te lleva volando por toda la estación, te narra cada lugar y luego… atraviesan un agujero negro. Dura 1 minuto y medio.</p>
+    <p class="nota">⚠️ El túnel tiene colores y movimiento intensos. Si eres sensible a la luz o te mareas, mejor no lo tomes.</p>
+    <div class="acciones"><button class="btn oro" data-ok ${J.polen < COSTO_TOUR ? "disabled" : ""}>Despegar · ${COSTO_TOUR} ⭐</button><button class="btn sec" data-x>Ahora no</button></div>
+    ${J.polen < COSTO_TOUR ? `<p class="nota">Te faltan ${COSTO_TOUR - J.polen} ⭐.</p>` : ""}`, "--c:#6ff0ff");
+  $("[data-x]", caja).onclick = cerrarModal;
+  $("[data-ok]", caja).onclick = () => { if (!gastar(COSTO_TOUR)) return; cerrarModal(); despegar(); };
+}
+function decir(texto) {
+  $("#subtitulo").textContent = texto;
+  try {
+    if (estaMudo() || !("speechSynthesis" in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(texto);
+    const voces = speechSynthesis.getVoices().filter((v) => v.lang && v.lang.toLowerCase().startsWith("es"));
+    u.voice = voces.find((v) => /mx|419|us/i.test(v.lang)) || voces[0] || null; u.lang = (u.voice && u.voice.lang) || "es-MX";
+    u.rate = 1.03; u.pitch = 1.05;
+    speechSynthesis.speak(u);
+  } catch {}
+}
+function destello() { const d = $("#destello"); d.classList.remove("on"); void d.offsetWidth; d.classList.add("on"); }
+function despegar() {
+  if (actual) cerrarPanel();
+  document.body.classList.add("en-tour");
+  $("#tour-ui").hidden = false;
+  sonido.teleport();
+  est.iniciarTour({
+    alTexto: decir,
+    alFase: (f) => { destello(); if (f === "tunel") sonido.tunel(); else sonido.entrar(); },
+    alFin: () => {
+      document.body.classList.remove("en-tour"); $("#tour-ui").hidden = true; destello();
+      try { speechSynthesis.cancel(); } catch {}
+      toast("¡Bienvenido de regreso a la base! 🚀");
+    },
+  });
 }
 
 // ---------- regalo diario ----------
@@ -686,7 +962,8 @@ function regaloDiario() {
 const PASOS = [
   { t: "¡Hola! Soy Nova 👋", p: "Bienvenido a Weedland Station: una expo en el espacio con los stands de las marcas." },
   { t: "Camina por la expo", p: matchMedia("(pointer: coarse)").matches ? "Muévete con el joystick o toca el suelo para caminar. Si tocas un stand, una pantalla o un dron, tu astronauta va solito hasta ahí." : "Camina con W A S D o las flechas, o haz clic en el suelo. Si das clic en un stand, una pantalla o un dron, tu astronauta va solito hasta ahí." },
-  { t: "Gana polen dorado 🌟", p: "Ganas polen al visitar stands, ver videos, jugar y tomar clases. Lo cambias por cupones reales y boletos para sorteos en 🎁 Premios." },
+  { t: "Gana estrellas 🌟", p: "Ganas estrellas al visitar stands, ver videos, jugar y vender en tu tienda. Con ellas compras semillas, aditamentos, el tour en la nave… o cupones reales de las marcas en 🎁 Premios." },
+  { t: "Tu cultivo 🌱", p: "En Mi cultivo siembras semillas registradas de las marcas. En el Mercado las aceleras, transformas la cosecha y luego la vendes en tu tienda." },
 ];
 function guia(i) {
   const el = $("#guia");

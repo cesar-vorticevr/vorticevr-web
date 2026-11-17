@@ -25,6 +25,8 @@ const nuevo = () => ({
   polen: 20, visitados: [], videos: [], jugados: {}, clases: [], talleres: [],
   cupones: [], boletos: {}, favoritos: [], siguiendo: [], recordar: [], bonos: [],
   diario: { fecha: "", racha: 0 }, guia: false,
+  // cultivo y tienda
+  semillas: {}, aditamentos: {}, inv: {}, parcelas: Array(8).fill(null), tienda: [], ventas: [], talleresVistos: [], sabias: [], regaloSemilla: false,
 });
 export function leerJuego() {
   const j = leer(K.juego, null);
@@ -53,7 +55,8 @@ export const CAMPOS = [
   ["visitas", "Visitas al stand"], ["videos", "Videos vistos"], ["producto", "Productos abiertos"],
   ["web", "Clics a su tienda"], ["favoritos", "Favoritos"], ["seguidores", "Seguidores"],
   ["partidas", "Partidas jugadas"], ["cupones", "Cupones canjeados"], ["boletos", "Boletos de sorteo"],
-  ["drones", "Clics en drones"], ["pantallas", "Clics en pantallas"], ["talleres", "Talleres vistos"],
+  ["drones", "Clics en drones"], ["pantallas", "Clics en pantallas"], ["talleres", "Videos de taller"],
+  ["semillas", "Semillas compradas (juego)"], ["sembradas", "Semillas sembradas"], ["aditamentos", "Aditamentos comprados"], ["transformados", "Productos hechos en su taller"],
 ];
 export function metricas() { return leer(K.metricas, {}); }
 export function sumar(id, campo, n = 1) {

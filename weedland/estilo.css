@@ -252,3 +252,34 @@ h1, h2, h3, h4 { font-family: Fredoka, system-ui, sans-serif; font-weight: 600; 
 .mini-v .mv-ico { font-size: 1.4rem; }
 .mini-v b { font-size: .85rem; }
 .mini-v small { color: var(--oro); font-weight: 800; font-size: .75rem; }
+
+/* cultivo */
+.parcelas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.parcela-c { position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px 12px; border-radius: 14px; background: #2a1d14; border: 1.5px solid #5a4030; text-align: center; }
+.parcela-c .pc-ico { font-size: 1.6rem; }
+.parcela-c b { font-size: .72rem; line-height: 1.1; }
+.parcela-c small { font-size: .62rem; color: var(--suave); }
+.parcela-c i { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--lima); }
+.parcela-c.lista { border-color: var(--oro); box-shadow: 0 0 16px rgba(255,215,106,.4); animation: pulso 1.4s ease-in-out infinite; }
+.parcela-c.lista small { color: var(--oro); font-weight: 800; }
+.mochila { display: grid; gap: 6px; }
+.mochila b { font-size: .8rem; color: var(--suave); margin-top: 4px; }
+.mochila div { display: flex; gap: 6px; flex-wrap: wrap; }
+.lista-cosecha { margin-top: 12px; text-align: center; border-color: var(--oro); }
+.sabias { margin-top: 12px; border-color: var(--c); }
+.sabias p { margin: 6px 0 10px; }
+.enlace { color: var(--cian); font-weight: 800; text-decoration: underline; padding: 0; }
+.precio-ctl { display: flex; align-items: center; gap: 4px; font: 700 .95rem Fredoka, sans-serif; color: var(--oro); }
+.precio-ctl button { width: 26px; height: 26px; border-radius: 50%; background: var(--panel); border: 1px solid var(--borde); font-weight: 800; }
+.nav button[data-aviso]:not([data-aviso=""])::after { content: attr(data-aviso); position: absolute; top: 2px; right: 8px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--oro); color: #3a2400; font: 800 .7rem Nunito, sans-serif; display: grid; place-items: center; }
+.nav button { position: relative; }
+/* tour */
+.tour-ui { position: absolute; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(640px, calc(100vw - 24px)); z-index: 30; display: flex; flex-direction: column; align-items: center; gap: 10px; pointer-events: none; }
+.tour-ui p { margin: 0; padding: 12px 18px; border-radius: 18px; background: rgba(11,6,32,.78); border: 1px solid var(--cian); font: 600 1.05rem/1.35 Nunito, sans-serif; text-align: center; box-shadow: 0 0 24px rgba(111,240,255,.25); }
+.tour-ui p:empty { display: none; }
+.tour-ui button { pointer-events: auto; }
+.en-tour .hud, .en-tour .nav, .en-tour .stick, .en-tour #etiquetas, .en-tour .entrar, .en-tour .guia, .en-tour .panel { display: none !important; }
+.destello { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 60; }
+.destello.on { animation: destello 1.2s ease-out; }
+@keyframes destello { 0% { opacity: 0; } 15% { opacity: .85; } 100% { opacity: 0; } }
+@media (max-width: 440px) { .nav button small { font-size: .62rem; } .parcelas { grid-template-columns: repeat(4, 1fr); gap: 6px; } }

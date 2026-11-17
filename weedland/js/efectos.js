@@ -82,6 +82,16 @@ export const sonido = {
   burbuja: () => nota(300 + Math.random() * 400, 0, 0.12, { vol: 0.1, a: 900 + Math.random() * 400 }),
   hablar: () => nota(500 + Math.random() * 300, 0, 0.04, { tipo: "triangle", vol: 0.03 }),
   paso: () => ruido(0, 0.035, 0.018, 500 + Math.random() * 200),
+  tunel: () => {
+    const c = audio(); if (!c) return;
+    const n = Math.floor(c.sampleRate * 16), buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), t0 = c.currentTime;
+    f.type = "bandpass"; f.Q.value = 6; f.frequency.setValueAtTime(200, t0); f.frequency.exponentialRampToValueAtTime(3000, t0 + 8); f.frequency.exponentialRampToValueAtTime(300, t0 + 16);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.12, t0 + 1.5); g.gain.setValueAtTime(0.12, t0 + 14); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 16);
+    s.buffer = buf; s.connect(f); f.connect(g); g.connect(salida); s.start(t0);
+    [0, 2, 4, 7, 9, 11].forEach((k, i) => nota(ESCALA[k] / 2, 1 + i * 2.2, 2.4, { tipo: "sine", vol: 0.05, a: ESCALA[k] }));
+  },
   teleport: () => { nota(200, 0, 0.45, { vol: 0.12, a: 1600 }); ruido(0.05, 0.35, 0.05, 5000); },
 };
 

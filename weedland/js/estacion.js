@@ -2,7 +2,8 @@
 // pabellones de marcas, Universidad, pantallas gigantes y drones que cargan publicidad.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { PABELLONES, UNIVERSIDAD, catalogo } from "./datos.js";
+import { PABELLONES, catalogo } from "./datos.js";
+import { PUESTOS } from "./cultivo.js";
 
 const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
 // Medidas: plaza central, pabellones (12 stands en círculo) y módulos exteriores (universidad e islas de marca)
@@ -548,37 +549,314 @@ export function crearEstacion(canvas, cfg) {
     s.videos.forEach((v) => { v.avance = (v.avance + dt / 12) % 1; dibujarVideo(v.tx.g, 1024, 576, s.m, v.k, v.avance, s.productos); v.tx.t.needsUpdate = true; });
   }
 
-  // Universidad
-  function crearUniversidad() {
-    const mod = modulo("universidad", UNIVERSIDAD.angulo, D_EXT, R_UNI, UNIVERSIDAD.color);
-    const g = new THREE.Group(); g.position.copy(mod.centro); g.position.y = 0.6;
-    g.lookAt(0, 0.6, 0); g.userData = { tipo: "uni", id: "universidad" };
-    scene.add(g); tocables.push(g);
-    const domo = new THREE.Mesh(new THREE.SphereGeometry(6.5, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: "#e9e4ff", roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.55 }));
-    domo.position.z = -2; g.add(domo);
-    const anillo = new THREE.Mesh(new THREE.TorusGeometry(6.5, 0.15, 8, 96), neon("#b18cff")); anillo.rotation.x = Math.PI / 2; anillo.position.set(0, 0.1, -2); g.add(anillo);
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2; const c = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 4.5, 12), blanco);
-      c.position.set(Math.cos(a) * 6.2, 2.25, -2 + Math.sin(a) * 6.2); g.add(c);
-      obst.push({ caja: g, x0: c.position.x - 0.3, x1: c.position.x + 0.3, z0: c.position.z - 0.3, z1: c.position.z + 0.3 });
-    }
-    const tx = texCanvas(1024, 400, 0.75);
-    const f = tx.g.createLinearGradient(0, 0, 1024, 400); f.addColorStop(0, "#3a1670"); f.addColorStop(1, "#0b0620");
-    tx.g.fillStyle = f; tx.g.fillRect(0, 0, 1024, 400);
-    tx.g.textAlign = "center"; tx.g.textBaseline = "middle"; tx.g.fillStyle = "#fff"; tx.g.font = `700 110px ${FUENTE}`; tx.g.fillText("🎓 UNIVERSIDAD", 512, 150);
-    tx.g.fillStyle = "#c9b4ff"; tx.g.font = `600 48px ${FUENTE}`; tx.g.fillText("Clases · Talleres · Conferencias", 512, 270);
-    tx.g.strokeStyle = "#b18cff"; tx.g.lineWidth = 12; tx.g.strokeRect(6, 6, 1012, 388);
-    const pan = new THREE.Mesh(new THREE.PlaneGeometry(8, 3.1), conMapa(tx.t));
-    pan.position.set(0, 2.4, 4.6); g.add(pan);
-    obst.push({ caja: g, x0: -4.3, x1: 4.3, z0: 4.2, z1: 4.8 });
+  // Lugares a los que se puede ir caminando (puestos, parcelas, tu tienda, la nave): id -> { p, mirar, entrar }
+  const lugares = {};
+  function lugar(id, g, local, mirarLocal, entrar = true) {
     g.updateMatrixWorld(true);
-    mod.puerta = g.localToWorld(new THREE.Vector3(0, 0, 7)); mod.puerta.y = 0;
-    const soporte = new THREE.Mesh(new THREE.BoxGeometry(8.3, 3.4, 0.3), oscuro); soporte.position.set(0, 2.4, 4.42); g.add(soporte);
-    const birrete = spriteEmoji("🎓", 4.5); birrete.position.set(0, 5.5, -2); g.add(birrete);
-    const libro = spriteEmoji("📚", 2.2); libro.position.set(-3.2, 3.2, -1); g.add(libro);
-    const micro = spriteEmoji("🎤", 2.2); micro.position.set(3.2, 3.2, -1); g.add(micro);
-    anim.push((t) => { if (quieto) return; birrete.position.y = 5.5 + Math.sin(t * 1.3) * 0.35; libro.position.y = 3.2 + Math.sin(t * 1.7 + 1) * 0.25; micro.position.y = 3.2 + Math.sin(t * 1.5 + 2) * 0.25; });
-    etiquetas.push({ el: cfg.etiqueta({ id: "universidad", icono: "🎓", nombre: "Universidad", color: UNIVERSIDAD.color }), pos: new THREE.Vector3(mod.centro.x, 10, mod.centro.z) });
+    const p = g.localToWorld(local.clone()); p.y = 0;
+    const mirar = g.localToWorld(mirarLocal.clone()); mirar.y = 0;
+    lugares[id] = { p, mirar, entrar };
+  }
+  function letreroPlano(texto, color, ancho = 4, fondo = "#120a2a") {
+    const t = texCanvas(1024, 220, 0.5);
+    t.g.fillStyle = fondo; rr(t.g, 0, 0, 1024, 220, 40); t.g.fill();
+    t.g.strokeStyle = color; t.g.lineWidth = 14; rr(t.g, 7, 7, 1010, 206, 36); t.g.stroke();
+    t.g.fillStyle = "#fff"; t.g.textAlign = "center"; t.g.textBaseline = "middle"; ajustar(t.g, texto, 940, 110); t.g.fillText(texto, 512, 116);
+    return new THREE.Mesh(new THREE.PlaneGeometry(ancho, ancho * 0.215), new THREE.MeshBasicMaterial({ map: t.t, transparent: true, toneMapped: false, side: THREE.DoubleSide }));
+  }
+  function arcoEntrada(g, texto, color, z) {
+    const ent = new THREE.Group(); ent.position.set(0, 0, z); g.add(ent);
+    [-2.6, 2.6].forEach((x) => { const c = new THREE.Mesh(new THREE.BoxGeometry(0.6, 5, 0.6), blanco); c.position.set(x, 2.5, 0); ent.add(c); const l = new THREE.Mesh(new THREE.BoxGeometry(0.12, 4.6, 0.65), neon(color)); l.position.set(x, 2.5, 0); ent.add(l); obst.push({ caja: g, x0: x - 0.6, x1: x + 0.6, z0: z - 0.6, z1: z + 0.6 }); });
+    const viga = letreroPlano(texto, color, 6.4); viga.material.side = THREE.FrontSide; viga.position.y = 5.4; ent.add(viga);
+    const atras = viga.clone(); atras.rotation.y = Math.PI; ent.add(atras);
+  }
+
+  // ----- Mercado: puestos para comprar semillas y aditamentos, y talleres para transformar la cosecha -----
+  const puestos3d = {};
+  function crearMercado() {
+    const mod = modulo("mercado", 90, D_EXT, R_ISLA, "#ffd76a");
+    const g = new THREE.Group(); g.position.set(mod.centro.x, 0.6, mod.centro.z); g.lookAt(0, 0.6, 0);
+    scene.add(g); g.updateMatrixWorld(true);
+    const alfombra = new THREE.Mesh(new THREE.CircleGeometry(R_ISLA - 1.5, 64), new THREE.MeshStandardMaterial({ color: "#3a2a10", roughness: 0.7 }));
+    alfombra.rotation.x = -Math.PI / 2; alfombra.position.y = 0.02; g.add(alfombra);
+    // letrero central flotante
+    const centro = new THREE.Group(); centro.position.set(0, 0, -1); g.add(centro);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2, 0.6, 32), blanco); base.position.y = 0.3; centro.add(base);
+    obst.push({ caja: g, x0: -2.1, x1: 2.1, z0: -3.1, z1: 1.1 });
+    const carrito = spriteEmoji("🛒", 1.6); carrito.position.y = 1.5; centro.add(carrito);
+    const sign = letreroPlano("MERCADO", "#ffd76a", 6, "#3a2a10"); sign.position.y = 10; centro.add(sign);
+    anim.push((t) => { carrito.position.y = 1.5 + Math.sin(t * 1.4) * 0.15; sign.rotation.y = t * 0.3; });
+    arcoEntrada(g, "🛒 Mercado", "#ffd76a", R_ISLA - 1.2);
+    // 5 puestos en semicírculo mirando al centro
+    PUESTOS.forEach((pu, i) => {
+      const a = rad(-84 + i * 42), R = 10.5;
+      const pg = new THREE.Group(); pg.position.set(Math.sin(a) * R, 0, -Math.cos(a) * R);
+      pg.userData = { tipo: "puesto", id: pu.id }; g.add(pg); tocables.push(pg);
+      pg.rotation.y = Math.atan2(0 - pg.position.x, -1 - pg.position.z); // mira al centro del mercado
+      const color = new THREE.Color(pu.color);
+      const mostrador = new THREE.Mesh(new THREE.BoxGeometry(4, 1.1, 1.3), new THREE.MeshStandardMaterial({ color: pu.color, roughness: 0.5 })); mostrador.position.set(0, 0.55, 0); pg.add(mostrador);
+      const tapa = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.12, 1.5), blanco); tapa.position.y = 1.16; pg.add(tapa);
+      [-1.9, 1.9].forEach((x) => { const poste = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3.4, 8), blanco); poste.position.set(x, 1.7, -0.6); pg.add(poste); });
+      // toldo a rayas
+      const rayas = texCanvas(256, 64, 1);
+      for (let k = 0; k < 8; k++) { rayas.g.fillStyle = k % 2 ? "#ffffff" : pu.color; rayas.g.fillRect(k * 32, 0, 32, 64); }
+      const toldo = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.1, 2.2), [blanco, blanco, new THREE.MeshStandardMaterial({ map: rayas.t }), blanco, blanco, blanco]);
+      toldo.position.set(0, 3.45, 0); toldo.rotation.x = 0.25; pg.add(toldo);
+      const borde = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.3, 0.06), neon(pu.color)); borde.position.set(0, 3.15, 1.05); pg.add(borde);
+      const letrero = letreroPlano(`${pu.icono} ${pu.nombre}`, pu.color, 3.8); letrero.position.set(0, 4.25, -0.2); pg.add(letrero);
+      // mercancía sobre el mostrador
+      pu.mercancia.forEach((e, k) => { const sp = spriteEmoji(e, 0.75); sp.position.set(-1.2 + k * 1.2, 1.6, 0.1); pg.add(sp); });
+      const rob = robot(pu.color, 0, -1.4, 0.9); pg.add(rob); anim.push((t, dt) => { if (!quieto) rob.userData.animar(t, dt); });
+      pg.updateMatrixWorld(true);
+      obst.push({ caja: pg, x0: -2.3, x1: 2.3, z0: -2.2, z1: 0.8 });
+      lugar("puesto:" + pu.id, pg, new THREE.Vector3(0, 0, 2.6), new THREE.Vector3(0, 0, 0));
+      puestos3d[pu.id] = { pg, rob };
+    });
+    etiquetas.push({ el: cfg.etiqueta({ id: "mercado", icono: "🛒", nombre: "Mercado", color: "#ffd76a" }), pos: new THREE.Vector3(mod.centro.x, 12, mod.centro.z) });
+    lugar("mercado", g, new THREE.Vector3(0, 0, 4.5), new THREE.Vector3(0, 0, -1), false);
+  }
+
+  // ----- Mi cultivo: 8 parcelas y tu tienda virtual -----
+  const parcelas3d = [];
+  let tienda3d = null;
+  function crearCultivo() {
+    const mod = modulo("cultivo", 270, D_EXT, R_ISLA, "#7dffb3");
+    const g = new THREE.Group(); g.position.set(mod.centro.x, 0.6, mod.centro.z); g.lookAt(0, 0.6, 0);
+    scene.add(g);
+    const pasto = new THREE.Mesh(new THREE.CircleGeometry(R_ISLA - 1.5, 64), new THREE.MeshStandardMaterial({ color: "#2f6b3e", roughness: 0.9 }));
+    pasto.rotation.x = -Math.PI / 2; pasto.position.y = 0.02; g.add(pasto);
+    arcoEntrada(g, "🌱 Mi cultivo", "#7dffb3", R_ISLA - 1.2);
+    // invernadero: costillas de cristal sobre las parcelas
+    [-6.5, -1.8, 2.9].forEach((z) => {
+      const costilla = new THREE.Mesh(new THREE.TorusGeometry(10, 0.12, 8, 48, Math.PI), neon("#bfffe0")); costilla.position.set(0, 0, z); costilla.scale.y = 0.62; g.add(costilla);
+    });
+    const tierra = new THREE.MeshStandardMaterial({ color: "#4a2f1c", roughness: 1 });
+    for (let i = 0; i < 8; i++) {
+      const x = [-6.9, -2.3, 2.3, 6.9][i % 4], z = i < 4 ? 1.2 : -4.6;
+      const pg = new THREE.Group(); pg.position.set(x, 0, z); pg.userData = { tipo: "parcela", id: i };
+      g.add(pg); tocables.push(pg);
+      const cama = new THREE.Mesh(new THREE.BoxGeometry(3, 0.6, 3), blanco); cama.position.y = 0.3; pg.add(cama);
+      const suelo = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.1, 2.7), tierra); suelo.position.y = 0.62; pg.add(suelo);
+      const filo = new THREE.Mesh(new THREE.BoxGeometry(3.05, 0.06, 3.05), neon("#7dffb3")); filo.position.y = 0.6; pg.add(filo);
+      const planta = new THREE.Group(); planta.position.y = 0.66; pg.add(planta);
+      const extras = new THREE.Group(); pg.add(extras);
+      const num = letreroPlano(`${i + 1}`, "#7dffb3", 0.9); num.position.set(0, 0.35, 1.52); pg.add(num);
+      obst.push({ caja: g, x0: x - 1.6, x1: x + 1.6, z0: z - 1.6, z1: z + 1.6 });
+      lugar("parcela:" + i, g, new THREE.Vector3(x, 0, z + 2.5), new THREE.Vector3(x, 0, z), false);
+      parcelas3d.push({ pg, planta, extras, clave: "" });
+    }
+    // tu tienda virtual al fondo
+    const tg = new THREE.Group(); tg.position.set(0, 0, -11); tg.userData = { tipo: "tienda", id: "tienda" }; g.add(tg); tocables.push(tg);
+    const muro = new THREE.Mesh(new THREE.BoxGeometry(8, 4, 0.4), blanco); muro.position.set(0, 2, -1.2); tg.add(muro);
+    const repisa = [0.9, 1.9, 2.9].map((y) => { const r = new THREE.Mesh(new THREE.BoxGeometry(7, 0.1, 0.6), gris); r.position.set(0, y, -0.8); tg.add(r); return r; });
+    const most = new THREE.Mesh(new THREE.BoxGeometry(4, 1.1, 1), new THREE.MeshStandardMaterial({ color: "#7dffb3", roughness: 0.5 })); most.position.set(0, 0.55, 1); tg.add(most);
+    const letrero = letreroPlano("🏪 Tu tienda", "#7dffb3", 5); letrero.position.set(0, 4.7, -1); tg.add(letrero);
+    const rob = robot("#7dffb3", 2.6, 0.6, 0.9); tg.add(rob); anim.push((t, dt) => { if (!quieto) rob.userData.animar(t, dt); });
+    const productos = new THREE.Group(); tg.add(productos);
+    obst.push({ caja: g, x0: -4.2, x1: 4.2, z0: -12.6, z1: -9.4 });
+    lugar("tienda", g, new THREE.Vector3(0, 0, -7.6), new THREE.Vector3(0, 0, -11));
+    tienda3d = { productos, rob };
+    etiquetas.push({ el: cfg.etiqueta({ id: "cultivo", icono: "🌱", nombre: "Mi cultivo", color: "#7dffb3" }), pos: new THREE.Vector3(mod.centro.x, 12, mod.centro.z) });
+    lugar("cultivo", g, new THREE.Vector3(0, 0, 3.5), new THREE.Vector3(0, 0, -3), false);
+  }
+  // Dibuja las plantas según el estado (lo manda la interfaz)
+  function setParcelas(lista) {
+    lista.forEach((p, i) => {
+      const P = parcelas3d[i]; if (!P) return;
+      const etapa = !p ? -1 : p.listo ? 4 : Math.min(3, Math.floor(p.prog * 4));
+      const clave = `${etapa}|${p ? p.tipo : ""}|${p ? p.aditamentos.join(",") : ""}`;
+      if (clave === P.clave) return;
+      P.clave = clave;
+      P.planta.clear(); P.extras.clear();
+      if (!p) return;
+      if (etapa === 0) { const b = spriteEmoji("🌱", 0.9); b.position.y = 0.4; P.planta.add(b); }
+      else {
+        const alto = [0, 0.9, 1.6, 2.3, 2.6][etapa];
+        const tallo = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, alto, 8), verde); tallo.position.y = alto / 2; P.planta.add(tallo);
+        const hojas = etapa + 2;
+        for (let k = 0; k < hojas; k++) {
+          const a = (k / hojas) * Math.PI * 2, y = alto * (0.35 + 0.6 * (k / hojas));
+          const h = spriteEmoji(p.tipo === "canamo" ? "🌾" : "🌿", 0.7 + etapa * 0.18); h.position.set(Math.cos(a) * 0.35, y, Math.sin(a) * 0.35); P.planta.add(h);
+        }
+        if (etapa === 4) {
+          const flor = spriteEmoji(p.tipo === "canamo" ? "🌾" : "🌼", 1.1); flor.position.y = alto + 0.3; P.planta.add(flor);
+          const brillo = spriteBrillo("#ffd76a", 3.2); brillo.position.y = alto * 0.7; brillo.material.opacity = 0.7; P.planta.add(brillo);
+          const chispa = spriteEmoji("✨", 0.8); chispa.position.set(0.7, alto + 0.6, 0); P.planta.add(chispa);
+        }
+      }
+      // aditamentos visibles
+      if (p.aditamentos.includes("lampara")) {
+        const lam = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.12, 0.8), neon("#fff6c8")); lam.position.y = 3.8; P.extras.add(lam);
+        const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.5), gris); cable.position.y = 4.6; P.extras.add(cable);
+        const luz = spriteBrillo("#fff1a8", 3); luz.position.y = 3.6; luz.material.opacity = 0.6; P.extras.add(luz);
+      }
+      p.aditamentos.filter((a) => a !== "lampara").forEach((a, k) => {
+        const ico = { nutrientes: "🧪", riego: "💧", extractor: "🌀", sensor: "📟", maceta: "🪴", micorrizas: "🍄" }[a] || "✨";
+        const sp = spriteEmoji(ico, 0.45); sp.position.set(-1.1 + k * 0.45, 0.95, 1.3); P.extras.add(sp);
+      });
+    });
+  }
+  function setTienda(items) {
+    if (!tienda3d) return;
+    tienda3d.productos.clear();
+    items.forEach((it, k) => { const sp = spriteEmoji(it.icono, 0.8); sp.position.set(-2.6 + (k % 3) * 2.6, [1.35, 2.35][Math.floor(k / 3)] || 2.35, -0.7); tienda3d.productos.add(sp); });
+  }
+  // Un comprador llega a tu tienda: el robot saluda y sale una bolsita
+  function venta() {
+    if (!tienda3d) return;
+    tienda3d.rob.userData.saludar();
+    const b = spriteEmoji("🛍️", 1); b.position.set(0, 2, 1.4); tienda3d.productos.parent.add(b);
+    let t = 0; const f = (tt, dt) => { t += dt; b.position.y = 2 + t * 2; b.material.opacity = Math.max(0, 1 - t / 1.5); if (t > 1.5) { b.removeFromParent(); anim.splice(anim.indexOf(f), 1); } };
+    anim.push(f);
+  }
+
+  // ----- la nave del tour (flotando en la plaza) -----
+  const NAVE_BASE = new THREE.Vector3(0, 5.2, 6.6);
+  const nave = new THREE.Group(); nave.position.copy(NAVE_BASE); nave.userData = { tipo: "nave", id: "nave" };
+  scene.add(nave); tocables.push(nave);
+  {
+    const casco = new THREE.Mesh(new THREE.CapsuleGeometry(1.25, 3.6, 8, 24), blanco); casco.rotation.x = Math.PI / 2; nave.add(casco);
+    const cabina = new THREE.Mesh(new THREE.SphereGeometry(1.05, 24, 16), new THREE.MeshStandardMaterial({ color: "#6ff0ff", roughness: 0.05, metalness: 0.4, transparent: true, opacity: 0.75, emissive: "#1b6f80", emissiveIntensity: 0.5 }));
+    cabina.position.set(0, 0.55, 1.4); cabina.scale.set(1, 0.75, 1.3); nave.add(cabina);
+    [-1, 1].forEach((s) => {
+      const ala = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.14, 1.8), blanco); ala.position.set(s * 2.2, -0.2, -0.6); ala.rotation.y = s * 0.35; ala.rotation.z = s * -0.12; nave.add(ala);
+      const punta = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.5, 1.2), neon(s < 0 ? "#ff7ad9" : "#6ff0ff")); punta.position.set(s * 3.75, -0.05, -1); nave.add(punta);
+      const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.55, 1.4, 16), gris); motor.rotation.x = Math.PI / 2; motor.position.set(s * 0.95, -0.35, -2.7); nave.add(motor);
+      const fuego = spriteBrillo(s < 0 ? "#ff7ad9" : "#6ff0ff", 2.2); fuego.position.set(s * 0.95, -0.35, -3.5); nave.add(fuego);
+    });
+    const aleta = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.4, 1.4), blanco); aleta.position.set(0, 1.2, -2.2); aleta.rotation.x = -0.4; nave.add(aleta);
+    const franja = new THREE.Mesh(new THREE.TorusGeometry(1.27, 0.06, 8, 32), neon("#b18cff")); franja.position.z = 0.2; nave.add(franja);
+    const plataformaN = new THREE.Mesh(new THREE.RingGeometry(2.4, 2.75, 48), neon("#6ff0ff")); plataformaN.rotation.x = -Math.PI / 2; plataformaN.position.set(NAVE_BASE.x, 0.72, NAVE_BASE.z); scene.add(plataformaN);
+    const haz = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 2.6, 4.4, 24, 1, true), new THREE.MeshBasicMaterial({ color: "#6ff0ff", transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false }));
+    haz.position.set(NAVE_BASE.x, 2.9, NAVE_BASE.z); scene.add(haz);
+    anim.push((t) => { if (!tour) { nave.position.y = NAVE_BASE.y + Math.sin(t * 1.3) * 0.25; nave.rotation.z = Math.sin(t * 0.9) * 0.04; } haz.visible = !tour; });
+    etiquetas.push({ el: cfg.etiqueta({ id: "nave", icono: "🚀", nombre: "Tour espacial", color: "#6ff0ff" }), pos: new THREE.Vector3(NAVE_BASE.x, 8.5, NAVE_BASE.z) });
+    lugares.nave = { p: new THREE.Vector3(NAVE_BASE.x + 3.2, 0, NAVE_BASE.z + 1.5), mirar: NAVE_BASE.clone(), entrar: true };
+  }
+
+  // ----- agujero negro en el cielo -----
+  const HOYO = new THREE.Vector3(0, 170, -620);
+  {
+    const negro = new THREE.Mesh(new THREE.SphereGeometry(34, 32, 16), new THREE.MeshBasicMaterial({ color: "#000000" })); negro.position.copy(HOYO); scene.add(negro);
+    const d = texCanvas(512, 512, 1);
+    const gr = d.g.createRadialGradient(256, 256, 70, 256, 256, 256);
+    gr.addColorStop(0, "rgba(255,240,200,1)"); gr.addColorStop(0.25, "rgba(255,140,220,.9)"); gr.addColorStop(0.55, "rgba(140,90,255,.6)"); gr.addColorStop(1, "rgba(40,20,120,0)");
+    d.g.fillStyle = gr; d.g.fillRect(0, 0, 512, 512);
+    const disco = new THREE.Mesh(new THREE.RingGeometry(38, 120, 96), new THREE.MeshBasicMaterial({ map: d.t, transparent: true, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false }));
+    const uv = disco.geometry.attributes.uv, pp = disco.geometry.attributes.position;
+    for (let i = 0; i < uv.count; i++) { uv.setXY(i, 0.5 + pp.getX(i) / 240, 0.5 + pp.getY(i) / 240); }
+    disco.position.copy(HOYO); disco.rotation.set(rad(70), 0, 0); scene.add(disco);
+    const halo = spriteBrillo("#a56bff", 330); halo.position.copy(HOYO); halo.material.opacity = 0.45; scene.add(halo);
+    anim.push((t, dt) => { disco.rotation.z += dt * 0.15; });
+  }
+
+  // ----- tour en la nave: recorrido narrado + túnel del agujero negro + regreso -----
+  const RUTA_TOUR = new THREE.CatmullRomCurve3([
+    NAVE_BASE.clone(), new THREE.Vector3(0, 16, 40), new THREE.Vector3(0, 26, 108), new THREE.Vector3(48, 22, 58),
+    new THREE.Vector3(108, 22, 10), new THREE.Vector3(56, 24, -52), new THREE.Vector3(8, 24, -114), new THREE.Vector3(-52, 24, -56),
+    new THREE.Vector3(-110, 22, 0), new THREE.Vector3(-56, 24, 54), new THREE.Vector3(-10, 45, 62), new THREE.Vector3(0, 95, -60), HOYO.clone().add(new THREE.Vector3(0, -10, 110)),
+  ]);
+  const RUTA_REGRESO = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 160, 300), new THREE.Vector3(30, 70, 130), new THREE.Vector3(10, 22, 40), NAVE_BASE.clone()]);
+  const T_IDA = 58, T_TUNEL = 18, T_REGRESO = 14;
+  const GUION = [
+    [0, "¡Bienvenido a bordo! Soy Nova, tu guía. Despegamos de la plaza central de Weedland Station."],
+    [5, "Allá abajo está Mi cultivo: ahí siembras las semillas registradas de las marcas y abres tu propia tienda."],
+    [14, "Este es el pabellón de Cultivo: iluminación, riego, sustratos y todo para que tus plantas crezcan."],
+    [19, "A la derecha, la isla de LumenGrow: una marca con su isla completa, con pantallas gigantes."],
+    [24, "El pabellón de Genética: bancos de semillas de varios países."],
+    [29, "Al fondo, el Mercado. Ahí compras aditamentos y transformas tu cosecha en cuerdas, telas, aceites y más."],
+    [34, "El pabellón de Accesorios: vidrio, papeles, básculas y diseño."],
+    [39, "Y la isla de Vapor Norte, otra marca que tiene su propio mundo."],
+    [44, "Por último, el pabellón de Cáñamo y bienestar: ropa, cosmética y alimentos."],
+    [50, "Ahora sujétate fuerte… vamos directo al agujero negro."],
+    [T_IDA + 2, "Atravesamos el túnel… luz, color y estrellas."],
+    [T_IDA + T_TUNEL + 1, "¡Regresamos a la base! Gracias por volar con Weedland."],
+  ];
+  let tour = null;
+  // escena del túnel
+  const tunel = new THREE.Scene();
+  const camTunel = new THREE.PerspectiveCamera(75, 1, 0.1, 1200);
+  const matTunel = new THREE.ShaderMaterial({
+    side: THREE.BackSide, uniforms: { t: { value: 0 } },
+    vertexShader: "varying vec2 vU; void main(){ vU = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }",
+    fragmentShader: `uniform float t; varying vec2 vU;
+      vec3 pal(float x){ return 0.5 + 0.5*cos(6.2831*(x + vec3(0.0,0.33,0.67))); }
+      void main(){
+        float a = vU.x*6.2831, y = vU.y*60.0;
+        float giro = sin(a*3.0 + y*0.35 - t*2.2);
+        float banda = 0.5 + 0.5*sin(y*1.4 - t*6.0 + giro*1.6);
+        vec3 c = pal(vU.y*1.5 + t*0.06 + giro*0.08) * (0.35 + 0.65*banda);
+        c += vec3(1.0,0.9,1.0) * pow(max(0.0, sin(a*8.0 + y*0.6 - t*3.0)), 18.0) * 0.6;
+        float fondo = smoothstep(0.0, 0.25, vU.y);
+        gl_FragColor = vec4(c*fondo, 1.0);
+      }`,
+  });
+  const tubo = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 900, 48, 1, true), matTunel);
+  tubo.rotation.x = Math.PI / 2; tubo.position.z = -440; tunel.add(tubo);
+  const estrellasT = (() => {
+    const n = 500, pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, r = 1 + Math.random() * 7; pos.set([Math.cos(a) * r, Math.sin(a) * r, -Math.random() * 400], i * 3); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    const pt = texCanvas(64, 64); { const r = pt.g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, "rgba(255,255,255,1)"); r.addColorStop(1, "rgba(255,255,255,0)"); pt.g.fillStyle = r; pt.g.fillRect(0, 0, 64, 64); }
+    const p = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.25, map: pt.t, color: "#ffffff", transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+    tunel.add(p); return p;
+  })();
+
+  function iniciarTour(cb) {
+    if (tour) return;
+    ruta = []; aro.visible = false; stick.x = stick.y = 0;
+    tour = { t0: performance.now(), cb, dicho: -1, fase: "ida" };
+    controls.enabled = false; yo.visible = false; ver = false;
+    cfg.alCerca && cfg.alCerca(null);
+  }
+  function terminarTour() {
+    if (!tour) return;
+    const cb = tour.cb; tour = null;
+    nave.position.copy(NAVE_BASE); nave.rotation.set(0, 0, 0);
+    controls.enabled = true; yo.visible = true; ver = true;
+    saltarA(lugares.nave.p, NAVE_BASE);
+    camera.position.copy(objYo().add(offset)); controls.target.copy(objYo());
+    mirarHacia(new THREE.Vector3(NAVE_BASE.x, 0, NAVE_BASE.z - 6));
+    cb && cb.alFin && cb.alFin();
+  }
+  const tg1 = new THREE.Vector3(), tg2 = new THREE.Vector3();
+  function actualizarTour(ahora, dt) {
+    const s = (ahora - tour.t0) / 1000;
+    // narración
+    for (let i = tour.dicho + 1; i < GUION.length && GUION[i][0] <= s; i++) { tour.dicho = i; tour.cb.alTexto && tour.cb.alTexto(GUION[i][1]); }
+    if (s < T_IDA) {
+      const u = Math.min(1, s / T_IDA);
+      RUTA_TOUR.getPoint(u, tg1); RUTA_TOUR.getPoint(Math.min(1, u + 0.004), tg2);
+      nave.position.copy(tg1); nave.lookAt(tg2);
+      const dir = tg2.clone().sub(tg1).normalize();
+      const deseo = tg1.clone().addScaledVector(dir, -12).add(new THREE.Vector3(0, 4.5, 0));
+      camera.position.lerp(deseo, Math.min(1, dt * 3)); controls.target.lerp(tg1.clone().addScaledVector(dir, 6), Math.min(1, dt * 4));
+      camera.lookAt(controls.target);
+      return scene;
+    }
+    if (s < T_IDA + T_TUNEL) {
+      if (tour.fase !== "tunel") { tour.fase = "tunel"; tour.cb.alFase && tour.cb.alFase("tunel"); }
+      const k = s - T_IDA;
+      matTunel.uniforms.t.value = k;
+      camTunel.position.set(Math.sin(k * 0.7) * 1.5, Math.cos(k * 0.5) * 1.2, 0);
+      camTunel.rotation.set(0, 0, k * 0.25);
+      const pos = estrellasT.geometry.attributes.position;
+      for (let i = 0; i < pos.count; i++) { let z = pos.getZ(i) + dt * 120; if (z > 5) z -= 400; pos.setZ(i, z); }
+      pos.needsUpdate = true;
+      return tunel;
+    }
+    if (s < T_IDA + T_TUNEL + T_REGRESO) {
+      if (tour.fase !== "regreso") { tour.fase = "regreso"; tour.cb.alFase && tour.cb.alFase("regreso"); camera.position.set(0, 175, 330); }
+      const u = Math.min(1, (s - T_IDA - T_TUNEL) / T_REGRESO), e = 1 - Math.pow(1 - u, 2);
+      RUTA_REGRESO.getPoint(e, tg1); RUTA_REGRESO.getPoint(Math.min(1, e + 0.01), tg2);
+      nave.position.copy(tg1); if (u < 0.97) nave.lookAt(tg2);
+      const dir = tg2.clone().sub(tg1); if (dir.lengthSq() > 1e-6) dir.normalize(); else dir.set(0, 0, -1);
+      camera.position.lerp(tg1.clone().addScaledVector(dir, -13).add(new THREE.Vector3(0, 5, 0)), Math.min(1, dt * 3));
+      controls.target.lerp(tg1, Math.min(1, dt * 4)); camera.lookAt(controls.target);
+      return scene;
+    }
+    terminarTour();
+    return scene;
   }
 
   // ----- drones con publicidad -----
@@ -635,7 +913,8 @@ export function crearEstacion(canvas, cfg) {
     orden.forEach((m) => { const w = anchoAng(m); crearStand(m, mod, a + w / 2, m.nivel === "premium"); a += w + sobra; });
     etiquetas.push({ el: cfg.etiqueta({ id: p.id, icono: p.icono, nombre: p.nombre, color: p.color }), pos: new THREE.Vector3(mod.centro.x, 12, mod.centro.z) });
   });
-  crearUniversidad();
+  crearMercado();
+  crearCultivo();
   lista.filter((m) => m.nivel === "isla").forEach(crearIsla);
   const conDron = [...lista.filter((m) => m.nivel === "isla"), ...lista.filter((m) => m.nivel === "premium"), ...lista.filter((m) => !m.nivel)].slice(0, 9);
   conDron.forEach((m, i) => crearDron(m, i, conDron.length));
@@ -811,7 +1090,8 @@ export function crearEstacion(canvas, cfg) {
   }
   function destinoDe(tipo, id) {
     if (tipo === "stand" && stands[id]) return { p: stands[id].puerta, mirar: stands[id].mira || stands[id].pos };
-    if (tipo === "universidad" && modulos.universidad) return { p: modulos.universidad.puerta, mirar: modulos.universidad.centro };
+    const L = lugares[id != null ? `${tipo}:${id}` : tipo] || lugares[tipo];
+    if (L) return { p: L.p, mirar: L.mirar };
     if (tipo === "pabellon" && modulos[id]) return { p: modulos[id].centro.clone().addScaledVector(modulos[id].haciaPlaza, 5), mirar: modulos[id].centro };
     return { p: INICIO, mirar: new THREE.Vector3(0, 0, 0) };
   }
@@ -828,7 +1108,7 @@ export function crearEstacion(canvas, cfg) {
     const d = destinoDe(tipo, id);
     if (enfocado) seguir(600);
     if (caminar) caminarA(d.p, () => { mirarHacia(d.mirar); cb && cb(); });
-    else { saltarA(d.p, d.mirar); if (!enfocado) volar(objYo().add(offset), objYo(), 500); cb && cb(); }
+    else { saltarA(d.p, d.mirar); if (!enfocado) mirarHacia(d.mirar); cb && cb(); }
   }
 
   // ---------- toques ----------
@@ -876,6 +1156,7 @@ export function crearEstacion(canvas, cfg) {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    camTunel.aspect = w / h; camTunel.updateProjectionMatrix();
   }
   addEventListener("resize", medir);
   medir();
@@ -941,7 +1222,7 @@ export function crearEstacion(canvas, cfg) {
     // ¿cerca de un stand o de la universidad?
     let cerca = null, dmin = 3.6;
     for (const id in stands) { const p = stands[id].puerta, d = Math.hypot(yo.position.x - p.x, yo.position.z - p.z); if (d < dmin) { dmin = d; cerca = id; } }
-    if (!cerca && modulos.universidad && Math.hypot(yo.position.x - modulos.universidad.puerta.x, yo.position.z - modulos.universidad.puerta.z) < 4.5) cerca = "universidad";
+    if (!cerca) for (const k in lugares) { const L = lugares[k]; if (L.entrar && Math.hypot(yo.position.x - L.p.x, yo.position.z - L.p.z) < 3.4) { cerca = k; break; } }
     if (cerca !== cercaId) { cercaId = cerca; cfg.alCerca && cfg.alCerca(cerca); }
   }
 
@@ -953,6 +1234,15 @@ export function crearEstacion(canvas, cfg) {
     const dt = Math.max(0, Math.min(0.05, (ahora - previo) / 1000)); previo = ahora;
     const t = ahora / 1000;
     try {
+      if (tour) {
+        const esc = actualizarTour(ahora, dt);
+        if (tour || esc === tunel) {
+          anim.forEach((fn) => fn(t, dt));
+          renderer.render(esc, esc === tunel ? camTunel : camera);
+          etiquetas.forEach((et) => (et.el.style.display = "none"));
+          return;
+        }
+      }
       moverYo(dt);
       if (vuelo) {
         const k = Math.min(1, (ahora - vuelo.t0) / vuelo.ms), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
@@ -1015,7 +1305,9 @@ export function crearEstacion(canvas, cfg) {
   setTimeout(() => seguir(quieto ? 0 : 2200), 900);
 
   return {
-    irA, enfocarStand, seguir,
+    irA, enfocarStand, seguir, setParcelas, setTienda, venta, iniciarTour,
+    enTour: () => !!tour,
+    saltarTour: () => terminarTour(),
     setStick(x, y) { stick.x = x; stick.y = y; },
     setDesplazamiento(x, y) { despObj.x = x; despObj.y = y; },
     setEtiquetas(s) { ver = s; },

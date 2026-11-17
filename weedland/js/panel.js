@@ -1,5 +1,6 @@
 // Panel de marca del demo: editar stand, catálogo y ver métricas.
 import { PABELLONES, catalogo } from "./datos.js";
+import { esSemilla, semillasRegistradas } from "./cultivo.js";
 import { marcas, guardarMarca, restaurarMarca, metricas, CAMPOS, CLAVES } from "./estado.js";
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -22,7 +23,7 @@ function pintar() {
     <div class="dos"><div><label>Color principal</label><input type="color" id="f-color" value="${m.color}"></div><div><label>Color de fondo</label><input type="color" id="f-color2" value="${m.color2}"></div></div>
     <label>Anuncio que cargan los drones</label><input id="f-anuncio" value="${esc(m.anuncio)}" maxlength="36">
     <label>Juego del stand</label><select id="f-act">${[["ruleta", "Ruleta"], ["quiz", "Trivia"], ["rasca", "Rasca y gana"]].map(([v, t]) => `<option value="${v}" ${m.actividad === v ? "selected" : ""}>${t}</option>`).join("")}</select>
-    <div class="dos"><div><label>Cupón</label><input id="f-cupon" value="${esc(m.cupon.texto)}" maxlength="40"></div><div><label>Cuesta (polen)</label><input type="number" id="f-costo" min="10" max="500" step="5" value="${m.cupon.costo}"></div></div>
+    <div class="dos"><div><label>Cupón</label><input id="f-cupon" value="${esc(m.cupon.texto)}" maxlength="40"></div><div><label>Cuesta (estrellas)</label><input type="number" id="f-costo" min="10" max="500" step="5" value="${m.cupon.costo}"></div></div>
     <label>Premio del sorteo</label><input id="f-sorteo" value="${esc(m.sorteo)}" maxlength="40">
     <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap"><button class="btn" id="guardar">Guardar cambios</button><button class="btn sec" id="restaurar">Restaurar original</button></div>
     <p class="nota">Los cambios se ven al instante en la estación si la tienes abierta en otra pestaña.</p>`;
@@ -30,12 +31,14 @@ function pintar() {
   const cat = catalogo(m), extra = m.extra || [];
   $("#c-prods").innerHTML = `
     <h2>📦 Catálogo · ${cat.length} productos</h2>
+    <p class="chip" style="margin:-4px 0 10px">🌱 ${semillasRegistradas([m]).length} semillas en el Banco de semillas del juego</p>
     <p class="suave chico-t" style="margin:-6px 0 10px">En la versión real se importa el catálogo completo (CSV o su tienda en línea). Aquí puedes agregar productos destacados.</p>
     <div class="dos"><div><label>Producto</label><input id="p-nombre" maxlength="40" placeholder="Nombre"></div><div><label>Categoría</label><input id="p-cat" maxlength="24" placeholder="Ej. Novedades" value="Novedades"></div></div>
     <div class="dos"><div><label>Precio de referencia</label><input id="p-precio" maxlength="16" placeholder="US$ 25"></div><div><label>Ícono</label><select id="p-icono">${ICONOS.map((i) => `<option>${i}</option>`).join("")}</select></div></div>
     <label>Descripción</label><input id="p-desc" maxlength="140" placeholder="Corta y sin promesas de salud">
+    <label class="check"><input type="checkbox" id="p-semilla"> 🌱 Es una semilla registrada: aparece sola en el Banco de semillas del juego</label>
     <button class="btn chico" style="margin-top:12px" id="agregar">＋ Agregar al catálogo</button>
-    <div style="margin-top:14px">${extra.map((p, i) => `<div class="prod-fila"><span>${p.icono}</span><div><b>${esc(p.nombre)}</b><small>${esc(p.cat)} · ${esc(p.precio)}</small></div><button class="btn sec chico" data-quitar="${i}">Quitar</button></div>`).join("")}
+    <div style="margin-top:14px">${extra.map((p, i) => `<div class="prod-fila"><span>${p.icono}</span><div><b>${esc(p.nombre)}${p.semilla ? " · 🌱 semilla" : ""}</b><small>${esc(p.cat)} · ${esc(p.precio)}</small></div><button class="btn sec chico" data-quitar="${i}">Quitar</button></div>`).join("")}
     ${cat.filter((p) => !p.id.includes("-x")).slice(0, 6).map((p) => `<div class="prod-fila"><span>${p.icono}</span><div><b>${esc(p.nombre)}</b><small>${esc(p.cat)} · ${esc(p.precio)}</small></div></div>`).join("")}
     <p class="suave chico-t">… y ${Math.max(0, cat.length - extra.length - 6)} más</p></div>`;
 
@@ -63,6 +66,7 @@ function pintar() {
   $("#agregar").onclick = () => {
     const nombre = $("#p-nombre").value.trim(); if (!nombre) return $("#p-nombre").focus();
     const nuevo = { nombre, cat: $("#p-cat").value.trim() || "Novedades", precio: $("#p-precio").value.trim() || "Consultar", icono: $("#p-icono").value, desc: $("#p-desc").value.trim() || `${nombre} de ${m.nombre}.` };
+    if ($("#p-semilla").checked) nuevo.semilla = true;
     guardarMarca(id, { extra: [...extra, nuevo] });
     pintar(); aviso("Producto agregado ✓");
   };
