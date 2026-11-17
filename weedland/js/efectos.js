@@ -3,11 +3,11 @@ const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // ---------- sonido ----------
 let ac = null, salida = null;
-let mudo = (() => { try { return localStorage.getItem("wl-mudo") === "1"; } catch { return false; } })();
+let mudo = (() => { try { return localStorage.getItem("ws-mudo") === "1"; } catch { return false; } })();
 export const estaMudo = () => mudo;
 export function alternarSonido() {
   mudo = !mudo;
-  try { localStorage.setItem("wl-mudo", mudo ? "1" : "0"); } catch {}
+  try { localStorage.setItem("ws-mudo", mudo ? "1" : "0"); } catch {}
   return mudo;
 }
 function audio() {

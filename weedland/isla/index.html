@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Weedland</title>
+<meta name="description" content="Demo de Weedland: mundo isométrico donde las marcas del sector cannábico legal tienen su espacio y los adultos juegan, aprenden y ganan recompensas.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#120c24">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<!-- La verificación de edad de Weedland va en la pantalla de entrada (edad mínima según el país). -->
+<div id="entrada" class="pantalla" hidden></div>
+<div id="crear" class="pantalla" hidden></div>
+
+<main id="juego" hidden>
+  <canvas id="mundo" aria-label="Mapa de Weedland"></canvas>
+
+  <header class="hud-arriba">
+    <button id="btn-menu" class="logo-chico" aria-label="Menú"><span class="hoja-logo">✦</span>Weedland</button>
+    <div class="monedas">
+      <span class="moneda" title="Hojas"><span>🍃</span><b id="hojas">0</b></span>
+      <span class="moneda luna" title="Polen dorado"><span>🌟</span><b id="lunas">0</b></span>
+      <button id="btn-sonido" class="idioma" aria-label="Sonido">🔊</button>
+      <button id="btn-idioma" class="idioma">EN</button>
+    </div>
+  </header>
+
+  <div id="mision-actual" class="mision-actual" hidden></div>
+  <div id="reco" class="reco" hidden></div>
+
+  <div class="zoom">
+    <button id="zoom-mas" aria-label="Acercar">＋</button>
+    <button id="zoom-menos" aria-label="Alejar">－</button>
+  </div>
+
+  <nav class="hud-abajo">
+    <button id="btn-buscar"><span>🔍</span><small data-t="nav_buscar"></small></button>
+    <button id="btn-granja"><span>🌱</span><small data-t="nav_granja"></small><i id="badge-granja" class="badge" hidden></i></button>
+    <button id="btn-inventario"><span>🎒</span><small data-t="nav_inventario"></small></button>
+    <button id="btn-taller"><span>⚗️</span><small data-t="nav_taller"></small></button>
+    <button id="btn-misiones"><span>📜</span><small data-t="nav_misiones"></small><i id="badge-misiones" class="badge" hidden></i></button>
+    <button id="btn-uni"><span>🎓</span><small data-t="nav_uni"></small></button>
+  </nav>
+
+  <div id="velo" hidden></div>
+  <section id="hoja" class="hoja" hidden role="dialog" aria-modal="true">
+    <button id="hoja-cerrar" class="cerrar" aria-label="Cerrar">✕</button>
+    <div id="hoja-cuerpo"></div>
+  </section>
+  <div id="toasts" aria-live="polite"></div>
+</main>
+<div id="fundido"></div>
+
+<script type="module" src="js/juego.js"></script>
+</body>
+</html>

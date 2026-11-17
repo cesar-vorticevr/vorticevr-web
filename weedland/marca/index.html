@@ -3,100 +3,57 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Panel de marca Weedland</title>
+<title>Panel de marca · Weedland</title>
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#120c24">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../estilo.css">
-<link rel="stylesheet" href="panel.css">
+<style>
+  html, body { overflow: auto; }
+  body { background: radial-gradient(ellipse at 80% 0, #3a1670 0, transparent 50%), var(--fondo); }
+  .envoltura { max-width: 1080px; margin: 0 auto; padding: 16px 16px 60px; }
+  .barra-sup { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 18px; }
+  .rejilla { display: grid; gap: 16px; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .rejilla { grid-template-columns: 1.1fr .9fr; } }
+  .caja { padding: 18px; border-radius: 22px; background: var(--panel); border: 1px solid var(--borde); }
+  .caja h2 { font-size: 1.2rem; margin-bottom: 12px; }
+  label { display: block; font-size: .82rem; font-weight: 800; color: var(--suave); margin: 12px 0 4px; }
+  input, textarea, select { width: 100%; padding: 10px 12px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--borde); color: var(--texto); font: inherit; }
+  textarea { min-height: 70px; resize: vertical; }
+  input[type=color] { padding: 2px; height: 42px; }
+  .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .metricas { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .met { padding: 12px; border-radius: 16px; background: var(--panel-2); border: 1px solid var(--borde); }
+  .met b { display: block; font: 700 1.6rem Fredoka, sans-serif; color: var(--c, var(--cian)); }
+  .met small { color: var(--suave); font-size: .78rem; font-weight: 700; }
+  .prod-fila { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--borde); }
+  .prod-fila span { font-size: 1.4rem; }
+  .prod-fila div { flex: 1; min-width: 0; }
+  .prod-fila small { color: var(--suave); display: block; }
+  .vista { border-radius: 18px; overflow: hidden; aspect-ratio: 16/9; display: grid; align-content: center; padding: 20px; background: linear-gradient(135deg, var(--c2), #06030f); border: 3px solid var(--c); position: relative; }
+  .vista .e { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); font-size: 4.4rem; }
+  .vista b { font: 700 1.6rem Fredoka, sans-serif; max-width: 65%; }
+  .vista p { color: var(--c); margin: 4px 0 0; font-weight: 700; max-width: 65%; }
+</style>
 </head>
-<body class="panel">
-<header class="panel-cab">
-  <a class="logo-chico" href="../index.html"><span class="hoja-logo">✦</span>Weedland</a>
-  <span class="panel-tag">Panel de marca · demo</span>
-  <a class="chip" href="../index.html">← Volver al mundo</a>
-</header>
-
-<main class="panel-cuerpo">
-  <section class="tarjeta-panel">
-    <label class="campo">Entrar como (en la versión real, cada marca entra con su usuario)
-      <select id="sel-marca"></select>
-    </label>
-  </section>
-
-  <section class="tarjeta-panel">
-    <div class="titulo-seccion"><h2>Métricas de la temporada</h2><button class="chip" id="refrescar">Actualizar</button></div>
-    <div class="metricas" id="metricas"></div>
-    <p class="nota">Estas cifras salen de lo que tú hagas en el demo en este navegador. Entra al mundo, visita el stand, juega y guarda el cupón, y vuelve aquí.</p>
-  </section>
-
-  <section class="tarjeta-panel">
-    <h2>Registrar una compra</h2>
-    <p class="suave">El cliente compró en tu tienda o en tu web y te dio su código Weedland. Al registrarlo, su cupón queda canjeado y recibe 5 de polen dorado y tu coleccionable extra raro.</p>
-    <div class="fila">
-      <input id="codigo" class="buscador" placeholder="WL-XXXXXX" autocomplete="off" style="text-transform:uppercase">
-      <button class="btn" id="registrar" style="width:auto">Registrar</button>
+<body>
+<div class="envoltura">
+  <div class="barra-sup">
+    <div><h1 style="font-size:1.5rem">Panel de marca</h1><p class="suave" style="margin:2px 0 0">Así edita cada marca su stand en Weedland Station (demo: se guarda en este navegador).</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><select id="sel" style="width:auto"></select><a class="btn chico" href="../" target="weedland">Ver la estación ↗</a></div>
+  </div>
+  <div class="rejilla">
+    <div>
+      <section class="caja" id="c-stand"></section>
+      <section class="caja" style="margin-top:16px" id="c-prods"></section>
     </div>
-    <p id="msg-compra" class="msg"></p>
-    <p class="nota" id="pista-codigo"></p>
-  </section>
-
-  <form class="tarjeta-panel" id="form">
-    <div class="titulo-seccion"><h2>Tu stand</h2><span class="vista" id="vista"></span></div>
-    <p class="suave">Llenas los huecos de la plantilla. El interior siempre tiene las mismas cinco piezas: anfitrión, vitrina, juego, regalos y taller.</p>
-
-    <h3>Fachada</h3>
-    <div class="rejilla">
-      <label class="campo">Nombre de la marca<input name="nombre" maxlength="24" required></label>
-      <label class="campo">Color<input name="color" type="color"></label>
-      <label class="campo">Edificio<select name="plantilla"></select></label>
+    <div>
+      <section class="caja" id="c-vista"></section>
+      <section class="caja" style="margin-top:16px" id="c-met"></section>
     </div>
-
-    <h3>Anfitrión</h3>
-    <div class="rejilla">
-      <label class="campo">Nombre del anfitrión<input name="anf_nombre" maxlength="16"></label>
-    </div>
-    <div class="rejilla dos">
-      <label class="campo">Saludo (ES)<textarea name="saludo_es" rows="3" maxlength="220"></textarea></label>
-      <label class="campo">Saludo (EN)<textarea name="saludo_en" rows="3" maxlength="220"></textarea></label>
-    </div>
-
-    <h3>Vitrina</h3>
-    <div id="productos"></div>
-
-    <h3>Juego de la marca</h3>
-    <div class="rejilla">
-      <label class="campo">Minijuego<select name="juego"><option value="ruleta">Ruleta (un giro al día)</option><option value="quiz">Trivia</option><option value="rasca">Rasca y gana</option></select></label>
-    </div>
-
-    <h3>Cupón</h3>
-    <div class="rejilla dos">
-      <label class="campo">Descuento (ES)<input name="cupon_es" maxlength="60"></label>
-      <label class="campo">Discount (EN)<input name="cupon_en" maxlength="60"></label>
-      <label class="campo">Vigencia en días<input name="cupon_dias" type="number" min="1" max="120"></label>
-    </div>
-    <fieldset class="paises"><legend>Países donde vendes (el cupón solo lo ven usuarios de estos países)</legend><div id="paises"></div></fieldset>
-
-    <h3>Taller</h3>
-    <div class="rejilla dos">
-      <label class="campo">Lo bueno (ES)<textarea name="bueno_es" rows="3" maxlength="240"></textarea></label>
-      <label class="campo">The good (EN)<textarea name="bueno_en" rows="3" maxlength="240"></textarea></label>
-      <label class="campo">Ojo con (ES)<textarea name="ojo_es" rows="3" maxlength="240"></textarea></label>
-      <label class="campo">Watch out (EN)<textarea name="ojo_en" rows="3" maxlength="240"></textarea></label>
-    </div>
-    <p class="nota">Regla de Weedland: beneficios y riesgos con la misma visibilidad. Nada de promesas médicas ni mensajes que inviten a consumir.</p>
-
-    <div class="acciones-form">
-      <button class="btn" type="submit">Publicar cambios</button>
-      <a class="btn fantasma" id="ver-stand" href="../index.html">Ver mi stand en el mundo</a>
-      <button class="btn fantasma" type="button" id="restaurar">Restaurar original</button>
-    </div>
-    <p id="msg-form" class="msg"></p>
-  </form>
-</main>
-
+  </div>
+</div>
 <script type="module" src="../js/panel.js"></script>
 </body>
 </html>

@@ -1,160 +1,80 @@
-// Panel de marca (demo): editar el stand, ver métricas y registrar compras.
-import { PAISES, PLANTILLAS, ZONAS } from "./datos.js";
-import * as E from "./estado.js";
+// Panel de marca del demo: editar stand, catálogo y ver métricas.
+import { PABELLONES, catalogo } from "./datos.js";
+import { marcas, guardarMarca, restaurarMarca, metricas, CAMPOS, CLAVES } from "./estado.js";
 
 const $ = (s, r = document) => r.querySelector(s);
-const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const es = (o) => (typeof o === "string" ? o : o?.es ?? "");
-const en = (o) => (typeof o === "string" ? o : o?.en ?? "");
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const ICONOS = ["⭐", "🌱", "🧢", "👕", "🎒", "♨️", "🔮", "📜", "🧴", "🧼", "💡", "🪴", "💧", "📘", "🎁"];
 
-let marcas = E.marcas();
-let actual = (() => { try { return localStorage.getItem("wl-panel-marca"); } catch { return null; } })() || marcas[0].id;
-if (!marcas.some((m) => m.id === actual)) actual = marcas[0].id;
-const marca = () => marcas.find((m) => m.id === actual);
+let id = new URLSearchParams(location.hash.slice(1)).get("marca") || marcas()[0].id;
 
-// ---- selector ----
-const sel = $("#sel-marca");
-function pintarSelector() {
-  sel.innerHTML = marcas.map((m) => `<option value="${m.id}" ${m.id === actual ? "selected" : ""}>${esc(m.nombre)} · ${esc(PAISES.find((x) => x.id === m.pais)?.es || m.pais)} · ${esc(ZONAS[m.zona]?.es || "")}</option>`).join("");
+function pintar() {
+  const lista = marcas(), m = lista.find((x) => x.id === id) || lista[0];
+  id = m.id;
+  document.body.style.setProperty("--c", m.color); document.body.style.setProperty("--c2", m.color2);
+  $("#sel").innerHTML = PABELLONES.map((p) => `<optgroup label="${p.icono} ${esc(p.nombre)}">${lista.filter((x) => x.pab === p.id).map((x) => `<option value="${x.id}" ${x.id === id ? "selected" : ""}>${esc(x.nombre)}</option>`).join("")}</optgroup>`).join("");
+
+  $("#c-stand").innerHTML = `
+    <h2>${m.icono} Tu stand</h2>
+    <label>Nombre</label><input id="f-nombre" value="${esc(m.nombre)}" maxlength="28">
+    <label>Lema (sale en la pantalla grande)</label><input id="f-lema" value="${esc(m.lema)}" maxlength="48">
+    <label>Descripción</label><textarea id="f-desc" maxlength="220">${esc(m.desc)}</textarea>
+    <div class="dos"><div><label>Color principal</label><input type="color" id="f-color" value="${m.color}"></div><div><label>Color de fondo</label><input type="color" id="f-color2" value="${m.color2}"></div></div>
+    <label>Anuncio que cargan los drones</label><input id="f-anuncio" value="${esc(m.anuncio)}" maxlength="36">
+    <label>Juego del stand</label><select id="f-act">${[["ruleta", "Ruleta"], ["quiz", "Trivia"], ["rasca", "Rasca y gana"]].map(([v, t]) => `<option value="${v}" ${m.actividad === v ? "selected" : ""}>${t}</option>`).join("")}</select>
+    <div class="dos"><div><label>Cupón</label><input id="f-cupon" value="${esc(m.cupon.texto)}" maxlength="40"></div><div><label>Cuesta (polen)</label><input type="number" id="f-costo" min="10" max="500" step="5" value="${m.cupon.costo}"></div></div>
+    <label>Premio del sorteo</label><input id="f-sorteo" value="${esc(m.sorteo)}" maxlength="40">
+    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap"><button class="btn" id="guardar">Guardar cambios</button><button class="btn sec" id="restaurar">Restaurar original</button></div>
+    <p class="nota">Los cambios se ven al instante en la estación si la tienes abierta en otra pestaña.</p>`;
+
+  const cat = catalogo(m), extra = m.extra || [];
+  $("#c-prods").innerHTML = `
+    <h2>📦 Catálogo · ${cat.length} productos</h2>
+    <p class="suave chico-t" style="margin:-6px 0 10px">En la versión real se importa el catálogo completo (CSV o su tienda en línea). Aquí puedes agregar productos destacados.</p>
+    <div class="dos"><div><label>Producto</label><input id="p-nombre" maxlength="40" placeholder="Nombre"></div><div><label>Categoría</label><input id="p-cat" maxlength="24" placeholder="Ej. Novedades" value="Novedades"></div></div>
+    <div class="dos"><div><label>Precio de referencia</label><input id="p-precio" maxlength="16" placeholder="US$ 25"></div><div><label>Ícono</label><select id="p-icono">${ICONOS.map((i) => `<option>${i}</option>`).join("")}</select></div></div>
+    <label>Descripción</label><input id="p-desc" maxlength="140" placeholder="Corta y sin promesas de salud">
+    <button class="btn chico" style="margin-top:12px" id="agregar">＋ Agregar al catálogo</button>
+    <div style="margin-top:14px">${extra.map((p, i) => `<div class="prod-fila"><span>${p.icono}</span><div><b>${esc(p.nombre)}</b><small>${esc(p.cat)} · ${esc(p.precio)}</small></div><button class="btn sec chico" data-quitar="${i}">Quitar</button></div>`).join("")}
+    ${cat.filter((p) => !p.id.includes("-x")).slice(0, 6).map((p) => `<div class="prod-fila"><span>${p.icono}</span><div><b>${esc(p.nombre)}</b><small>${esc(p.cat)} · ${esc(p.precio)}</small></div></div>`).join("")}
+    <p class="suave chico-t">… y ${Math.max(0, cat.length - extra.length - 6)} más</p></div>`;
+
+  $("#c-vista").innerHTML = `<h2>👀 Así se ve tu pantalla</h2>
+    <div class="vista"><span class="e">${m.icono}</span><b>${esc(m.nombre)}</b><p>${esc(m.lema)}</p></div>
+    <a class="btn chico" style="margin-top:12px" href="../" target="weedland">Abrir la estación ↗</a>`;
+
+  const met = metricas()[id] || {};
+  $("#c-met").innerHTML = `<h2>📊 Métricas</h2><div class="metricas">${CAMPOS.map(([k, t]) => `<div class="met"><b>${met[k] || 0}</b><small>${t}</small></div>`).join("")}</div>
+    <p class="nota">Esto es lo que se le reporta a la marca cada mes. Demo: solo cuenta lo que pasa en este navegador.</p>`;
+
+  $("#guardar").onclick = () => {
+    guardarMarca(id, {
+      nombre: $("#f-nombre").value.trim() || m.nombre, lema: $("#f-lema").value.trim(), desc: $("#f-desc").value.trim(),
+      color: $("#f-color").value, color2: $("#f-color2").value, anuncio: $("#f-anuncio").value.trim(), actividad: $("#f-act").value,
+      cupon: { texto: $("#f-cupon").value.trim() || m.cupon.texto, costo: Math.max(10, Math.min(500, +$("#f-costo").value || m.cupon.costo)) },
+      sorteo: $("#f-sorteo").value.trim() || m.sorteo,
+    });
+    pintar(); aviso("Guardado ✓");
+  };
+  $("#restaurar").onclick = (e) => {
+    if (e.currentTarget.dataset.ok) { restaurarMarca(id); pintar(); aviso("Restaurado"); return; }
+    e.currentTarget.dataset.ok = "1"; e.currentTarget.textContent = "Toca otra vez para confirmar";
+  };
+  $("#agregar").onclick = () => {
+    const nombre = $("#p-nombre").value.trim(); if (!nombre) return $("#p-nombre").focus();
+    const nuevo = { nombre, cat: $("#p-cat").value.trim() || "Novedades", precio: $("#p-precio").value.trim() || "Consultar", icono: $("#p-icono").value, desc: $("#p-desc").value.trim() || `${nombre} de ${m.nombre}.` };
+    guardarMarca(id, { extra: [...extra, nuevo] });
+    pintar(); aviso("Producto agregado ✓");
+  };
+  document.querySelectorAll("[data-quitar]").forEach((b) => (b.onclick = () => {
+    const e2 = extra.slice(); e2.splice(+b.dataset.quitar, 1); guardarMarca(id, { extra: e2 }); pintar();
+  }));
 }
-sel.onchange = () => {
-  actual = sel.value;
-  try { localStorage.setItem("wl-panel-marca", actual); } catch {}
-  todo();
-};
-
-// ---- métricas ----
-function pintarMetricas() {
-  const m = E.metricas()[actual] || { visitas: 0, partidas: 0, cupones: 0, canjes: 0, calif: [] };
-  const prom = m.calif?.length ? (m.calif.reduce((a, b) => a + b, 0) / m.calif.length).toFixed(1) + " ★" : "–";
-  const datos = [
-    ["Visitas al stand", m.visitas], ["Partidas jugadas", m.partidas], ["Cupones guardados", m.cupones],
-    ["Videos vistos completos", m.videos || 0], ["Me gusta en productos", m.favoritos || 0], ["Semillas registradas sembradas", m.semillas || 0], ["Clics en vallas", m.vallas || 0], ["Recomendaciones seguidas", m.recos || 0], ["Compras registradas", m.canjes], ["Calificación", prom],
-  ];
-  $("#metricas").innerHTML = datos.map(([k, v]) => `<div class="metrica"><b>${v}</b><span>${k}</span></div>`).join("");
-  const j = E.leerJuego();
-  $("#pista-codigo").textContent = `Para probar: el código del jugador de este navegador es ${j.codigo}.`;
+function aviso(t) {
+  const el = document.createElement("div"); el.className = "toast"; el.textContent = t;
+  el.style.cssText = "position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:50";
+  document.body.appendChild(el); setTimeout(() => el.remove(), 1800);
 }
-$("#refrescar").onclick = pintarMetricas;
-window.addEventListener("storage", (e) => { if (e.key === E.CLAVES.metricas || e.key === E.CLAVES.juego) pintarMetricas(); });
-
-// ---- registrar compra ----
-$("#registrar").onclick = () => {
-  const cod = $("#codigo").value.trim().toUpperCase();
-  const msg = $("#msg-compra");
-  const j = E.leerJuego();
-  if (!cod || cod !== j.codigo) {
-    msg.className = "msg error";
-    msg.textContent = "No encontramos ese código. (En el demo solo existe el jugador de este navegador.)";
-    return;
-  }
-  const m = marca();
-  const cupon = j.cupones.find((c) => c.marca === m.id && c.estado === "activo");
-  if (cupon) { cupon.estado = "canjeado"; cupon.canjeado = Date.now(); }
-  j.lunas += 5;
-  const extra = "extra:" + m.id;
-  const nuevo = !j.inv[extra];
-  j.inv[extra] = (j.inv[extra] || 0) + 1;
-  j.avisos = j.avisos || [];
-  j.avisos.push({
-    es: `🏆 ${m.nombre} registró tu compra: +5 🌟${nuevo ? " y su coleccionable extra raro" : ""}.${cupon ? " Tu cupón quedó canjeado; califícalo en tu mochila." : ""}`,
-    en: `🏆 ${m.nombre} registered your purchase: +5 🌟${nuevo ? " and its ultra-rare collectible" : ""}.${cupon ? " Your coupon is redeemed; rate it in your backpack." : ""}`,
-  });
-  E.guardarJuego(j);
-  E.sumar(m.id, "canjes");
-  msg.className = "msg ok";
-  msg.textContent = `Compra registrada${cupon ? " con cupón" : " (sin cupón)"}. El jugador recibe 5 de polen dorado${nuevo ? " y tu coleccionable extra raro" : ""}.`;
-  $("#codigo").value = "";
-  pintarMetricas();
-};
-
-// ---- formulario del stand ----
-const form = $("#form");
-form.plantilla.innerHTML = Object.entries(PLANTILLAS).map(([k, v]) => `<option value="${k}">${v.es}</option>`).join("");
-
-function pintarForm() {
-  const m = marca();
-  form.nombre.value = m.nombre;
-  form.color.value = m.color;
-  form.plantilla.value = m.plantilla;
-  form.anf_nombre.value = m.anfitrion.nombre;
-  form.saludo_es.value = es(m.anfitrion.saludo);
-  form.saludo_en.value = en(m.anfitrion.saludo);
-  form.juego.value = m.juego;
-  form.cupon_es.value = es(m.cupon.desc);
-  form.cupon_en.value = en(m.cupon.desc);
-  form.cupon_dias.value = m.cupon.dias;
-  form.bueno_es.value = es(m.taller.bueno);
-  form.bueno_en.value = en(m.taller.bueno);
-  form.ojo_es.value = es(m.taller.ojo);
-  form.ojo_en.value = en(m.taller.ojo);
-  $("#productos").innerHTML = m.productos.map((p, i) => `
-    <div class="producto-fila">
-      <label class="campo">Ícono<input name="p${i}_icono" value="${esc(p.icono)}" maxlength="4"></label>
-      <label class="campo">Producto<input name="p${i}_nombre" value="${esc(es(p.nombre))}" maxlength="40"></label>
-      <label class="campo ancho">Descripción (ES)<input name="p${i}_desc_es" value="${esc(es(p.desc))}" maxlength="90"></label>
-      <label class="campo ancho">Description (EN)<input name="p${i}_desc_en" value="${esc(en(p.desc))}" maxlength="90"></label>
-    </div>`).join("");
-  $("#paises").innerHTML = PAISES.filter((p) => p.id !== "XX").map((p) => `<label><input type="checkbox" value="${p.id}" ${m.paises.includes(p.id) ? "checked" : ""}> ${p.es}</label>`).join("");
-  $("#ver-stand").href = `../index.html#${encodeURIComponent(m.id)}`;
-  pintarVista();
-}
-
-function pintarVista() {
-  const c = form.color.value;
-  const v = $("#vista");
-  v.style.background = c;
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
-  v.style.color = (r * 299 + g * 587 + b * 114) / 1000 > 140 ? "#160f2b" : "#fff";
-  v.textContent = `${form.nombre.value || "Tu marca"} · ${PLANTILLAS[form.plantilla.value]?.es || ""}`;
-}
-form.addEventListener("input", pintarVista);
-
-form.onsubmit = (e) => {
-  e.preventDefault();
-  const m = marca();
-  const paises = [...document.querySelectorAll("#paises input:checked")].map((x) => x.value);
-  const msg = $("#msg-form");
-  if (!paises.length) { msg.className = "msg error"; msg.textContent = "Elige al menos un país donde vendes."; return; }
-  const productos = m.productos.map((p, i) => {
-    const nombre = form[`p${i}_nombre`].value.trim();
-    return {
-      icono: form[`p${i}_icono`].value.trim() || p.icono,
-      nombre: nombre && nombre !== es(p.nombre) ? nombre : p.nombre,
-      desc: { es: form[`p${i}_desc_es`].value.trim(), en: form[`p${i}_desc_en`].value.trim() || form[`p${i}_desc_es`].value.trim() },
-    };
-  });
-  E.guardarMarca(m.id, {
-    nombre: form.nombre.value.trim() || m.nombre,
-    color: form.color.value,
-    plantilla: form.plantilla.value,
-    juego: form.juego.value,
-    anfitrion: { nombre: form.anf_nombre.value.trim() || m.anfitrion.nombre, saludo: { es: form.saludo_es.value.trim(), en: form.saludo_en.value.trim() || form.saludo_es.value.trim() } },
-    cupon: { desc: { es: form.cupon_es.value.trim(), en: form.cupon_en.value.trim() || form.cupon_es.value.trim() }, dias: Math.max(1, Math.min(120, +form.cupon_dias.value || 30)) },
-    paises,
-    taller: {
-      titulo: m.taller.titulo,
-      bueno: { es: form.bueno_es.value.trim(), en: form.bueno_en.value.trim() || form.bueno_es.value.trim() },
-      ojo: { es: form.ojo_es.value.trim(), en: form.ojo_en.value.trim() || form.ojo_es.value.trim() },
-    },
-    productos,
-  });
-  marcas = E.marcas();
-  pintarSelector();
-  msg.className = "msg ok";
-  msg.textContent = "Publicado. Si tienes el mundo abierto en otra pestaña, el stand cambia al instante.";
-};
-
-$("#restaurar").onclick = (ev) => {
-  const b = ev.currentTarget;
-  if (!b.dataset.seguro) { b.dataset.seguro = "1"; b.textContent = "Toca otra vez para restaurar"; return; }
-  delete b.dataset.seguro; b.textContent = "Restaurar original";
-  E.restaurarMarca(actual);
-  marcas = E.marcas();
-  todo();
-  $("#msg-form").className = "msg ok";
-  $("#msg-form").textContent = "Stand restaurado.";
-};
-
-function todo() { pintarSelector(); pintarMetricas(); pintarForm(); }
-todo();
+$("#sel").onchange = (e) => { id = e.target.value; location.hash = "marca=" + id; pintar(); };
+addEventListener("storage", (e) => { if (e.key === CLAVES.metricas || e.key === CLAVES.marcas) pintar(); });
+pintar();
