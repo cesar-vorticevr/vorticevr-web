@@ -876,7 +876,8 @@ export function crearEstacion(canvas, cfg) {
     haz.position.set(NAVE_BASE.x, 2.9, NAVE_BASE.z); scene.add(haz);
     anim.push((t) => { if (!tour) { nave.position.y = NAVE_BASE.y + Math.sin(t * 1.3) * 0.25; nave.rotation.z = Math.sin(t * 0.9) * 0.04; } haz.visible = !tour; });
     etiquetas.push({ el: cfg.etiqueta({ id: "nave", icono: "🚀", nombre: "Tour espacial", color: "#6ff0ff" }), pos: new THREE.Vector3(NAVE_BASE.x, 8.5, NAVE_BASE.z) });
-    lugares.nave = { p: new THREE.Vector3(NAVE_BASE.x + 3.2, 0, NAVE_BASE.z + 1.5), mirar: NAVE_BASE.clone(), entrar: true };
+    // frente a la nave, en el pasillo libre entre las dos torres turbina (antes caía encima de una y el avatar quedaba atorado)
+    lugares.nave = { p: new THREE.Vector3(NAVE_BASE.x, 0, NAVE_BASE.z + 3), mirar: NAVE_BASE.clone(), entrar: true };
   }
 
   // ----- agujero negro en el cielo -----
@@ -1538,7 +1539,9 @@ export function crearEstacion(canvas, cfg) {
     }
     if (mover.lengthSq() > 0) {
       const sx = mover.x * vel * dt, sz = mover.z * vel * dt, x = yo.position.x, z = yo.position.z;
-      if (libre(x + sx, z + sz)) yo.position.x += sx, yo.position.z += sz;
+      // si por algo quedó dentro de un obstáculo, puede salir caminando hacia cualquier lado
+      if (!libre(x, z)) yo.position.x += sx, yo.position.z += sz;
+      else if (libre(x + sx, z + sz)) yo.position.x += sx, yo.position.z += sz;
       else if (libre(x + sx, z)) yo.position.x += sx;
       else if (libre(x, z + sz)) yo.position.z += sz;
       const objetivo = Math.atan2(mover.x, mover.z);
