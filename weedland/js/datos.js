@@ -14,18 +14,18 @@ export const nombrePais = (id) => (PAISES.find((p) => p.id === id) || {}).nombre
 
 // Módulos de la estación. El ángulo es su lugar alrededor de la plaza central.
 export const PABELLONES = [
-  { id: "genetica", nombre: "Genética", icono: "🧬", color: "#7dffb3", angulo: 90, lema: "Bancos de semillas y genética (donde es legal)" },
-  { id: "accesorios", nombre: "Accesorios", icono: "🛠️", color: "#ff7ad9", angulo: 18, lema: "Vaporizadores, vidrio, papeles y más" },
-  { id: "canamo", nombre: "Cáñamo y bienestar", icono: "🌾", color: "#f2c45a", angulo: 306, lema: "Textiles, cosmética y productos de cáñamo" },
-  { id: "cultivo", nombre: "Cultivo", icono: "💡", color: "#6ff0ff", angulo: 234, lema: "Iluminación, sustratos, riego e hidroponía" },
+  { id: "genetica", nombre: "Genética", icono: "🧬", color: "#7dffb3", angulo: 45, lema: "Bancos de semillas y genética (donde es legal)" },
+  { id: "accesorios", nombre: "Accesorios", icono: "🛠️", color: "#ff7ad9", angulo: 135, lema: "Vaporizadores, vidrio, papeles y más" },
+  { id: "canamo", nombre: "Cáñamo y bienestar", icono: "🌾", color: "#f2c45a", angulo: 225, lema: "Textiles, cosmética y productos de cáñamo" },
+  { id: "cultivo", nombre: "Cultivo", icono: "💡", color: "#6ff0ff", angulo: 315, lema: "Iluminación, sustratos, riego e hidroponía" },
 ];
-export const UNIVERSIDAD = { id: "universidad", nombre: "Universidad", icono: "🎓", color: "#b18cff", angulo: 162 };
+export const UNIVERSIDAD = { id: "universidad", nombre: "Universidad", icono: "🎓", color: "#b18cff", angulo: 90 };
 
 // ---------- marcas ----------
 // cats: categorías del catálogo. Cada base se multiplica por sus variantes para simular catálogos grandes.
-export const MARCAS_BASE = [
+const MARCAS_MANO = [
   {
-    id: "aurora", nombre: "Semillas Aurora", pab: "genetica", pais: "ES", color: "#7dffb3", color2: "#0f5d43", icono: "🌅", sigla: "SA",
+    id: "aurora", nivel: "premium", nombre: "Semillas Aurora", pab: "genetica", pais: "ES", color: "#7dffb3", color2: "#0f5d43", icono: "🌅", sigla: "SA",
     lema: "Genética europea desde 2009",
     desc: "Banco de semillas con más de 120 variedades registradas. Venta solo en países donde es legal.",
     actividad: "ruleta",
@@ -63,7 +63,7 @@ export const MARCAS_BASE = [
     ],
   },
   {
-    id: "vapor", nombre: "Vapor Norte", pab: "accesorios", pais: "US", color: "#ff7ad9", color2: "#5a1149", icono: "♨️", sigla: "VN",
+    id: "vapor", nivel: "isla", angulo: 180, nombre: "Vapor Norte", pab: "accesorios", pais: "US", color: "#ff7ad9", color2: "#5a1149", icono: "♨️", sigla: "VN",
     lema: "Vaporizadores de diseño",
     desc: "Vaporizadores de hierbas secas, repuestos y accesorios. Garantía de 2 años.",
     actividad: "ruleta",
@@ -76,7 +76,7 @@ export const MARCAS_BASE = [
     ],
   },
   {
-    id: "kaleido", nombre: "Kaleido Glass", pab: "accesorios", pais: "AR", color: "#6ff0ff", color2: "#0c4b5a", icono: "🔮", sigla: "KG",
+    id: "kaleido", nivel: "premium", nombre: "Kaleido Glass", pab: "accesorios", pais: "AR", color: "#6ff0ff", color2: "#0c4b5a", icono: "🔮", sigla: "KG",
     lema: "Vidrio soplado de autor",
     desc: "Piezas de vidrio artesanal hechas a mano en Buenos Aires. Cada pieza es única.",
     actividad: "rasca",
@@ -102,7 +102,7 @@ export const MARCAS_BASE = [
     ],
   },
   {
-    id: "telaverde", nombre: "Tela Verde", pab: "canamo", pais: "AR", color: "#f2c45a", color2: "#5a4310", icono: "🧵", sigla: "TV",
+    id: "telaverde", nivel: "premium", nombre: "Tela Verde", pab: "canamo", pais: "AR", color: "#f2c45a", color2: "#5a4310", icono: "🧵", sigla: "TV",
     lema: "Ropa de cáñamo para todos los días",
     desc: "Moda sostenible con fibra de cáñamo: playeras, mochilas y tenis.",
     actividad: "rasca",
@@ -141,7 +141,7 @@ export const MARCAS_BASE = [
     ],
   },
   {
-    id: "lumen", nombre: "LumenGrow", pab: "cultivo", pais: "US", color: "#6ff0ff", color2: "#0c3d5a", icono: "💡", sigla: "LG",
+    id: "lumen", nivel: "isla", angulo: 0, nombre: "LumenGrow", pab: "cultivo", pais: "US", color: "#6ff0ff", color2: "#0c3d5a", icono: "💡", sigla: "LG",
     lema: "Iluminación LED de espectro completo",
     desc: "Lámparas LED eficientes para cultivo interior. Hasta 40% menos consumo.",
     actividad: "quiz",
@@ -167,7 +167,7 @@ export const MARCAS_BASE = [
     ],
   },
   {
-    id: "aqua", nombre: "AquaRaíz", pab: "cultivo", pais: "CL", color: "#7fc8ff", color2: "#103a5a", icono: "💧", sigla: "AR",
+    id: "aqua", nivel: "premium", nombre: "AquaRaíz", pab: "cultivo", pais: "CL", color: "#7fc8ff", color2: "#103a5a", icono: "💧", sigla: "AR",
     lema: "Riego e hidroponía",
     desc: "Sistemas de riego por goteo e hidroponía para casa y profesionales.",
     actividad: "ruleta",
@@ -180,6 +180,82 @@ export const MARCAS_BASE = [
     ],
   },
 ];
+
+// ---------- 38 marcas más, generadas (también ficticias) para llegar a 50 stands ----------
+// Cada pabellón tiene 12 stands (1 premium + 11 normales). Las islas de marca van aparte.
+const TIPOS = {
+  semillas: { cat: "Semillas", icono: "🌱", precio: [22, 70], variantes: ["3 u.", "5 u.", "10 u."], items: null, lema: "Genética seleccionada", desc: "Banco de semillas con variedades registradas. Venta solo en países donde es legal." },
+  molinos: { cat: "Grinders", icono: "⚙️", precio: [12, 80], variantes: ["chico", "mediano", "grande"], items: ["Grinder 2 piezas", "Grinder 4 piezas", "Grinder eléctrico", "Grinder de bolsillo"], lema: "Grinders de aluminio", desc: "Grinders de aluminio aeroespacial con garantía de por vida." },
+  frascos: { cat: "Almacenamiento", icono: "🫙", precio: [6, 40], variantes: ["250 ml", "500 ml", "1 L"], items: ["Frasco hermético", "Frasco UV", "Set de frascos", "Bote con humedad"], lema: "Guarda todo fresco", desc: "Frascos herméticos y de vidrio UV." },
+  encendedores: { cat: "Encendedores", icono: "🔥", precio: [3, 45], variantes: ["negro", "plata", "neón"], items: ["Encendedor recargable", "Encendedor de mesa", "Funda de encendedor"], lema: "Encendedores de diseño", desc: "Encendedores recargables y accesorios de diseño." },
+  cajas: { cat: "Cajas", icono: "📦", precio: [15, 90], variantes: ["pino", "nogal", "bambú"], items: ["Caja de madera", "Caja con llave", "Organizador", "Charola con tapa"], lema: "Orden con estilo", desc: "Cajas y organizadores de madera hechos a mano." },
+  basculas: { cat: "Básculas", icono: "⚖️", precio: [10, 120], variantes: ["0.01 g", "0.1 g"], items: ["Báscula de bolsillo", "Báscula de precisión", "Báscula de mesa", "Pesas de calibración"], lema: "Precisión en cada gramo", desc: "Básculas digitales de precisión." },
+  bandejas: { cat: "Bandejas", icono: "🌈", precio: [8, 40], variantes: ["S", "M", "L"], items: ["Bandeja neón", "Bandeja con tapa", "Bandeja XL", "Bandeja con luz"], lema: "Bandejas que brillan", desc: "Bandejas de metal con diseños de artistas." },
+  vidrio: { cat: "Vidrio", icono: "🧪", precio: [15, 200], variantes: ["14 mm", "18 mm"], items: ["Pipa de vidrio", "Bong recto", "Bowl", "Ash catcher"], lema: "Vidrio de borosilicato", desc: "Piezas de vidrio de borosilicato resistentes." },
+  bolsos: { cat: "Bolsos", icono: "👝", precio: [15, 90], variantes: ["negro", "verde", "arena"], items: ["Bolso antiolor", "Mochila", "Riñonera", "Estuche"], lema: "Discreto y resistente", desc: "Bolsos con forro de carbón activado y cierre hermético." },
+  pipas: { cat: "Pipas", icono: "🎨", precio: [12, 90], variantes: ["chica", "grande"], items: ["Pipa de madera", "Pipa de cerámica", "Pipa artesanal", "Pipa de piedra"], lema: "Piezas de autor", desc: "Pipas artesanales de madera y cerámica." },
+  filtros: { cat: "Filtros", icono: "🔘", precio: [2, 25], variantes: ["x50", "x100", "x300"], items: ["Filtros de cartón", "Filtros de carbón", "Filtros de vidrio"], lema: "Filtros para todos", desc: "Filtros de cartón, carbón y vidrio." },
+  construccion: { cat: "Construcción", icono: "🧱", precio: [5, 120], variantes: ["unidad", "caja"], items: ["Bloque de hempcrete", "Panel aislante", "Cal de cáñamo", "Mortero"], lema: "Construye con cáñamo", desc: "Materiales de construcción de cáñamo: ligeros, aislantes y sostenibles." },
+  papel: { cat: "Papelería", icono: "📄", precio: [2, 30], variantes: ["chico", "grande"], items: ["Cuaderno", "Papel para impresora", "Sobres", "Cajas de cartón"], lema: "Papel sin talar árboles", desc: "Papel y empaques hechos con fibra de cáñamo." },
+  textil: { cat: "Textiles", icono: "🧶", precio: [10, 80], variantes: ["S", "M", "L"], items: ["Suéter", "Calcetines", "Tela por metro", "Gorro"], lema: "Fibra natural que dura", desc: "Ropa y telas de fibra de cáñamo." },
+  jabon: { cat: "Cuidado personal", icono: "🧼", precio: [4, 25], variantes: ["barra", "líquido"], items: ["Jabón de lavanda", "Shampoo sólido", "Crema de manos", "Desodorante"], lema: "Cosmética natural", desc: "Cosmética con aceite de semilla de cáñamo. No son medicamentos." },
+  alimento: { cat: "Despensa", icono: "🥣", precio: [4, 35], variantes: ["250 g", "500 g", "1 kg"], items: ["Semilla pelada", "Proteína", "Harina", "Galletas"], lema: "Proteína vegetal", desc: "Alimentos con semilla de cáñamo." },
+  bioplastico: { cat: "Bioplásticos", icono: "♻️", precio: [3, 30], variantes: ["x10", "x50"], items: ["Vasos", "Cubiertos", "Funda de celular", "Bolsas"], lema: "Plástico de planta", desc: "Bioplásticos compostables hechos con cáñamo." },
+  mascota: { cat: "Mascotas", icono: "🐾", precio: [6, 60], variantes: ["S", "M", "L"], items: ["Collar de cáñamo", "Correa", "Cama", "Juguete de cuerda"], lema: "Para tu mejor amigo", desc: "Accesorios para mascotas con fibra de cáñamo." },
+  aceite: { cat: "Aceites de cocina", icono: "🫒", precio: [6, 30], variantes: ["250 ml", "500 ml"], items: ["Aceite de semilla", "Aderezo", "Mantequilla de semilla"], lema: "Del campo a tu mesa", desc: "Aceite de semilla de cáñamo para cocinar." },
+  calzado: { cat: "Calzado", icono: "👟", precio: [40, 120], variantes: ["25", "26", "27"], items: ["Tenis", "Sandalias", "Botas"], lema: "Camina ligero", desc: "Calzado con lona de cáñamo." },
+  macetas: { cat: "Macetas", icono: "🪴", precio: [3, 40], variantes: ["10 L", "20 L", "40 L"], items: ["Maceta de tela", "Maceta de barro", "Maceta autorriego"], lema: "Raíces felices", desc: "Macetas de tela, barro y autorriego." },
+  clima: { cat: "Clima", icono: "🌀", precio: [20, 250], variantes: ["10 cm", "15 cm", "20 cm"], items: ["Extractor", "Ventilador", "Filtro de carbón", "Ducto"], lema: "Aire fresco siempre", desc: "Extracción y ventilación para cultivo interior." },
+  riego: { cat: "Riego", icono: "🚿", precio: [10, 150], variantes: ["básico", "pro"], items: ["Kit de goteo", "Bomba", "Programador", "Manguera"], lema: "Agua justa", desc: "Riego por goteo y programadores." },
+  luz: { cat: "Iluminación", icono: "☀️", precio: [40, 600], variantes: ["100 W", "300 W", "600 W"], items: ["Panel LED", "Barra LED", "Reflector"], lema: "Luz que rinde", desc: "Iluminación LED eficiente." },
+  abono: { cat: "Fertilizantes", icono: "🪱", precio: [5, 40], variantes: ["1 kg", "5 kg"], items: ["Humus", "Composta", "Té de compost", "Micorrizas"], lema: "Suelo vivo", desc: "Fertilizantes orgánicos." },
+  hidro: { cat: "Hidroponía", icono: "🧪", precio: [30, 400], variantes: ["6 plantas", "12 plantas"], items: ["Sistema DWC", "Torre vertical", "Bomba de aire"], lema: "Cultivo sin tierra", desc: "Sistemas hidropónicos para casa." },
+  carpas: { cat: "Carpas", icono: "⛺", precio: [60, 300], variantes: ["60 cm", "80 cm", "120 cm"], items: ["Carpa", "Carpa con ventana", "Kit completo"], lema: "Tu espacio de cultivo", desc: "Carpas de cultivo reflectantes." },
+  sensores: { cat: "Sensores", icono: "📟", precio: [10, 120], variantes: ["única"], items: ["Medidor de pH", "Medidor EC", "Termohigrómetro", "Sensor Wi-Fi"], lema: "Mide, no adivines", desc: "Sensores y medidores para cultivo." },
+  semilleros: { cat: "Semilleros", icono: "🌱", precio: [3, 40], variantes: ["12", "24", "72"], items: ["Charola", "Domo", "Tapete térmico", "Pastillas de turba"], lema: "Todo empieza aquí", desc: "Charolas, domos y accesorios para germinar." },
+  herramientas: { cat: "Herramientas", icono: "✂️", precio: [5, 60], variantes: ["única"], items: ["Tijeras de poda", "Guantes", "Lupa", "Delantal"], lema: "Herramienta fina", desc: "Herramientas de jardinería de precisión." },
+};
+const NUEVAS = {
+  genetica: [["Pampa Genetics", "AR", "🌾", "semillas"], ["Bosque Seeds", "CL", "🌲", "semillas"], ["Origen Banco", "UY", "🧬", "semillas"], ["Sol de Montaña", "CO", "⛰️", "semillas"], ["Hoja Alta", "ES", "🍃", "semillas"], ["Raíz Pura", "US", "🌱", "semillas"], ["Valle Verde Seeds", "CL", "🏞️", "semillas"], ["Cumbre Andina", "AR", "🌄", "semillas"], ["Brote Lab", "ES", "🔬", "semillas"]],
+  accesorios: [["Molino Andino", "AR", "⚙️", "molinos"], ["Frasco Fresco", "UY", "🫙", "frascos"], ["Chispa Lighters", "CO", "🔥", "encendedores"], ["Caja Zen", "ES", "📦", "cajas"], ["Báscula Fina", "CL", "⚖️", "basculas"], ["Neón Rolling", "US", "🌈", "bandejas"], ["Vidrio Sur", "AR", "🧪", "vidrio"], ["Bolso Discreto", "MX", "👝", "bolsos"], ["Pipa Arte", "CO", "🎨", "pipas"], ["Filtro Puro", "US", "🔘", "filtros"]],
+  canamo: [["Cáñamo Vivo", "ES", "🧱", "construccion"], ["Papel Verde", "CL", "📄", "papel"], ["Hilo Natural", "AR", "🧶", "textil"], ["Jabón de Monte", "CO", "🧼", "jabon"], ["Semilla Nutri", "UY", "🥣", "alimento"], ["Bioplast Hemp", "US", "♻️", "bioplastico"], ["Huellita Hemp", "MX", "🐾", "mascota"], ["Aceite Andino", "CL", "🫒", "aceite"], ["Calzado Raíz", "ES", "👟", "calzado"]],
+  cultivo: [["Maceta Viva", "MX", "🪴", "macetas"], ["Clima Grow", "US", "🌀", "clima"], ["Riego Sur", "AR", "🚿", "riego"], ["Luz Solar Pro", "CL", "☀️", "luz"], ["Abono Andino", "CO", "🪱", "abono"], ["Hidro Lab", "ES", "🧪", "hidro"], ["Carpa Max", "US", "⛺", "carpas"], ["Sensor Verde", "UY", "📟", "sensores"], ["Semillero Pro", "CL", "🌱", "semilleros"], ["Poda Fina", "AR", "✂️", "herramientas"]],
+};
+const PALETA = [["#7dffb3", "#0f5d43"], ["#ff9ae6", "#5a1149"], ["#8ff0ff", "#0c4b5a"], ["#ffd76a", "#5a4310"], ["#c9a2ff", "#2e1660"], ["#ff9a76", "#5a2a10"], ["#b6e36b", "#2f4a10"], ["#7fc8ff", "#103a5a"], ["#ff7a9c", "#5a1028"], ["#9be3d0", "#10443a"], ["#f2a2ff", "#4a1650"], ["#ffe08a", "#4a3a08"]];
+const CUPONES = ["10% en tu primera compra", "Envío gratis", "2x1 en accesorios", "Regalo con tu pedido", "15% en kits", "20% en tu segunda compra", "Muestra gratis"];
+const CEPAS_A = ["Luna", "Brisa", "Cumbre", "Selva", "Nieve", "Río", "Cielo", "Lima", "Menta", "Cacao", "Ámbar", "Coral"];
+const CEPAS_B = ["Kush", "Haze", "Dream", "Gold", "Express", "Dulce", "Mística", "Real"];
+let semillaGen = 7;
+const azar = () => { semillaGen = (semillaGen * 9301 + 49297) % 233280; return semillaGen / 233280; };
+const tomar = (a) => a[Math.floor(azar() * a.length)];
+const GENERADAS = [];
+Object.entries(NUEVAS).forEach(([pab, lista]) => lista.forEach(([nombre, pais, icono, tipo]) => {
+  const T = TIPOS[tipo], [color, color2] = PALETA[(GENERADAS.length * 5) % PALETA.length];
+  const items = T.items || [...new Set(Array.from({ length: 6 }, () => `${tomar(CEPAS_A)} ${tomar(CEPAS_B)}`))].slice(0, 5);
+  const sigla = nombre.split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase();
+  GENERADAS.push({
+    id: nombre.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+    nombre, pab, pais, color, color2, icono, sigla,
+    lema: T.lema, desc: T.desc, anuncio: T.lema,
+    actividad: ["ruleta", "quiz", "rasca"][GENERADAS.length % 3],
+    cupon: { texto: tomar(CUPONES), costo: 30 + Math.floor(azar() * 12) * 5 }, sorteo: `Kit de ${nombre}`,
+    cats: [
+      { nombre: T.cat, items, variantes: T.variantes, icono: T.icono, precio: T.precio },
+      { nombre: "Kits", items: ["Kit de inicio", "Kit completo"], variantes: ["única"], icono: "🎁", precio: [T.precio[0] * 2, Math.round(T.precio[1] * 1.5)] },
+      { nombre: "Merch", items: ["Gorra", "Playera"], variantes: ["S", "M", "L"], icono: "🧢", precio: [12, 30] },
+    ],
+  });
+}));
+export const MARCAS_BASE = [...MARCAS_MANO, ...GENERADAS];
+
+// Videos de cada marca: 1 en stand normal, 3 en premium, 4 en isla (en la versión real los sube la marca)
+export function videosDe(m) {
+  const v = [{ id: m.id, titulo: `Conoce ${m.nombre}`, icono: m.icono }];
+  if (m.nivel === "premium" || m.nivel === "isla") v.push({ id: `${m.id}#2`, titulo: "Así se hace", icono: "🎬" }, { id: `${m.id}#3`, titulo: "Producto estrella", icono: "⭐" });
+  if (m.nivel === "isla") v.push({ id: `${m.id}#4`, titulo: "Detrás de cámaras", icono: "🎥" });
+  return v;
+}
+export const NIVELES = { stand: "Stand", premium: "Stand premium", isla: "Isla de marca" };
 
 // Arma el catálogo completo de una marca (base × variantes + productos que la marca agregó en su panel)
 export function catalogo(m) {

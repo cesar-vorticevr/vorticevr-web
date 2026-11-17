@@ -1,5 +1,5 @@
 // Weedland Station: interfaz (entrada, stands, catálogo, juegos, premios, universidad, pasaporte).
-import { PAISES, PABELLONES, UNIVERSIDAD, CLASES, TALLERES, CONFERENCIAS, PREMIO_DIA, catalogo, preguntasMarca, nombrePais } from "./datos.js";
+import { PAISES, PABELLONES, UNIVERSIDAD, CLASES, TALLERES, CONFERENCIAS, PREMIO_DIA, catalogo, preguntasMarca, nombrePais, videosDe, NIVELES } from "./datos.js";
 import { leerPerfil, guardarPerfil, leerJuego, guardarJuego, marcas, sumar, codigo, CLAVES } from "./estado.js";
 import { sonido, volar, cartel, confeti, flotante, contar, alternarSonido, estaMudo } from "./efectos.js";
 
@@ -75,9 +75,10 @@ async function iniciar() {
   setTimeout(() => { if (!regaloDiario() && !J.guia) guia(0); }, 900);
 }
 
-function crearEtiqueta({ id, icono, nombre, color }) {
+function crearEtiqueta({ id, icono, nombre, color, isla }) {
   const b = document.createElement("button");
-  b.className = "etiqueta"; b.style.setProperty("--c", color);
+  b.className = "etiqueta" + (isla ? " isla" : ""); b.style.setProperty("--c", color);
+  if (isla) { b.innerHTML = `<span>${icono}</span>${esc(nombre)}<em>ISLA</em>`; b.onclick = () => { sonido.tap(); caminarA("stand", id, () => abrirStand(id)); }; $("#etiquetas").appendChild(b); return b; }
   b.innerHTML = `<span>${icono}</span>${esc(nombre)}`;
   b.onclick = () => { sonido.tap(); if (id === "plaza") irPlaza(); else if (id === "universidad") abrirUniversidad(); else caminarA("pabellon", id); };
   $("#etiquetas").appendChild(b);
@@ -236,10 +237,12 @@ function abrirPabellon(id) {
     <p class="nota">Toca un stand en el 3D o en la lista para entrar.</p>`, { tipo: "pabellon", id, c: `--c:${p.color}` });
   conectarItems();
 }
+const insignia = (m) => (m.nivel === "isla" ? `<span class="nivel isla">🏝️ Isla</span>` : m.nivel === "premium" ? `<span class="nivel">⭐ Premium</span>` : "");
+const enPabellon = (m, pid) => m.pab === pid && m.nivel !== "isla";
 function itemMarca(m) {
   const visto = J.visitados.includes(m.id);
   return `<button class="item-m" data-marca="${m.id}" style="${vars(m)}"><div class="logo-m">${m.icono}</div>
-    <div class="txt"><b>${esc(m.nombre)}</b><small>${esc(m.lema)} · ${esc(nombrePais(m.pais))}</small></div>
+    <div class="txt"><b>${esc(m.nombre)} ${insignia(m)}</b><small>${esc(m.lema)} · ${esc(nombrePais(m.pais))}</small></div>
     ${visto ? `<span class="visto">✓ visto</span>` : `<span class="costo">+10 🌟</span>`}</button>`;
 }
 function conectarItems(r = document) { $$("[data-marca]", r).forEach((b) => (b.onclick = () => { sonido.tap(); abrirStand(b.dataset.marca); })); }
@@ -252,7 +255,7 @@ function abrirStand(id, tab = "inicio", volarCam = true) {
   abrirPanel(`
     <div class="cab-marca"><div class="logo-m">${m.icono}</div>
       <div><h2>${esc(m.nombre)}</h2><p>${esc(m.lema)}</p>
-      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><span class="chip c">${pab(m.pab).icono} ${esc(pab(m.pab).nombre)}</span><span class="chip">${esc(nombrePais(m.pais))}</span></div></div></div>
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">${m.nivel ? `<span class="chip c">${m.nivel === "isla" ? "🏝️" : "⭐"} ${NIVELES[m.nivel]}</span>` : ""}<span class="chip">${pab(m.pab).icono} ${esc(pab(m.pab).nombre)}</span><span class="chip">${esc(nombrePais(m.pais))}</span></div></div></div>
     <div class="tabs">
       <button data-tab="inicio">Inicio</button>
       <button data-tab="catalogo">Catálogo · ${cat.length}</button>
@@ -285,13 +288,15 @@ function pintarTab(m, tab) {
 }
 
 function tabInicio(m, caja) {
-  const cat = catalogo(m), visto = J.videos.includes(m.id), sigue = J.siguiendo.includes(m.id);
+  const cat = catalogo(m), sigue = J.siguiendo.includes(m.id), vids = videosDe(m);
+  const visto = (v) => J.videos.includes(v.id);
   caja.innerHTML = `
-    <button class="video ancho" id="ver-video">
+    <button class="video ancho" data-video="0">
       <div><div class="play">▶</div></div>
-      <span class="lbl">Video de ${esc(m.nombre)} · 10 s</span>
-      <span class="premio-v chip ${visto ? "" : "c"}">${visto ? "✓ visto" : "+15 🌟"}</span>
+      <span class="lbl">${esc(vids[0].titulo)} · 10 s</span>
+      <span class="premio-v chip ${visto(vids[0]) ? "" : "c"}">${visto(vids[0]) ? "✓ visto" : "+15 🌟"}</span>
     </button>
+    ${vids.length > 1 ? `<div class="mini-videos">${vids.slice(1).map((v, i) => `<button class="mini-v" data-video="${i + 1}"><span class="mv-ico">${v.icono}</span><b>${esc(v.titulo)}</b><small>${visto(v) ? "✓ visto" : "+15 🌟"}</small></button>`).join("")}</div>` : ""}
     <p style="margin:12px 0 0">${esc(m.desc)}</p>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
       <button class="btn chico" id="seguir">${sigue ? "✓ Siguiendo" : "＋ Seguir marca"}</button>
@@ -303,7 +308,7 @@ function tabInicio(m, caja) {
       <button class="tarjeta fila-t ancho" data-ir-tab="juega" style="text-align:left"><span class="grande">🎰</span><span class="txt"><b>${nombreJuego(m.actividad)}</b><small>${J.jugados[m.id] === hoy() ? "Ya jugaste hoy. Vuelve mañana." : "Una partida gratis al día"}</small></span><span class="costo">hasta 30 🌟</span></button>
       <button class="tarjeta fila-t ancho" data-ir-tab="premios" style="text-align:left"><span class="grande">🎟️</span><span class="txt"><b>${esc(m.cupon.texto)}</b><small>Cupón de la marca</small></span><span class="costo">${m.cupon.costo} 🌟</span></button>
     </div>`;
-  $("#ver-video").onclick = () => verVideo(m);
+  $$("[data-video]", caja).forEach((b) => (b.onclick = () => verVideo(m, vids[+b.dataset.video])));
   $("#seguir").onclick = (e) => {
     const i = J.siguiendo.indexOf(m.id);
     if (i >= 0) J.siguiendo.splice(i, 1); else { J.siguiendo.push(m.id); sumar(m.id, "seguidores"); sonido.bien(); flotante("💜", centroDe(e.currentTarget).x, centroDe(e.currentTarget).y); }
@@ -366,12 +371,13 @@ function tabCatalogo(m, caja) {
 }
 
 // ---------- video de marca (simulado: en la versión real es el video que sube la marca) ----------
-function verVideo(m) {
+function verVideo(m, v = videosDe(m)[0]) {
   const cat = catalogo(m).filter((p) => p.destacado);
+  const k = Math.max(0, videosDe(m).findIndex((x) => x.id === v.id)), p0 = cat[k % Math.max(1, cat.length)] || {};
   const caja = modal(`
     <div class="rep">
       <div class="esc"><div class="e">${m.icono}</div><b>${esc(m.nombre)}</b><span>${esc(m.lema)}</span></div>
-      <div class="esc"><div class="e">${(cat[0] || {}).icono || m.icono}</div><b>${esc((cat[0] || {}).nombre || m.nombre)}</b><span>${esc(m.anuncio)}</span></div>
+      <div class="esc"><div class="e">${k ? v.icono : p0.icono || m.icono}</div><b>${esc(k ? v.titulo : p0.nombre || m.nombre)}</b><span>${esc(m.anuncio)}</span></div>
       <div class="esc"><div class="e">🎟️</div><b>${esc(m.cupon.texto)}</b><span>Canjéalo con tu polen en este stand</span></div>
       <div class="prog"></div>
     </div>
@@ -380,8 +386,8 @@ function verVideo(m) {
   $("[data-x]", caja).onclick = () => { clearTimeout(fin); cerrarModal(); };
   const fin = setTimeout(() => {
     sumar(m.id, "videos");
-    if (!J.videos.includes(m.id)) {
-      J.videos.push(m.id); guardar();
+    if (!J.videos.includes(v.id)) {
+      J.videos.push(v.id); guardar();
       cerrarModal();
       ganar(15, "Video completo", { x: innerWidth / 2, y: innerHeight / 2 });
       sonido.premio();
@@ -514,7 +520,8 @@ function abrirDirectorio() {
       html += res.length ? `<div class="grupo-t">Productos (${res.length})</div><div class="lista-m">${res.slice(0, 30).map(({ m, p }) => `<button class="item-m" data-pm="${m.id}|${p.id}" style="${vars(m)}"><div class="logo-m">${p.icono}</div><div class="txt"><b>${esc(p.nombre)}</b><small>${esc(m.nombre)} · ${esc(p.precio)}</small></div></button>`).join("")}</div>` : "";
       if (!html) html = `<p class="suave">No encontramos “${esc(q)}”.</p>`;
     } else {
-      html = PABELLONES.map((p) => `<div class="grupo-t" style="--c:${p.color}">${p.icono} ${esc(p.nombre)}</div><div class="lista-m">${MARCAS.filter((m) => m.pab === p.id).map(itemMarca).join("")}</div>`).join("");
+      html = `<div class="grupo-t" style="--c:#ffd76a">🏝️ Islas de marca</div><div class="lista-m">${MARCAS.filter((m) => m.nivel === "isla").map(itemMarca).join("")}</div>` +
+        PABELLONES.map((p) => `<div class="grupo-t" style="--c:${p.color}">${p.icono} ${esc(p.nombre)}</div><div class="lista-m">${MARCAS.filter((m) => enPabellon(m, p.id)).sort((a, b) => (b.nivel ? 1 : 0) - (a.nivel ? 1 : 0)).map(itemMarca).join("")}</div>`).join("");
     }
     $("#dir").innerHTML = html;
     conectarItems($("#dir"));
@@ -551,7 +558,7 @@ function abrirPremios() {
 
 // ---------- pasaporte ----------
 function revisarPabellon(pid) {
-  const ids = MARCAS.filter((m) => m.pab === pid).map((m) => m.id);
+  const ids = MARCAS.filter((m) => enPabellon(m, pid)).map((m) => m.id);
   if (ids.every((id) => J.visitados.includes(id)) && !J.bonos.includes(pid)) {
     J.bonos.push(pid); guardar();
     setTimeout(() => { cartel({ titulo: "¡PABELLÓN COMPLETO!", sub: `${pab(pid).icono} ${pab(pid).nombre} · +50 🌟`, tipo: "dorada", ms: 2600 }); sonido.jackpot(); ganar(50); }, 1600);
@@ -565,10 +572,12 @@ function abrirPasaporte() {
     <div class="barra"><i style="width:${(vistos / total) * 100}%"></i></div>
     <p class="chico-t suave" style="margin:6px 0 0">${vistos} de ${total} stands · ${J.cupones.length} cupones · ${Object.values(J.boletos).reduce((a, b) => a + b, 0)} boletos · ${J.clases.length} clases</p>
     ${PABELLONES.map((p) => {
-      const ms = MARCAS.filter((m) => m.pab === p.id);
+      const ms = MARCAS.filter((m) => enPabellon(m, p.id));
       return `<div class="grupo-t" style="--c:${p.color}">${p.icono} ${esc(p.nombre)} ${J.bonos.includes(p.id) ? `<span class="hecho">✓ completo</span>` : ""}</div>
         <div class="sellos">${ms.map((m) => `<button class="sello ${J.visitados.includes(m.id) ? "si" : ""}" data-marca="${m.id}" style="${vars(m)}"><div><span>${J.visitados.includes(m.id) ? m.icono : "？"}</span>${esc(m.nombre)}</div></button>`).join("")}</div>`;
     }).join("")}
+    <div class="grupo-t" style="--c:#ffd76a">🏝️ Islas de marca</div>
+    <div class="sellos">${MARCAS.filter((m) => m.nivel === "isla").map((m) => `<button class="sello ${J.visitados.includes(m.id) ? "si" : ""}" data-marca="${m.id}" style="${vars(m)}"><div><span>${J.visitados.includes(m.id) ? m.icono : "？"}</span>${esc(m.nombre)}</div></button>`).join("")}</div>
     <div class="grupo-t" style="--c:${UNIVERSIDAD.color}">🎓 Universidad</div>
     <div class="sellos">${CLASES.map((c) => `<div class="sello ${J.clases.includes(c.id) ? "si" : ""}" style="--c:${UNIVERSIDAD.color}"><div><span>${J.clases.includes(c.id) ? c.icono : "？"}</span>${esc(c.titulo.split(":")[0])}</div></div>`).join("")}</div>`,
   { tipo: "pasaporte", nav: "pasaporte", alto: true });
