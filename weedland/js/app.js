@@ -60,6 +60,9 @@ async function iniciar() {
       marcas: MARCAS,
       etiqueta: crearEtiqueta,
       alTocar,
+      alCerca,
+      alSoltar: () => { if (actual && actual.tipo === "stand") cerrarPanel(); },
+      alPaso: () => sonido.paso(),
     });
   } catch (e) {
     console.error(e);
@@ -68,6 +71,7 @@ async function iniciar() {
   }
   setTimeout(() => $("#cargando").classList.add("fuera"), 300);
   conectarHud();
+  conectarStick();
   setTimeout(() => { if (!regaloDiario() && !J.guia) guia(0); }, 900);
 }
 
@@ -75,7 +79,7 @@ function crearEtiqueta({ id, icono, nombre, color }) {
   const b = document.createElement("button");
   b.className = "etiqueta"; b.style.setProperty("--c", color);
   b.innerHTML = `<span>${icono}</span>${esc(nombre)}`;
-  b.onclick = () => { sonido.tap(); if (id === "plaza") irPlaza(); else if (id === "universidad") abrirUniversidad(); else abrirPabellon(id); };
+  b.onclick = () => { sonido.tap(); if (id === "plaza") irPlaza(); else if (id === "universidad") abrirUniversidad(); else caminarA("pabellon", id); };
   $("#etiquetas").appendChild(b);
   return b;
 }
@@ -104,13 +108,50 @@ function conectarHud() {
   });
 }
 
+// Tocar algo en el 3D: el avatar camina hasta ahí y, al llegar, se abre
 function alTocar(tipo, id) {
   sonido.tap();
-  if (tipo === "stand") abrirStand(id);
-  else if (tipo === "dron") { sumar(id, "drones"); abrirStand(id); }
-  else if (tipo === "pantalla") { sumar(id, "pantallas"); abrirStand(id); }
-  else if (tipo === "pabellon") abrirPabellon(id);
-  else if (tipo === "uni") abrirUniversidad();
+  if (tipo === "dron") sumar(id, "drones");
+  if (tipo === "pantalla") sumar(id, "pantallas");
+  if (tipo === "stand" || tipo === "dron" || tipo === "pantalla") caminarA("stand", id, () => abrirStand(id));
+  else if (tipo === "pabellon") caminarA("pabellon", id);
+  else if (tipo === "uni") caminarA("universidad", "universidad", () => abrirUniversidad());
+}
+function caminarA(tipo, id, cb) {
+  if (actual) cerrarPanel();
+  est && est.irA(tipo, id, { cb });
+}
+// Botón "Entrar" cuando el avatar está frente a un stand o la Universidad
+let cercaDe = null;
+function alCerca(id) {
+  cercaDe = id;
+  const b = $("#entrar");
+  if (!id) { b.hidden = true; return; }
+  const m = marca(id);
+  b.innerHTML = m ? `<span class="logo-mini" style="${vars(m)}">${m.icono}</span> Entrar a ${esc(m.nombre)} ▶` : `🎓 Entrar a la Universidad ▶`;
+  b.style.cssText = m ? vars(m) : `--c:${UNIVERSIDAD.color}`;
+  b.hidden = actual && (actual.id === id || actual.tipo === "uni");
+  if (!b.hidden) sonido.burbuja();
+}
+function conectarStick() {
+  const base = $("#stick"), bola = $(".bola", base);
+  let id = null, cx = 0, cy = 0;
+  const R = 46;
+  const mover = (e) => {
+    let dx = e.clientX - cx, dy = e.clientY - cy;
+    const d = Math.hypot(dx, dy); if (d > R) { dx = (dx / d) * R; dy = (dy / d) * R; }
+    bola.style.transform = `translate(${dx}px, ${dy}px)`;
+    est && est.setStick(dx / R, -dy / R);
+  };
+  const soltar = () => { id = null; bola.style.transform = ""; est && est.setStick(0, 0); base.classList.remove("activo"); };
+  base.addEventListener("pointerdown", (e) => {
+    id = e.pointerId; const r = base.getBoundingClientRect(); cx = r.left + r.width / 2; cy = r.top + r.height / 2;
+    try { base.setPointerCapture(id); } catch {}
+    base.classList.add("activo"); mover(e); e.preventDefault();
+  });
+  base.addEventListener("pointermove", (e) => { if (e.pointerId === id) mover(e); });
+  base.addEventListener("pointerup", soltar); base.addEventListener("pointercancel", soltar);
+  $("#entrar").onclick = () => { sonido.tap(); if (cercaDe === "universidad") abrirUniversidad(); else if (cercaDe) abrirStand(cercaDe); };
 }
 
 function marcarNav(ir) { $$(".nav button").forEach((b) => b.classList.toggle("activo", b.dataset.ir === ir)); }
@@ -124,6 +165,8 @@ function abrirPanel(html, { tipo, id, alto = false, c = null, nav = null } = {})
   $("#panel-cuerpo").scrollTop = 0;
   actual = { tipo, id };
   marcarNav(nav);
+  $("#entrar").hidden = true;
+  document.body.classList.add("con-panel");
   est && est.setEtiquetas(!movil());
   desplazar();
   cerrarGuia(true);
@@ -136,10 +179,14 @@ function desplazar() {
   else est.setDesplazamiento((p.offsetWidth + 12) / 2, 0);
 }
 function cerrarPanel() {
+  if ($("#panel").hidden) return;
+  const eraStand = actual && actual.tipo === "stand";
   $("#panel").hidden = true;
   actual = null;
   marcarNav(null);
-  if (est) { est.setDesplazamiento(0, 0); est.setEtiquetas(true); }
+  document.body.classList.remove("con-panel");
+  if (est) { est.setDesplazamiento(0, 0); est.setEtiquetas(true); if (eraStand) est.seguir(); }
+  alCerca(cercaDe);
 }
 function modal(html, c = "") {
   $("#modal").hidden = false;
@@ -173,7 +220,7 @@ const centroDe = (el) => { const r = el.getBoundingClientRect(); return { x: r.l
 // ---------- navegación ----------
 function irPlaza() {
   cerrarPanel(); cerrarModal();
-  est && est.volarA("plaza");
+  est && est.irA("plaza", null, { caminar: false });
   sonido.teleport();
   marcarNav("plaza");
 }
@@ -200,7 +247,7 @@ function conectarItems(r = document) { $$("[data-marca]", r).forEach((b) => (b.o
 // ---------- stand ----------
 function abrirStand(id, tab = "inicio", volarCam = true) {
   const m = marca(id); if (!m) return;
-  if (volarCam) { est && est.volarA("stand", id); sonido.entrar(); }
+  if (volarCam) { est && est.enfocarStand(id); sonido.entrar(); }
   const cat = catalogo(m);
   abrirPanel(`
     <div class="cab-marca"><div class="logo-m">${m.icono}</div>
@@ -530,8 +577,7 @@ function abrirPasaporte() {
 
 // ---------- universidad ----------
 function abrirUniversidad(tab = "clases") {
-  est && est.volarA("universidad", "universidad");
-  if (!actual || actual.tipo !== "uni") sonido.teleport();
+  if (cercaDe !== "universidad" && (!actual || actual.tipo !== "uni")) { est && est.irA("universidad", "universidad", { caminar: false }); sonido.teleport(); }
   abrirPanel(`
     <div class="cab-marca"><div class="logo-m" style="--c:${UNIVERSIDAD.color};--c2:#2a1660">🎓</div>
       <div><h2>Universidad Weedland</h2><p>Aprende, mira talleres de las marcas y apúntate a conferencias.</p></div></div>
@@ -630,7 +676,7 @@ function regaloDiario() {
 // ---------- guía (Nova): opcional, se cierra con ✕ y no vuelve sola ----------
 const PASOS = [
   { t: "¡Hola! Soy Nova 👋", p: "Bienvenido a Weedland Station: una expo en el espacio con los stands de las marcas." },
-  { t: "Toca para entrar", p: "Toca un stand, una pantalla o un dron con publicidad y vuelas directo a la marca: su video, su catálogo y su juego." },
+  { t: "Camina por la expo", p: matchMedia("(pointer: coarse)").matches ? "Muévete con el joystick o toca el suelo para caminar. Si tocas un stand, una pantalla o un dron, tu astronauta va solito hasta ahí." : "Camina con W A S D o las flechas, o haz clic en el suelo. Si das clic en un stand, una pantalla o un dron, tu astronauta va solito hasta ahí." },
   { t: "Gana polen dorado 🌟", p: "Ganas polen al visitar stands, ver videos, jugar y tomar clases. Lo cambias por cupones reales y boletos para sorteos en 🎁 Premios." },
 ];
 function guia(i) {
@@ -651,6 +697,18 @@ function cerrarGuia(marcar) {
   $("#guia").hidden = true;
   if (marcar && !J.guia) { J.guia = true; guardar(); }
 }
+
+// ---------- sin zoom de página (doble toque o pellizco) ----------
+document.addEventListener("dblclick", (e) => e.preventDefault(), { passive: false });
+["gesturestart", "gesturechange", "gestureend"].forEach((ev) => document.addEventListener(ev, (e) => e.preventDefault(), { passive: false }));
+document.addEventListener("touchmove", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+addEventListener("wheel", (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+let ultimoToque = 0;
+document.addEventListener("touchend", (e) => {
+  const ahora = Date.now();
+  if (ahora - ultimoToque < 320 && !e.target.closest("button, a, input, textarea, select, #stick")) e.preventDefault();
+  ultimoToque = ahora;
+}, { passive: false });
 
 // ---------- inicio ----------
 if (leerPerfil()) iniciar(); else entrada();

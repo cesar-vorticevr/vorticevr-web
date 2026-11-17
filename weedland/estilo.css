@@ -5,6 +5,7 @@
   --nav: 68px;
 }
 * { box-sizing: border-box; }
+html, body { touch-action: manipulation; overscroll-behavior: none; }
 html, body { margin: 0; height: 100%; background: var(--fondo); color: var(--texto); font: 16px/1.45 Nunito, system-ui, sans-serif; overflow: hidden; -webkit-tap-highlight-color: transparent; }
 button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
 h1, h2, h3, h4 { font-family: Fredoka, system-ui, sans-serif; font-weight: 600; margin: 0; line-height: 1.15; }
@@ -57,6 +58,19 @@ h1, h2, h3, h4 { font-family: Fredoka, system-ui, sans-serif; font-weight: 600; 
 .nav button small { font-size: .7rem; font-weight: 700; color: var(--suave); }
 .nav button.activo { background: var(--panel-2); }
 .nav button.activo small { color: #fff; }
+
+/* ---------- caminar ---------- */
+.stick { position: absolute; left: 18px; bottom: calc(var(--nav) + 28px); width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, rgba(177,140,255,.18), rgba(11,6,32,.55)); border: 2px solid rgba(177,140,255,.55); z-index: 11; touch-action: none; display: none; backdrop-filter: blur(3px); }
+.stick .bola { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #c9b4ff); box-shadow: 0 0 18px rgba(177,140,255,.7); pointer-events: none; }
+.stick.activo { border-color: var(--cian); }
+@media (pointer: coarse) { .stick { display: block; } }
+.con-panel .stick { display: none; }
+.entrar { position: absolute; left: 50%; bottom: calc(var(--nav) + 30px); transform: translateX(-50%); z-index: 12; display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px 12px 12px; border-radius: 999px; font: 700 1.05rem Fredoka, sans-serif; color: #120a2a; background: linear-gradient(135deg, #fff, var(--c, var(--morado))); box-shadow: 0 0 0 4px rgba(255,255,255,.15), 0 0 30px color-mix(in srgb, var(--c, var(--morado)) 60%, transparent); animation: entraBoton .35s cubic-bezier(.2,1.5,.4,1), pulsoBoton 1.6s ease-in-out .4s infinite; white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
+.entrar .logo-mini { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--c), var(--c2)); font-size: 1.1rem; flex: none; }
+@keyframes entraBoton { from { transform: translateX(-50%) scale(.6); opacity: 0; } }
+@keyframes pulsoBoton { 50% { transform: translateX(-50%) scale(1.05); } }
+@media (pointer: coarse) { .entrar { left: auto; right: 14px; transform: none; bottom: calc(var(--nav) + 64px); animation: entraBoton2 .35s cubic-bezier(.2,1.5,.4,1); max-width: calc(100vw - 170px); white-space: normal; text-align: left; font-size: .95rem; } }
+@keyframes entraBoton2 { from { transform: scale(.6); opacity: 0; } }
 
 /* ---------- guía Nova ---------- */
 .guia { position: absolute; left: 12px; bottom: calc(var(--nav) + 24px); width: min(360px, calc(100vw - 24px)); padding: 14px 14px 14px 76px; border-radius: 22px; background: rgba(21,13,51,.94); border: 1.5px solid var(--cian); box-shadow: 0 0 30px rgba(111,240,255,.25), var(--sombra); z-index: 12; animation: entra .4s cubic-bezier(.2,1.4,.4,1); }
@@ -226,3 +240,4 @@ h1, h2, h3, h4 { font-family: Fredoka, system-ui, sans-serif; font-weight: 600; 
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .rayos, .confeti { display: none; }
 }
+@media (pointer: coarse) { .guia { top: calc(max(10px, env(safe-area-inset-top)) + 58px); bottom: auto; } }

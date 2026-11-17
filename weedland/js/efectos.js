@@ -81,6 +81,7 @@ export const sonido = {
   rasca: () => ruido(0, 0.04, 0.03, 4000 + Math.random() * 2000),
   burbuja: () => nota(300 + Math.random() * 400, 0, 0.12, { vol: 0.1, a: 900 + Math.random() * 400 }),
   hablar: () => nota(500 + Math.random() * 300, 0, 0.04, { tipo: "triangle", vol: 0.03 }),
+  paso: () => ruido(0, 0.035, 0.018, 500 + Math.random() * 200),
   teleport: () => { nota(200, 0, 0.45, { vol: 0.12, a: 1600 }); ruido(0.05, 0.35, 0.05, 5000); },
 };
 

@@ -149,6 +149,7 @@ export function crearEstacion(canvas, cfg) {
   controls.target.copy(VISTA_GENERAL.obj);
   controls.enableDamping = true; controls.dampingFactor = 0.08;
   controls.minDistance = 7; controls.maxDistance = 200; controls.maxPolarAngle = 1.42;
+  controls.enableZoom = false; controls.enablePan = false; // sin zoom: solo se gira la cámara alrededor del avatar
   controls.rotateSpeed = 0.6; controls.zoomSpeed = 0.9; controls.panSpeed = 0.8;
   controls.autoRotate = !quieto; controls.autoRotateSpeed = 0.35;
 
@@ -205,6 +206,8 @@ export function crearEstacion(canvas, cfg) {
   const neon = (c) => new THREE.MeshBasicMaterial({ color: c });
 
   const tocables = [];
+  const suelos = []; // pisos donde se puede caminar (para tocar y caminar)
+  const obst = []; // obstáculos: { c: [x, z, r] } círculos o { caja: objeto3D, x0, x1, z0, z1 } cajas en coordenadas locales
   const etiquetas = []; // { el, pos }
   const anim = []; // funciones (t, dt)
   const pantallas = []; // texturas que rotan
@@ -213,6 +216,7 @@ export function crearEstacion(canvas, cfg) {
   function plataforma(radio, color, alto = 1.2) {
     const g = new THREE.Group();
     const piso = new THREE.Mesh(new THREE.CylinderGeometry(radio, radio, alto, 64), blanco); g.add(piso);
+    piso.userData.suelo = true; suelos.push(piso);
     const base = new THREE.Mesh(new THREE.CylinderGeometry(radio * 0.92, radio * 0.35, radio * 0.45, 48), gris);
     base.position.y = -alto / 2 - radio * 0.225; g.add(base);
     const punta = new THREE.Mesh(new THREE.ConeGeometry(radio * 0.35, radio * 0.35, 32), gris);
@@ -230,6 +234,7 @@ export function crearEstacion(canvas, cfg) {
     const largo = D_MODULO - R_PLAZA - R_PAB + 1.2;
     const g = new THREE.Group();
     const piso = new THREE.Mesh(new THREE.BoxGeometry(largo, 0.5, 3.6), blanco); g.add(piso);
+    piso.userData.suelo = true; suelos.push(piso);
     [-1.9, 1.9].forEach((z) => {
       const baranda = new THREE.Mesh(new THREE.BoxGeometry(largo, 0.08, 0.08), neon(color)); baranda.position.set(0, 0.9, z); g.add(baranda);
       const vidrio = new THREE.Mesh(new THREE.BoxGeometry(largo, 0.9, 0.05), new THREE.MeshStandardMaterial({ color: "#bfe8ff", transparent: true, opacity: 0.18 }));
@@ -237,7 +242,7 @@ export function crearEstacion(canvas, cfg) {
     });
     const tira = new THREE.Mesh(new THREE.BoxGeometry(largo, 0.02, 0.25), neon(color)); tira.position.y = 0.26; g.add(tira);
     const d = R_PLAZA + largo / 2 - 0.6;
-    g.position.set(Math.cos(rad(angulo)) * d, 0.2, -Math.sin(rad(angulo)) * d);
+    g.position.set(Math.cos(rad(angulo)) * d, 0.35, -Math.sin(rad(angulo)) * d);
     g.rotation.y = rad(angulo);
     return g;
   }
@@ -247,6 +252,7 @@ export function crearEstacion(canvas, cfg) {
   scene.add(plaza);
   {
     const torre = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.6, 9, 24), blanco); torre.position.y = 5.2; scene.add(torre);
+    obst.push({ c: [0, 0, 2] });
     const anillos = [3, 5.5, 8].map((y) => { const a = new THREE.Mesh(new THREE.TorusGeometry(1.35, 0.1, 8, 32), neon("#ff7ad9")); a.rotation.x = Math.PI / 2; a.position.y = y; scene.add(a); return a; });
     anim.push((t) => anillos.forEach((a, i) => { a.position.y = 2 + ((t * 1.2 + i * 2.6) % 7.8); }));
     // Pantalla de 4 caras
@@ -276,6 +282,7 @@ export function crearEstacion(canvas, cfg) {
     sub.scale.set(6.4, 1, 1); sub.position.y = 16.6; scene.add(sub);
     // Torres turbina (como en Expoweed 2020)
     [[-9, -6], [9, -6]].forEach(([x, z], k) => {
+      obst.push({ c: [x, z, 2] });
       const g = new THREE.Group(); g.position.set(x, 0.7, z); scene.add(g);
       const base = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.8, 1.2, 24), blanco); base.position.y = 0.6; g.add(base);
       const nucleo = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 11, 16), neon(k ? "#8ff0ff" : "#ff7ad9")); nucleo.position.y = 6.6; g.add(nucleo);
@@ -290,10 +297,10 @@ export function crearEstacion(canvas, cfg) {
     });
     // Bancas y plantas en la plaza
     for (let i = 0; i < 10; i++) {
-      const a = (i / 10) * Math.PI * 2 + 0.3, r = 11;
-      if (Math.abs(Math.sin(a)) > 0.95) continue;
+      const a = (i / 10) * Math.PI * 2 + 0.3 + rad(18), r = 11; // desfasadas para no tapar la entrada de los puentes
       const maceta = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.45, 0.8, 16), blanco);
       maceta.position.set(Math.cos(a) * r, 1.1, Math.sin(a) * r); scene.add(maceta);
+      obst.push({ c: [maceta.position.x, maceta.position.z, 0.7] });
       const planta = new THREE.Mesh(new THREE.IcosahedronGeometry(0.75, 0), new THREE.MeshStandardMaterial({ color: "#3fbf6a", roughness: 0.8, flatShading: true }));
       planta.position.set(maceta.position.x, 2, maceta.position.z); planta.scale.y = 1.4; scene.add(planta);
     }
@@ -304,7 +311,8 @@ export function crearEstacion(canvas, cfg) {
     const n = 380, pos = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, r = 8 + Math.random() * 60; pos.set([Math.cos(a) * r, -10 + Math.random() * 35, Math.sin(a) * r], i * 3); }
     const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-    const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.35, color: "#d8c4ff", transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const punto = texCanvas(64, 64); { const r = punto.g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, "rgba(255,255,255,1)"); r.addColorStop(1, "rgba(255,255,255,0)"); punto.g.fillStyle = r; punto.g.fillRect(0, 0, 64, 64); }
+    const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.3, map: punto.t, color: "#d8c4ff", transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
     scene.add(pts);
     anim.push((t, dt) => { if (!quieto) pts.rotation.y += dt * 0.02; });
   }
@@ -398,6 +406,9 @@ export function crearEstacion(canvas, cfg) {
 
     const s = { m, grupo: g, pos, frente: g.getWorldDirection(new THREE.Vector3()), pt, lt, mt, totems, slide: k % 3, totemI: k * 3, productos: catalogo(m), saludar: () => (saludando = 2.4) };
     stands[m.id] = s;
+    g.updateMatrixWorld(true);
+    obst.push({ caja: g, x0: -3.7, x1: 3.7, z0: -2.9, z1: 1.6 });
+    s.puerta = pos.clone().addScaledVector(s.frente, 4.3);
     pintarStand(s);
     return s;
   }
@@ -424,6 +435,7 @@ export function crearEstacion(canvas, cfg) {
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * Math.PI * 2; const c = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 4.5, 12), blanco);
       c.position.set(Math.cos(a) * 6.2, 2.25, -2 + Math.sin(a) * 6.2); g.add(c);
+      obst.push({ caja: g, x0: c.position.x - 0.3, x1: c.position.x + 0.3, z0: c.position.z - 0.3, z1: c.position.z + 0.3 });
     }
     const tx = texCanvas(1024, 400);
     const f = tx.g.createLinearGradient(0, 0, 1024, 400); f.addColorStop(0, "#3a1670"); f.addColorStop(1, "#0b0620");
@@ -433,6 +445,9 @@ export function crearEstacion(canvas, cfg) {
     tx.g.strokeStyle = "#b18cff"; tx.g.lineWidth = 12; tx.g.strokeRect(6, 6, 1012, 388);
     const pan = new THREE.Mesh(new THREE.PlaneGeometry(8, 3.1), new THREE.MeshBasicMaterial({ map: tx.t, toneMapped: false }));
     pan.position.set(0, 2.4, 4.6); g.add(pan);
+    obst.push({ caja: g, x0: -4.3, x1: 4.3, z0: 4.2, z1: 4.8 });
+    g.updateMatrixWorld(true);
+    mod.puerta = g.localToWorld(new THREE.Vector3(0, 0, 7));
     const soporte = new THREE.Mesh(new THREE.BoxGeometry(8.3, 3.4, 0.3), oscuro); soporte.position.set(0, 2.4, 4.42); g.add(soporte);
     const birrete = spriteEmoji("🎓", 4.5); birrete.position.set(0, 5.5, -2); g.add(birrete);
     const libro = spriteEmoji("📚", 2.2); libro.position.set(-3.2, 3.2, -1); g.add(libro);
@@ -479,11 +494,13 @@ export function crearEstacion(canvas, cfg) {
     const centroG = new THREE.Group(); scene.add(centroG);
     const holo = spriteEmoji(p.icono, 4); holo.position.set(mod.centro.x, 4.2, mod.centro.z); centroG.add(holo);
     const columna = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 1.4, 1.5, 24), blanco); columna.position.set(mod.centro.x, 1.35, mod.centro.z); centroG.add(columna);
+    obst.push({ c: [mod.centro.x, mod.centro.z, 1.5] });
     const haz = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 1.2, 2.4, 24, 1, true), new THREE.MeshBasicMaterial({ color: p.color, transparent: true, opacity: 0.15, side: THREE.DoubleSide, depthWrite: false }));
     haz.position.set(mod.centro.x, 3.2, mod.centro.z); centroG.add(haz);
     anim.push((t) => {
       if (!quieto) holo.position.y = 4.2 + Math.sin(t * 1.2 + p.angulo) * 0.3;
-      centroG.visible = enfoque !== p.id && Math.hypot(camera.position.x - mod.centro.x, camera.position.z - mod.centro.z) > 7;
+      // se esconde si estás dentro del pabellón, para que no tape los stands
+      centroG.visible = enfoque !== p.id && Math.hypot(yo.position.x - mod.centro.x, yo.position.z - mod.centro.z) > R_PAB + 1 && Math.hypot(camera.position.x - mod.centro.x, camera.position.z - mod.centro.z) > 7;
     });
     const piso = new THREE.Mesh(new THREE.CircleGeometry(3, 32), new THREE.MeshBasicMaterial({ color: p.color, transparent: true, opacity: 0.25 }));
     piso.rotation.x = -Math.PI / 2; piso.position.set(mod.centro.x, 0.62, mod.centro.z); piso.userData = { tipo: "pabellon", id: p.id }; scene.add(piso); tocables.push(piso);
@@ -511,36 +528,183 @@ export function crearEstacion(canvas, cfg) {
   rotarPantallas();
   let reloj = 0, relojStand = 0;
 
+  // ---------- avatar ----------
+  const yo = new THREE.Group(); scene.add(yo);
+  const traje = new THREE.MeshStandardMaterial({ color: "#f4f1ff", roughness: 0.35, metalness: 0.1 });
+  const acento = new THREE.MeshStandardMaterial({ color: "#b18cff", roughness: 0.4, emissive: "#3a1670", emissiveIntensity: 0.4 });
+  const piernas = [-1, 1].map((s) => {
+    const p = new THREE.Group(); p.position.set(s * 0.2, 0.62, 0); yo.add(p);
+    const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.14, 0.38, 4, 10), acento); m.position.y = -0.3; p.add(m);
+    return p;
+  });
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.36, 0.45, 6, 16), traje); torso.position.y = 1.15; yo.add(torso);
+  const cinto = new THREE.Mesh(new THREE.TorusGeometry(0.37, 0.05, 8, 24), neon("#ff7ad9")); cinto.rotation.x = Math.PI / 2; cinto.position.y = 0.95; yo.add(cinto);
+  const mochila = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.55, 0.25), acento); mochila.position.set(0, 1.2, -0.38); yo.add(mochila);
+  const brazosYo = [-1, 1].map((s) => {
+    const b = new THREE.Group(); b.position.set(s * 0.45, 1.42, 0); yo.add(b);
+    const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.36, 4, 8), traje); m.position.y = -0.28; b.add(m);
+    return b;
+  });
+  const casco = new THREE.Group(); casco.position.y = 1.95; yo.add(casco);
+  casco.add(new THREE.Mesh(new THREE.SphereGeometry(0.42, 24, 16), traje));
+  const visorYo = new THREE.Mesh(new THREE.SphereGeometry(0.37, 24, 12, -1, 2, 1.05, 1), new THREE.MeshStandardMaterial({ color: "#2a1660", roughness: 0.1, metalness: 0.6, emissive: "#6ff0ff", emissiveIntensity: 0.35 }));
+  visorYo.position.z = 0.08; casco.add(visorYo);
+  const antenaYo = spriteEmoji("🌿", 0.55); antenaYo.position.y = 0.62; casco.add(antenaYo);
+  const sombraYo = new THREE.Mesh(new THREE.CircleGeometry(0.55, 24), new THREE.MeshBasicMaterial({ color: "#000", transparent: true, opacity: 0.22, depthWrite: false }));
+  sombraYo.rotation.x = -Math.PI / 2; sombraYo.position.y = 0.02; yo.add(sombraYo);
+  const aro = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.62, 32), new THREE.MeshBasicMaterial({ color: "#6ff0ff", transparent: true, opacity: 0.9, depthWrite: false }));
+  aro.rotation.x = -Math.PI / 2; aro.visible = false; scene.add(aro);
+
+  const RADIO = 0.45, VEL = 7;
+  const INICIO = new THREE.Vector3(0, 0, 11);
+  yo.position.copy(INICIO); yo.rotation.y = Math.PI;
+  const altura = (x, z) => (Math.hypot(x, z) < R_PLAZA + 0.2 ? 0.7 : 0.6);
+  yo.position.y = altura(yo.position.x, yo.position.z);
+
+  // ¿Se puede pisar este punto?
+  const local = new THREE.Vector3();
+  function libre(x, z) {
+    let piso = Math.hypot(x, z) < R_PLAZA - RADIO;
+    if (!piso) for (const id in modulos) {
+      const mo = modulos[id];
+      if (Math.hypot(x - mo.centro.x, z - mo.centro.z) < R_PAB - RADIO) { piso = true; break; }
+      // puente: a lo largo del eje del módulo
+      const ax = -mo.haciaPlaza.x, az = -mo.haciaPlaza.z, largo = x * ax + z * az, lado = Math.abs(-x * az + z * ax);
+      if (lado < 1.4 && largo > R_PLAZA - 2 && largo < D_MODULO - R_PAB + 2) { piso = true; break; }
+    }
+    if (!piso) return false;
+    for (const o of obst) {
+      if (o.c) { if (Math.hypot(x - o.c[0], z - o.c[1]) < o.c[2] + RADIO) return false; }
+      else {
+        local.set(x, o.caja.position.y, z); o.caja.worldToLocal(local);
+        if (local.x > o.x0 - RADIO && local.x < o.x1 + RADIO && local.z > o.z0 - RADIO && local.z < o.z1 + RADIO) return false;
+      }
+    }
+    return true;
+  }
+  function despejado(a, b) {
+    const d = Math.hypot(b.x - a.x, b.z - a.z), n = Math.max(1, Math.ceil(d / 0.4));
+    for (let i = 1; i <= n; i++) { const k = i / n; if (!libre(a.x + (b.x - a.x) * k, a.z + (b.z - a.z) * k)) return false; }
+    return true;
+  }
+  // En qué zona está un punto: "plaza" o el id de un módulo (incluye su puente)
+  function zona(p) {
+    if (Math.hypot(p.x, p.z) < R_PLAZA + 0.5) return "plaza";
+    let mejor = "plaza", dmin = Infinity;
+    for (const id in modulos) {
+      const mo = modulos[id], d = Math.hypot(p.x - mo.centro.x, p.z - mo.centro.z);
+      if (d < dmin) { dmin = d; mejor = id; }
+    }
+    return mejor;
+  }
+  // Arco de puntos alrededor de un centro (para rodear torres y columnas)
+  function arco(cx, cz, r, a1, a2) {
+    let d = a2 - a1; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
+    const n = Math.max(1, Math.ceil(Math.abs(d) / rad(45))), pts = [];
+    for (let i = 0; i <= n; i++) { const a = a1 + (d * i) / n; pts.push(new THREE.Vector3(cx + Math.cos(a) * r, 0, cz + Math.sin(a) * r)); }
+    return pts;
+  }
+  const ang = (p, cx = 0, cz = 0) => Math.atan2(p.z - cz, p.x - cx);
+  function dentroDe(z, desde, hasta) {
+    // camino dentro de una misma zona: directo si está libre, si no rodeando el centro
+    if (despejado(desde, hasta)) return [hasta];
+    const c = z === "plaza" ? { x: 0, z: 0, r: 6.5 } : { x: modulos[z].centro.x, z: modulos[z].centro.z, r: 4.3 };
+    return [...arco(c.x, c.z, c.r, ang(desde, c.x, c.z), ang(hasta, c.x, c.z)), hasta];
+  }
+  const bocaPlaza = (id) => modulos[id].haciaPlaza.clone().multiplyScalar(-(R_PLAZA - 1.5));
+  const bocaModulo = (id) => modulos[id].centro.clone().addScaledVector(modulos[id].haciaPlaza, R_PAB - 1.2);
+  function trazar(desde, hasta) {
+    const zd = zona(desde), zh = zona(hasta);
+    if (zd === zh) return dentroDe(zd, desde, hasta);
+    let pts = [], p = desde.clone();
+    if (zd !== "plaza") {
+      const b = bocaModulo(zd);
+      if (Math.hypot(p.x - modulos[zd].centro.x, p.z - modulos[zd].centro.z) < R_PAB) pts.push(...dentroDe(zd, p, b)); else pts.push(b);
+      pts.push(bocaPlaza(zd)); p = bocaPlaza(zd);
+    }
+    if (zh === "plaza") return [...pts, ...dentroDe("plaza", p, hasta)];
+    pts.push(...dentroDe("plaza", p, bocaPlaza(zh)), bocaModulo(zh));
+    return [...pts, ...dentroDe(zh, bocaModulo(zh), hasta)];
+  }
+
+  let ruta = [], alLlegar = null, atorado = 0, rapido = false;
+  function caminarA(destino, cb) {
+    const d = destino.clone(); d.y = 0;
+    ruta = trazar(yo.position.clone(), d); alLlegar = cb || null; atorado = 0;
+    let largo = 0, prev = yo.position;
+    ruta.forEach((q) => { largo += Math.hypot(q.x - prev.x, q.z - prev.z); prev = q; });
+    rapido = largo > 30;
+    aro.visible = true; aro.position.set(d.x, altura(d.x, d.z) + 0.04, d.z);
+  }
+  function saltarA(destino, mirar) {
+    ruta = []; alLlegar = null; aro.visible = false;
+    const dx = destino.x - yo.position.x, dz = destino.z - yo.position.z;
+    yo.position.set(destino.x, altura(destino.x, destino.z), destino.z);
+    if (mirar) yo.rotation.y = Math.atan2(mirar.x - destino.x, mirar.z - destino.z);
+    camera.position.x += dx; camera.position.z += dz; controls.target.x += dx; controls.target.z += dz;
+    destello();
+  }
+  // brillito al aparecer
+  const chispa = spriteBrillo("#6ff0ff", 4); chispa.material.opacity = 0; scene.add(chispa);
+  let chispaT = 1;
+  function destello() { chispaT = 0; }
+
+  // Entrada: teclado y joystick
+  const teclas = {};
+  addEventListener("keydown", (e) => { if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; teclas[e.key.toLowerCase()] = true; });
+  addEventListener("keyup", (e) => { teclas[e.key.toLowerCase()] = false; });
+  addEventListener("blur", () => { for (const k in teclas) teclas[k] = false; });
+  const stick = { x: 0, y: 0 };
+
   // ---------- cámara ----------
-  let enfoque = null, vuelo = null, desp = { x: 0, y: 0 }, despObj = { x: 0, y: 0 };
+  let listo = false, enfoque = null, enfocado = false, vuelo = null, desp = { x: 0, y: 0 }, despObj = { x: 0, y: 0 };
+  const offset = canvas.clientWidth / canvas.clientHeight < 0.8 ? new THREE.Vector3(0, 9, 16) : new THREE.Vector3(0, 6.5, 11); // cámara respecto al avatar (más lejos en celular)
   function volar(pos, obj, ms = 1300) {
     controls.autoRotate = false;
-    if (quieto) { camera.position.copy(pos); controls.target.copy(obj); return; }
+    if (quieto) { camera.position.copy(pos); controls.target.copy(obj); vuelo = null; return; }
     vuelo = { p0: camera.position.clone(), o0: controls.target.clone(), p1: pos, o1: obj, t0: performance.now(), ms };
   }
-  function volarA(tipo, id) {
-    enfoque = tipo === "stand" && stands[id] ? stands[id].m.pab : null;
-    if (tipo === "stand" && stands[id]) {
-      const s = stands[id], f = s.frente.clone();
-      const vertical = canvas.clientWidth / canvas.clientHeight < 0.8; // en celular, más lejos para que quepa el stand arriba del panel
-      volar(s.pos.clone().addScaledVector(f, vertical ? 21 : 11.5).add(new THREE.Vector3(0, vertical ? 5.5 : 3.6, 0)), s.pos.clone().add(new THREE.Vector3(0, 2.8, 0)));
-      s.saludar();
-      return true;
-    }
-    if (tipo === "pabellon" || tipo === "universidad") {
-      const mod = modulos[id]; if (!mod) return false;
-      volar(mod.centro.clone().addScaledVector(mod.haciaPlaza, 26).add(new THREE.Vector3(0, 19, 0)), mod.centro.clone().add(new THREE.Vector3(0, 1, 0)));
-      return true;
-    }
-    volar(posGeneral(), VISTA_GENERAL.obj.clone());
-    setTimeout(() => (controls.autoRotate = !quieto), 1400);
+  const objYo = () => yo.position.clone().add(new THREE.Vector3(0, 1.6, 0));
+  function seguir(ms = 1000) {
+    enfocado = false; enfoque = null; listo = true;
+    volar(objYo().add(offset), objYo(), ms);
+  }
+  function enfocarStand(id) {
+    const s = stands[id]; if (!s) return false;
+    if (Math.hypot(yo.position.x - s.puerta.x, yo.position.z - s.puerta.z) > 6) saltarA(s.puerta, s.pos);
+    else { ruta = []; aro.visible = false; yo.rotation.y = Math.atan2(s.pos.x - yo.position.x, s.pos.z - yo.position.z); }
+    enfoque = s.m.pab; enfocado = true;
+    const f = s.frente.clone(), vertical = canvas.clientWidth / canvas.clientHeight < 0.8;
+    volar(s.pos.clone().addScaledVector(f, vertical ? 21 : 11.5).add(new THREE.Vector3(0, vertical ? 6.5 : 4.8, 0)), s.pos.clone().add(new THREE.Vector3(0, 2.6, 0)));
+    s.saludar();
     return true;
+  }
+  function destinoDe(tipo, id) {
+    if (tipo === "stand" && stands[id]) return { p: stands[id].puerta, mirar: stands[id].pos };
+    if (tipo === "universidad" && modulos.universidad) return { p: modulos.universidad.puerta, mirar: modulos.universidad.centro };
+    if (tipo === "pabellon" && modulos[id]) return { p: modulos[id].centro.clone().addScaledVector(modulos[id].haciaPlaza, 5), mirar: modulos[id].centro };
+    return { p: INICIO, mirar: new THREE.Vector3(0, 0, 0) };
+  }
+  // Al llegar, la cámara se pone detrás del avatar mirando hacia lo que fue a ver
+  function mirarHacia(q) {
+    const dx = q.x - yo.position.x, dz = q.z - yo.position.z, d = Math.hypot(dx, dz); if (d < 0.1) return;
+    yo.rotation.y = Math.atan2(dx, dz);
+    const h = Math.hypot(offset.x, offset.z);
+    offset.set((-dx / d) * h, offset.y, (-dz / d) * h);
+    if (!enfocado) volar(objYo().add(offset), objYo(), 700);
+  }
+  // Ir caminando (o de un salto) a un stand, pabellón, la universidad o la plaza
+  function irA(tipo, id, { caminar = true, cb } = {}) {
+    const d = destinoDe(tipo, id);
+    if (enfocado) seguir(600);
+    if (caminar) caminarA(d.p, () => { mirarHacia(d.mirar); cb && cb(); });
+    else { saltarA(d.p, d.mirar); if (!enfocado) volar(objYo().add(offset), objYo(), 500); cb && cb(); }
   }
 
   // ---------- toques ----------
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
   let inicio = null;
-  canvas.addEventListener("pointerdown", (e) => { inicio = { x: e.clientX, y: e.clientY, t: performance.now() }; controls.autoRotate = false; vuelo = null; });
+  canvas.addEventListener("pointerdown", (e) => { inicio = { x: e.clientX, y: e.clientY, t: performance.now() }; controls.autoRotate = false; });
   canvas.addEventListener("pointerup", (e) => {
     if (!inicio) return;
     const mov = Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y);
@@ -548,18 +712,27 @@ export function crearEstacion(canvas, cfg) {
     inicio = null;
     if (mov > 8 || dur > 600) return;
     const hit = tocado(e.clientX, e.clientY);
-    if (hit) cfg.alTocar(hit.tipo, hit.id);
+    if (!hit) return;
+    if (hit.tipo === "suelo") {
+      if (!libre(hit.punto.x, hit.punto.z)) return;
+      if (enfocado) cfg.alSoltar && cfg.alSoltar();
+      caminarA(hit.punto, null);
+      return;
+    }
+    cfg.alTocar(hit.tipo, hit.id);
   });
   canvas.addEventListener("pointermove", (e) => {
     if (e.pointerType !== "mouse" || inicio) return;
-    canvas.style.cursor = tocado(e.clientX, e.clientY) ? "pointer" : "grab";
+    const h = tocado(e.clientX, e.clientY);
+    canvas.style.cursor = h && h.tipo !== "suelo" ? "pointer" : h ? "crosshair" : "grab";
   });
   function tocado(x, y) {
     const r = canvas.getBoundingClientRect();
     ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
-    const hits = ray.intersectObjects(tocables, true);
+    const hits = ray.intersectObjects([...tocables, ...suelos], true);
     for (const h of hits) {
+      if (h.object.userData.suelo) return { tipo: "suelo", punto: h.point };
       let o = h.object;
       while (o && !o.userData.tipo) o = o.parent;
       if (o) return o.userData;
@@ -577,6 +750,71 @@ export function crearEstacion(canvas, cfg) {
   addEventListener("resize", medir);
   medir();
 
+  const fwd = new THREE.Vector3(), der = new THREE.Vector3(), mover = new THREE.Vector3(), antes = new THREE.Vector3();
+  let paso = 0, cercaId = null, pasoSon = 0;
+  function moverYo(dt) {
+    antes.copy(yo.position);
+    // dirección desde teclado o joystick, relativa a la cámara
+    let ix = stick.x, iy = stick.y;
+    if (teclas.w || teclas.arrowup) iy += 1;
+    if (teclas.s || teclas.arrowdown) iy -= 1;
+    if (teclas.a || teclas.arrowleft) ix -= 1;
+    if (teclas.d || teclas.arrowright) ix += 1;
+    const mag = Math.min(1, Math.hypot(ix, iy));
+    mover.set(0, 0, 0);
+    let vel = VEL;
+    if (mag > 0.12) {
+      if (ruta.length) { ruta = []; alLlegar = null; aro.visible = false; }
+      if (enfocado) { cfg.alSoltar && cfg.alSoltar(); }
+      camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
+      der.crossVectors(fwd, camera.up).normalize();
+      mover.addScaledVector(fwd, iy / Math.max(1, Math.hypot(ix, iy))).addScaledVector(der, ix / Math.max(1, Math.hypot(ix, iy)));
+      mover.multiplyScalar(mag);
+    } else if (ruta.length) {
+      const q = ruta[0], dx = q.x - yo.position.x, dz = q.z - yo.position.z, d = Math.hypot(dx, dz);
+      if (d < 0.35) {
+        ruta.shift();
+        if (!ruta.length) { aro.visible = false; const cb = alLlegar; alLlegar = null; cb && cb(); }
+      } else mover.set(dx / d, 0, dz / d);
+      vel = rapido ? 13 : 9;
+    }
+    if (mover.lengthSq() > 0) {
+      const sx = mover.x * vel * dt, sz = mover.z * vel * dt, x = yo.position.x, z = yo.position.z;
+      if (libre(x + sx, z + sz)) yo.position.x += sx, yo.position.z += sz;
+      else if (libre(x + sx, z)) yo.position.x += sx;
+      else if (libre(x, z + sz)) yo.position.z += sz;
+      const objetivo = Math.atan2(mover.x, mover.z);
+      let dA = objetivo - yo.rotation.y; while (dA > Math.PI) dA -= Math.PI * 2; while (dA < -Math.PI) dA += Math.PI * 2;
+      yo.rotation.y += dA * Math.min(1, dt * 12);
+      // si sigue una ruta y no avanza, salta al siguiente punto
+      const avance = Math.hypot(yo.position.x - x, yo.position.z - z);
+      if (ruta.length && avance < vel * dt * 0.2) { atorado += dt; if (atorado > 0.5) { const q = ruta[0]; yo.position.x = q.x; yo.position.z = q.z; atorado = 0; } } else atorado = 0;
+    }
+    yo.position.y = altura(yo.position.x, yo.position.z);
+    // animación de caminar
+    const andando = Math.hypot(yo.position.x - antes.x, yo.position.z - antes.z) > 0.001;
+    if (andando) {
+      paso += dt * (vel > 9 ? 16 : 11);
+      pasoSon += dt; if (pasoSon > 0.32) { pasoSon = 0; cfg.alPaso && cfg.alPaso(); }
+    } else paso *= 0.8;
+    const sw = andando ? Math.sin(paso) : 0;
+    piernas[0].rotation.x = sw * 0.7; piernas[1].rotation.x = -sw * 0.7;
+    brazosYo[0].rotation.x = -sw * 0.6; brazosYo[1].rotation.x = sw * 0.6;
+    torso.position.y = 1.15 + Math.abs(Math.sin(paso)) * (andando ? 0.06 : 0);
+    casco.position.y = 1.95 + Math.abs(Math.sin(paso)) * (andando ? 0.06 : 0) + (andando ? 0 : Math.sin(performance.now() / 600) * 0.02);
+    // la cámara acompaña al avatar
+    if (!enfocado && !vuelo) {
+      const dx = yo.position.x - antes.x, dz = yo.position.z - antes.z;
+      camera.position.x += dx; camera.position.z += dz; controls.target.x += dx; controls.target.z += dz;
+      camera.position.y += (yo.position.y - antes.y); controls.target.y += (yo.position.y - antes.y);
+    }
+    // ¿cerca de un stand o de la universidad?
+    let cerca = null, dmin = 3.6;
+    for (const id in stands) { const p = stands[id].puerta, d = Math.hypot(yo.position.x - p.x, yo.position.z - p.z); if (d < dmin) { dmin = d; cerca = id; } }
+    if (!cerca && modulos.universidad && Math.hypot(yo.position.x - modulos.universidad.puerta.x, yo.position.z - modulos.universidad.puerta.z) < 4.5) cerca = "universidad";
+    if (cerca !== cercaId) { cercaId = cerca; cfg.alCerca && cfg.alCerca(cerca); }
+  }
+
   const v = new THREE.Vector3();
   let previo = performance.now(), ver = true;
   function cuadro(ahora) {
@@ -584,6 +822,7 @@ export function crearEstacion(canvas, cfg) {
     const dt = Math.max(0, Math.min(0.05, (ahora - previo) / 1000)); previo = ahora;
     const t = ahora / 1000;
     try {
+      moverYo(dt);
       if (vuelo) {
         const k = Math.min(1, (ahora - vuelo.t0) / vuelo.ms), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
         camera.position.lerpVectors(vuelo.p0, vuelo.p1, e);
@@ -591,6 +830,9 @@ export function crearEstacion(canvas, cfg) {
         if (k >= 1) vuelo = null;
       }
       controls.update();
+      if (listo && !enfocado && !vuelo) offset.copy(camera.position).sub(controls.target);
+      if (aro.visible) { aro.rotation.z += dt * 2; aro.scale.setScalar(1 + Math.sin(t * 6) * 0.08); }
+      if (chispaT < 1) { chispaT = Math.min(1, chispaT + dt * 1.6); chispa.position.copy(yo.position).add(new THREE.Vector3(0, 1.2, 0)); chispa.material.opacity = 1 - chispaT; chispa.scale.setScalar(2 + chispaT * 6); }
       // Desplazamiento de la imagen cuando hay un panel abierto (el stand queda visible)
       desp.x += (despObj.x - desp.x) * 0.12; desp.y += (despObj.y - desp.y) * 0.12;
       const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -615,10 +857,16 @@ export function crearEstacion(canvas, cfg) {
   requestAnimationFrame(cuadro);
   if (document.fonts) document.fonts.ready.then(() => { Object.values(stands).forEach((s) => pintarStand(s)); drones.forEach((d) => { dibujarBanner(d.bt.g, 640, 240, d.m); d.bt.t.needsUpdate = true; }); rotarPantallas(); });
 
+  // Al cargar: vista general y luego la cámara baja hasta el avatar
+  controls.autoRotate = false;
+  setTimeout(() => seguir(quieto ? 0 : 2200), 900);
+
   return {
-    volarA,
+    irA, enfocarStand, seguir,
+    setStick(x, y) { stick.x = x; stick.y = y; },
     setDesplazamiento(x, y) { despObj.x = x; despObj.y = y; },
     setEtiquetas(s) { ver = s; },
+    nombreDe: (id) => (stands[id] ? stands[id].m.nombre : id),
     actualizarMarcas(nuevas) {
       lista = nuevas;
       nuevas.forEach((m) => {
