@@ -209,7 +209,7 @@ section{position:relative;padding-block:110px}
 
 /* experiences */
 .xgrid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:20px}
-.xcard{grid-column:span 6;perspective:1100px}
+.xcard{grid-column:span 6;perspective:1100px;position:relative}
 .xcard.wide{grid-column:span 12}
 @media (max-width:860px){.xcard,.xcard.wide{grid-column:span 12}}
 .xin{position:relative;display:flex;flex-direction:column;height:100%;border-radius:18px;overflow:hidden;border:1px solid var(--line2);background:var(--surface-solid);text-decoration:none;transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .5s var(--ease),border-color .3s,box-shadow .4s}
@@ -416,10 +416,11 @@ header.top .brand{flex:none}
     <div class="shead reveal">
       <span class="kick" data-en="Try them">Pruébalos</span>
       <h2 data-en="Educational projects we have built.">Proyectos educativos que hemos desarrollado.</h2>
-      <p data-en="They are real: open them and try them in your browser.">Son reales: ábrelos y pruébalos en tu navegador.</p>
+      <p data-en="They are real: open them and try them in your browser. To share one with your group, tap &lt;b&gt;Share&lt;/b&gt;: QR, code and poster. Got a code? Type it at &lt;a href=&quot;../codigo/&quot;&gt;vorticevr.mx/codigo&lt;/a&gt;.">Son reales: ábrelos y pruébalos en tu navegador. Para compartir uno con tu grupo, toca <b>Compartir</b>: QR, código y póster. ¿Te dieron un código? Escríbelo en <a href="../codigo/">vorticevr.mx/codigo</a>.</p>
     </div>
     <div class="xgrid">
       <article class="xcard wide reveal">
+        <button class="ve-share" type="button" data-compartir="ASTRO">Compartir</button>
         <a class="xin" href="../proyectos/observatorio/">
           <div class="xmedia"><span class="xnum">01</span><img src="../assets/proyectos/observatorio.webp" alt="Observatorio Orbital: sistema solar en 3D con panel de bitácora" data-en-alt="Orbital Observatory: 3D solar system with a mission log panel" loading="lazy"></div>
           <div class="xbody">
@@ -431,6 +432,7 @@ header.top .brand{flex:none}
         </a>
       </article>
       <article class="xcard wide reveal">
+        <button class="ve-share" type="button" data-compartir="LSM">Compartir</button>
         <a class="xin" href="../proyectos/deletreo-lsm/">
           <div class="xmedia"><span class="xnum">02</span><img src="../assets/proyectos/deletreo-lsm.webp" alt="Deletreo LSM: práctica del alfabeto manual con la cámara" data-en-alt="LSM Fingerspelling: practicing the manual alphabet with the camera" loading="lazy"></div>
           <div class="xbody">
@@ -442,6 +444,7 @@ header.top .brand{flex:none}
         </a>
       </article>
       <article class="xcard wide reveal">
+        <button class="ve-share" type="button" data-compartir="PINATA">Compartir</button>
         <a class="xin" href="../proyectos/pinata-tabasco/">
           <div class="xmedia"><span class="xnum">03</span><img src="../assets/proyectos/pinata-tabasco.webp" alt="Steal a Piñata · Edición Tabasco: desfile de piñatas de cacao, pejelagarto, cabeza olmeca y manatí en un pueblo de Tabasco" data-en-alt="Steal a Piñata · Tabasco Edition: a parade of cacao, pejelagarto, Olmec head and manatee piñatas in a Tabasco town" loading="lazy"></div>
           <div class="xbody">
@@ -453,6 +456,7 @@ header.top .brand{flex:none}
         </a>
       </article>
       <article class="xcard wide reveal">
+        <button class="ve-share" type="button" data-compartir="LILA">Compartir</button>
         <a class="xin" href="../proyectos/selva-tierra-lila/">
           <div class="xmedia"><span class="xnum">04</span><img src="../assets/proyectos/selva-tierra-lila.webp" alt="La cosecha de Tierra Lila: una niña recorre una selva tropical en 3D entre palmeras" data-en-alt="The Tierra Lila Harvest: a girl explores a 3D tropical jungle among palm trees" loading="lazy"></div>
           <div class="xbody">
@@ -572,5 +576,6 @@ header.top .brand{flex:none}
 <script src="../assets/cuenta-chip.js"></script>
 <script src="../assets/magia.js" defer></script>
 
+<script src="../assets/educativas.js?v=2"></script>
 </body>
 </html>
