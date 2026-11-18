@@ -26,47 +26,52 @@ main{max-width:1080px}
 .stage{display:grid;gap:26px;align-items:start}
 @media (min-width:920px){.stage{grid-template-columns:minmax(0,1.35fr) minmax(320px,1fr)}}
 
-/* the certificate preview: the same diploma as _cursos/pdf.js (ivory paper, purple band with a gold braid,
-   corner rosettes, Cinzel + EB Garamond + Great Vibes, the seal with ribbons); cqw units scale it to any width */
-.paper{container-type:inline-size;position:relative;aspect-ratio:11/8.5;border-radius:6px;overflow:hidden;color:#1b0a36;
-  background:radial-gradient(circle at 50% 52%,transparent 20cqw,rgba(236,227,243,.7) 20.4cqw,transparent 21cqw,transparent 23cqw,rgba(236,227,243,.6) 23.3cqw,transparent 24cqw),
-    repeating-conic-gradient(from 0deg at 50% 52%,rgba(236,227,243,.55) 0 .6deg,transparent .6deg 4deg),#fbf8f1;
-  box-shadow:0 34px 80px -30px rgba(139,63,214,.9),0 0 0 1px rgba(255,190,85,.4);transform:perspective(1400px) rotateX(3deg);transition:transform .5s}
+/* the certificate preview: the same design as _cursos/pdf.js (ivory paper, purple edge, fine frame with viewfinder
+   corners, vortex arcs, Cinzel + EB Garamond + Great Vibes + Plex Mono, the seal, the verification strip); cqw units */
+.paper{container-type:inline-size;position:relative;aspect-ratio:11/8.5;border-radius:6px;overflow:hidden;color:#1b0a36;background:#fcfbf8;
+  box-shadow:0 34px 80px -30px rgba(139,63,214,.9),0 0 0 1px rgba(255,190,85,.35);transform:perspective(1400px) rotateX(3deg);transition:transform .5s}
 .paper:hover{transform:none}
 .paper::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.55) 50%,transparent 62%);background-size:260% 100%;animation:shine 6s infinite;pointer-events:none;mix-blend-mode:soft-light}
-.p-fr{position:absolute;inset:1.77cqw;border:2.52cqw solid #1d0b38;pointer-events:none}
-.p-fr::before{content:"";position:absolute;inset:-2.52cqw;border:2.52cqw solid transparent;
-  border-image:repeating-linear-gradient(45deg,transparent 0 .35cqw,rgba(226,189,98,.85) .35cqw .5cqw,transparent .5cqw .9cqw,rgba(155,116,211,.6) .9cqw 1cqw,transparent 1cqw 1.3cqw) 30}
-.p-fr::after{content:"";position:absolute;inset:.6cqw;border:.14cqw solid #b8862c;box-shadow:inset 0 0 0 .3cqw #fbf8f1,inset 0 0 0 .38cqw #b8862c}
-.p-co{position:absolute;width:4.8cqw;height:4.8cqw;border-radius:50%;background:radial-gradient(circle,#e2bd62 0 .5cqw,#1d0b38 .55cqw 1.1cqw,transparent 1.15cqw),repeating-conic-gradient(#e2bd62 0 4deg,#1d0b38 4deg 20deg);border:.1cqw solid #e2bd62;z-index:1}
-.p-co.a{left:.5cqw;top:.5cqw}.p-co.b{right:.5cqw;top:.5cqw}.p-co.c{left:.5cqw;bottom:.5cqw}.p-co.d{right:.5cqw;bottom:.5cqw}
-.p-in{position:absolute;inset:6.5cqw 7cqw 5.6cqw;display:flex;flex-direction:column;align-items:center;text-align:center}
-.p-in img{height:3.8cqw}
-.p-k{font:600 5.1cqw/1 "Cinzel",serif;letter-spacing:1.15cqw;color:#5b1f8a;margin-top:1.6cqw;padding-left:1.15cqw}
-.p-k2{font:500 1.6cqw "Cinzel",serif;letter-spacing:.7cqw;color:#7a5410;margin-top:.9cqw;display:flex;align-items:center;gap:1.6cqw}
-.p-k2::before,.p-k2::after{content:"";width:9cqw;height:.1cqw;background:#b8862c}
-.p-o{font:italic 1.85cqw "EB Garamond",serif;color:#3d2f57;margin-top:2.2cqw}
-.p-n{font:400 6.3cqw/1.25 "Great Vibes",cursive;word-spacing:.9cqw;margin-top:.4cqw;min-height:7.4cqw;max-width:78cqw;padding:0 1.2cqw;color:#1b0a36;transition:color .3s;white-space:nowrap;overflow:hidden}
+.p-edge{position:absolute;left:0;top:0;bottom:0;width:1.77cqw;background:#1d0b38;box-shadow:.45cqw 0 0 -.33cqw #b8862c}
+.p-fr{position:absolute;left:4.3cqw;right:3.3cqw;top:3.3cqw;bottom:3.3cqw;border:.07cqw solid #ddd2ea;
+  background:repeating-radial-gradient(circle at 100% 0,transparent 0 1.8cqw,rgba(205,184,234,.55) 1.8cqw 1.88cqw) top right/34cqw 34cqw no-repeat}
+.p-fr::before{content:"";position:absolute;inset:-.1cqw;background:
+  linear-gradient(#b8862c,#b8862c) 0 0/2cqw .17cqw,linear-gradient(#b8862c,#b8862c) 0 0/.17cqw 2cqw,
+  linear-gradient(#b8862c,#b8862c) 100% 0/2cqw .17cqw,linear-gradient(#b8862c,#b8862c) 100% 0/.17cqw 2cqw,
+  linear-gradient(#b8862c,#b8862c) 0 100%/2cqw .17cqw,linear-gradient(#b8862c,#b8862c) 0 100%/.17cqw 2cqw,
+  linear-gradient(#b8862c,#b8862c) 100% 100%/2cqw .17cqw,linear-gradient(#b8862c,#b8862c) 100% 100%/.17cqw 2cqw;background-repeat:no-repeat}
+.p-in{position:absolute;left:10.4cqw;right:3.3cqw;top:5.8cqw;bottom:3.3cqw}
+.p-logo{height:3cqw}
+.p-fol{position:absolute;right:3.8cqw;top:.6cqw;text-align:right;font:500 .82cqw "IBM Plex Mono",monospace;letter-spacing:.2cqw;color:#7b6d93}
+.p-fol b{display:block;font:500 1.4cqw "IBM Plex Mono",monospace;letter-spacing:.05cqw;color:#1b0a36;margin-top:.3cqw}
+.p-k{font:700 5.8cqw/1 "Cinzel",serif;letter-spacing:.76cqw;color:#4f1a7d;margin-top:4.6cqw}
+.p-k2{display:flex;align-items:center;gap:1.5cqw;font:500 1.58cqw "Cinzel",serif;letter-spacing:.57cqw;color:#7a5410;margin-top:1cqw}
+.p-k2::before{content:"";width:4.3cqw;height:.18cqw;background:#b8862c}
+.p-o{font:italic 1.9cqw "EB Garamond",serif;color:#3d2f57;margin-top:3.6cqw}
+.p-n{font:400 7cqw/1.2 "Great Vibes",cursive;word-spacing:1.1cqw;margin-top:.4cqw;width:59cqw;min-height:8.4cqw;padding-right:1cqw;white-space:nowrap;overflow:hidden;border-bottom:.08cqw solid #b8862c;transition:color .3s}
 .p-n.ph{color:#c9bcd9}
-.p-n .car{display:inline-block;width:.25cqw;height:5cqw;background:#8b3fd6;vertical-align:-.4cqw;margin-left:.3cqw;animation:blink 1s steps(1) infinite}
-.p-u{display:flex;align-items:center;gap:1cqw}.p-u i{width:24cqw;height:.1cqw;background:#b8862c}.p-u b{width:1cqw;height:1.3cqw;background:#b8862c;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
-.p-f{font:italic 1.8cqw "EB Garamond",serif;color:#3d2f57;margin-top:1.4cqw}
-.p-t{font:600 2.45cqw/1.25 "Cinzel",serif;color:#5b1f8a;margin-top:.5cqw;max-width:76cqw}
-.p-d{font:1.6cqw/1.4 "EB Garamond",serif;color:#3d2f57;margin-top:.8cqw;max-width:74cqw}
-.p-s{margin-top:auto;width:100%;display:grid;grid-template-columns:1fr 1.4fr 1fr;align-items:end}
-.p-qr{justify-self:start;display:flex;flex-direction:column;align-items:center;gap:.4cqw;font:500 .85cqw "Cinzel",serif;color:#7a5410;letter-spacing:.15cqw}
-.p-qr i{display:block;width:8.4cqw;height:8.4cqw;border:.1cqw solid #b8862c;background:#fff conic-gradient(#1b0a36 25%,#fff 0 50%,#1b0a36 0 75%,#fff 0) .6cqw .6cqw/1.8cqw 1.8cqw;background-clip:content-box;padding:.6cqw;box-sizing:border-box}
-.p-qr b{font:600 1.2cqw "EB Garamond",serif;color:#1b0a36;letter-spacing:0}
-.p-sg{border-top:.1cqw solid #3d2f57;padding-top:.6cqw;font:600 1.5cqw "EB Garamond",serif}
-.p-sg small{display:block;font:italic 400 1.25cqw "EB Garamond",serif;color:#3d2f57}
-.p-seal{justify-self:end;position:relative;width:12cqw;height:12cqw;margin-bottom:2cqw}
-.p-seal .r{position:absolute;bottom:-2.6cqw;width:3cqw;height:6cqw;background:#5b1f8a;clip-path:polygon(0 0,100% 0,100% 100%,50% 80%,0 100%)}
-.p-seal .r.l{left:3.2cqw;transform:rotate(22deg);background:#4a1d7a}.p-seal .r.d{right:3.2cqw;transform:rotate(-22deg)}
-.p-seal .g{position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;text-align:center;font:700 1.3cqw/1.2 "Cinzel",serif;color:#7a5410;
-  background:radial-gradient(circle,#f7e7b8 0 2.4cqw,#7a5410 2.45cqw 2.55cqw,transparent 2.6cqw),repeating-conic-gradient(#d6ab4f 0 3deg,#e2bd62 3deg 8deg);
-  clip-path:polygon(50% 0,56% 7%,64% 2%,68% 10%,77% 7%,79% 16%,88% 15%,87% 24%,95% 27%,91% 35%,98% 41%,93% 47%,100% 53%,93% 58%,97% 66%,90% 70%,92% 79%,83% 81%,82% 90%,74% 89%,70% 97%,62% 93%,56% 100%,50% 94%,44% 100%,38% 93%,30% 97%,26% 89%,18% 90%,17% 81%,8% 79%,10% 70%,3% 66%,7% 58%,0 53%,7% 47%,2% 41%,9% 35%,5% 27%,13% 24%,12% 15%,21% 16%,23% 7%,32% 10%,36% 2%,44% 7%)}
-.p-seal .g small{display:block;font-size:.9cqw;font-weight:500}
-.paper .tag{position:absolute;right:8cqw;top:7.4cqw;z-index:2;font:700 1.3cqw var(--fd);color:#1a7f4b;background:#dff7ea;border-radius:99px;padding:.5cqw 1.4cqw}
+.p-n .car{display:inline-block;width:.25cqw;height:5.4cqw;background:#8b3fd6;vertical-align:-.4cqw;margin-left:.3cqw;animation:blink 1s steps(1) infinite}
+.p-f{font:italic 1.77cqw "EB Garamond",serif;color:#3d2f57;margin-top:2.6cqw}
+.p-t{font:700 2.5cqw/1.25 "Cinzel",serif;letter-spacing:.06cqw;color:#4f1a7d;margin-top:.4cqw;width:59cqw}
+.p-d{display:flex;flex-wrap:wrap;gap:1.2cqw 4.3cqw;margin-top:2.4cqw;width:59cqw}
+.p-d div{display:flex;flex-direction:column;gap:.3cqw;position:relative}
+.p-d div+div::before{content:"";position:absolute;left:-2.15cqw;top:.2cqw;bottom:.2cqw;width:.1cqw;background:#ddd2ea}
+.p-d div.full{flex-basis:100%}.p-d div.full::before{display:none}
+.p-d small{font:500 .82cqw "IBM Plex Mono",monospace;letter-spacing:.18cqw;color:#7b6d93}
+.p-d b{font:600 1.52cqw "EB Garamond",serif}
+.p-seal{position:absolute;right:11.5cqw;top:21cqw;width:16.7cqw;aspect-ratio:1;border-radius:50%;border:.13cqw solid #b8862c;box-shadow:inset 0 0 0 .4cqw #fcfbf8,inset 0 0 0 .46cqw #b8862c;display:grid;place-items:center}
+.p-seal i{width:11.1cqw;aspect-ratio:1;border-radius:50%;background:#1d0b38;border:.15cqw solid #b8862c;display:grid;place-items:center}
+.p-seal img{width:4.6cqw;filter:brightness(0) invert(1)}
+.p-seal svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.p-seal text{font:700 7.4px "Cinzel",serif;fill:#7a5410}
+.p-sg{position:absolute;right:6.8cqw;bottom:16.6cqw;width:24.2cqw;text-align:center;border-top:.08cqw solid #3d2f57;padding-top:.6cqw;font:600 1.45cqw "EB Garamond",serif}
+.p-sg small{display:block;font:italic 400 1.26cqw "EB Garamond",serif;color:#3d2f57}
+.p-strip{position:absolute;left:4.3cqw;right:3.3cqw;bottom:3.3cqw;height:8.8cqw;background:#f4f0fa;border-top:.08cqw solid #ddd2ea;padding:1.7cqw 2.6cqw 0 6.1cqw}
+.p-strip small{display:block;font:500 .82cqw "IBM Plex Mono",monospace;letter-spacing:.2cqw;color:#7a5410}
+.p-strip span{display:block;font:1.07cqw "IBM Plex Mono",monospace;margin-top:.7cqw}
+.p-strip em{display:block;font:italic 1.39cqw "EB Garamond",serif;color:#3d2f57;margin-top:.6cqw}
+.p-strip i{position:absolute;right:1.8cqw;top:.6cqw;width:7.6cqw;aspect-ratio:1;background:#fff conic-gradient(#1b0a36 25%,#fff 0 50%,#1b0a36 0 75%,#fff 0) 0 0/1.6cqw 1.6cqw;border:.5cqw solid #fff}
+.paper .tag{position:absolute;right:16cqw;top:5.6cqw;z-index:2;font:700 1.3cqw var(--fd);color:#1a7f4b;background:#dff7ea;border-radius:99px;padding:.5cqw 1.4cqw}
 .paper.off .tag{color:#c62828;background:#fde3e3}
 
 /* the side card */
@@ -119,19 +124,21 @@ if (!code) {   // /constancia/ alone: type the code
 
 // the certificate as it will be printed (same layout as the PDF)
 function paper(t, name, cls, folio) {
-  const mod = t.modality === "en_linea" ? "en línea, en vivo" : "presencial";
+  const mod = t.modality === "en_linea" ? "En línea, en vivo" : "Presencial", multi = /^del /.test(t.period);
   return `<div class="paper ${cls || ""}" id="paper" aria-hidden="true">
-    <div class="p-fr"></div><i class="p-co a"></i><i class="p-co b"></i><i class="p-co c"></i><i class="p-co d"></i>
+    <i class="p-edge"></i><div class="p-fr"></div>
     ${cls ? `<span class="tag">${cls === "off" ? "Revocada" : "✓ Emitida"}</span>` : ""}
-    <div class="p-in"><img src="/assets/logo-vorticevr.png" alt="">
+    <div class="p-in"><img class="p-logo" src="/assets/logo-vorticevr.png" alt="">
+      <div class="p-fol">FOLIO<b>${E(folio || "VVR-" + new Date().getFullYear() + "-······")}</b></div>
       <div class="p-k">CONSTANCIA</div><div class="p-k2">DE PARTICIPACIÓN</div>
       <div class="p-o">Vórtice VR otorga la presente a</div>
-      <div class="p-n" id="pn"></div><div class="p-u"><i></i><b></b><i></i></div>
+      <div class="p-n" id="pn"></div>
       <div class="p-f">por su participación en el taller</div><div class="p-t">${E(t.title)}</div>
-      <div class="p-d">con una duración de ${E(VC.hours(t.hours))}, en modalidad ${mod}, impartido ${/^del /.test(t.period) ? "" : "el "}${E(t.period)}${t.place ? `,<br>en ${E(t.place)}` : ""}.</div>
-      <div class="p-s"><div class="p-qr">VERIFIQUE SU AUTENTICIDAD<i></i>FOLIO<b>${E(folio || "VVR-" + new Date().getFullYear() + "-······")}</b></div>
-        <div class="p-sg">Mtro. César Adrián García Martínez<small>Vórtice VR</small></div>
-        <div class="p-seal"><i class="r l"></i><i class="r d"></i><div class="g"><span>AVAL<small>${new Date().getFullYear()}</small></span></div></div></div></div></div>`;
+      <div class="p-d"><div><small>DURACIÓN</small><b>${E(VC.hours(t.hours))}</b></div><div><small>MODALIDAD</small><b>${mod}</b></div>
+        <div><small>${multi ? "FECHAS" : "FECHA"}</small><b>${E(t.period.replace(/^del /, "Del "))}</b></div>${t.place ? `<div class="full"><small>LUGAR</small><b>${E(t.place)}</b></div>` : ""}</div></div>
+    <div class="p-seal"><svg viewBox="-70 -70 140 140"><defs><path id="sr" d="M0,-50.5 A50.5,50.5 0 1,1 -0.01,-50.5"/></defs><text><textPath href="#sr" textLength="314" lengthAdjust="spacing">VÓRTICE VR · CONSTANCIA AVALADA ·</textPath></text></svg><i><img src="/assets/icono.png" alt=""></i></div>
+    <div class="p-sg">Mtro. César Adrián García Martínez<small>Vórtice VR</small></div>
+    <div class="p-strip"><small>VERIFICACIÓN DIGITAL</small><span>cursos.vorticevr.mx/verificar/…</span><em>Con folio y código QR para comprobar que es auténtica.</em><i></i></div></div>`;
 }
 function setName(v, typing) {
   const el = $("pn"); if (!el) return;

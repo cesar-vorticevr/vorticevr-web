@@ -1,16 +1,20 @@
 // Constancias de la plataforma de cursos y de los talleres: un PDF horizontal (carta) armado a mano, sin librerías.
-// Diseño de diploma (17 de noviembre de 2026, César: "que se vea algo honorable y más complejo", "las letras se ven
-// básicas"): papel marfil con una roseta guilloché de fondo, marco de banda morada con una trenza guilloché dorada,
-// rosetas en las esquinas, filetes dorados, "CONSTANCIA" en Cinzel, el texto en EB Garamond, el nombre en caligrafía
-// (Great Vibes), la firma de César, el QR de verificación con el folio y un sello dorado con texto alrededor y listones.
+// Diseño (17 de noviembre de 2026; tras tres versiones, César: "honorable pero moderno también, tecnológico", "sin
+// tanto garigoleo ni figuritas"; las letras sí le gustaron): papel marfil limpio, una franja morada con filete dorado
+// a la izquierda, un marco fino con esquinas de visor (como el de la realidad aumentada), arcos concéntricos tenues
+// en una esquina (el vórtice), "CONSTANCIA" en Cinzel, el texto en EB Garamond, el nombre en caligrafía (Great Vibes),
+// los datos como campos de una credencial digital en IBM Plex Mono, un sello circular moderno (disco morado con el
+// isotipo en blanco y "VÓRTICE VR · CONSTANCIA AVALADA" alrededor), la firma de César y abajo una franja de
+// "Verificación digital" con el enlace, la fecha de expedición y el QR.
 // Las letras van incrustadas (recortadas a WinAnsi, _cursos/fuentes-pdf.js, tools/fuentes-pdf.mjs; licencia OFL);
-// el logo y la firma vienen comprimidos (_cursos/logo-pdf.js, _cursos/firma-pdf.js) y el QR de qrcode-generator.
+// el logo, el isotipo y la firma vienen comprimidos (_cursos/logo-pdf.js, icono-pdf.js, firma-pdf.js).
 import qrcode from "./vendor/qrcode.js";
 import { LOGO } from "./logo-pdf.js";
+import { ICONO } from "./icono-pdf.js";
 import { FIRMA } from "./firma-pdf.js";
 import { FONTS } from "./fuentes-pdf.js";
 
-const W = 792, H = 612, CX = W / 2;
+const W = 792, H = 612;
 export const SIGNER = "Mtro. César Adrián García Martínez";   // signs for Vórtice VR (his signature is FIRMA)
 const WIN = { "€": 0x80, "‚": 0x82, "„": 0x84, "…": 0x85, "‘": 0x91, "’": 0x92, "“": 0x93, "”": 0x94, "•": 0x95, "–": 0x96, "—": 0x97, "™": 0x99 };
 const code = ch => { const c = ch.codePointAt(0); return WIN[ch] || (c > 255 || (c >= 0x80 && c < 0xa0) ? 63 : c); };
@@ -26,7 +30,7 @@ function pstr(s) {
   return o + ")";
 }
 // the fonts used: resource name → FONTS key
-const F = { T: "cinzelB", t: "cinzel", G: "garamond", I: "garamondI", B: "garamondB", S: "script" };
+const F = { T: "cinzelB", t: "cinzel", G: "garamond", I: "garamondI", B: "garamondB", S: "script", M: "mono", N: "monoM" };
 // exact widths from the embedded fonts
 function tw(s, size, f, tc = 0) {
   const wd = FONTS[F[f]].widths; let w = 0, n = 0;
@@ -43,120 +47,131 @@ function wrap(s, size, f, max) {
   return lines;
 }
 const rgb = hex => [1, 3, 5].map(i => (parseInt(hex.slice(i, i + 2), 16) / 255).toFixed(3)).join(" ");
-const MODALITY = { recorded: "en línea", live: "en vivo", mixed: "mixta (en línea y en vivo)", presencial: "presencial", en_linea: "en línea, en vivo" };
-const C = { night: "#1d0b38", ink: "#1b0a36", purple: "#5b1f8a", violet: "#8b3fd6", gold: "#b8862c", goldL: "#e2bd62", goldD: "#7a5410", text: "#3d2f57", paper: "#fbf8f1", faint: "#ece3f3" };
+const mix = (a, b, t) => "#" + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, "0")).join("");
+const MODALITY = { recorded: "En línea", live: "En vivo", mixed: "Mixta", presencial: "Presencial", en_linea: "En línea, en vivo" };
+const C = { night: "#1d0b38", ink: "#1b0a36", purple: "#4f1a7d", gold: "#b8862c", goldD: "#7a5410", text: "#3d2f57", label: "#7b6d93", paper: "#fcfbf8", strip: "#f4f0fa", line: "#ddd2ea" };
 const fechaMx = t => new Date(t).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
 
 // c = { folio, issued, student, course, hours, modality, period, place, instructor, kind, courseKey, objectives, verifyUrl, ace, signer, signerTitle, revoked }
 export function certificatePdf(c) {
   const ops = [], P = v => v.toFixed(2);
   const text = (x, y, size, f, s, color = C.ink, tc = 0) => ops.push(`BT /${f} ${size} Tf ${tc} Tc ${rgb(color)} rg ${P(x)} ${P(y)} Td ${pstr(s)} Tj ET`);
-  const center = (y, size, f, s, color, tc = 0, cx = CX) => text(cx - tw(s, size, f, tc) / 2, y, size, f, s, color, tc);
+  const center = (cx, y, size, f, s, color, tc = 0) => text(cx - tw(s, size, f, tc) / 2, y, size, f, s, color, tc);
+  const right = (rx, y, size, f, s, color, tc = 0) => text(rx - tw(s, size, f, tc), y, size, f, s, color, tc);
   const rect = (x, y, w, h, color) => ops.push(`${rgb(color)} rg ${P(x)} ${P(y)} ${P(w)} ${P(h)} re f`);
-  const frame = (i, color, w) => ops.push(`${rgb(color)} RG ${w} w ${P(i)} ${P(i)} ${P(W - 2 * i)} ${P(H - 2 * i)} re S`);
   const line = (x1, y1, x2, y2, color, w) => ops.push(`${rgb(color)} RG ${w} w ${P(x1)} ${P(y1)} m ${P(x2)} ${P(y2)} l S`);
-  const poly = (pts, close) => pts.map((p, i) => `${p[0].toFixed(1)} ${p[1].toFixed(1)} ${i ? "l" : "m"}`).join(" ") + (close ? " h" : "");
-  const stroke = (pts, color, w, close) => ops.push(`${rgb(color)} RG ${w} w 1 j ${poly(pts, close)} S`);
-  const fill = (pts, color) => ops.push(`${rgb(color)} rg ${poly(pts, true)} f`);
-  const circle = (cx, cy, r, color, w) => { const pts = []; for (let i = 0; i <= 72; i++) { const a = i * Math.PI / 36; pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } w ? stroke(pts, color, w, true) : fill(pts, color); };
-  // a guilloché rosette: overlapping polar waves
-  const rosette = (cx, cy, r0, amp, k, copies, color, w, steps = 360) => {
-    for (let j = 0; j < copies; j++) {
-      const pts = []; for (let i = 0; i <= steps; i++) { const a = i * 2 * Math.PI / steps, r = r0 + amp * Math.sin(k * a + j * 2 * Math.PI / copies); pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); }
-      stroke(pts, color, w, true);
-    }
-  };
-  const diamond = (x, y, r, color) => fill([[x, y + r], [x + r * 0.6, y], [x, y - r], [x - r * 0.6, y]], color);
+  const K = 0.5523;
+  const circ = (cx, cy, r) => `${P(cx + r)} ${P(cy)} m ${P(cx + r)} ${P(cy + r * K)} ${P(cx + r * K)} ${P(cy + r)} ${P(cx)} ${P(cy + r)} c ${P(cx - r * K)} ${P(cy + r)} ${P(cx - r)} ${P(cy + r * K)} ${P(cx - r)} ${P(cy)} c ${P(cx - r)} ${P(cy - r * K)} ${P(cx - r * K)} ${P(cy - r)} ${P(cx)} ${P(cy - r)} c ${P(cx + r * K)} ${P(cy - r)} ${P(cx + r)} ${P(cy - r * K)} ${P(cx + r)} ${P(cy)} c h`;
+  const ring = (cx, cy, r, color, w) => ops.push(`${rgb(color)} RG ${w} w ${circ(cx, cy, r)} S`);
+  const disc = (cx, cy, r, color) => ops.push(`${rgb(color)} rg ${circ(cx, cy, r)} f`);
   const taller = c.kind === "taller";
 
-  // ---------- paper, background rosette ----------
+  // ---------- paper, the purple edge, a fine frame with viewfinder corners, the vortex arcs ----------
+  const L = 34, R = W - 26, B = 26, T = H - 26;   // the inner frame
   rect(0, 0, W, H, C.paper);
-  rosette(CX, 316, 168, 30, 14, 10, C.faint, 0.35, 360);
-  rosette(CX, 316, 96, 14, 11, 6, "#f1eaf6", 0.3, 260);
+  ops.push(`q ${L} ${B} ${R - L} ${T - B} re W n`);
+  for (let i = 0; i < 16; i++) { const r = 34 + i * 15; ring(R, T, r, mix("#cdb8ea", C.paper, i / 17), 0.55); }
+  ops.push("Q");
+  rect(0, 0, 14, H, C.night);
+  line(18.5, 0, 18.5, H, C.gold, 0.8);
+  ops.push(`${rgb(C.line)} RG 0.5 w ${L} ${B} ${R - L} ${T - B} re S`);
+  for (const [x, y, dx, dy] of [[L, T, 1, -1], [R, T, -1, -1], [L, B, 1, 1], [R, B, -1, 1]])
+    ops.push(`${rgb(C.gold)} RG 1.3 w ${P(x)} ${P(y + dy * 16)} m ${P(x)} ${P(y)} l ${P(x + dx * 16)} ${P(y)} l S`);
 
-  // ---------- the frame: purple band with a gold guilloché braid ----------
-  const o = 14, b = 20, mid = o + b / 2;
-  ops.push(`${rgb(C.night)} rg ${o} ${o} ${W - 2 * o} ${H - 2 * o} re ${o + b} ${o + b} ${W - 2 * (o + b)} ${H - 2 * (o + b)} re f*`);
-  const per = 2 * (W - 2 * mid) + 2 * (H - 2 * mid);
-  const along = s => {   // point on the band's center line and its inward normal
-    const w = W - 2 * mid, h = H - 2 * mid;
-    if (s < w) return [mid + s, mid, 0, 1];
-    if ((s -= w) < h) return [W - mid, mid + s, -1, 0];
-    if ((s -= h) < w) return [W - mid - s, H - mid, 0, -1];
-    s -= w; return [mid, H - mid - s, 1, 0];
-  };
-  const waves = 4, lam = per / Math.round(per / 16);
-  for (let j = 0; j < waves; j++) {
-    const pts = [];
-    for (let s = 0; s <= per; s += 2.2) { const [x, y, nx, ny] = along(Math.min(s, per - 0.01)), d = 6.4 * Math.sin(2 * Math.PI * s / lam + j * Math.PI / waves * 2); pts.push([x + nx * d, y + ny * d]); }
-    stroke(pts, j % 2 ? "#9b74d3" : C.goldL, j % 2 ? 0.35 : 0.5, true);
-  }
-  frame(o + 0.8, C.goldL, 0.6); frame(o + b - 0.8, C.goldL, 0.6);
-  frame(o + b + 5, C.gold, 1.1); frame(o + b + 8.5, C.gold, 0.35);
-  // corner rosettes
-  for (const [x, y] of [[mid, mid], [W - mid, mid], [mid, H - mid], [W - mid, H - mid]]) {
-    circle(x, y, 19, C.night); circle(x, y, 19, C.goldL, 0.8);
-    rosette(x, y, 12, 4.5, 9, 4, C.goldL, 0.35, 220);
-    circle(x, y, 4, C.goldL);
-  }
-  // small ornaments in the middle of the inner rule
-  for (const [x, y] of [[CX, o + b + 5], [CX, H - o - b - 5], [o + b + 5, H / 2], [W - o - b - 5, H / 2]]) { rect(x - 7, y - 7, 14, 14, C.paper); diamond(x, y, 5.5, C.gold); }
+  // ---------- header: logo and folio ----------
+  const X = 82, MAXW = 468;
+  const lh = 24, lw = lh * LOGO.w / LOGO.h;
+  ops.push(`q ${P(lw)} 0 0 ${lh} ${X} 542 cm /Logo Do Q`);
+  right(R - 30, 558, 6.5, "N", "FOLIO", C.label, 1.6);
+  right(R - 30, 543, 11, "N", c.folio, C.ink, 0.4);
 
-  // ---------- heading ----------
-  const lh = 30, lw = lh * LOGO.w / LOGO.h;
-  ops.push(`q ${P(lw)} 0 0 ${lh} ${P(CX - lw / 2)} 516 cm /Logo Do Q`);
-  center(470, 40, "T", "CONSTANCIA", C.purple, 9);
+  // ---------- title ----------
+  text(X, 468, 46, "T", "CONSTANCIA", C.purple, 6);
   const sub = c.kind === "dc3" ? "DE CAPACITACIÓN" : taller ? "DE PARTICIPACIÓN" : "DE ACREDITACIÓN";
-  const sw = tw(sub, 12.5, "t", 5.5);
-  center(446, 12.5, "t", sub, C.goldD, 5.5);
-  for (const sgn of [-1, 1]) { const x0 = CX + sgn * (sw / 2 + 14), x1 = x0 + sgn * 70; line(x0, 450, x1, 450, C.gold, 0.7); diamond(x1 + sgn * 4, 450, 3, C.gold); diamond(x0, 450, 2, C.gold); }
-  center(414, 14.5, "I", "Vórtice VR otorga la presente a", C.text);
+  line(X, 450.5, X + 34, 450.5, C.gold, 1.4);
+  text(X + 46, 446, 12.5, "t", sub, C.goldD, 4.5);
+  text(X, 404, 15, "I", "Vórtice VR otorga la presente a", C.text);
 
-  // ---------- the name, in calligraphy ----------
-  // the script's own space is too narrow: extra word spacing (Tw), counted in the width
+  // ---------- the name, in calligraphy (extra word spacing: the script's own space is narrow) ----------
   const nsp = (String(c.student).match(/ /g) || []).length, nw = s => tw(c.student, s, "S") + nsp * s * 0.16;
-  let ns = 50; while (ns > 24 && nw(ns) > 600) ns -= 1;
-  ops.push(`BT /S ${ns} Tf ${P(ns * 0.16)} Tw ${rgb(C.ink)} rg ${P(CX - nw(ns) / 2)} 366 Td ${pstr(c.student)} Tj 0 Tw ET`);
-  line(CX - 200, 350, CX - 12, 350, C.gold, 0.8); line(CX + 12, 350, CX + 200, 350, C.gold, 0.8);
-  diamond(CX, 350, 5, C.gold); diamond(CX - 204, 350, 2.2, C.gold); diamond(CX + 204, 350, 2.2, C.gold);
+  let ns = 56; while (ns > 24 && nw(ns) > MAXW) ns -= 1;
+  ops.push(`BT /S ${ns} Tf ${P(ns * 0.16)} Tw ${rgb(C.ink)} rg ${X} 350 Td ${pstr(c.student)} Tj 0 Tw ET`);
+  line(X, 332, X + MAXW, 332, C.gold, 0.6);
 
   // ---------- what for ----------
-  center(326, 14, "I", taller ? "por su participación en el taller" : "por haber acreditado satisfactoriamente el curso", C.text);
-  let y = 326;
-  for (const l of wrap(c.course, 19, "T", 590).slice(0, 2)) { y -= 25; center(y, 19, "T", l, C.purple, 0.6); }
+  text(X, 306, 14, "I", taller ? "por su participación en el taller" : "por haber acreditado satisfactoriamente el curso", C.text);
+  let y = 306;
+  let ts = 20; while (ts > 13 && wrap(c.course, ts, "T", MAXW).length > 2) ts -= 0.5;   // long titles shrink to two lines
+  for (const l of wrap(c.course, ts, "T", MAXW).slice(0, 2)) { y -= ts + 5; text(X, y, ts, "T", l, C.purple, 0.5); }
+
+  // ---------- the data, as the fields of a digital credential ----------
   const hrs = c.hours ? `${String(c.hours).replace(/\.0$/, "")} ${Number(c.hours) === 1 ? "hora" : "horas"}` : "";
-  const facts = [hrs && `con una duración de ${hrs}`, c.modality && `en modalidad ${MODALITY[c.modality] || c.modality}`,
-    c.period && (taller ? (/^del /i.test(c.period) ? `impartido ${c.period}` : `impartido el ${c.period}`) : /^del /i.test(c.period) ? c.period.replace(/^D/, "d") : `concluido el ${c.period}`), ].filter(Boolean);
-  y -= 6;
-  // the facts, and the place on its own line
-  const fl = wrap(facts.join(", ") + (c.place ? "," : "."), 12.5, "G", 580).slice(0, 2);
-  if (c.place) fl.push(...wrap(`en ${c.place}.`, 12.5, "G", 580).slice(0, 1));
-  for (const l of fl.slice(0, 3)) { y -= 17; center(y, 12.5, "G", l, C.text); }
-  if (c.kind === "dc3") {   // DC-3 fields printed on the Vórtice VR certificate (the official format is phase 3)
-    const rows = [`Agente capacitador: Vórtice VR${c.ace ? " · Registro STPS: " + c.ace : ""}${c.courseKey ? " · Clave del curso: " + c.courseKey : ""}`];
-    if (c.objectives) rows.push(...wrap("Objetivo: " + c.objectives, 9.5, "I", 560).slice(0, 1));
-    for (const r of rows) { y -= 13; center(y, 9.5, "I", r, C.text); }
+  const per = c.period ? c.period.replace(/^del /, "Del ") : "";
+  const fields = [["DURACIÓN", hrs], ["MODALIDAD", MODALITY[c.modality] || c.modality || ""], [taller ? (/^del /i.test(c.period || "") ? "FECHAS" : "FECHA") : "PERIODO", per]].filter(x => x[1]);
+  const rows = [[]]; let used = 0;
+  for (const f of fields) {   // a row while they fit; the date can go to its own row
+    const w = Math.max(tw(f[1], 12, "B"), tw(f[0], 6.5, "N", 1.4)) + 34;
+    if (used + w > MAXW + 34 && rows[rows.length - 1].length) { rows.push([]); used = 0; }
+    rows[rows.length - 1].push([...f, w]); used += w;
   }
-  if (c.issued) { y -= 18; center(y, 10.5, "I", `Expedida en México, el ${fechaMx(c.issued)}.`, C.text); }
+  if (c.place) rows.push([["LUGAR", wrap(c.place, 12, "B", MAXW)[0], MAXW]]);
+  y -= 36;
+  for (const row of rows) {
+    let x = X;
+    row.forEach(([k, v, w], i) => {
+      if (i) line(x - 17, y - 5, x - 17, y + 14, C.line, 0.8);
+      text(x, y + 7, 6.5, "N", k, C.label, 1.4);
+      text(x, y - 7, 12, "B", v, C.ink);
+      x += w;
+    });
+    y -= 36;
+  }
+
+  // ---------- the seal (right): a night disc with the isotipo in white, gold rings, text around ----------
+  const RX = W - 150, SY = 398;
+  ring(RX, SY, 66, C.gold, 1);
+  ring(RX, SY, 62.5, C.gold, 0.35);
+  disc(RX, SY, 44, C.night);
+  ring(RX, SY, 44, C.gold, 1.2);
+  ring(RX, SY, 40, "#4a2a78", 0.5);
+  const ih = 40, iw = ih * ICONO.w / ICONO.h;
+  ops.push(`q ${P(iw)} 0 0 ${ih} ${P(RX - iw / 2)} ${P(SY - ih / 2)} cm /Icono Do Q`);
+  const ringTxt = "VÓRTICE VR · CONSTANCIA AVALADA · ", rr = 50.5, rs = 7.4;
+  const gap = (2 * Math.PI * rr - tw(ringTxt, rs, "T")) / ringTxt.length;
+  let phi = Math.PI / 2 + (tw("VÓRTICE VR", rs, "T") + 9 * gap) / 2 / rr;   // "VÓRTICE VR" centered on top, clockwise
+  for (const ch of ringTxt) {
+    const w = tw(ch, rs, "T"), cw = w + gap, mid = phi - cw / 2 / rr, th = mid - Math.PI / 2;
+    const x = RX + rr * Math.cos(mid) - Math.cos(th) * w / 2, yy = SY + rr * Math.sin(mid) - Math.sin(th) * w / 2;   // baseline 2.6 below the ring line, so the letters sit on it
+    if (ch !== " ") ops.push(`BT /T ${rs} Tf ${rgb(C.goldD)} rg ${Math.cos(th).toFixed(4)} ${Math.sin(th).toFixed(4)} ${(-Math.sin(th)).toFixed(4)} ${Math.cos(th).toFixed(4)} ${P(x - Math.cos(mid) * 2.6)} ${P(yy - Math.sin(mid) * 2.6)} Tm ${pstr(ch)} Tj ET`);
+    phi -= cw / rr;
+  }
 
   // ---------- signatures ----------
-  const SY = 104;
+  const SLY = 150;
   const signer = c.signer || SIGNER, withFirma = !c.signer || /c[ée]sar/i.test(c.signer);
   const sig = (cx, name, role, firma) => {
-    if (firma) { const fh = 84, fw = fh * FIRMA.w / FIRMA.h; ops.push(`q ${P(fw)} 0 0 ${fh} ${P(cx - fw / 2 + 6)} ${SY - 8} cm /Firma Do Q`); }
-    line(cx - 92, SY, cx + 92, SY, C.text, 0.6);
-    let s = 12; while (s > 8.5 && tw(name || "", s, "B") > 196) s -= 0.5;
-    center(SY - 15, s, "B", name || "", C.ink, 0, cx);
-    center(SY - 28, 10, "I", role, C.text, 0, cx);
+    if (firma) { const fh = 78, fw = fh * FIRMA.w / FIRMA.h; ops.push(`q ${P(fw)} 0 0 ${fh} ${P(cx - fw / 2 + 6)} ${SLY - 8} cm /Firma Do Q`); }
+    line(cx - 96, SLY, cx + 96, SLY, C.text, 0.6);
+    let s = 11.5; while (s > 8.5 && tw(name || "", s, "B") > 200) s -= 0.5;
+    center(cx, SLY - 15, s, "B", name || "", C.ink);
+    center(cx, SLY - 28, 10, "I", role, C.text);
   };
-  if (taller) sig(CX, signer, c.signerTitle || "Vórtice VR", withFirma);
-  else { sig(CX - 108, c.instructor, "Instructor del curso", false); sig(CX + 108, signer, c.signerTitle || "Por Vórtice VR", withFirma); }
+  sig(RX, signer, c.signerTitle || (taller ? "Vórtice VR" : "Por Vórtice VR"), withFirma);
+  if (!taller) sig(X + 110, c.instructor, "Instructor del curso", false);
 
-  // ---------- QR and folio (left) ----------
+  // ---------- digital verification strip ----------
+  const SB = 96;
+  rect(L, B, R - L, SB - B, C.strip);
+  line(L, SB, R, SB, C.line, 0.6);
+  text(X, 78, 6.5, "N", "VERIFICACIÓN DIGITAL", C.goldD, 1.6);
+  text(X, 64, 8.5, "M", c.verifyUrl.replace(/^https?:\/\//, ""), C.ink);
+  if (c.issued) text(X, 47, 11, "I", `Expedida en México, el ${fechaMx(c.issued)}.`, C.text);
+  if (c.kind === "dc3") {   // DC-3 fields printed on the Vórtice VR certificate (the official format is phase 3)
+    text(X, 34, 6.5, "M", `Agente capacitador: Vórtice VR${c.ace ? " · Registro STPS " + c.ace : ""}${c.courseKey ? " · Clave del curso " + c.courseKey : ""}`, C.label);
+  }
   const qr = qrcode(0, "M"); qr.addData(c.verifyUrl); qr.make();
-  const n = qr.getModuleCount(), size = 66, cell = size / n, qx = 70, qy = 82;
-  rect(qx - 5, qy - 5, size + 10, size + 10, "#ffffff");
-  ops.push(`${rgb(C.gold)} RG 0.6 w ${qx - 5} ${qy - 5} ${size + 10} ${size + 10} re S`);
+  const n = qr.getModuleCount(), size = 60, cell = size / n, qx = R - 14 - size, qy = 31;
+  rect(qx - 4, qy - 4, size + 8, size + 8, "#ffffff");
   const q = [];
   for (let r = 0; r < n; r++) for (let col = 0; col < n; ) {
     if (!qr.isDark(r, col)) { col++; continue; }
@@ -165,39 +180,12 @@ export function certificatePdf(c) {
     col = e;
   }
   ops.push(`${rgb(C.ink)} rg ${q.join(" ")} f`);
-  center(qy + size + 22, 6.5, "t", "VERIFIQUE SU", C.goldD, 1.2, qx + size / 2);
-  center(qy + size + 13, 6.5, "t", "AUTENTICIDAD", C.goldD, 1.2, qx + size / 2);
-  center(66, 6.5, "t", "FOLIO", C.goldD, 1.5, qx + size / 2);
-  center(56, 9.5, "B", c.folio, C.ink, 0.3, qx + size / 2);
-
-  // ---------- the seal (right): ribbons, scalloped gold, guilloché, text around ----------
-  const sx = W - 112, sy = 112;
-  fill([[sx - 8, sy], [sx - 36, sy - 66], [sx - 24, sy - 58], [sx - 15, sy - 72], [sx + 6, sy - 8]], "#4a1d7a");
-  fill([[sx + 8, sy], [sx + 36, sy - 66], [sx + 24, sy - 58], [sx + 15, sy - 72], [sx - 6, sy - 8]], C.purple);
-  const sc = []; for (let i = 0; i < 64; i++) { const a = i * Math.PI / 32, r = i % 2 ? 44 : 47.5; sc.push([sx + r * Math.cos(a), sy + r * Math.sin(a)]); }
-  fill(sc, C.gold);
-  circle(sx, sy, 42.5, C.goldL);
-  circle(sx, sy, 41.5, C.goldD, 0.5); circle(sx, sy, 31.5, C.goldD, 0.5);
-  rosette(sx, sy, 24, 5, 12, 5, "#a77a24", 0.35, 240);
-  circle(sx, sy, 17, "#f7e7b8"); circle(sx, sy, 17, C.goldD, 0.5);
-  // the ring text, clockwise from the top
-  const ring = "VÓRTICE VR · CONSTANCIA AVALADA · ", rr = 34.2, rs = 6.4, rtc = 0.9;
-  const rw = tw(ring, rs, "T", rtc) + rtc, scaleTc = (2 * Math.PI * rr - tw(ring, rs, "T", 0)) / ring.length;
-  let phi = Math.PI / 2 + (tw("VÓRTICE VR", rs, "T") + 9 * scaleTc) / 2 / rr;   // "VÓRTICE VR" centered on top
-  for (const ch of ring) {
-    const cw = tw(ch, rs, "T") + scaleTc, mid = phi - cw / 2 / rr, th = mid - Math.PI / 2;
-    const x = sx + rr * Math.cos(mid) - Math.cos(th) * tw(ch, rs, "T") / 2, yy = sy + rr * Math.sin(mid) - Math.sin(th) * tw(ch, rs, "T") / 2;
-    if (ch !== " ") ops.push(`BT /T ${rs} Tf ${rgb(C.goldD)} rg ${Math.cos(th).toFixed(4)} ${Math.sin(th).toFixed(4)} ${(-Math.sin(th)).toFixed(4)} ${Math.cos(th).toFixed(4)} ${P(x)} ${P(yy)} Tm ${pstr(ch)} Tj ET`);
-    phi -= cw / rr;
-  }
-  void rw;
-  center(sy + 1, 8.5, "T", "AVAL", C.goldD, 1.2, sx);
-  center(sy - 9, 7, "t", String(new Date(c.issued || Date.now()).getFullYear()), C.goldD, 1, sx);
-  diamond(sx, sy + 11, 2.6, C.goldD);
+  right(qx - 14, 64, 6.5, "N", "ESCANEE PARA", C.label, 1.4);
+  right(qx - 14, 54, 6.5, "N", "VERIFICAR", C.label, 1.4);
 
   if (c.revoked) {   // a revoked certificate still opens, crossed out
-    ops.push(`q 0.9 0.2 0.2 RG 4 w 90 300 m ${W - 90} 300 l S Q`);
-    center(268, 30, "T", "CONSTANCIA REVOCADA", "#c62828", 2);
+    ops.push(`q 0.85 0.15 0.15 RG 3 w 70 300 m ${W - 60} 300 l S Q`);
+    center(W / 2, 272, 28, "T", "CONSTANCIA REVOCADA", "#c62828", 2);
   }
 
   // ---------- assemble ----------
@@ -209,6 +197,7 @@ export function certificatePdf(c) {
   const img = (w, h, cs, filter, smask) => `<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /${cs} /BitsPerComponent 8 /Filter /${filter}${smask ? ` /SMask ${smask} 0 R` : ""} >>`;
   const logoA = add(img(LOGO.w, LOGO.h, "DeviceGray", "FlateDecode"), b64bytes(LOGO.alpha));
   const logo = add(img(LOGO.w, LOGO.h, "DeviceRGB", "FlateDecode", logoA), b64bytes(LOGO.rgb));
+  const icono = add(img(ICONO.w, ICONO.h, "DeviceGray", "RunLengthDecode", add(img(ICONO.w, ICONO.h, "DeviceGray", "FlateDecode"), b64bytes(ICONO.alpha))), whiteRun(ICONO.w * ICONO.h));   // the isotipo in white: a white image with its alpha
   const firmaA = add(img(FIRMA.w, FIRMA.h, "DeviceGray", "FlateDecode"), b64bytes(FIRMA.alpha));
   const firma = add(img(FIRMA.w, FIRMA.h, "DeviceRGB", "FlateDecode", firmaA), b64bytes(FIRMA.rgb));
   const fontRefs = {};
@@ -220,7 +209,7 @@ export function certificatePdf(c) {
   }
   objs[catalog - 1][0] = `<< /Type /Catalog /Pages ${pages} 0 R >>`;
   objs[pages - 1][0] = `<< /Type /Pages /Kids [${page} 0 R] /Count 1 >>`;
-  objs[page - 1][0] = `<< /Type /Page /Parent ${pages} 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << ${Object.entries(fontRefs).map(([r, id]) => `/${r} ${id} 0 R`).join(" ")} >> /XObject << /Logo ${logo} 0 R /Firma ${firma} 0 R >> >> /Contents ${contents} 0 R >>`;
+  objs[page - 1][0] = `<< /Type /Page /Parent ${pages} 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << ${Object.entries(fontRefs).map(([r, id]) => `/${r} ${id} 0 R`).join(" ")} >> /XObject << /Logo ${logo} 0 R /Firma ${firma} 0 R /Icono ${icono} 0 R >> >> /Contents ${contents} 0 R >>`;
   const parts = [], offsets = [];
   let len = 0;
   const push = p => { const b = typeof p === "string" ? asciiBytes(p) : p; parts.push(b); len += b.length; };
@@ -236,6 +225,13 @@ export function certificatePdf(c) {
   const out = new Uint8Array(len); let p = 0;
   for (const b2 of parts) { out.set(b2, p); p += b2.length; }
   return out;
+}
+// n bytes of 255 in RunLengthDecode (runs of up to 128, then EOD)
+function whiteRun(n) {
+  const out = [];
+  while (n > 0) { const k = Math.min(128, n); out.push(k === 1 ? 0 : 257 - k, 255); n -= k; }
+  out.push(128);
+  return Uint8Array.from(out);
 }
 const asciiBytes = s => { const b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i) & 255; return b; };
 const b64bytes = s => Uint8Array.from(atob(s), ch => ch.charCodeAt(0));
