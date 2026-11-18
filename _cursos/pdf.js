@@ -1,205 +1,241 @@
-// Constancias de la plataforma de cursos y de los talleres: un PDF horizontal (carta) armado a mano, sin librerías
-// ni fuentes incrustadas (Helvetica y Courier del propio PDF, WinAnsi), para que el Worker lo haga en milisegundos.
-// Diseño (17 de noviembre de 2026, César: "muy feo, Vórtice VR es muy innovador"): franja nocturna a la izquierda
-// con un vórtice de anillos, destellos, el logo en blanco, el folio y el QR de verificación; a la derecha el nombre,
-// el curso o taller, los datos en columnas, la firma de César (Mtro. César Adrián García Martínez) y un sello dorado.
-// El logo y la firma vienen ya comprimidos (_cursos/logo-pdf.js y _cursos/firma-pdf.js) y el QR de qrcode-generator.
+// Constancias de la plataforma de cursos y de los talleres: un PDF horizontal (carta) armado a mano, sin librerías.
+// Diseño de diploma (17 de noviembre de 2026, César: "que se vea algo honorable y más complejo", "las letras se ven
+// básicas"): papel marfil con una roseta guilloché de fondo, marco de banda morada con una trenza guilloché dorada,
+// rosetas en las esquinas, filetes dorados, "CONSTANCIA" en Cinzel, el texto en EB Garamond, el nombre en caligrafía
+// (Great Vibes), la firma de César, el QR de verificación con el folio y un sello dorado con texto alrededor y listones.
+// Las letras van incrustadas (recortadas a WinAnsi, _cursos/fuentes-pdf.js, tools/fuentes-pdf.mjs; licencia OFL);
+// el logo y la firma vienen comprimidos (_cursos/logo-pdf.js, _cursos/firma-pdf.js) y el QR de qrcode-generator.
 import qrcode from "./vendor/qrcode.js";
 import { LOGO } from "./logo-pdf.js";
 import { FIRMA } from "./firma-pdf.js";
+import { FONTS } from "./fuentes-pdf.js";
 
-const W = 792, H = 612;
+const W = 792, H = 612, CX = W / 2;
 export const SIGNER = "Mtro. César Adrián García Martínez";   // signs for Vórtice VR (his signature is FIRMA)
 const WIN = { "€": 0x80, "‚": 0x82, "„": 0x84, "…": 0x85, "‘": 0x91, "’": 0x92, "“": 0x93, "”": 0x94, "•": 0x95, "–": 0x96, "—": 0x97, "™": 0x99 };
-// a PDF literal string in WinAnsi: Latin-1 as is, a few typographic signs mapped, anything else "?"
+const code = ch => { const c = ch.codePointAt(0); return WIN[ch] || (c > 255 || (c >= 0x80 && c < 0xa0) ? 63 : c); };
+// a PDF literal string in WinAnsi
 function pstr(s) {
   let o = "(";
   for (const ch of String(s)) {
-    let c = ch.codePointAt(0);
-    if (WIN[ch]) c = WIN[ch]; else if (c > 255 || (c >= 0x80 && c < 0xa0)) c = 63;
+    const c = code(ch);
     if (ch === "(" || ch === ")" || ch === "\\") o += "\\" + ch;
     else if (c < 32 || c > 126) o += "\\" + c.toString(8).padStart(3, "0");
     else o += ch;
   }
   return o + ")";
 }
-// rough Helvetica widths (to shrink, wrap and center; never needs to be exact)
-function textW(s, size, bold, tc = 0) {
-  let w = 0, n = 0;
-  for (const ch of String(s)) { n++; w += /[ijlI.,:;'!|ft\s]/.test(ch) ? 0.28 : /[mwMW]/.test(ch) ? 0.86 : /[A-ZÁÉÍÓÚÑ]/.test(ch) ? 0.70 : 0.56; }
-  return w * size * (bold ? 1.07 : 1) + n * tc;
+// the fonts used: resource name → FONTS key
+const F = { T: "cinzelB", t: "cinzel", G: "garamond", I: "garamondI", B: "garamondB", S: "script" };
+// exact widths from the embedded fonts
+function tw(s, size, f, tc = 0) {
+  const wd = FONTS[F[f]].widths; let w = 0, n = 0;
+  for (const ch of String(s)) { const c = code(ch); w += c >= 32 ? wd[c - 32] || 500 : 500; n++; }
+  return w * size / 1000 + tc * Math.max(0, n - 1);
 }
-function wrap(s, size, bold, max) {
+function wrap(s, size, f, max) {
   const lines = []; let cur = "";
   for (const word of String(s).split(/\s+/)) {
     const t = cur ? cur + " " + word : word;
-    if (cur && textW(t, size, bold) > max) { lines.push(cur); cur = word; } else cur = t;
+    if (cur && tw(t, size, f) > max) { lines.push(cur); cur = word; } else cur = t;
   }
   if (cur) lines.push(cur);
   return lines;
 }
 const rgb = hex => [1, 3, 5].map(i => (parseInt(hex.slice(i, i + 2), 16) / 255).toFixed(3)).join(" ");
-const mix = (a, b, t) => "#" + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, "0")).join("");
-const MODALITY = { recorded: "En línea (grabado)", live: "En vivo", mixed: "Mixto (en línea y en vivo)", presencial: "Presencial", en_linea: "En línea (en vivo)" };
-const C = { night: "#12062a", ink: "#1b0a36", purple: "#6b279b", violet: "#8b3fd6", lav: "#d2b8ff", gold: "#c9952e", goldL: "#ffbe55", mute: "#5b4d78", paper: "#fdfcff", line: "#e6dcf7" };
+const MODALITY = { recorded: "en línea", live: "en vivo", mixed: "mixta (en línea y en vivo)", presencial: "presencial", en_linea: "en línea, en vivo" };
+const C = { night: "#1d0b38", ink: "#1b0a36", purple: "#5b1f8a", violet: "#8b3fd6", gold: "#b8862c", goldL: "#e2bd62", goldD: "#7a5410", text: "#3d2f57", paper: "#fbf8f1", faint: "#ece3f3" };
+const fechaMx = t => new Date(t).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
 
-// c = { folio, student, course, hours, modality, period, place, instructor, kind, courseKey, objectives, verifyUrl, ace, signer, signerTitle, revoked }
+// c = { folio, issued, student, course, hours, modality, period, place, instructor, kind, courseKey, objectives, verifyUrl, ace, signer, signerTitle, revoked }
 export function certificatePdf(c) {
-  const ops = [];
-  const text = (x, y, size, font, s, color = C.ink, tc = 0) => ops.push(`BT /${font} ${size} Tf ${tc} Tc ${rgb(color)} rg ${x.toFixed(1)} ${y.toFixed(1)} Td ${pstr(s)} Tj ET`);
-  const center = (cx, y, size, font, s, color, tc = 0) => text(cx - textW(s, size, font === "F2", tc) / 2, y, size, font, s, color, tc);
-  const rect = (x, y, w, h, color) => ops.push(`${rgb(color)} rg ${x.toFixed(1)} ${y.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)} re f`);
-  const line = (x1, y1, x2, y2, color, w) => ops.push(`${rgb(color)} RG ${w} w ${x1.toFixed(1)} ${y1.toFixed(1)} m ${x2.toFixed(1)} ${y2.toFixed(1)} l S`);
-  const K = 0.5523;
-  const ellipse = (rx, ry) => `${rx} 0 m ${rx} ${(ry * K).toFixed(2)} ${(rx * K).toFixed(2)} ${ry} 0 ${ry} c ${(-rx * K).toFixed(2)} ${ry} ${-rx} ${(ry * K).toFixed(2)} ${-rx} 0 c ${-rx} ${(-ry * K).toFixed(2)} ${(-rx * K).toFixed(2)} ${-ry} 0 ${-ry} c ${(rx * K).toFixed(2)} ${-ry} ${rx} ${(-ry * K).toFixed(2)} ${rx} 0 c h`;
-  const circle = (cx, cy, r, color, fill = true, w = 1) => ops.push(`q 1 0 0 1 ${cx} ${cy} cm ${fill ? `${rgb(color)} rg ${ellipse(r, r)} f` : `${rgb(color)} RG ${w} w ${ellipse(r, r)} S`} Q`);
-  const spark = (x, y, r, color) => ops.push(`${rgb(color)} rg ${x} ${y + r} m ${x + r * 0.22} ${y + r * 0.22} l ${x + r} ${y} l ${x + r * 0.22} ${y - r * 0.22} l ${x} ${y - r} l ${x - r * 0.22} ${y - r * 0.22} l ${x - r} ${y} l ${x - r * 0.22} ${y + r * 0.22} l h f`);
-  const taller = c.kind === "taller";   // a workshop (_cursos/talleres.js): participation, not an exam
+  const ops = [], P = v => v.toFixed(2);
+  const text = (x, y, size, f, s, color = C.ink, tc = 0) => ops.push(`BT /${f} ${size} Tf ${tc} Tc ${rgb(color)} rg ${P(x)} ${P(y)} Td ${pstr(s)} Tj ET`);
+  const center = (y, size, f, s, color, tc = 0, cx = CX) => text(cx - tw(s, size, f, tc) / 2, y, size, f, s, color, tc);
+  const rect = (x, y, w, h, color) => ops.push(`${rgb(color)} rg ${P(x)} ${P(y)} ${P(w)} ${P(h)} re f`);
+  const frame = (i, color, w) => ops.push(`${rgb(color)} RG ${w} w ${P(i)} ${P(i)} ${P(W - 2 * i)} ${P(H - 2 * i)} re S`);
+  const line = (x1, y1, x2, y2, color, w) => ops.push(`${rgb(color)} RG ${w} w ${P(x1)} ${P(y1)} m ${P(x2)} ${P(y2)} l S`);
+  const poly = (pts, close) => pts.map((p, i) => `${p[0].toFixed(1)} ${p[1].toFixed(1)} ${i ? "l" : "m"}`).join(" ") + (close ? " h" : "");
+  const stroke = (pts, color, w, close) => ops.push(`${rgb(color)} RG ${w} w 1 j ${poly(pts, close)} S`);
+  const fill = (pts, color) => ops.push(`${rgb(color)} rg ${poly(pts, true)} f`);
+  const circle = (cx, cy, r, color, w) => { const pts = []; for (let i = 0; i <= 72; i++) { const a = i * Math.PI / 36; pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } w ? stroke(pts, color, w, true) : fill(pts, color); };
+  // a guilloché rosette: overlapping polar waves
+  const rosette = (cx, cy, r0, amp, k, copies, color, w, steps = 360) => {
+    for (let j = 0; j < copies; j++) {
+      const pts = []; for (let i = 0; i <= steps; i++) { const a = i * 2 * Math.PI / steps, r = r0 + amp * Math.sin(k * a + j * 2 * Math.PI / copies); pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); }
+      stroke(pts, color, w, true);
+    }
+  };
+  const diamond = (x, y, r, color) => fill([[x, y + r], [x + r * 0.6, y], [x, y - r], [x - r * 0.6, y]], color);
+  const taller = c.kind === "taller";
 
-  // ---------- paper and the night band ----------
+  // ---------- paper, background rosette ----------
   rect(0, 0, W, H, C.paper);
-  const BW = 238;
-  rect(0, 0, BW, H, C.night);
-  // the vortex: rotated rings that open up from the center of the band
-  const vx = BW * 0.52, vy = 340;
-  ops.push(`q 0 0 ${BW} ${H} re W n`);   // clipped to the band
-  for (let i = 0; i < 14; i++) {
-    const rx = 18 + i * 13, ry = rx * 0.42, col = mix(i < 7 ? C.violet : "#3a1670", C.night, i < 7 ? i / 9 : 0.25 + (i - 7) / 10);
-    ops.push(`q ${Math.cos(i * 0.32).toFixed(4)} ${Math.sin(i * 0.32).toFixed(4)} ${(-Math.sin(i * 0.32)).toFixed(4)} ${Math.cos(i * 0.32).toFixed(4)} ${vx} ${vy} cm ${rgb(col)} RG ${(1.6 - i * 0.08).toFixed(2)} w ${ellipse(rx, ry)} S Q`);
+  rosette(CX, 316, 168, 30, 14, 10, C.faint, 0.35, 360);
+  rosette(CX, 316, 96, 14, 11, 6, "#f1eaf6", 0.3, 260);
+
+  // ---------- the frame: purple band with a gold guilloché braid ----------
+  const o = 14, b = 20, mid = o + b / 2;
+  ops.push(`${rgb(C.night)} rg ${o} ${o} ${W - 2 * o} ${H - 2 * o} re ${o + b} ${o + b} ${W - 2 * (o + b)} ${H - 2 * (o + b)} re f*`);
+  const per = 2 * (W - 2 * mid) + 2 * (H - 2 * mid);
+  const along = s => {   // point on the band's center line and its inward normal
+    const w = W - 2 * mid, h = H - 2 * mid;
+    if (s < w) return [mid + s, mid, 0, 1];
+    if ((s -= w) < h) return [W - mid, mid + s, -1, 0];
+    if ((s -= h) < w) return [W - mid - s, H - mid, 0, -1];
+    s -= w; return [mid, H - mid - s, 1, 0];
+  };
+  const waves = 4, lam = per / Math.round(per / 16);
+  for (let j = 0; j < waves; j++) {
+    const pts = [];
+    for (let s = 0; s <= per; s += 2.2) { const [x, y, nx, ny] = along(Math.min(s, per - 0.01)), d = 6.4 * Math.sin(2 * Math.PI * s / lam + j * Math.PI / waves * 2); pts.push([x + nx * d, y + ny * d]); }
+    stroke(pts, j % 2 ? "#9b74d3" : C.goldL, j % 2 ? 0.35 : 0.5, true);
   }
-  ops.push("Q");
-  circle(vx, vy, 5, C.lav);
-  circle(vx, vy, 10, C.violet, false, 0.8);
-  // gold sparkles around it
-  [[44, 470, 7], [196, 420, 5], [62, 262, 4], [186, 250, 8], [120, 486, 3.5], [30, 352, 3], [214, 330, 3.5], [150, 214, 3]].forEach(([x, y, r], i) => spark(x, y, r, i % 3 === 2 ? C.lav : C.goldL));
-  // the logo in white (its alpha over a white image), the folio
-  const lh = 26, lw = lh * LOGO.w / LOGO.h;
-  ops.push(`q ${lw.toFixed(1)} 0 0 ${lh} 30 ${H - 30 - lh} cm /LogoW Do Q`);
-  line(30, H - 74, BW - 30, H - 74, "#3a1d63", 0.6);
-  text(30, H - 92, 7, "F3", "FOLIO", C.lav, 1.6);
-  text(30, H - 108, 11, "F3", c.folio, "#ffffff");
-  // QR to the public verification page, on a white card
+  frame(o + 0.8, C.goldL, 0.6); frame(o + b - 0.8, C.goldL, 0.6);
+  frame(o + b + 5, C.gold, 1.1); frame(o + b + 8.5, C.gold, 0.35);
+  // corner rosettes
+  for (const [x, y] of [[mid, mid], [W - mid, mid], [mid, H - mid], [W - mid, H - mid]]) {
+    circle(x, y, 19, C.night); circle(x, y, 19, C.goldL, 0.8);
+    rosette(x, y, 12, 4.5, 9, 4, C.goldL, 0.35, 220);
+    circle(x, y, 4, C.goldL);
+  }
+  // small ornaments in the middle of the inner rule
+  for (const [x, y] of [[CX, o + b + 5], [CX, H - o - b - 5], [o + b + 5, H / 2], [W - o - b - 5, H / 2]]) { rect(x - 7, y - 7, 14, 14, C.paper); diamond(x, y, 5.5, C.gold); }
+
+  // ---------- heading ----------
+  const lh = 30, lw = lh * LOGO.w / LOGO.h;
+  ops.push(`q ${P(lw)} 0 0 ${lh} ${P(CX - lw / 2)} 516 cm /Logo Do Q`);
+  center(470, 40, "T", "CONSTANCIA", C.purple, 9);
+  const sub = c.kind === "dc3" ? "DE CAPACITACIÓN" : taller ? "DE PARTICIPACIÓN" : "DE ACREDITACIÓN";
+  const sw = tw(sub, 12.5, "t", 5.5);
+  center(446, 12.5, "t", sub, C.goldD, 5.5);
+  for (const sgn of [-1, 1]) { const x0 = CX + sgn * (sw / 2 + 14), x1 = x0 + sgn * 70; line(x0, 450, x1, 450, C.gold, 0.7); diamond(x1 + sgn * 4, 450, 3, C.gold); diamond(x0, 450, 2, C.gold); }
+  center(414, 14.5, "I", "Vórtice VR otorga la presente a", C.text);
+
+  // ---------- the name, in calligraphy ----------
+  // the script's own space is too narrow: extra word spacing (Tw), counted in the width
+  const nsp = (String(c.student).match(/ /g) || []).length, nw = s => tw(c.student, s, "S") + nsp * s * 0.16;
+  let ns = 50; while (ns > 24 && nw(ns) > 600) ns -= 1;
+  ops.push(`BT /S ${ns} Tf ${P(ns * 0.16)} Tw ${rgb(C.ink)} rg ${P(CX - nw(ns) / 2)} 366 Td ${pstr(c.student)} Tj 0 Tw ET`);
+  line(CX - 200, 350, CX - 12, 350, C.gold, 0.8); line(CX + 12, 350, CX + 200, 350, C.gold, 0.8);
+  diamond(CX, 350, 5, C.gold); diamond(CX - 204, 350, 2.2, C.gold); diamond(CX + 204, 350, 2.2, C.gold);
+
+  // ---------- what for ----------
+  center(326, 14, "I", taller ? "por su participación en el taller" : "por haber acreditado satisfactoriamente el curso", C.text);
+  let y = 326;
+  for (const l of wrap(c.course, 19, "T", 590).slice(0, 2)) { y -= 25; center(y, 19, "T", l, C.purple, 0.6); }
+  const hrs = c.hours ? `${String(c.hours).replace(/\.0$/, "")} ${Number(c.hours) === 1 ? "hora" : "horas"}` : "";
+  const facts = [hrs && `con una duración de ${hrs}`, c.modality && `en modalidad ${MODALITY[c.modality] || c.modality}`,
+    c.period && (taller ? `impartido el ${c.period}` : /^del /i.test(c.period) ? c.period.replace(/^D/, "d") : `concluido el ${c.period}`), ].filter(Boolean);
+  y -= 6;
+  // the facts, and the place on its own line
+  const fl = wrap(facts.join(", ") + (c.place ? "," : "."), 12.5, "G", 580).slice(0, 2);
+  if (c.place) fl.push(...wrap(`en ${c.place}.`, 12.5, "G", 580).slice(0, 1));
+  for (const l of fl.slice(0, 3)) { y -= 17; center(y, 12.5, "G", l, C.text); }
+  if (c.kind === "dc3") {   // DC-3 fields printed on the Vórtice VR certificate (the official format is phase 3)
+    const rows = [`Agente capacitador: Vórtice VR${c.ace ? " · Registro STPS: " + c.ace : ""}${c.courseKey ? " · Clave del curso: " + c.courseKey : ""}`];
+    if (c.objectives) rows.push(...wrap("Objetivo: " + c.objectives, 9.5, "I", 560).slice(0, 1));
+    for (const r of rows) { y -= 13; center(y, 9.5, "I", r, C.text); }
+  }
+  if (c.issued) { y -= 18; center(y, 10.5, "I", `Expedida en México, el ${fechaMx(c.issued)}.`, C.text); }
+
+  // ---------- signatures ----------
+  const SY = 104;
+  const signer = c.signer || SIGNER, withFirma = !c.signer || /c[ée]sar/i.test(c.signer);
+  const sig = (cx, name, role, firma) => {
+    if (firma) { const fh = 84, fw = fh * FIRMA.w / FIRMA.h; ops.push(`q ${P(fw)} 0 0 ${fh} ${P(cx - fw / 2 + 6)} ${SY - 8} cm /Firma Do Q`); }
+    line(cx - 92, SY, cx + 92, SY, C.text, 0.6);
+    let s = 12; while (s > 8.5 && tw(name || "", s, "B") > 196) s -= 0.5;
+    center(SY - 15, s, "B", name || "", C.ink, 0, cx);
+    center(SY - 28, 10, "I", role, C.text, 0, cx);
+  };
+  if (taller) sig(CX, signer, c.signerTitle || "Vórtice VR", withFirma);
+  else { sig(CX - 108, c.instructor, "Instructor del curso", false); sig(CX + 108, signer, c.signerTitle || "Por Vórtice VR", withFirma); }
+
+  // ---------- QR and folio (left) ----------
   const qr = qrcode(0, "M"); qr.addData(c.verifyUrl); qr.make();
-  const n = qr.getModuleCount(), size = 104, cell = size / n, qx = 30, qy = 78;
-  rect(qx - 8, qy - 8, size + 16, size + 16, "#ffffff");
+  const n = qr.getModuleCount(), size = 66, cell = size / n, qx = 70, qy = 82;
+  rect(qx - 5, qy - 5, size + 10, size + 10, "#ffffff");
+  ops.push(`${rgb(C.gold)} RG 0.6 w ${qx - 5} ${qy - 5} ${size + 10} ${size + 10} re S`);
   const q = [];
   for (let r = 0; r < n; r++) for (let col = 0; col < n; ) {
     if (!qr.isDark(r, col)) { col++; continue; }
     let e = col; while (e < n && qr.isDark(r, e)) e++;
-    q.push(`${(qx + col * cell).toFixed(2)} ${(qy + (n - 1 - r) * cell).toFixed(2)} ${((e - col) * cell + 0.05).toFixed(2)} ${(cell + 0.05).toFixed(2)} re`);
+    q.push(`${P(qx + col * cell)} ${P(qy + (n - 1 - r) * cell)} ${P((e - col) * cell + 0.05)} ${P(cell + 0.05)} re`);
     col = e;
   }
   ops.push(`${rgb(C.ink)} rg ${q.join(" ")} f`);
-  text(30, qy + size + 22, 7, "F3", "VERIFICA SU VALIDEZ", C.lav, 1.6);
-  const vu = c.verifyUrl.replace(/^https?:\/\//, ""), cut = vu.lastIndexOf("/") + 1;
-  text(30, 52, 6.5, "F3", vu.slice(0, cut), "#b9a6dc");
-  text(30, 42, 6.5, "F3", vu.slice(cut), "#b9a6dc");
+  center(qy + size + 22, 6.5, "t", "VERIFIQUE SU", C.goldD, 1.2, qx + size / 2);
+  center(qy + size + 13, 6.5, "t", "AUTENTICIDAD", C.goldD, 1.2, qx + size / 2);
+  center(66, 6.5, "t", "FOLIO", C.goldD, 1.5, qx + size / 2);
+  center(56, 9.5, "B", c.folio, C.ink, 0.3, qx + size / 2);
 
-  // ---------- the right side ----------
-  const X = BW + 46, MAXW = W - X - 44;
-  ops.push(`${rgb(C.line)} RG 0.8 w ${BW + 18} 18 ${W - BW - 36} ${H - 36} re S`);
-  // gold corners
-  for (const [x, y, dx, dy] of [[BW + 18, H - 18, 1, -1], [W - 18, H - 18, -1, -1], [BW + 18, 18, 1, 1], [W - 18, 18, -1, 1]])
-    ops.push(`${rgb(C.gold)} RG 1.6 w ${x} ${y + dy * 26} m ${x} ${y} l ${x + dx * 26} ${y} l S`);
-
-  let y = H - 78;
-  text(X, y, 10.5, "F2", c.kind === "dc3" ? "CONSTANCIA DE CAPACITACIÓN" : taller ? "CONSTANCIA DE PARTICIPACIÓN" : "CONSTANCIA DE ACREDITACIÓN", "#a8741a", 3);
-  y -= 34; text(X, y, 12, "F1", "Vórtice VR otorga la presente a", C.mute);
-  let ns = 38; while (ns > 18 && textW(c.student, ns, true) > MAXW) ns -= 1;
-  y -= ns + 8; text(X, y, ns, "F2", c.student, C.ink);
-  y -= 16;
-  rect(X, y, 64, 2.4, C.gold); rect(X + 68, y, 14, 2.4, C.violet);
-  y -= 26; text(X, y, 12, "F1", taller ? "por su participación en el taller" : "por haber acreditado el curso", C.mute);
-  const tl = wrap(c.course, 20, true, MAXW).slice(0, 2);
-  for (const l of tl) { y -= 25; text(X, y, 20, "F2", l, C.purple); }
-
-  // the details, as label/value columns
-  const hrs = c.hours ? `${String(c.hours).replace(/\.0$/, "")} ${Number(c.hours) === 1 ? "hora" : "horas"}` : "";
-  const cols = [["DURACIÓN", hrs], ["MODALIDAD", MODALITY[c.modality] || c.modality || ""], [taller ? "FECHA" : "PERIODO", c.period || ""]].filter(x => x[1]);
-  y -= 38;
-  let cx = X;
-  cols.forEach(([k, v], i) => {
-    if (i) { line(cx - 14, y - 6, cx - 14, y + 16, C.line, 1); }
-    text(cx, y + 8, 6.5, "F3", k, C.mute, 1.4);
-    text(cx, y - 6, 11, "F2", v, C.ink);
-    cx += Math.max(textW(v, 11, true), textW(k, 6.5, false, 1.4)) + 30;
-  });
-  if (c.place) {
-    y -= 34;
-    text(X, y + 8, 6.5, "F3", "LUGAR", C.mute, 1.4);
-    text(X, y - 6, 11, "F2", wrap(c.place, 11, true, MAXW)[0], C.ink);
+  // ---------- the seal (right): ribbons, scalloped gold, guilloché, text around ----------
+  const sx = W - 112, sy = 112;
+  fill([[sx - 8, sy], [sx - 36, sy - 66], [sx - 24, sy - 58], [sx - 15, sy - 72], [sx + 6, sy - 8]], "#4a1d7a");
+  fill([[sx + 8, sy], [sx + 36, sy - 66], [sx + 24, sy - 58], [sx + 15, sy - 72], [sx - 6, sy - 8]], C.purple);
+  const sc = []; for (let i = 0; i < 64; i++) { const a = i * Math.PI / 32, r = i % 2 ? 44 : 47.5; sc.push([sx + r * Math.cos(a), sy + r * Math.sin(a)]); }
+  fill(sc, C.gold);
+  circle(sx, sy, 42.5, C.goldL);
+  circle(sx, sy, 41.5, C.goldD, 0.5); circle(sx, sy, 31.5, C.goldD, 0.5);
+  rosette(sx, sy, 24, 5, 12, 5, "#a77a24", 0.35, 240);
+  circle(sx, sy, 17, "#f7e7b8"); circle(sx, sy, 17, C.goldD, 0.5);
+  // the ring text, clockwise from the top
+  const ring = "VÓRTICE VR · CONSTANCIA AVALADA · ", rr = 34.2, rs = 6.4, rtc = 0.9;
+  const rw = tw(ring, rs, "T", rtc) + rtc, scaleTc = (2 * Math.PI * rr - tw(ring, rs, "T", 0)) / ring.length;
+  let phi = Math.PI / 2 + (tw("VÓRTICE VR", rs, "T") + 9 * scaleTc) / 2 / rr;   // "VÓRTICE VR" centered on top
+  for (const ch of ring) {
+    const cw = tw(ch, rs, "T") + scaleTc, mid = phi - cw / 2 / rr, th = mid - Math.PI / 2;
+    const x = sx + rr * Math.cos(mid) - Math.cos(th) * tw(ch, rs, "T") / 2, yy = sy + rr * Math.sin(mid) - Math.sin(th) * tw(ch, rs, "T") / 2;
+    if (ch !== " ") ops.push(`BT /T ${rs} Tf ${rgb(C.goldD)} rg ${Math.cos(th).toFixed(4)} ${Math.sin(th).toFixed(4)} ${(-Math.sin(th)).toFixed(4)} ${Math.cos(th).toFixed(4)} ${P(x)} ${P(yy)} Tm ${pstr(ch)} Tj ET`);
+    phi -= cw / rr;
   }
-  if (c.kind === "dc3") {   // DC-3 fields printed on the Vórtice VR certificate (the official format is phase 3)
-    const rows = [`Agente capacitador: Vórtice VR${c.ace ? "   ·   Registro STPS: " + c.ace : ""}${c.courseKey ? "   ·   Clave del curso: " + c.courseKey : ""}`];
-    if (c.objectives) rows.push(...wrap("Objetivo: " + c.objectives, 8.5, false, MAXW).slice(0, 2));
-    y -= 10;
-    for (const r of rows) { y -= 13; text(X, y, 8.5, "F1", r, C.mute); }
-  }
-
-  // ---------- signatures and the seal ----------
-  const SY = 104, SWD = taller ? 200 : 164;   // two signatures (courses) must leave room for the seal
-  const signer = c.signer || SIGNER, withFirma = !c.signer || /c[ée]sar/i.test(c.signer);
-  const sig = (x, name, role, firma) => {
-    if (firma) { const fh = 96, fw = fh * FIRMA.w / FIRMA.h; ops.push(`q ${fw.toFixed(1)} 0 0 ${fh} ${(x + 30).toFixed(1)} ${SY - 6} cm /Firma Do Q`); }
-    line(x, SY, x + SWD, SY, C.mute, 0.6);
-    let s = 10.5; while (s > 7.5 && textW(name || "", s, true) > SWD) s -= 0.5;
-    text(x, SY - 15, s, "F2", name || "", C.ink);
-    text(x, SY - 28, 8.5, "F1", role, C.mute);
-  };
-  if (taller) sig(X, signer, c.signerTitle || "Vórtice VR", withFirma);   // Vórtice VR gives the workshop: one signature
-  else { sig(X, c.instructor, "Instructor del curso", false); sig(X + SWD + 22, signer, c.signerTitle || "Por Vórtice VR", withFirma); }
-  // the seal: a gold starburst with a ring of text-free ticks
-  const sx = W - 92, sy = 100, pts = [];
-  for (let i = 0; i < 48; i++) { const a = i * Math.PI / 24, r = i % 2 ? 44 : 48; pts.push(`${(sx + Math.cos(a) * r).toFixed(2)} ${(sy + Math.sin(a) * r).toFixed(2)}`); }
-  ops.push(`${rgb("#d9a441")} rg ${pts[0]} m ${pts.slice(1).map(p => p + " l").join(" ")} h f`);
-  circle(sx, sy, 40, "#f3d488");
-  circle(sx, sy, 36, "#a8741a", false, 0.8);
-  circle(sx, sy, 33, "#fff6dc");
-  spark(sx, sy + 15, 6, "#c9952e");
-  center(sx, sy - 3, 7.5, "F2", "VÓRTICE VR", "#7a5410", 0.6);
-  center(sx, sy - 14, 6, "F3", "AVAL " + String(c.folio).slice(4, 8), "#7a5410", 0.8);
-  text(X, 34, 6.5, "F3", "Emitida por Vórtice VR · vorticevr.mx" + (c.ace ? " · Agente Capacitador Externo, registro " + c.ace : ""), C.mute, 0.4);
+  void rw;
+  center(sy + 1, 8.5, "T", "AVAL", C.goldD, 1.2, sx);
+  center(sy - 9, 7, "t", String(new Date(c.issued || Date.now()).getFullYear()), C.goldD, 1, sx);
+  diamond(sx, sy + 11, 2.6, C.goldD);
 
   if (c.revoked) {   // a revoked certificate still opens, crossed out
-    ops.push(`q 0.9 0.2 0.2 RG 4 w ${X - 10} 300 m ${W - 40} 300 l S Q`);
-    text(X + 80, 268, 28, "F2", "CONSTANCIA REVOCADA", "#c62828", 1);
+    ops.push(`q 0.9 0.2 0.2 RG 4 w 90 300 m ${W - 90} 300 l S Q`);
+    center(268, 30, "T", "CONSTANCIA REVOCADA", "#c62828", 2);
   }
 
-  // ---------- assemble: header, objects, xref (byte offsets), trailer ----------
-  const content = ops.join("\n");
+  // ---------- assemble ----------
+  const content = asciiBytes(ops.join("\n"));
+  const objs = [];   // [body, stream?]
+  const add = (body, stream) => (objs.push([body, stream]), objs.length);
+  const catalog = add(null), pages = add(null), page = add(null);
+  const contents = add("<< >>", content);
+  const img = (w, h, cs, filter, smask) => `<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /${cs} /BitsPerComponent 8 /Filter /${filter}${smask ? ` /SMask ${smask} 0 R` : ""} >>`;
+  const logoA = add(img(LOGO.w, LOGO.h, "DeviceGray", "FlateDecode"), b64bytes(LOGO.alpha));
+  const logo = add(img(LOGO.w, LOGO.h, "DeviceRGB", "FlateDecode", logoA), b64bytes(LOGO.rgb));
+  const firmaA = add(img(FIRMA.w, FIRMA.h, "DeviceGray", "FlateDecode"), b64bytes(FIRMA.alpha));
+  const firma = add(img(FIRMA.w, FIRMA.h, "DeviceRGB", "FlateDecode", firmaA), b64bytes(FIRMA.rgb));
+  const fontRefs = {};
+  for (const [res, key] of Object.entries(F)) {
+    const f = FONTS[key];
+    const file = add(`<< /Filter /FlateDecode /Length1 ${f.len} >>`, b64bytes(f.ttf));
+    const desc = add(`<< /Type /FontDescriptor /FontName /${f.name} /Flags ${f.flags} /FontBBox [${f.bbox.join(" ")}] /ItalicAngle ${f.italic} /Ascent ${f.asc} /Descent ${f.desc} /CapHeight ${f.cap} /StemV 80 /FontFile2 ${file} 0 R >>`);
+    fontRefs[res] = add(`<< /Type /Font /Subtype /TrueType /BaseFont /${f.name} /FirstChar 32 /LastChar 255 /Widths [${f.widths.join(" ")}] /Encoding /WinAnsiEncoding /FontDescriptor ${desc} 0 R >>`);
+  }
+  objs[catalog - 1][0] = `<< /Type /Catalog /Pages ${pages} 0 R >>`;
+  objs[pages - 1][0] = `<< /Type /Pages /Kids [${page} 0 R] /Count 1 >>`;
+  objs[page - 1][0] = `<< /Type /Page /Parent ${pages} 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << ${Object.entries(fontRefs).map(([r, id]) => `/${r} ${id} 0 R`).join(" ")} >> /XObject << /Logo ${logo} 0 R /Firma ${firma} 0 R >> >> /Contents ${contents} 0 R >>`;
   const parts = [], offsets = [];
   let len = 0;
   const push = p => { const b = typeof p === "string" ? asciiBytes(p) : p; parts.push(b); len += b.length; };
-  const obj = (n, body, stream) => {
-    offsets[n] = len;
-    if (stream) { push(`${n} 0 obj\n${body.replace(/>>$/, ` /Length ${stream.length} >>`)}\nstream\n`); push(stream); push("\nendstream\nendobj\n"); }
-    else push(`${n} 0 obj\n${body}\nendobj\n`);
-  };
-  const img = (w, h, cs, filter, smask) => `<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /${cs} /BitsPerComponent 8 /Filter /${filter}${smask ? ` /SMask ${smask} 0 R` : ""} >>`;
   push("%PDF-1.4\n%\xe2\xe3\xcf\xd3\n");
-  obj(1, "<< /Type /Catalog /Pages 2 0 R >>");
-  obj(2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-  obj(3, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 5 0 R /F2 6 0 R /F3 7 0 R >> /XObject << /LogoW 8 0 R /Firma 10 0 R >> >> /Contents 4 0 R >>`);
-  obj(4, "<< >>", asciiBytes(content));
-  const font = name => `<< /Type /Font /Subtype /Type1 /BaseFont /${name} /Encoding /WinAnsiEncoding >>`;
-  obj(5, font("Helvetica")); obj(6, font("Helvetica-Bold")); obj(7, font("Courier"));
-  obj(8, img(LOGO.w, LOGO.h, "DeviceGray", "RunLengthDecode", 9), whiteRun(LOGO.w * LOGO.h));   // the logo in white: a white image with the logo's alpha
-  obj(9, img(LOGO.w, LOGO.h, "DeviceGray", "FlateDecode"), b64bytes(LOGO.alpha));
-  obj(10, img(FIRMA.w, FIRMA.h, "DeviceRGB", "FlateDecode", 11), b64bytes(FIRMA.rgb));
-  obj(11, img(FIRMA.w, FIRMA.h, "DeviceGray", "FlateDecode"), b64bytes(FIRMA.alpha));
-  const xref = len;
-  push(`xref\n0 12\n0000000000 65535 f \n${offsets.slice(1).map(o => String(o).padStart(10, "0") + " 00000 n \n").join("")}`);
-  push(`trailer\n<< /Size 12 /Root 1 0 R /Info << /Title ${pstr("Constancia " + c.folio)} /Producer (Vortice VR) >> >>\nstartxref\n${xref}\n%%EOF\n`);
+  objs.forEach(([body, stream], i) => {
+    offsets[i + 1] = len;
+    if (stream) { push(`${i + 1} 0 obj\n${body.replace(/>>$/, ` /Length ${stream.length} >>`)}\nstream\n`); push(stream); push("\nendstream\nendobj\n"); }
+    else push(`${i + 1} 0 obj\n${body}\nendobj\n`);
+  });
+  const xref = len, N = objs.length + 1;
+  push(`xref\n0 ${N}\n0000000000 65535 f \n${offsets.slice(1).map(o2 => String(o2).padStart(10, "0") + " 00000 n \n").join("")}`);
+  push(`trailer\n<< /Size ${N} /Root ${catalog} 0 R /Info << /Title ${pstr("Constancia " + c.folio)} /Producer (Vortice VR) >> >>\nstartxref\n${xref}\n%%EOF\n`);
   const out = new Uint8Array(len); let p = 0;
-  for (const b of parts) { out.set(b, p); p += b.length; }
+  for (const b2 of parts) { out.set(b2, p); p += b2.length; }
   return out;
-}
-// n bytes of 255 in RunLengthDecode (runs of 128, then EOD)
-function whiteRun(n) {
-  const out = [];
-  while (n > 0) { const k = Math.min(128, n); out.push(k === 1 ? 0 : 257 - k, 255); n -= k; }   // a run of 1 is a literal
-  out.push(128);
-  return Uint8Array.from(out);
 }
 const asciiBytes = s => { const b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i) & 255; return b; };
 const b64bytes = s => Uint8Array.from(atob(s), ch => ch.charCodeAt(0));

@@ -10,7 +10,7 @@
 <link rel="icon" href="/assets/icono.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Great+Vibes&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="/cursos/cursos.css">
 <style>
 /* the participant's side of a workshop certificate (_cursos/talleres.js): vorticevr.mx/constancia/<CÓDIGO>/
@@ -26,40 +26,48 @@ main{max-width:1080px}
 .stage{display:grid;gap:26px;align-items:start}
 @media (min-width:920px){.stage{grid-template-columns:minmax(0,1.35fr) minmax(320px,1fr)}}
 
-/* the certificate preview */
-.paper{container-type:inline-size;position:relative;aspect-ratio:11/8.5;border-radius:14px;overflow:hidden;background:#fdfcff;color:#1b0a36;
-  display:grid;grid-template-columns:30% 1fr;box-shadow:0 30px 70px -28px rgba(139,63,214,.85),0 0 0 1px rgba(255,190,85,.35);transform:perspective(1400px) rotateX(4deg);transition:transform .5s}
+/* the certificate preview: the same diploma as _cursos/pdf.js (ivory paper, purple band with a gold braid,
+   corner rosettes, Cinzel + EB Garamond + Great Vibes, the seal with ribbons); cqw units scale it to any width */
+.paper{container-type:inline-size;position:relative;aspect-ratio:11/8.5;border-radius:6px;overflow:hidden;color:#1b0a36;
+  background:radial-gradient(circle at 50% 52%,transparent 20cqw,rgba(236,227,243,.7) 20.4cqw,transparent 21cqw,transparent 23cqw,rgba(236,227,243,.6) 23.3cqw,transparent 24cqw),
+    repeating-conic-gradient(from 0deg at 50% 52%,rgba(236,227,243,.55) 0 .6deg,transparent .6deg 4deg),#fbf8f1;
+  box-shadow:0 34px 80px -30px rgba(139,63,214,.9),0 0 0 1px rgba(255,190,85,.4);transform:perspective(1400px) rotateX(3deg);transition:transform .5s}
 .paper:hover{transform:none}
-.paper::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.35) 50%,transparent 62%);background-size:260% 100%;animation:shine 6s infinite;pointer-events:none;mix-blend-mode:soft-light}
-.p-band{position:relative;background:#12062a;overflow:hidden;padding:4cqw 3.6cqw;display:flex;flex-direction:column}
-.p-band img{width:62%;filter:brightness(0) invert(1)}
-.p-band .fl{margin-top:2.4cqw;border-top:1px solid #3a1d63;padding-top:1.6cqw;font:500 1.15cqw "IBM Plex Mono",monospace;letter-spacing:.2em;color:#d2b8ff}
-.p-band .fv{font:500 1.6cqw "IBM Plex Mono",monospace;color:#fff;margin-top:.4cqw}
-.p-band .vx{position:absolute;left:50%;top:55%;width:46cqw;height:46cqw;margin:-23cqw 0 0 -23cqw;border-radius:50%;
-  background:repeating-radial-gradient(circle,rgba(139,63,214,.85) 0 .22cqw,transparent .22cqw 1.9cqw);transform:rotate(-24deg) scaleY(.45);animation:spin 20s linear infinite;mask:radial-gradient(circle,#000 25%,transparent 68%)}
-.p-band .vx::before{content:"";position:absolute;left:50%;top:50%;width:2.2cqw;height:2.2cqw;margin:-1.1cqw;border-radius:50%;background:#d2b8ff;box-shadow:0 0 3cqw #b98cff}
-.p-band .sp{position:absolute;color:#ffbe55;font-size:2.2cqw;animation:tw 2.6s infinite}
-.p-band .qr{margin-top:auto;width:44%;aspect-ratio:1;background:#fff;border-radius:.6cqw;display:grid;place-items:center;color:#12062a;font:600 1.2cqw var(--fd);position:relative;z-index:1}
-.p-band .qr i{width:78%;height:78%;background:conic-gradient(#12062a 25%,#fff 0 50%,#12062a 0 75%,#fff 0) 0 0/22% 22%;opacity:.85;border-radius:.3cqw}
-.p-main{position:relative;padding:6.4cqw 5.5cqw 4cqw;display:flex;flex-direction:column;border:none}
-.p-main::before{content:"";position:absolute;inset:2.4cqw 2.6cqw;border:1px solid #e6dcf7;pointer-events:none}
-.p-k{font:700 1.45cqw var(--fd);letter-spacing:.32em;color:#a8741a}
-.p-o{font-size:1.75cqw;color:#5b4d78;margin-top:3.2cqw}
-.p-n{font:800 4.9cqw/1.1 "IBM Plex Sans",Arial,sans-serif;margin-top:1cqw;min-height:5.4cqw;overflow-wrap:anywhere;color:#1b0a36;transition:color .3s}
-.p-n.ph{color:#cfc3e6}
-.p-n .car{display:inline-block;width:.32cqw;height:4.6cqw;background:#8b3fd6;vertical-align:-.6cqw;margin-left:.3cqw;animation:blink 1s steps(1) infinite}
-.p-u{display:flex;gap:.5cqw;margin:1.6cqw 0 2.6cqw}.p-u i{height:.36cqw;width:9cqw;background:#c9952e}.p-u i+i{width:2cqw;background:#8b3fd6}
-.p-f{font-size:1.75cqw;color:#5b4d78}
-.p-t{font:700 2.8cqw/1.2 "IBM Plex Sans",Arial,sans-serif;color:#6b279b;margin-top:.6cqw}
-.p-d{display:flex;gap:2.6cqw;margin-top:3cqw;flex-wrap:wrap}
-.p-d div{display:flex;flex-direction:column;gap:.4cqw}.p-d small{font:500 .95cqw "IBM Plex Mono",monospace;letter-spacing:.2em;color:#5b4d78}.p-d b{font-size:1.55cqw}
-.p-s{margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between}
-.p-s .sg{width:42%;border-top:1px solid #5b4d78;padding-top:.8cqw;font-size:1.45cqw;font-weight:700;position:relative}
-.p-s .sg small{display:block;font-weight:400;color:#5b4d78;font-size:1.2cqw}
-.p-s .seal{width:12cqw;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#fff6dc 52%,#a8741a 53% 55%,#f3d488 56% 64%,#d9a441 65%);display:grid;place-items:center;text-align:center;font:700 1.15cqw var(--fd);color:#7a5410;
+.paper::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.55) 50%,transparent 62%);background-size:260% 100%;animation:shine 6s infinite;pointer-events:none;mix-blend-mode:soft-light}
+.p-fr{position:absolute;inset:1.77cqw;border:2.52cqw solid #1d0b38;pointer-events:none}
+.p-fr::before{content:"";position:absolute;inset:-2.52cqw;border:2.52cqw solid transparent;
+  border-image:repeating-linear-gradient(45deg,transparent 0 .35cqw,rgba(226,189,98,.85) .35cqw .5cqw,transparent .5cqw .9cqw,rgba(155,116,211,.6) .9cqw 1cqw,transparent 1cqw 1.3cqw) 30}
+.p-fr::after{content:"";position:absolute;inset:.6cqw;border:.14cqw solid #b8862c;box-shadow:inset 0 0 0 .3cqw #fbf8f1,inset 0 0 0 .38cqw #b8862c}
+.p-co{position:absolute;width:4.8cqw;height:4.8cqw;border-radius:50%;background:radial-gradient(circle,#e2bd62 0 .5cqw,#1d0b38 .55cqw 1.1cqw,transparent 1.15cqw),repeating-conic-gradient(#e2bd62 0 4deg,#1d0b38 4deg 20deg);border:.1cqw solid #e2bd62;z-index:1}
+.p-co.a{left:.5cqw;top:.5cqw}.p-co.b{right:.5cqw;top:.5cqw}.p-co.c{left:.5cqw;bottom:.5cqw}.p-co.d{right:.5cqw;bottom:.5cqw}
+.p-in{position:absolute;inset:6.5cqw 7cqw 5.6cqw;display:flex;flex-direction:column;align-items:center;text-align:center}
+.p-in img{height:3.8cqw}
+.p-k{font:600 5.1cqw/1 "Cinzel",serif;letter-spacing:1.15cqw;color:#5b1f8a;margin-top:1.6cqw;padding-left:1.15cqw}
+.p-k2{font:500 1.6cqw "Cinzel",serif;letter-spacing:.7cqw;color:#7a5410;margin-top:.9cqw;display:flex;align-items:center;gap:1.6cqw}
+.p-k2::before,.p-k2::after{content:"";width:9cqw;height:.1cqw;background:#b8862c}
+.p-o{font:italic 1.85cqw "EB Garamond",serif;color:#3d2f57;margin-top:2.2cqw}
+.p-n{font:400 6.3cqw/1.25 "Great Vibes",cursive;word-spacing:.9cqw;margin-top:.4cqw;min-height:7.4cqw;max-width:78cqw;padding:0 1.2cqw;color:#1b0a36;transition:color .3s;white-space:nowrap;overflow:hidden}
+.p-n.ph{color:#c9bcd9}
+.p-n .car{display:inline-block;width:.25cqw;height:5cqw;background:#8b3fd6;vertical-align:-.4cqw;margin-left:.3cqw;animation:blink 1s steps(1) infinite}
+.p-u{display:flex;align-items:center;gap:1cqw}.p-u i{width:24cqw;height:.1cqw;background:#b8862c}.p-u b{width:1cqw;height:1.3cqw;background:#b8862c;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.p-f{font:italic 1.8cqw "EB Garamond",serif;color:#3d2f57;margin-top:1.4cqw}
+.p-t{font:600 2.45cqw/1.25 "Cinzel",serif;color:#5b1f8a;margin-top:.5cqw;max-width:76cqw}
+.p-d{font:1.6cqw/1.4 "EB Garamond",serif;color:#3d2f57;margin-top:.8cqw;max-width:74cqw}
+.p-s{margin-top:auto;width:100%;display:grid;grid-template-columns:1fr 1.4fr 1fr;align-items:end}
+.p-qr{justify-self:start;display:flex;flex-direction:column;align-items:center;gap:.4cqw;font:500 .85cqw "Cinzel",serif;color:#7a5410;letter-spacing:.15cqw}
+.p-qr i{display:block;width:8.4cqw;height:8.4cqw;border:.1cqw solid #b8862c;background:#fff conic-gradient(#1b0a36 25%,#fff 0 50%,#1b0a36 0 75%,#fff 0) .6cqw .6cqw/1.8cqw 1.8cqw;background-clip:content-box;padding:.6cqw;box-sizing:border-box}
+.p-qr b{font:600 1.2cqw "EB Garamond",serif;color:#1b0a36;letter-spacing:0}
+.p-sg{border-top:.1cqw solid #3d2f57;padding-top:.6cqw;font:600 1.5cqw "EB Garamond",serif}
+.p-sg small{display:block;font:italic 400 1.25cqw "EB Garamond",serif;color:#3d2f57}
+.p-seal{justify-self:end;position:relative;width:12cqw;height:12cqw;margin-bottom:2cqw}
+.p-seal .r{position:absolute;bottom:-2.6cqw;width:3cqw;height:6cqw;background:#5b1f8a;clip-path:polygon(0 0,100% 0,100% 100%,50% 80%,0 100%)}
+.p-seal .r.l{left:3.2cqw;transform:rotate(22deg);background:#4a1d7a}.p-seal .r.d{right:3.2cqw;transform:rotate(-22deg)}
+.p-seal .g{position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;text-align:center;font:700 1.3cqw/1.2 "Cinzel",serif;color:#7a5410;
+  background:radial-gradient(circle,#f7e7b8 0 2.4cqw,#7a5410 2.45cqw 2.55cqw,transparent 2.6cqw),repeating-conic-gradient(#d6ab4f 0 3deg,#e2bd62 3deg 8deg);
   clip-path:polygon(50% 0,56% 7%,64% 2%,68% 10%,77% 7%,79% 16%,88% 15%,87% 24%,95% 27%,91% 35%,98% 41%,93% 47%,100% 53%,93% 58%,97% 66%,90% 70%,92% 79%,83% 81%,82% 90%,74% 89%,70% 97%,62% 93%,56% 100%,50% 94%,44% 100%,38% 93%,30% 97%,26% 89%,18% 90%,17% 81%,8% 79%,10% 70%,3% 66%,7% 58%,0 53%,7% 47%,2% 41%,9% 35%,5% 27%,13% 24%,12% 15%,21% 16%,23% 7%,32% 10%,36% 2%,44% 7%)}
-.paper.done .p-main::after{content:"✓ Emitida";position:absolute;right:4cqw;top:4cqw;font:700 1.4cqw var(--fd);color:#1a7f4b;background:#dff7ea;border-radius:99px;padding:.6cqw 1.6cqw}
-.paper.off .p-main::after{content:"Revocada";color:#c62828;background:#fde3e3}
+.p-seal .g small{display:block;font-size:.9cqw;font-weight:500}
+.paper .tag{position:absolute;right:8cqw;top:7.4cqw;z-index:2;font:700 1.3cqw var(--fd);color:#1a7f4b;background:#dff7ea;border-radius:99px;padding:.5cqw 1.4cqw}
+.paper.off .tag{color:#c62828;background:#fde3e3}
 
 /* the side card */
 .side{display:flex;flex-direction:column;gap:16px}
@@ -85,7 +93,7 @@ label.f input:focus{border-color:var(--sun);box-shadow:0 0 0 4px rgba(255,190,85
 @keyframes blink{50%{opacity:0}}
 @keyframes pop{from{opacity:0;transform:translateY(16px) scale(.97)}}
 .in{animation:pop .7s cubic-bezier(.2,.8,.2,1) backwards}
-@media (prefers-reduced-motion:reduce){.paper::after,.p-band .vx,.p-band .sp,.p-n .car,.in{animation:none}.paper{transform:none}}
+@media (prefers-reduced-motion:reduce){.paper::after,.p-n .car,.in{animation:none}.paper{transform:none}}
 </style>
 </head>
 <body>
@@ -111,23 +119,26 @@ if (!code) {   // /constancia/ alone: type the code
 
 // the certificate as it will be printed (same layout as the PDF)
 function paper(t, name, cls, folio) {
+  const mod = t.modality === "en_linea" ? "en línea, en vivo" : "presencial";
   return `<div class="paper ${cls || ""}" id="paper" aria-hidden="true">
-    <div class="p-band"><img src="/assets/logo-vorticevr.png" alt=""><div class="fl">FOLIO</div><div class="fv">${E(folio || "VVR-" + new Date().getFullYear() + "-······")}</div>
-      <i class="vx"></i><span class="sp" style="left:12%;top:30%">✦</span><span class="sp" style="right:14%;top:44%;font-size:1.5cqw;animation-delay:.9s;color:#d2b8ff">✦</span><span class="sp" style="right:22%;top:74%;animation-delay:1.6s">✦</span>
-      <div class="qr"><i></i></div></div>
-    <div class="p-main"><div class="p-k">CONSTANCIA DE PARTICIPACIÓN</div><div class="p-o">Vórtice VR otorga la presente a</div>
-      <div class="p-n" id="pn"></div><div class="p-u"><i></i><i></i></div>
+    <div class="p-fr"></div><i class="p-co a"></i><i class="p-co b"></i><i class="p-co c"></i><i class="p-co d"></i>
+    ${cls ? `<span class="tag">${cls === "off" ? "Revocada" : "✓ Emitida"}</span>` : ""}
+    <div class="p-in"><img src="/assets/logo-vorticevr.png" alt="">
+      <div class="p-k">CONSTANCIA</div><div class="p-k2">DE PARTICIPACIÓN</div>
+      <div class="p-o">Vórtice VR otorga la presente a</div>
+      <div class="p-n" id="pn"></div><div class="p-u"><i></i><b></b><i></i></div>
       <div class="p-f">por su participación en el taller</div><div class="p-t">${E(t.title)}</div>
-      <div class="p-d"><div><small>DURACIÓN</small><b>${VC.hours(t.hours)}</b></div><div><small>MODALIDAD</small><b>${E(MOD[t.modality] || "")}</b></div><div><small>FECHA</small><b>${E(fecha(t.date))}</b></div></div>
-      ${t.place ? `<div class="p-d" style="margin-top:1.6cqw"><div><small>LUGAR</small><b>${E(t.place)}</b></div></div>` : ""}
-      <div class="p-s"><div class="sg">Mtro. César Adrián García Martínez<small>Vórtice VR</small></div><div class="seal">VÓRTICE VR</div></div></div></div>`;
+      <div class="p-d">con una duración de ${E(VC.hours(t.hours))}, en modalidad ${mod}, impartido el ${E(fecha(t.date))}${t.place ? `,<br>en ${E(t.place)}` : ""}.</div>
+      <div class="p-s"><div class="p-qr">VERIFIQUE SU AUTENTICIDAD<i></i>FOLIO<b>${E(folio || "VVR-" + new Date().getFullYear() + "-······")}</b></div>
+        <div class="p-sg">Mtro. César Adrián García Martínez<small>Vórtice VR</small></div>
+        <div class="p-seal"><i class="r l"></i><i class="r d"></i><div class="g"><span>AVAL<small>${new Date().getFullYear()}</small></span></div></div></div></div></div>`;
 }
 function setName(v, typing) {
   const el = $("pn"); if (!el) return;
   el.classList.toggle("ph", !v);
   el.innerHTML = E(v || "Tu nombre completo") + (typing ? `<span class="car"></span>` : "");
-  let s = 4.9; el.style.fontSize = s + "cqw";
-  while (s > 2.4 && el.scrollHeight > el.clientHeight * 1.05 + 4) { s -= 0.2; el.style.fontSize = s + "cqw"; }   // long names shrink to one or two lines
+  let s = 6.3; el.style.fontSize = s + "cqw";
+  while (s > 3 && el.scrollWidth > el.clientWidth + 1) { s -= 0.2; el.style.fontSize = s + "cqw"; }   // long names shrink to fit one line, like the PDF
 }
 
 async function load() {

@@ -311,7 +311,7 @@ function landingOf(c) {
   return null;
 }
 
-const certData = (k, s, base) => ({ folio: k.folio, student: k.student_name, course: k.course_title, hours: k.hours, modality: k.modality, period: k.period, instructor: k.instructor_name, kind: k.kind,
+const certData = (k, s, base) => ({ folio: k.folio, issued: k.issued_at, student: k.student_name, course: k.course_title, hours: k.hours, modality: k.modality, period: k.period, instructor: k.instructor_name, kind: k.kind,
   courseKey: k.course_key, objectives: k.objectives, place: k.place || "", verifyUrl: `${base}/verificar/${k.verify_token}`, ace: s.ace_registration_number || "", signer: s.certificate_signer_name || "", signerTitle: s.certificate_signer_title || "", revoked: !!k.revoked });
 
 async function issueCertificate(env, ctx, url, h, user, c, en) {
