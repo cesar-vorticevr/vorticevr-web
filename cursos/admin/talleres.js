@@ -45,7 +45,7 @@
 
   async function detail(id) {
     const r = await VC.call("admin/talleres/" + id), t = r.taller, ppl = r.people, link = linkOf(t.code);
-    const inList = ppl.filter(p => p.status === "in"), pending = inList.filter(p => !p.folio), issued = ppl.filter(p => p.folio);
+    const inList = ppl.filter(p => p.status === "in"), pending = inList.filter(p => !p.folio), issued = ppl.filter(p => p.folio), mailable = ppl.filter(p => p.folio && !p.revoked && p.email && p.status === "in");
     const reg = t.open ? `<span style="color:var(--ok)">Abierto</span> hasta el ${E(when(t.closes_at - 60e3))}` : Date.now() < t.opens_at ? `Se abre el ${E(when(t.opens_at))}` : "Cerrado";
     $("view").innerHTML = `<p><a href="#talleres">← Todos los talleres</a></p>
       <div class="panel" style="margin-bottom:16px;display:grid;gap:18px;grid-template-columns:minmax(0,1fr) auto;align-items:start">
@@ -68,12 +68,18 @@
           ${ppl.map((p, i) => `<tr style="${p.status === "out" ? "opacity:.5" : ""}"><td>${i + 1}</td>
             <td>${(p.folio && !p.revoked) || p.status === "out" ? E(p.name) : `<input type="text" data-nm="${E(p.id)}" value="${E(p.name)}" maxlength="90" style="width:100%;min-width:200px">`}</td>
             <td class="mute">${E(p.email || "—")}${p.user_id ? "" : " <span class='tag'>a mano</span>"}</td>
-            <td>${p.folio ? `<a class="mono" href="/cursos/verificar/${E(p.verify_token)}/" target="_blank">${E(p.folio)}</a>${p.revoked ? ` <span style="color:var(--bad)">revocada</span><div class="mute" style="font-size:.8rem">Corrige el nombre y vuelve a emitir</div>` : ""}<div class="mute" style="font-size:.8rem">${p.mail_state === "sent" ? "Correo enviado" : p.mail_state === "pending" || p.mail_state === "sending" ? "Correo en camino" : p.email ? "Sin correo" : ""}</div>` : p.status === "out" ? "Quitado" : "Por emitir"}</td>
+            <td>${p.folio ? `<a class="mono" href="/cursos/verificar/${E(p.verify_token)}/" target="_blank">${E(p.folio)}</a>${p.revoked ? ` <span style="color:var(--bad)">revocada</span><div class="mute" style="font-size:.8rem">Corrige el nombre y vuelve a emitir</div>` : ""}<div class="mute" style="font-size:.8rem">${p.mail_state === "sent" ? "Correo enviado" : p.mail_state === "pending" || p.mail_state === "sending" ? "Correo en camino" : p.email ? "Sin enviar" : "Sin correo"}${p.email && !p.revoked ? ` · <a href="#" data-resend="${E(p.id)}">${p.mail_state === "sent" ? "Reenviar" : "Enviar"}</a>` : ""}</div>` : p.status === "out" ? "Quitado" : "Por emitir"}</td>
             <td>${p.folio ? "" : `<a href="#" data-out="${E(p.id)}" data-v="${p.status === "out" ? "0" : "1"}" style="color:${p.status === "out" ? "var(--ok)" : "var(--bad)"}">${p.status === "out" ? "Regresar" : "Quitar"}</a>`}</td></tr>`).join("")}</tbody></table>`
           : `<div class="empty">Todavía no se registra nadie. Proyecta el QR al final del taller.</div>`}</div>
         <form id="add" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;align-items:center"><span class="mute">Agregar a mano:</span>
           <input type="text" name="name" maxlength="90" placeholder="Nombre completo" required style="flex:2;min-width:200px"><input type="text" name="email" maxlength="120" placeholder="Correo (opcional)" style="flex:1;min-width:180px"><button class="btn" type="submit">Agregar</button></form>
       </div>
+      <div class="panel" style="margin-bottom:16px"><div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between">
+          <h2 style="margin:0">Correo de la constancia</h2>
+          <button class="btn sun" id="resendAll"${mailable.length ? "" : " disabled"}>Reenviar a todos${mailable.length ? ` (${mailable.length})` : ""}</button></div>
+        <p class="mute" style="font-size:.88rem">Tu dedicatoria va en el correo con la constancia en PDF, firmada como <b>Mtro. César Adrián García Martínez</b>. Empieza con "¡Felicidades, (su nombre)!". Deja un renglón en blanco para separar párrafos. Si te responden, llega a hola@vorticevr.mx.</p>
+        <textarea id="mmsg" maxlength="1500" rows="7" style="width:100%;resize:vertical">${E(t.mail_msg || "")}</textarea>
+        <div class="acts"><button class="btn" id="msave">Guardar dedicatoria</button>${t.mail_default ? `<span class="mute" style="font-size:.85rem;align-self:center">Esta es la dedicatoria sugerida: cámbiala a tu gusto.</span>` : ""}</div></div>
       <div class="panel" style="margin-bottom:16px" id="dz"></div>
       <details class="panel"><summary style="cursor:pointer;font-weight:600">Editar datos del taller</summary>
         <p class="mute" style="font-size:.88rem">Las constancias ya emitidas no cambian.</p>
@@ -93,6 +99,11 @@
       if (!confirm(`¿Emitir ${pending.length} constancia${pending.length === 1 ? "" : "s"}? Revisa los nombres: después ya no cambian.`)) return;
       act(async () => { const x = await VC.call(`admin/talleres/${id}/emitir`, { json: { mail: $("mail").checked } }); VC.toast(`Listo: ${x.issued} emitida${x.issued === 1 ? "" : "s"}${x.mails ? `; ${x.mails} correo${x.mails === 1 ? "" : "s"} en camino` : ""}.`, 5000); });
     };
+    const resend = async person => { const x = await VC.call(`admin/talleres/${id}/reenviar`, { json: person ? { person } : {} }); VC.toast(`${x.mails} correo${x.mails === 1 ? "" : "s"} en camino.`, 5000); };
+    const saveMsg = () => VC.call("admin/talleres/" + id, { json: { mail_msg: $("mmsg").value } });
+    $("msave").onclick = () => act(saveMsg, "Dedicatoria guardada.");
+    $("resendAll").onclick = () => { if (confirm(`¿Mandar otra vez el correo con su constancia a ${mailable.length} persona${mailable.length === 1 ? "" : "s"}?`)) act(async () => { await saveMsg(); await resend(); }); };
+    document.querySelectorAll("[data-resend]").forEach(a => a.onclick = ev => { ev.preventDefault(); act(async () => { await saveMsg(); await resend(a.dataset.resend); }); });
     $("edit").onsubmit = e => { e.preventDefault(); act(() => VC.call("admin/talleres/" + id, { json: formData(e.target) }), "Guardado."); };
     if ($("del")) $("del").onclick = async () => {
       if (!confirm("¿Borrar este taller y su lista? No se puede deshacer.")) return;

@@ -15,6 +15,9 @@ const newCode = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), b =>
 const dayStart = d => Date.parse(d + "T00:00:00Z") + MX;   // "2026-11-17" → 00:00 in Mexico
 const MODS = ["presencial", "en_linea"];
 const MAIL_NOW = 25, MAIL_TICK = 40;
+// César's dedication in the certificate e-mail (each workshop can have its own; this one when it has none)
+export const MAIL_MSG = "Gracias por darte el tiempo de aprender algo nuevo. La tecnología inmersiva ya no es el futuro: es una herramienta que hoy está en tus manos, y lo que hagas con ella depende de tu imaginación.\n\nMe dio mucho gusto compartir este taller contigo. Ojalá esta constancia sea el inicio de muchas experiencias que vas a crear; cuando tengas la primera, me encantará verla.";
+const msgOf = t => (t && t.mail_msg && String(t.mail_msg).trim()) || MAIL_MSG;
 
 export async function migrateTalleres(env) {
   const t = s => env.DB.prepare(s);
@@ -40,6 +43,10 @@ export async function migrateTalleres(env) {
   const tr2 = await env.DB.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'c_talleres'").first();
   if (tr2 && !/\bdesign\b/.test(tr2.sql)) {
     try { await env.DB.prepare("ALTER TABLE c_talleres ADD COLUMN design TEXT").run(); } catch (e) { console.error("migración talleres diseño", e.message); }
+  }
+  // César's dedication in the e-mail of each workshop
+  if (tr2 && !/\bmail_msg\b/.test(tr2.sql)) {
+    try { await env.DB.prepare("ALTER TABLE c_talleres ADD COLUMN mail_msg TEXT").run(); } catch (e) { console.error("migración talleres mensaje", e.message); }
   }
   const cr = await env.DB.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'c_certificates'").first();
   if (cr && !/\bdesign\b/.test(cr.sql)) {
@@ -192,7 +199,7 @@ export async function talleresApi(request, env, ctx, url, path, h, user, LIB) {
   if (tid && !t) return json({ error: "No existe ese taller." }, 404);
 
   if (t && path === `/api/cursos/admin/talleres/${t.id}` && M === "GET") {
-    return json({ taller: { ...publicTaller(t), id: t.id, design: designOf(t) }, people: await people(t.id) });
+    return json({ taller: { ...publicTaller(t), id: t.id, design: designOf(t), mail_msg: msgOf(t), mail_default: !(t.mail_msg && String(t.mail_msg).trim()) }, people: await people(t.id) });
   }
   // a logo or a signature, already prepared by the browser: data = {w, h, rgb, alpha?} for the PDF and png to show it
   if (t && path === `/api/cursos/admin/talleres/${t.id}/archivo` && M === "POST") {
@@ -224,6 +231,11 @@ export async function talleresApi(request, env, ctx, url, path, h, user, LIB) {
       if (r.error) return json(r, 400);
       await env.DB.prepare("UPDATE c_talleres SET design = ?, updated_at = ? WHERE id = ?").bind(JSON.stringify(r.design), now, t.id).run();
       return json({ ok: true, design: r.design });
+    }
+    if (b.mail_msg !== undefined) {   // the dedication of the e-mail (empty = the default one)
+      const msg = String(b.mail_msg || "").replace(/\r/g, "").trim().slice(0, 1500);
+      await env.DB.prepare("UPDATE c_talleres SET mail_msg = ?, updated_at = ? WHERE id = ?").bind(msg && msg !== MAIL_MSG ? msg : null, now, t.id).run();
+      return json({ ok: true, mail_msg: msg || MAIL_MSG });
     }
     if (b.registro === "cerrar") { await env.DB.prepare("UPDATE c_talleres SET closes_at = ?, reg_manual = 1, updated_at = ? WHERE id = ?").bind(now, now, t.id).run(); return json({ ok: true }); }
     if (b.registro === "abrir") {   // 24 hours more from now
@@ -266,6 +278,16 @@ export async function talleresApi(request, env, ctx, url, path, h, user, LIB) {
     await env.DB.prepare("UPDATE c_taller_people SET name = ?, status = ?, cert_id = NULL, mail_state = NULL, updated_at = ? WHERE id = ?").bind(name, status, now, p.id).run();
     return json({ ok: true });
   }
+  // send the certificate e-mail again: to everyone with an issued (not revoked) certificate and an e-mail, or to one person
+  if (t && path === `/api/cursos/admin/talleres/${t.id}/reenviar` && M === "POST") {
+    const b = await body(), one = b.person ? String(b.person) : null;
+    const r = await env.DB.prepare(`UPDATE c_taller_people SET mail_state = 'pending', updated_at = ? WHERE taller_id = ? AND status = 'in' AND email IS NOT NULL AND email <> ''
+      AND cert_id IN (SELECT id FROM c_certificates WHERE revoked = 0 OR revoked IS NULL)${one ? " AND id = ?" : ""}`).bind(...[now, t.id, ...(one ? [one] : [])]).run();
+    const n = (r.meta && r.meta.changes) || 0;
+    if (!n) return json({ error: one ? "No se puede reenviar: no tiene correo o su constancia no está emitida." : "No hay a quién reenviarle: nadie con constancia emitida y correo." }, 400);
+    ctx.waitUntil(sendPending(env, h, LIB, url, MAIL_NOW).catch(e => console.error("talleres correo", e.message)));
+    return json({ ok: true, mails: n });
+  }
   // issue: everyone on the list without a certificate yet (can be pressed again for late additions)
   if (t && path === `/api/cursos/admin/talleres/${t.id}/emitir` && M === "POST") {
     const mail = (await body()).mail !== false;
@@ -291,25 +313,45 @@ export async function talleresApi(request, env, ctx, url, path, h, user, LIB) {
 
 // the e-mails with the PDF, a few at a time (also from the 15-minute cron)
 export async function sendPending(env, h, LIB, url, max = MAIL_TICK) {
-  const { results } = await env.DB.prepare(`SELECT p.id, p.email, k.* FROM c_taller_people p JOIN c_certificates k ON k.id = p.cert_id WHERE p.mail_state = 'pending' ORDER BY p.updated_at LIMIT ?`).bind(max).all();
+  const now = Date.now();
+  // one that got stuck half-way (the Worker stopped while sending) goes back to the line after 10 minutes
+  await env.DB.prepare("UPDATE c_taller_people SET mail_state = 'pending' WHERE mail_state = 'sending' AND updated_at < ?").bind(now - 600e3).run();
+  // ojo: k.* also has an "id" (the certificate's); the person's goes as pid
+  const { results } = await env.DB.prepare(`SELECT k.*, p.id AS pid, p.email AS pemail, t.mail_msg AS tmsg FROM c_taller_people p JOIN c_certificates k ON k.id = p.cert_id
+    LEFT JOIN c_talleres t ON t.id = p.taller_id WHERE p.mail_state = 'pending' ORDER BY p.updated_at LIMIT ?`).bind(max).all();
   if (!results.length) return 0;
   const s = await LIB.settings(env), base = LIB.baseUrl(env, url);
   let sent = 0;
   for (const k of results) {
     // claim it first, so the cron and the button never send the same one twice
-    const claim = await env.DB.prepare("UPDATE c_taller_people SET mail_state = 'sending' WHERE id = ? AND mail_state = 'pending'").bind(k.id).run();
+    const claim = await env.DB.prepare("UPDATE c_taller_people SET mail_state = 'sending', updated_at = ? WHERE id = ? AND mail_state = 'pending'").bind(Date.now(), k.pid).run();
     if (!claim.meta || !claim.meta.changes) continue;
-    const pdf = certificatePdf({ ...LIB.certData(k, s, base), ...(await loadDesign(env, k.design)) });
-    let bin = ""; for (let i = 0; i < pdf.length; i += 0x8000) bin += String.fromCharCode.apply(null, pdf.subarray(i, i + 0x8000));
-    const verify = `${base}/verificar/${k.verify_token}`;
-    const ok = await h.sendMail(env, k.email, `Tu constancia del taller "${k.course_title}"`, h.shell(`<h1 style="font-size:20px">¡Gracias por participar, ${h.esc(k.student_name)}!</h1>
-      <p>Te adjuntamos tu constancia de participación en el taller <b>${h.esc(k.course_title)}</b> (${h.esc(k.period)}), con folio <b>${k.folio}</b>.</p>
-      <p>Cualquiera puede comprobar que es auténtica en su página de verificación (también con el código QR de la constancia).</p>${h.btnMail(verify, "Ver mi constancia")}`,
-      "Recibiste este correo porque participaste en un taller de Vórtice VR."), [{ filename: `Constancia ${k.folio}.pdf`, content: btoa(bin) }]);
-    await env.DB.prepare("UPDATE c_taller_people SET mail_state = ? WHERE id = ?").bind(ok ? "sent" : "pending", k.id).run();
+    let ok = false;
+    try {
+      const pdf = certificatePdf({ ...LIB.certData(k, s, base), ...(await loadDesign(env, k.design)) });
+      let bin = ""; for (let i = 0; i < pdf.length; i += 0x8000) bin += String.fromCharCode.apply(null, pdf.subarray(i, i + 0x8000));
+      ok = await h.sendMail(env, k.pemail, `Tu constancia del taller "${k.course_title}"`, certMail(h, k, base, msgOf({ mail_msg: k.tmsg })),
+        [{ filename: `Constancia ${k.folio}.pdf`, content: btoa(bin) }], env.CONTACT_TO || "hola@vorticevr.mx");
+    } catch (e) { console.error("talleres correo", k.folio, e.message); }
+    await env.DB.prepare("UPDATE c_taller_people SET mail_state = ?, updated_at = ? WHERE id = ?").bind(ok ? "sent" : "pending", Date.now(), k.pid).run();
     if (!ok) break;   // Resend is out of quota or down: the cron tries again later
     sent++;
     await new Promise(r => setTimeout(r, 550));   // Resend: 2 per second
   }
   return sent;
+}
+
+// the e-mail: César's dedication (signed by him), the workshop's data, the PDF attached and its verification
+function certMail(h, k, base, msg) {
+  const first = String(k.student_name || "").trim().split(/\s+/)[0] || "";
+  const verify = `${base}/verificar/${k.verify_token}`;
+  const paras = msg.split(/\n{2,}/).map(p => `<p style="margin:0 0 12px;line-height:1.6">${h.esc(p).replace(/\n/g, "<br>")}</p>`).join("");
+  return h.shell(`<h1 style="font-size:22px;margin:14px 0 6px">¡Felicidades, ${h.esc(first)}!</h1>
+    <p style="margin:0 0 18px;color:#d2b8ff">Tu constancia del taller <b style="color:#fff">${h.esc(k.course_title)}</b> ya está lista.</p>
+    <div style="border-left:3px solid #ffbe55;background:#1b0a36;border-radius:0 12px 12px 0;padding:16px 18px;margin:0 0 18px">${paras}
+      <p style="margin:14px 0 0;font-family:Georgia,serif;font-style:italic;color:#ffbe55">Mtro. César Adrián García Martínez</p><p style="margin:2px 0 0;font-size:12px;color:#a99bcb">Vórtice VR</p></div>
+    <table style="font-size:14px;color:#f2ecff;margin:0 0 6px" cellpadding="3"><tr><td style="color:#a99bcb">Participante</td><td><b>${h.esc(k.student_name)}</b></td></tr>
+      <tr><td style="color:#a99bcb">Fecha</td><td>${h.esc(k.period || "")}</td></tr><tr><td style="color:#a99bcb">Folio</td><td style="font-family:monospace">${h.esc(k.folio)}</td></tr></table>
+    <p style="font-size:14px">Te la adjuntamos en PDF. Cualquiera puede comprobar que es auténtica en su página de verificación o con el código QR de la constancia.</p>${h.btnMail(verify, "Ver mi constancia")}`,
+    "Recibiste este correo porque participaste en un taller de Vórtice VR. Si respondes, le llega a nuestro equipo.");
 }
