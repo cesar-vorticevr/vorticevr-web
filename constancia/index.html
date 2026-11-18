@@ -10,83 +10,173 @@
 <link rel="icon" href="/assets/icono.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="/cursos/cursos.css">
 <style>
-/* the participant's side of a workshop certificate (_cursos/talleres.js): vorticevr.mx/constancia/<CÓDIGO>/ */
-main{max-width:640px}
-.facts{display:flex;flex-wrap:wrap;gap:8px 18px;color:var(--mute);margin:6px 0 22px}
-.facts b{color:var(--ink);font-weight:500}
-label.f{display:flex;flex-direction:column;gap:8px;font-weight:500;margin-bottom:6px}
-label.f input{width:100%;font-size:1.15rem;padding:14px 16px}
-.hint{font-size:.88rem;color:var(--mute);margin:4px 0 18px}
-.ok{display:flex;gap:14px;align-items:center;padding:16px 18px;border-radius:16px;background:rgba(95,227,161,.12);border:1px solid rgba(95,227,161,.5);color:var(--ok);font:600 1.05rem var(--fd);margin-bottom:16px}
-.ok .ic{width:36px;height:36px;border-radius:50%;background:var(--ok);color:#05200f;display:grid;place-items:center;flex:none}
-.nm{font:700 clamp(1.3rem,4.5vw,1.7rem) var(--fd);margin:4px 0 14px;overflow-wrap:anywhere}
-.acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
-.code input{text-transform:uppercase;letter-spacing:.25em;font-family:var(--fm, "IBM Plex Mono", monospace);text-align:center}
+/* the participant's side of a workshop certificate (_cursos/talleres.js): vorticevr.mx/constancia/<CÓDIGO>/
+   A live preview of the certificate (same layout as _cursos/pdf.js): the name is written on it while they type. */
+main{max-width:1080px}
+.hero{position:relative;text-align:center;padding:10px 0 26px}
+.hero .kick{display:inline-flex;gap:8px;align-items:center}
+.hero h1{font-size:clamp(1.9rem,5.4vw,3.2rem);line-height:1.08;margin:10px auto 16px;max-width:880px;
+  background:linear-gradient(100deg,#fff 20%,#d2b8ff 55%,#ffbe55 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.pills{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.pills span{display:inline-flex;gap:8px;align-items:center;padding:8px 14px;border-radius:99px;border:1px solid var(--line2);background:rgba(139,63,214,.12);font-size:.92rem}
+.pills b{font-weight:600}
+.stage{display:grid;gap:26px;align-items:start}
+@media (min-width:920px){.stage{grid-template-columns:minmax(0,1.35fr) minmax(320px,1fr)}}
+
+/* the certificate preview */
+.paper{container-type:inline-size;position:relative;aspect-ratio:11/8.5;border-radius:14px;overflow:hidden;background:#fdfcff;color:#1b0a36;
+  display:grid;grid-template-columns:30% 1fr;box-shadow:0 30px 70px -28px rgba(139,63,214,.85),0 0 0 1px rgba(255,190,85,.35);transform:perspective(1400px) rotateX(4deg);transition:transform .5s}
+.paper:hover{transform:none}
+.paper::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.35) 50%,transparent 62%);background-size:260% 100%;animation:shine 6s infinite;pointer-events:none;mix-blend-mode:soft-light}
+.p-band{position:relative;background:#12062a;overflow:hidden;padding:4cqw 3.6cqw;display:flex;flex-direction:column}
+.p-band img{width:62%;filter:brightness(0) invert(1)}
+.p-band .fl{margin-top:2.4cqw;border-top:1px solid #3a1d63;padding-top:1.6cqw;font:500 1.15cqw "IBM Plex Mono",monospace;letter-spacing:.2em;color:#d2b8ff}
+.p-band .fv{font:500 1.6cqw "IBM Plex Mono",monospace;color:#fff;margin-top:.4cqw}
+.p-band .vx{position:absolute;left:50%;top:55%;width:46cqw;height:46cqw;margin:-23cqw 0 0 -23cqw;border-radius:50%;
+  background:repeating-radial-gradient(circle,rgba(139,63,214,.85) 0 .22cqw,transparent .22cqw 1.9cqw);transform:rotate(-24deg) scaleY(.45);animation:spin 20s linear infinite;mask:radial-gradient(circle,#000 25%,transparent 68%)}
+.p-band .vx::before{content:"";position:absolute;left:50%;top:50%;width:2.2cqw;height:2.2cqw;margin:-1.1cqw;border-radius:50%;background:#d2b8ff;box-shadow:0 0 3cqw #b98cff}
+.p-band .sp{position:absolute;color:#ffbe55;font-size:2.2cqw;animation:tw 2.6s infinite}
+.p-band .qr{margin-top:auto;width:44%;aspect-ratio:1;background:#fff;border-radius:.6cqw;display:grid;place-items:center;color:#12062a;font:600 1.2cqw var(--fd);position:relative;z-index:1}
+.p-band .qr i{width:78%;height:78%;background:conic-gradient(#12062a 25%,#fff 0 50%,#12062a 0 75%,#fff 0) 0 0/22% 22%;opacity:.85;border-radius:.3cqw}
+.p-main{position:relative;padding:6.4cqw 5.5cqw 4cqw;display:flex;flex-direction:column;border:none}
+.p-main::before{content:"";position:absolute;inset:2.4cqw 2.6cqw;border:1px solid #e6dcf7;pointer-events:none}
+.p-k{font:700 1.45cqw var(--fd);letter-spacing:.32em;color:#a8741a}
+.p-o{font-size:1.75cqw;color:#5b4d78;margin-top:3.2cqw}
+.p-n{font:800 4.9cqw/1.1 "IBM Plex Sans",Arial,sans-serif;margin-top:1cqw;min-height:5.4cqw;overflow-wrap:anywhere;color:#1b0a36;transition:color .3s}
+.p-n.ph{color:#cfc3e6}
+.p-n .car{display:inline-block;width:.32cqw;height:4.6cqw;background:#8b3fd6;vertical-align:-.6cqw;margin-left:.3cqw;animation:blink 1s steps(1) infinite}
+.p-u{display:flex;gap:.5cqw;margin:1.6cqw 0 2.6cqw}.p-u i{height:.36cqw;width:9cqw;background:#c9952e}.p-u i+i{width:2cqw;background:#8b3fd6}
+.p-f{font-size:1.75cqw;color:#5b4d78}
+.p-t{font:700 2.8cqw/1.2 "IBM Plex Sans",Arial,sans-serif;color:#6b279b;margin-top:.6cqw}
+.p-d{display:flex;gap:2.6cqw;margin-top:3cqw;flex-wrap:wrap}
+.p-d div{display:flex;flex-direction:column;gap:.4cqw}.p-d small{font:500 .95cqw "IBM Plex Mono",monospace;letter-spacing:.2em;color:#5b4d78}.p-d b{font-size:1.55cqw}
+.p-s{margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between}
+.p-s .sg{width:42%;border-top:1px solid #5b4d78;padding-top:.8cqw;font-size:1.45cqw;font-weight:700;position:relative}
+.p-s .sg small{display:block;font-weight:400;color:#5b4d78;font-size:1.2cqw}
+.p-s .seal{width:12cqw;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#fff6dc 52%,#a8741a 53% 55%,#f3d488 56% 64%,#d9a441 65%);display:grid;place-items:center;text-align:center;font:700 1.15cqw var(--fd);color:#7a5410;
+  clip-path:polygon(50% 0,56% 7%,64% 2%,68% 10%,77% 7%,79% 16%,88% 15%,87% 24%,95% 27%,91% 35%,98% 41%,93% 47%,100% 53%,93% 58%,97% 66%,90% 70%,92% 79%,83% 81%,82% 90%,74% 89%,70% 97%,62% 93%,56% 100%,50% 94%,44% 100%,38% 93%,30% 97%,26% 89%,18% 90%,17% 81%,8% 79%,10% 70%,3% 66%,7% 58%,0 53%,7% 47%,2% 41%,9% 35%,5% 27%,13% 24%,12% 15%,21% 16%,23% 7%,32% 10%,36% 2%,44% 7%)}
+.paper.done .p-main::after{content:"✓ Emitida";position:absolute;right:4cqw;top:4cqw;font:700 1.4cqw var(--fd);color:#1a7f4b;background:#dff7ea;border-radius:99px;padding:.6cqw 1.6cqw}
+.paper.off .p-main::after{content:"Revocada";color:#c62828;background:#fde3e3}
+
+/* the side card */
+.side{display:flex;flex-direction:column;gap:16px}
+.card{position:relative;border-radius:22px;padding:24px;background:linear-gradient(160deg,rgba(139,63,214,.2),rgba(12,4,28,.9) 60%);border:1px solid rgba(210,184,255,.22);box-shadow:0 24px 60px -30px rgba(139,63,214,.9)}
+.card h2{margin:0 0 6px;font-size:1.35rem}
+.step{display:flex;gap:12px;align-items:flex-start;margin:14px 0}
+.step .n{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:700 .9rem var(--fd);background:rgba(255,190,85,.15);color:var(--sun);border:1px solid rgba(255,190,85,.4)}
+.step.ok .n{background:var(--ok);color:#05200f;border-color:var(--ok)}
+label.f{display:flex;flex-direction:column;gap:8px;font-weight:600;margin:16px 0 6px}
+label.f input{width:100%;font-size:1.2rem;padding:15px 16px;border-radius:14px;border:1px solid rgba(210,184,255,.35);background:rgba(5,2,11,.7);color:#fff;font-family:inherit;outline:none;transition:border-color .2s,box-shadow .2s}
+label.f input:focus{border-color:var(--sun);box-shadow:0 0 0 4px rgba(255,190,85,.18)}
+.hint{font-size:.86rem;color:var(--mute);margin:6px 0 16px}
+.badge{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:14px;background:rgba(95,227,161,.1);border:1px solid rgba(95,227,161,.45);color:var(--ok);font:600 1rem var(--fd);margin-bottom:6px}
+.badge .ic{width:30px;height:30px;border-radius:50%;background:var(--ok);color:#05200f;display:grid;place-items:center;flex:none}
+.acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.acts .btn{flex:1;justify-content:center;text-align:center}
+.code{max-width:520px;margin:0 auto}
+.code input{width:100%;text-transform:uppercase;letter-spacing:.35em;font:600 1.8rem "IBM Plex Mono",monospace;text-align:center;padding:16px}
+.small{font-size:.86rem;color:var(--mute)}
+@keyframes shine{0%,72%{background-position:150% 0}100%{background-position:-60% 0}}
+@keyframes spin{to{transform:rotate(336deg) scaleY(.45)}}
+@keyframes tw{50%{opacity:.2;transform:scale(.6)}}
+@keyframes blink{50%{opacity:0}}
+@keyframes pop{from{opacity:0;transform:translateY(16px) scale(.97)}}
+.in{animation:pop .7s cubic-bezier(.2,.8,.2,1) backwards}
+@media (prefers-reduced-motion:reduce){.paper::after,.p-band .vx,.p-band .sp,.p-n .car,.in{animation:none}.paper{transform:none}}
 </style>
 </head>
 <body>
-<header class="top" data-menu></header>
-<main class="wrap" style="padding-top:36px" id="main"><div class="empty">Cargando…</div></main>
+<header class="top"></header>
+<main class="wrap" style="padding-top:34px" id="main"><div class="empty">Cargando…</div></main>
 <footer class="bot"></footer>
 <script src="/cursos/cursos.js"></script>
 <script src="/assets/magia.js" defer></script>
 <script>
 VC.header(); VC.footer();
-const E = VC.esc, main = document.getElementById("main");
+const E = VC.esc, main = document.getElementById("main"), $ = id => document.getElementById(id);
 const code = (location.pathname.match(/^\/constancia\/([A-Za-z0-9]{4,10})/) || [])[1];
-const fecha = d => new Date(d + "T12:00:00Z").toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+const fecha = d => new Date(d + "T12:00:00Z").toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 const MOD = { presencial: "Presencial", en_linea: "En línea" };
 
 if (!code) {   // /constancia/ alone: type the code
-  main.innerHTML = `<div class="kick">Constancias de talleres</div><h1 style="font-size:clamp(1.8rem,6vw,2.4rem)">Escribe el código de tu taller</h1>
-    <p class="mute">Te lo dieron al final del taller (o escanea el QR que se proyectó).</p>
-    <form class="panel code" id="cf"><label class="f">Código<input type="text" id="cc" maxlength="10" autocomplete="off" autocapitalize="characters" required placeholder="ABC234"></label><button class="btn sun block" type="submit">Continuar</button></form>`;
-  document.getElementById("cf").onsubmit = e => { e.preventDefault(); const v = document.getElementById("cc").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ""); if (v) location.href = "/constancia/" + v + "/"; };
+  main.innerHTML = `<div class="hero in"><div class="kick">✦ Constancias de talleres</div><h1>Escribe el código de tu taller</h1>
+    <p class="mute">Te lo dieron al final del taller, o escanea el QR que se proyectó.</p></div>
+    <form class="card code in" id="cf" style="animation-delay:.1s"><input type="text" id="cc" maxlength="10" autocomplete="off" autocapitalize="characters" required placeholder="ABC234" aria-label="Código del taller">
+      <button class="btn sun block" type="submit" style="margin-top:14px">Continuar</button></form>`;
+  $("cf").onsubmit = e => { e.preventDefault(); const v = $("cc").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ""); if (v) location.href = "/constancia/" + v + "/"; };
 } else load();
+
+// the certificate as it will be printed (same layout as the PDF)
+function paper(t, name, cls, folio) {
+  return `<div class="paper ${cls || ""}" id="paper" aria-hidden="true">
+    <div class="p-band"><img src="/assets/logo-vorticevr.png" alt=""><div class="fl">FOLIO</div><div class="fv">${E(folio || "VVR-" + new Date().getFullYear() + "-······")}</div>
+      <i class="vx"></i><span class="sp" style="left:12%;top:30%">✦</span><span class="sp" style="right:14%;top:44%;font-size:1.5cqw;animation-delay:.9s;color:#d2b8ff">✦</span><span class="sp" style="right:22%;top:74%;animation-delay:1.6s">✦</span>
+      <div class="qr"><i></i></div></div>
+    <div class="p-main"><div class="p-k">CONSTANCIA DE PARTICIPACIÓN</div><div class="p-o">Vórtice VR otorga la presente a</div>
+      <div class="p-n" id="pn"></div><div class="p-u"><i></i><i></i></div>
+      <div class="p-f">por su participación en el taller</div><div class="p-t">${E(t.title)}</div>
+      <div class="p-d"><div><small>DURACIÓN</small><b>${VC.hours(t.hours)}</b></div><div><small>MODALIDAD</small><b>${E(MOD[t.modality] || "")}</b></div><div><small>FECHA</small><b>${E(fecha(t.date))}</b></div></div>
+      ${t.place ? `<div class="p-d" style="margin-top:1.6cqw"><div><small>LUGAR</small><b>${E(t.place)}</b></div></div>` : ""}
+      <div class="p-s"><div class="sg">Mtro. César Adrián García Martínez<small>Vórtice VR</small></div><div class="seal">VÓRTICE VR</div></div></div></div>`;
+}
+function setName(v, typing) {
+  const el = $("pn"); if (!el) return;
+  el.classList.toggle("ph", !v);
+  el.innerHTML = E(v || "Tu nombre completo") + (typing ? `<span class="car"></span>` : "");
+  let s = 4.9; el.style.fontSize = s + "cqw";
+  while (s > 2.4 && el.scrollHeight > el.clientHeight * 1.05 + 4) { s -= 0.2; el.style.fontSize = s + "cqw"; }   // long names shrink to one or two lines
+}
 
 async function load() {
   let r;
   try { r = await VC.call("taller/" + code); }
-  catch (e) { main.innerHTML = `<div class="panel empty">${E(e.message)}<div style="margin-top:14px"><a class="btn" href="/constancia/">Escribir otro código</a></div></div>`; return; }
-  const t = r.taller;
-  const head = `<div class="kick">Constancia de participación</div><h1 style="font-size:clamp(1.7rem,6vw,2.4rem)">${E(t.title)}</h1>
-    <div class="facts"><span>📅 <b>${E(fecha(t.date))}</b></span><span>⏱ <b>${VC.hours(t.hours)}</b></span><span>${E(MOD[t.modality] || "")}</span>${t.place ? `<span>📍 <b>${E(t.place)}</b></span>` : ""}</div>`;
-  const me = r.me;
-  // already issued: download it
-  if (me && me.cert) {
-    main.innerHTML = head + `<div class="ok"><span class="ic">✓</span><span>${me.cert.revoked ? "Esta constancia fue revocada" : "¡Tu constancia está lista!"}</span></div>
-      <div class="panel"><div class="mute">A nombre de</div><div class="nm">${E(me.name)}</div><div class="mono">Folio ${E(me.cert.folio)}</div>
-      <div class="acts" style="margin-top:16px"><a class="btn sun" href="/api/cursos/constancia/${E(me.cert.token)}.pdf" target="_blank" rel="noopener">Descargar PDF</a><a class="btn" href="/cursos/verificar/${E(me.cert.token)}/">Ver verificación</a></div></div>
-      <p class="mute" style="font-size:.88rem;margin-top:16px">También la tienes en <a href="/cursos/mi-aprendizaje/">Mi aprendizaje</a>.</p>`;
-    return;
-  }
-  if (me && me.status === "out") { main.innerHTML = head + `<div class="panel empty">No apareces en la lista de este taller. Si fue un error, avísale a quien lo impartió.</div>`; return; }
-  if (!r.signedIn) {
+  catch (e) { main.innerHTML = `<div class="card code in" style="text-align:center"><p>${E(e.message)}</p><a class="btn" href="/constancia/">Escribir otro código</a></div>`; return; }
+  const t = r.taller, me = r.me;
+  const hero = `<div class="hero in"><div class="kick">✦ Constancia de participación</div><h1>${E(t.title)}</h1>
+    <div class="pills"><span>📅 <b>${E(fecha(t.date))}</b></span><span>⏱ <b>${VC.hours(t.hours)}</b></span><span>${t.modality === "en_linea" ? "💻" : "📍"} <b>${E(MOD[t.modality] || "")}</b></span>${t.place ? `<span>🏫 <b>${E(t.place)}</b></span>` : ""}</div></div>`;
+  let side = "", cls = "", name = me ? me.name : "", folio = "";
+  if (me && me.cert) {   // issued: download it
+    cls = me.cert.revoked ? "off" : "done"; folio = me.cert.folio;
+    side = `<div class="card in"><div class="badge"><span class="ic">✓</span>${me.cert.revoked ? "Esta constancia fue revocada" : "¡Tu constancia está lista!"}</div>
+      <p class="small" style="margin:12px 0 0">Folio <b class="mono" style="color:var(--ink)">${E(me.cert.folio)}</b>. Lleva un QR para que cualquiera compruebe que es auténtica.</p>
+      <div class="acts"><a class="btn sun" href="/api/cursos/constancia/${E(me.cert.token)}.pdf" target="_blank" rel="noopener">Descargar PDF</a><a class="btn" href="/cursos/verificar/${E(me.cert.token)}/">Verificar</a></div>
+      <p class="small" style="margin-top:16px">También la tienes en <a href="/cursos/mi-aprendizaje/">Mis cursos y constancias</a>.</p></div>`;
+  } else if (me && me.status === "out") {
+    side = `<div class="card in"><h2>No apareces en la lista</h2><p class="small">Si fue un error, avísale a quien impartió el taller.</p></div>`;
+  } else if (!r.signedIn) {
     const next = VC.loginUrl("constancia/" + code);
-    main.innerHTML = head + `<div class="panel"><h2 style="margin-top:0">Pide tu constancia</h2><p>Entra con tu cuenta de Vórtice VR (o créala gratis, toma un minuto) y escribe tu nombre como debe salir en la constancia.</p>
+    side = `<div class="card in"><h2>Pide tu constancia</h2>
+      <div class="step"><span class="n">1</span><div>Entra con tu cuenta de Vórtice VR <span class="small">(o créala gratis, toma un minuto).</span></div></div>
+      <div class="step"><span class="n">2</span><div>Escribe tu nombre como debe salir en la constancia.</div></div>
+      <div class="step"><span class="n">3</span><div>Al terminar el taller la recibes por correo, con folio y QR.</div></div>
       <div class="acts"><a class="btn sun" href="${E(next.replace("#entrar", "#registro"))}">Crear cuenta</a><a class="btn" href="${E(next)}">Ya tengo cuenta</a></div></div>`;
-    return;
+  } else if (!t.open && !me) {
+    side = `<div class="card in"><h2>${Date.now() < t.opens_at ? "Todavía no" : "El registro cerró"}</h2><p class="small">${Date.now() < t.opens_at ? "El registro se abre el día del taller." : "Si participaste y no te registraste, avísale a quien lo impartió."}</p></div>`;
+  } else {   // the form (also to fix the name while it has not been issued)
+    name = name || r.accountName || "";
+    side = `<form class="card in" id="nf">${me ? `<div class="badge"><span class="ic">✓</span>Ya estás en la lista</div>` : `<h2>Pide tu constancia</h2>`}
+      <label class="f">${me ? "Tu nombre en la constancia" : "Tu nombre completo"}<input type="text" id="nm" maxlength="90" autocomplete="name" required value="${E(name)}" placeholder="Nombre y apellidos"></label>
+      <p class="hint">Escríbelo completo, con acentos y apellidos. Así saldrá en tu constancia: míralo en la vista previa.</p>
+      <button class="btn sun block" type="submit">${me ? "Guardar cambio" : "Quiero mi constancia ✦"}</button>
+      <p class="small" style="margin:14px 0 0">${me ? "Cuando se emita te llegará por correo y la podrás descargar aquí y en <a href=\"/cursos/mi-aprendizaje/\">Mis cursos y constancias</a>." : "Al terminar el taller se revisa la lista y se emiten las constancias."}</p></form>`;
   }
-  if (!t.open && !me) {
-    main.innerHTML = head + `<div class="panel empty">${Date.now() < t.opens_at ? "El registro se abre el día del taller." : "El registro de este taller ya cerró. Si participaste y no te registraste, avísale a quien lo impartió."}</div>`;
-    return;
-  }
-  // the form (also to fix the name while it has not been issued)
-  main.innerHTML = head + (me ? `<div class="ok"><span class="ic">✓</span><span>Ya estás en la lista</span></div>` : "") + `<form class="panel" id="nf">
-      <label class="f">${me ? "Tu nombre en la constancia" : "Tu nombre completo"}<input type="text" id="nm" maxlength="90" autocomplete="name" required value="${E(me ? me.name : r.accountName)}" placeholder="Nombre y apellidos"></label>
-      <p class="hint">Escríbelo completo, con acentos y apellidos, tal como debe salir en tu constancia.</p>
-      <button class="btn sun block" type="submit">${me ? "Guardar cambio" : "Quiero mi constancia"}</button></form>
-      <p class="mute" style="font-size:.88rem;margin-top:16px">${me ? "Cuando se emita te llegará por correo y la podrás descargar aquí y en <a href=\"/cursos/mi-aprendizaje/\">Mi aprendizaje</a>." : "Al terminar el taller se revisa la lista y se emiten las constancias. Te llegará por correo y la podrás descargar aquí."}</p>`;
-  document.getElementById("nf").onsubmit = async e => {
+  main.innerHTML = hero + `<div class="stage"><div class="in" style="animation-delay:.12s">${paper(t, name, cls, folio)}</div><div class="side" style="animation-delay:.2s">${side}</div></div>`;
+  setName(name, false);
+  const nf = $("nf"); if (!nf) return;
+  const nm = $("nm");
+  nm.addEventListener("input", () => setName(nm.value.replace(/\s+/g, " ").trimStart(), true));
+  nm.addEventListener("focus", () => setName(nm.value.trim(), true));
+  nm.addEventListener("blur", () => setName(nm.value.trim(), false));
+  nf.onsubmit = async e => {
     e.preventDefault();
-    const name = document.getElementById("nm").value.trim().replace(/\s+/g, " ");
-    if (!/\S+\s+\S+/.test(name)) return VC.toast("Escribe tu nombre con apellidos.");
-    if (!confirm(`Tu constancia saldrá a nombre de:\n\n${name}\n\n¿Está bien escrito?`)) return;
-    const b = e.target.querySelector("button"); b.disabled = true;
-    try { await VC.call(`taller/${code}/unirme`, { json: { name } }); VC.toast(me ? "Listo, guardamos tu nombre." : "¡Listo! Ya estás en la lista."); load(); }
+    const v = nm.value.trim().replace(/\s+/g, " ");
+    if (!/\S+\s+\S+/.test(v)) return VC.toast("Escribe tu nombre con apellidos.");
+    if (!confirm(`Tu constancia saldrá a nombre de:\n\n${v}\n\n¿Está bien escrito?`)) return;
+    const b = nf.querySelector("button"); b.disabled = true;
+    try { await VC.call(`taller/${code}/unirme`, { json: { name: v } }); VC.toast(me ? "Listo, guardamos tu nombre." : "¡Listo! Ya estás en la lista."); load(); }
     catch (err) { VC.toast(err.message, 5000); b.disabled = false; }
   };
 }

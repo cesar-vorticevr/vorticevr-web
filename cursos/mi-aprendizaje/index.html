@@ -18,7 +18,32 @@
 .row .cover{border-radius:14px}
 .row h3{margin:0 0 4px}
 .acts{display:flex;flex-wrap:wrap;gap:8px}
-.certs{margin-top:40px}
+.certs{margin:8px 0 40px}
+.cn{display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 8px;border-radius:99px;background:var(--sun);color:#2a1600;font:700 .85rem var(--fd);vertical-align:middle;margin-left:6px}
+.cgrid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(min(100%,430px),1fr))}
+.cert{position:relative;display:grid;grid-template-columns:96px minmax(0,1fr);border-radius:20px;overflow:hidden;background:linear-gradient(160deg,rgba(139,63,214,.16),rgba(18,6,42,.85) 55%);
+  border:1px solid rgba(255,190,85,.35);box-shadow:0 18px 40px -22px rgba(139,63,214,.7);animation:cin .6s var(--d) backwards cubic-bezier(.2,.8,.2,1);transition:transform .25s,box-shadow .25s}
+.cert:hover{transform:translateY(-3px);box-shadow:0 24px 50px -20px rgba(255,190,85,.45)}
+.cert::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.08) 50%,transparent 65%);background-size:250% 100%;animation:shine 5s var(--d) infinite;pointer-events:none}
+.cert .band{position:relative;background:#12062a;overflow:hidden;min-height:150px}
+.cert .vx{position:absolute;left:50%;top:44%;width:150px;height:150px;margin:-75px 0 0 -75px;border-radius:50%;
+  background:repeating-radial-gradient(circle,rgba(139,63,214,.75) 0 1.5px,transparent 1.5px 11px);transform:rotate(-24deg) scaleY(.5);animation:spin 18s linear infinite;mask:radial-gradient(circle,#000 30%,transparent 70%)}
+.cert .vx::before{content:"";position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px;border-radius:50%;background:#d2b8ff;box-shadow:0 0 16px #b98cff}
+.cert .sp{position:absolute;color:var(--sun);font-size:.9rem;animation:tw 2.4s infinite}
+.cert .s1{left:14px;top:14px}.cert .s2{right:14px;top:40%;font-size:.6rem;animation-delay:.8s;color:#d2b8ff}.cert .s3{left:22px;bottom:34px;font-size:.7rem;animation-delay:1.5s}
+.cert .fo{position:absolute;left:0;right:0;bottom:12px;text-align:center;font:500 .7rem var(--fm,monospace);letter-spacing:.08em;color:#d2b8ff}
+.cert .body{padding:16px 18px 18px}
+.cert .kd{font:600 .7rem var(--fd);letter-spacing:.16em;text-transform:uppercase;color:var(--sun)}
+.cert h3{margin:6px 0 4px;font-size:1.12rem;line-height:1.3}
+.cert .meta{color:var(--mute);font-size:.85rem;margin-bottom:12px}.cert .meta .mono{font-size:.72rem}
+.cert .acts .btn{padding:8px 14px;font-size:.85rem}
+.cert .rv{background:rgba(255,122,138,.15);color:var(--bad);border-radius:99px;padding:2px 8px;margin-left:6px;letter-spacing:.05em}
+.cert.off{filter:saturate(.3);opacity:.75;border-color:rgba(255,122,138,.4)}
+@keyframes cin{from{opacity:0;transform:translateY(14px) scale(.98)}}
+@keyframes shine{0%,70%{background-position:150% 0}100%{background-position:-50% 0}}
+@keyframes spin{to{transform:rotate(336deg) scaleY(.5)}}
+@keyframes tw{50%{opacity:.25;transform:scale(.7)}}
+@media (prefers-reduced-motion:reduce){.cert,.cert::after,.cert .vx,.cert .sp{animation:none}}
 </style>
 </head>
 <body>
@@ -26,9 +51,10 @@
 <main class="wrap" style="padding-top:36px">
   <div class="kick">Mi aprendizaje</div>
   <h1 id="hi" style="font-size:clamp(1.8rem,5vw,2.6rem)">Tus cursos</h1>
+  <section class="certs" id="certs" hidden><h2>Mis constancias <span class="cn" id="cn"></span></h2><p class="mute" style="margin-top:-6px">Cada una tiene su folio y un QR para que cualquiera compruebe que es auténtica.</p><div class="cgrid" id="clist"></div></section>
   <section id="next" hidden style="margin-bottom:26px"><h2>Próximas sesiones en vivo</h2><div class="list" id="nlist"></div></section>
+  <h2 style="margin-top:8px">Mis cursos</h2>
   <div class="list" id="list"><div class="empty">Cargando…</div></div>
-  <section class="certs" id="certs" hidden><h2>Tus constancias</h2><div class="list" id="clist"></div></section>
 </main>
 <footer class="bot"></footer>
 <script src="/cursos/cursos.js"></script>
@@ -36,9 +62,27 @@
 <script>
 VC.header("mis"); VC.footer();
 const E = VC.esc, $ = id => document.getElementById(id);
+// "Mis constancias": each one as a small certificate (night band with the vortex, like the PDF), first on the page
+const certs = [];
+function showCerts(add) {
+  certs.push(...add);
+  if (!certs.length) return;
+  $("certs").hidden = false;
+  $("cn").textContent = certs.length;
+  $("clist").innerHTML = certs.map((k, i) => `<article class="cert${k.revoked ? " off" : ""}" style="--d:${i * 70}ms">
+      <div class="band"><span class="sp s1">✦</span><span class="sp s2">✦</span><span class="sp s3">✦</span><i class="vx"></i><span class="fo">${E(k.folio.slice(4))}</span></div>
+      <div class="body"><div class="kd">${k.kind === "taller" ? "Participación · Taller" : "Acreditación · Curso"}${k.revoked ? ` <b class="rv">Revocada</b>` : ""}</div>
+        <h3>${E(k.title)}</h3><div class="meta">${k.period ? E(k.period) + " · " : ""}<span class="mono">${E(k.folio)}</span></div>
+        <div class="acts"><a class="btn sun" href="/api/cursos/constancia/${E(k.token)}.pdf" target="_blank" rel="noopener">Descargar PDF</a><a class="btn" href="/cursos/verificar/${E(k.token)}/">Verificar</a><button class="btn" type="button" data-sh="${E(k.token)}" data-t="${E(k.title)}">Compartir</button></div></div></article>`).join("");
+  document.querySelectorAll("[data-sh]").forEach(b => b.onclick = async () => {
+    const url = location.origin + "/cursos/verificar/" + b.dataset.sh + "/";
+    try { if (navigator.share) await navigator.share({ title: "Mi constancia: " + b.dataset.t, url }); else { await navigator.clipboard.writeText(url); VC.toast("Link de verificación copiado."); } } catch (e) {}
+  });
+}
 if (!VC.session()) location.href = VC.loginUrl("cursos/mi-aprendizaje");
 else VC.call("mis").then(r => {
   if (r.name) $("hi").textContent = "Hola, " + r.name.split(" ")[0];
+  showCerts(r.courses.filter(c => c.certificate).map(c => ({ kind: "curso", title: c.title, folio: c.certificate.folio, token: c.certificate.token, revoked: c.certificate.revoked })));
   if (r.upcoming && r.upcoming.length) {   // the link to enter is in the course, 30 minutes before
     const when = t => new Date(t).toLocaleString("es-MX", { timeZone: "America/Mexico_City", weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" });
     $("next").hidden = false;
@@ -51,19 +95,8 @@ else VC.call("mis").then(r => {
         <div class="bar"><i style="width:${c.progress}%"></i></div><div class="mute" style="font-size:.82rem;margin-top:4px">${c.completed ? "Completado" : c.progress + "% completado"}</div></div>
       <div class="acts"><a class="btn ${c.completed ? "" : "sun"}" href="/cursos/aprender/${E(c.slug)}/">${c.completed ? "Repasar" : c.progress ? "Continuar" : "Empezar"}</a></div></div>`).join("")
     : `<div class="panel empty">Todavía no tienes cursos.<div style="margin-top:14px"><a class="btn sun" href="/cursos/">Ver el catálogo</a></div></div>`;
-  const certs = r.courses.filter(c => c.certificate);
-  if (certs.length) {
-    $("certs").hidden = false;
-    $("clist").innerHTML = certs.map(c => `<div class="panel row crow"><div><h3>${E(c.title)}</h3><div class="mono">Folio ${E(c.certificate.folio)}${c.certificate.revoked ? " · revocada" : ""}</div></div>
-      <div class="acts"><a class="btn sun" href="/api/cursos/constancia/${E(c.certificate.token)}.pdf" target="_blank" rel="noopener">PDF</a><a class="btn" href="/cursos/verificar/${E(c.certificate.token)}/">Verificación</a></div></div>`).join("");
-  }
-  // workshops (vorticevr.mx/constancia/<CÓDIGO>): their certificates go in the same list
-  VC.call("talleres/mias").then(w => {
-    if (!w.list.length) return;
-    $("certs").hidden = false;
-    $("clist").insertAdjacentHTML("beforeend", w.list.map(k => `<div class="panel row crow"><div><h3>${E(k.title)}</h3><div class="mute" style="font-size:.88rem">Taller · ${E(k.period || "")}</div><div class="mono">Folio ${E(k.folio)}${k.revoked ? " · revocada" : ""}</div></div>
-      <div class="acts"><a class="btn sun" href="/api/cursos/constancia/${E(k.token)}.pdf" target="_blank" rel="noopener">PDF</a><a class="btn" href="/cursos/verificar/${E(k.token)}/">Verificación</a></div></div>`).join(""));
-  }).catch(() => {});
+  // workshops (vorticevr.mx/constancia/<CÓDIGO>): their certificates go in the same gallery
+  VC.call("talleres/mias").then(w => showCerts(w.list.map(k => ({ kind: "taller", title: k.title, period: k.period, folio: k.folio, token: k.token, revoked: k.revoked })))).catch(() => {});
 }).catch(e => {
   if (e.status === 401) location.href = VC.loginUrl("cursos/mi-aprendizaje");
   else $("list").innerHTML = `<div class="empty">${E(e.message)}</div>`;
