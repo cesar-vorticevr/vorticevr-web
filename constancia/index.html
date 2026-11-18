@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Constancia del taller · Vórtice VR</title>
+<meta name="description" content="Pide tu constancia de participación en un taller de Vórtice VR.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="/assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/cursos/cursos.css">
+<style>
+/* the participant's side of a workshop certificate (_cursos/talleres.js): vorticevr.mx/constancia/<CÓDIGO>/ */
+main{max-width:640px}
+.facts{display:flex;flex-wrap:wrap;gap:8px 18px;color:var(--mute);margin:6px 0 22px}
+.facts b{color:var(--ink);font-weight:500}
+label.f{display:flex;flex-direction:column;gap:8px;font-weight:500;margin-bottom:6px}
+label.f input{width:100%;font-size:1.15rem;padding:14px 16px}
+.hint{font-size:.88rem;color:var(--mute);margin:4px 0 18px}
+.ok{display:flex;gap:14px;align-items:center;padding:16px 18px;border-radius:16px;background:rgba(95,227,161,.12);border:1px solid rgba(95,227,161,.5);color:var(--ok);font:600 1.05rem var(--fd);margin-bottom:16px}
+.ok .ic{width:36px;height:36px;border-radius:50%;background:var(--ok);color:#05200f;display:grid;place-items:center;flex:none}
+.nm{font:700 clamp(1.3rem,4.5vw,1.7rem) var(--fd);margin:4px 0 14px;overflow-wrap:anywhere}
+.acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.code input{text-transform:uppercase;letter-spacing:.25em;font-family:var(--fm, "IBM Plex Mono", monospace);text-align:center}
+</style>
+</head>
+<body>
+<header class="top" data-menu></header>
+<main class="wrap" style="padding-top:36px" id="main"><div class="empty">Cargando…</div></main>
+<footer class="bot"></footer>
+<script src="/cursos/cursos.js"></script>
+<script src="/assets/magia.js" defer></script>
+<script>
+VC.header(); VC.footer();
+const E = VC.esc, main = document.getElementById("main");
+const code = (location.pathname.match(/^\/constancia\/([A-Za-z0-9]{4,10})/) || [])[1];
+const fecha = d => new Date(d + "T12:00:00Z").toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+const MOD = { presencial: "Presencial", en_linea: "En línea" };
+
+if (!code) {   // /constancia/ alone: type the code
+  main.innerHTML = `<div class="kick">Constancias de talleres</div><h1 style="font-size:clamp(1.8rem,6vw,2.4rem)">Escribe el código de tu taller</h1>
+    <p class="mute">Te lo dieron al final del taller (o escanea el QR que se proyectó).</p>
+    <form class="panel code" id="cf"><label class="f">Código<input type="text" id="cc" maxlength="10" autocomplete="off" autocapitalize="characters" required placeholder="ABC234"></label><button class="btn sun block" type="submit">Continuar</button></form>`;
+  document.getElementById("cf").onsubmit = e => { e.preventDefault(); const v = document.getElementById("cc").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ""); if (v) location.href = "/constancia/" + v + "/"; };
+} else load();
+
+async function load() {
+  let r;
+  try { r = await VC.call("taller/" + code); }
+  catch (e) { main.innerHTML = `<div class="panel empty">${E(e.message)}<div style="margin-top:14px"><a class="btn" href="/constancia/">Escribir otro código</a></div></div>`; return; }
+  const t = r.taller;
+  const head = `<div class="kick">Constancia de participación</div><h1 style="font-size:clamp(1.7rem,6vw,2.4rem)">${E(t.title)}</h1>
+    <div class="facts"><span>📅 <b>${E(fecha(t.date))}</b></span><span>⏱ <b>${VC.hours(t.hours)}</b></span><span>${E(MOD[t.modality] || "")}</span>${t.place ? `<span>📍 <b>${E(t.place)}</b></span>` : ""}</div>`;
+  const me = r.me;
+  // already issued: download it
+  if (me && me.cert) {
+    main.innerHTML = head + `<div class="ok"><span class="ic">✓</span><span>${me.cert.revoked ? "Esta constancia fue revocada" : "¡Tu constancia está lista!"}</span></div>
+      <div class="panel"><div class="mute">A nombre de</div><div class="nm">${E(me.name)}</div><div class="mono">Folio ${E(me.cert.folio)}</div>
+      <div class="acts" style="margin-top:16px"><a class="btn sun" href="/api/cursos/constancia/${E(me.cert.token)}.pdf" target="_blank" rel="noopener">Descargar PDF</a><a class="btn" href="/cursos/verificar/${E(me.cert.token)}/">Ver verificación</a></div></div>
+      <p class="mute" style="font-size:.88rem;margin-top:16px">También la tienes en <a href="/cursos/mi-aprendizaje/">Mi aprendizaje</a>.</p>`;
+    return;
+  }
+  if (me && me.status === "out") { main.innerHTML = head + `<div class="panel empty">No apareces en la lista de este taller. Si fue un error, avísale a quien lo impartió.</div>`; return; }
+  if (!r.signedIn) {
+    const next = VC.loginUrl("constancia/" + code);
+    main.innerHTML = head + `<div class="panel"><h2 style="margin-top:0">Pide tu constancia</h2><p>Entra con tu cuenta de Vórtice VR (o créala gratis, toma un minuto) y escribe tu nombre como debe salir en la constancia.</p>
+      <div class="acts"><a class="btn sun" href="${E(next.replace("#entrar", "#registro"))}">Crear cuenta</a><a class="btn" href="${E(next)}">Ya tengo cuenta</a></div></div>`;
+    return;
+  }
+  if (!t.open && !me) {
+    main.innerHTML = head + `<div class="panel empty">${Date.now() < t.opens_at ? "El registro se abre el día del taller." : "El registro de este taller ya cerró. Si participaste y no te registraste, avísale a quien lo impartió."}</div>`;
+    return;
+  }
+  // the form (also to fix the name while it has not been issued)
+  main.innerHTML = head + (me ? `<div class="ok"><span class="ic">✓</span><span>Ya estás en la lista</span></div>` : "") + `<form class="panel" id="nf">
+      <label class="f">${me ? "Tu nombre en la constancia" : "Tu nombre completo"}<input type="text" id="nm" maxlength="90" autocomplete="name" required value="${E(me ? me.name : r.accountName)}" placeholder="Nombre y apellidos"></label>
+      <p class="hint">Escríbelo completo, con acentos y apellidos, tal como debe salir en tu constancia.</p>
+      <button class="btn sun block" type="submit">${me ? "Guardar cambio" : "Quiero mi constancia"}</button></form>
+      <p class="mute" style="font-size:.88rem;margin-top:16px">${me ? "Cuando se emita te llegará por correo y la podrás descargar aquí y en <a href=\"/cursos/mi-aprendizaje/\">Mi aprendizaje</a>." : "Al terminar el taller se revisa la lista y se emiten las constancias. Te llegará por correo y la podrás descargar aquí."}</p>`;
+  document.getElementById("nf").onsubmit = async e => {
+    e.preventDefault();
+    const name = document.getElementById("nm").value.trim().replace(/\s+/g, " ");
+    if (!/\S+\s+\S+/.test(name)) return VC.toast("Escribe tu nombre con apellidos.");
+    if (!confirm(`Tu constancia saldrá a nombre de:\n\n${name}\n\n¿Está bien escrito?`)) return;
+    const b = e.target.querySelector("button"); b.disabled = true;
+    try { await VC.call(`taller/${code}/unirme`, { json: { name } }); VC.toast(me ? "Listo, guardamos tu nombre." : "¡Listo! Ya estás en la lista."); load(); }
+    catch (err) { VC.toast(err.message, 5000); b.disabled = false; }
+  };
+}
+</script>
+</body>
+</html>

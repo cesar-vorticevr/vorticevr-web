@@ -8,6 +8,7 @@ import { COURSE, MODULES, EXAM, SEED_VERSION, ONBOARDING_SLUG } from "./induccio
 import { certificatePdf } from "./pdf.js";
 import { pagosApi, migratePagos, cursosWebhook, sellable, billingOn } from "./pagos.js";
 import { estudioApi, migrateEstudio } from "./estudio.js";
+import { talleresApi, migrateTalleres, sendPending } from "./talleres.js";
 import { vivoApi, migrateVivo, cursosCron, publicEditions, editionCheck, liveFor, periodText } from "./vivo.js";
 
 let ready = false;
@@ -37,6 +38,7 @@ async function schema(env) {
   await migratePagos(env);
   await migrateEstudio(env);
   await migrateVivo(env);
+  await migrateTalleres(env);
   await seed(env);
   ready = true;
 }
@@ -100,18 +102,24 @@ async function enrollmentOf(env, user, courseId) {
   return user ? env.DB.prepare("SELECT * FROM c_enrollments WHERE student_id = ? AND course_id = ?").bind(user.id, courseId).first() : null;
 }
 
-const LIB = { uid, settings, courseBySlug, ready: schema, onboardingSlug: ONBOARDING_SLUG };
+const LIB = { uid, token, settings, courseBySlug, ready: schema, onboardingSlug: ONBOARDING_SLUG, baseUrl: (env, url) => baseUrl(env, url), certData: (k, s, b) => certData(k, s, b) };
 // Stripe events of the courses (worker.js's webhook asks first; true = it was ours)
 export const cursosStripeEvent = (env, ctx, ev, h) => cursosWebhook(env, ctx, ev, h, LIB);
 // the books (_libros/api.js) keep their sales in c_orders: they need these tables ready
 export const cursosReady = env => schema(env);
 // the 15-minute cron of worker.js: reminders before live sessions
-export async function cursosTick(env, h) { await schema(env); return cursosCron(env, h); }
+export async function cursosTick(env, h) {
+  await schema(env);
+  await sendPending(env, h, LIB, new URL(h.siteUrl(env))).catch(e => console.error("talleres correo", e.message));   // workshop certificates still to e-mail
+  return cursosCron(env, h);
+}
 
 export async function cursosApi(request, env, ctx, url, path, h) {
   await schema(env);
   const M = request.method, user = await h.auth(request, env);
   const { json } = h;
+  const done5 = await talleresApi(request, env, ctx, url, path, h, user, LIB);   // workshop certificates (_cursos/talleres.js)
+  if (done5) return done5;
   const done4 = await vivoApi(request, env, ctx, url, path, h, user, LIB);   // block 4: editions, live sessions, coupons, payouts, sales
   if (done4) return done4;
   const done3 = await estudioApi(request, env, ctx, url, path, h, user, LIB);   // block 3: the course studio, the manual, course review
@@ -284,7 +292,7 @@ export async function cursosApi(request, env, ctx, url, path, h) {
   if ((m = path.match(/^\/api\/cursos\/verificar\/([A-Za-z0-9_-]{10,40})$/)) && M === "GET") {
     const k = await env.DB.prepare("SELECT * FROM c_certificates WHERE verify_token = ?").bind(m[1]).first();
     if (!k) return json({ error: "No encontramos esta constancia." }, 404);
-    return json({ folio: k.folio, student: k.student_name, course: k.course_title, hours: k.hours, modality: k.modality, period: k.period, instructor: k.instructor_name, kind: k.kind,
+    return json({ folio: k.folio, student: k.student_name, course: k.course_title, hours: k.hours, modality: k.modality, period: k.period, instructor: k.instructor_name, kind: k.kind, place: k.place || "",
       issued_at: k.issued_at, revoked: !!k.revoked, revoked_reason: k.revoked ? k.revoked_reason || "" : undefined, pdf: `/api/cursos/constancia/${k.verify_token}.pdf` });
   }
   if ((m = path.match(/^\/api\/cursos\/constancia\/([A-Za-z0-9_-]{10,40})\.pdf$/)) && M === "GET") {
@@ -304,7 +312,7 @@ function landingOf(c) {
 }
 
 const certData = (k, s, base) => ({ folio: k.folio, student: k.student_name, course: k.course_title, hours: k.hours, modality: k.modality, period: k.period, instructor: k.instructor_name, kind: k.kind,
-  courseKey: k.course_key, objectives: k.objectives, verifyUrl: `${base}/verificar/${k.verify_token}`, ace: s.ace_registration_number || "", signer: s.certificate_signer_name || "", signerTitle: s.certificate_signer_title || "", revoked: !!k.revoked });
+  courseKey: k.course_key, objectives: k.objectives, place: k.place || "", verifyUrl: `${base}/verificar/${k.verify_token}`, ace: s.ace_registration_number || "", signer: s.certificate_signer_name || "", signerTitle: s.certificate_signer_title || "", revoked: !!k.revoked });
 
 async function issueCertificate(env, ctx, url, h, user, c, en) {
   const old = await env.DB.prepare("SELECT folio, verify_token FROM c_certificates WHERE enrollment_id = ?").bind(en.id).first();

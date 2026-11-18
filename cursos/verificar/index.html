@@ -33,15 +33,16 @@ dd{margin:0;font-weight:500;overflow-wrap:anywhere}
 <script>
 VC.header(); VC.footer();
 const E = VC.esc, tk = VC.slugFromPath();
-const MOD = { recorded: "En línea (grabado)", live: "En vivo", mixed: "Mixto" };
+const MOD = { recorded: "En línea (grabado)", live: "En vivo", mixed: "Mixto", presencial: "Presencial", en_linea: "En línea (en vivo)" };
 VC.call("verificar/" + encodeURIComponent(tk)).then(k => {
+  const tl = k.kind === "taller";
   const date = new Date(k.issued_at).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
   document.getElementById("main").innerHTML = `<div class="kick">Verificación de constancia</div><h1 style="font-size:clamp(1.7rem,5vw,2.4rem)">${E(k.course)}</h1>
     <div class="state ${k.revoked ? "bad" : "ok"}"><span class="ic">${k.revoked ? "✕" : "✓"}</span><span>${k.revoked ? "Constancia revocada" : "Constancia válida, emitida por Vórtice VR"}</span></div>
     ${k.revoked && k.revoked_reason ? `<p class="mute">Motivo: ${E(k.revoked_reason)}</p>` : ""}
-    <div class="panel"><dl><dt>Alumno</dt><dd>${E(k.student)}</dd><dt>Curso</dt><dd>${E(k.course)}</dd><dt>Folio</dt><dd class="mono" style="color:var(--ink);font-size:.95rem">${E(k.folio)}</dd>
-      <dt>Emitida</dt><dd>${E(date)}</dd>${k.period ? `<dt>Periodo</dt><dd>${E(k.period)}</dd>` : ""}${k.hours ? `<dt>Duración</dt><dd>${VC.hours(k.hours)}</dd>` : ""}<dt>Modalidad</dt><dd>${E(MOD[k.modality] || k.modality)}</dd>
-      <dt>Instructor</dt><dd>${E(k.instructor)}</dd><dt>Tipo</dt><dd>${k.kind === "dc3" ? "Constancia de capacitación (datos DC-3)" : "Constancia Vórtice VR"}</dd></dl>
+    <div class="panel"><dl><dt>${tl ? "Participante" : "Alumno"}</dt><dd>${E(k.student)}</dd><dt>${tl ? "Taller" : "Curso"}</dt><dd>${E(k.course)}</dd><dt>Folio</dt><dd class="mono" style="color:var(--ink);font-size:.95rem">${E(k.folio)}</dd>
+      <dt>Emitida</dt><dd>${E(date)}</dd>${k.period ? `<dt>${tl ? "Fecha del taller" : "Periodo"}</dt><dd>${E(k.period)}</dd>` : ""}${k.hours ? `<dt>Duración</dt><dd>${VC.hours(k.hours)}</dd>` : ""}<dt>Modalidad</dt><dd>${E(MOD[k.modality] || k.modality)}</dd>
+      ${k.place ? `<dt>Lugar</dt><dd>${E(k.place)}</dd>` : ""}${tl ? "" : `<dt>Instructor</dt><dd>${E(k.instructor)}</dd>`}<dt>Tipo</dt><dd>${k.kind === "dc3" ? "Constancia de capacitación (datos DC-3)" : tl ? "Constancia de participación en taller" : "Constancia Vórtice VR"}</dd></dl>
       <div style="margin-top:18px"><a class="btn sun" href="${E(k.pdf)}" target="_blank" rel="noopener">Abrir el PDF</a></div></div>
     <iframe class="pdf" src="${E(k.pdf)}#view=FitH" title="Constancia en PDF"></iframe>`;
 }).catch(e => {

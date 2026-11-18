@@ -34,7 +34,7 @@ function wrap(s, size, bold, max) {
   return lines;
 }
 const rgb = hex => [1, 3, 5].map(i => (parseInt(hex.slice(i, i + 2), 16) / 255).toFixed(3)).join(" ");
-const MODALITY = { recorded: "En línea (grabado)", live: "En vivo", mixed: "Mixto (en línea y en vivo)" };
+const MODALITY = { recorded: "En línea (grabado)", live: "En vivo", mixed: "Mixto (en línea y en vivo)", presencial: "Presencial", en_linea: "En línea (en vivo)" };
 
 // c = { folio, student, course, hours, modality, period, instructor, kind, courseKey, objectives, verifyUrl, ace, signer, signerTitle, revoked }
 export function certificatePdf(c) {
@@ -53,16 +53,20 @@ export function certificatePdf(c) {
   const fol = "FOLIO " + c.folio;
   text(W - 60 - fol.length * 0.6 * 10, H - 60 - 22, 10, "F3", fol, "#4a3a66");
 
+  const taller = c.kind === "taller";   // a workshop (_cursos/talleres.js): participation, not an exam
   let y = 440;
-  text(60, y, 12, "F2", c.kind === "dc3" ? "CONSTANCIA DE CAPACITACIÓN" : "CONSTANCIA DE ACREDITACIÓN", "#a8741a", 2.2);
+  text(60, y, 12, "F2", c.kind === "dc3" ? "CONSTANCIA DE CAPACITACIÓN" : taller ? "CONSTANCIA DE PARTICIPACIÓN" : "CONSTANCIA DE ACREDITACIÓN", "#a8741a", 2.2);
   y -= 34; text(60, y, 13, "F1", "Se otorga a", "#4a3a66");
   let ns = 34; while (ns > 18 && textW(c.student, ns, true) > W - 120) ns -= 1;
   y -= ns + 8; text(60, y, ns, "F2", c.student, "#1b0a36");
-  y -= 30; text(60, y, 13, "F1", "por haber acreditado el curso", "#4a3a66");
+  y -= 30; text(60, y, 13, "F1", taller ? "por su participación en el taller" : "por haber acreditado el curso", "#4a3a66");
   const tl = wrap(c.course, 20, true, W - 120).slice(0, 2);
   for (const l of tl) { y -= 26; text(60, y, 20, "F2", l, "#6b279b"); }
-  const det = [c.hours ? `Duración: ${c.hours} ${Number(c.hours) === 1 ? "hora" : "horas"}` : "", `Modalidad: ${MODALITY[c.modality] || c.modality || ""}`, c.period ? `Periodo: ${c.period}` : ""].filter(Boolean).join("   ·   ");
+  const hrs = c.hours ? `Duración: ${String(c.hours).replace(/\.0$/, "")} ${Number(c.hours) === 1 ? "hora" : "horas"}` : "";
+  const det = (taller ? [hrs, `Modalidad: ${MODALITY[c.modality] || c.modality || ""}`, c.period ? `Fecha: ${c.period}` : ""]
+    : [hrs, `Modalidad: ${MODALITY[c.modality] || c.modality || ""}`, c.period ? `Periodo: ${c.period}` : ""]).filter(Boolean).join("   ·   ");
   y -= 26; text(60, y, 11, "F1", det, "#4a3a66");
+  if (taller && c.place) { y -= 16; text(60, y, 11, "F1", "Lugar: " + c.place, "#4a3a66"); }
   if (c.kind === "dc3") {   // DC-3 fields printed on the Vórtice VR certificate (the official format is phase 3)
     const rows = [`Agente capacitador: Vórtice VR${c.ace ? "   ·   Registro STPS: " + c.ace : ""}${c.courseKey ? "   ·   Clave del curso: " + c.courseKey : ""}`];
     if (c.objectives) rows.push(...wrap("Objetivo: " + c.objectives, 9, false, W - 120).slice(0, 2));
@@ -71,8 +75,8 @@ export function certificatePdf(c) {
 
   // signatures
   const sig = (x, name, role) => { line(x, 128, x + 210, 128, "#4a3a66", 0.6); text(x, 112, 11, "F2", name || "", "#1b0a36"); text(x, 98, 9, "F1", role, "#4a3a66"); };
-  sig(60, c.instructor, "Instructor del curso");
-  sig(300, c.signer || "Vórtice VR", c.signerTitle || "Por Vórtice VR");
+  if (taller) sig(60, c.signer || "Vórtice VR", c.signerTitle || "Por Vórtice VR");   // Vórtice VR gives the workshop: one signature
+  else { sig(60, c.instructor, "Instructor del curso"); sig(300, c.signer || "Vórtice VR", c.signerTitle || "Por Vórtice VR"); }
 
   // QR to the public verification page
   const qr = qrcode(0, "M"); qr.addData(c.verifyUrl); qr.make();

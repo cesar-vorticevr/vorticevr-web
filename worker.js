@@ -13,7 +13,7 @@ import { mensajesApi } from "./_mensajes/api.js";
 import { librosApi, librosWebhook, cleanLibro, publicLibro, lockedMediaOk, newBookId, LIBRO } from "./_libros/api.js";
 
 const ROOT_DEFAULT = "vorticevr.mx";
-const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear","create","ra","x","e","m","preview","app","apps","static","assets","cdn","dev","test","staging","beta","demo","vorticevr","vortice","soporte","support","help","ayuda","blog","shop","tienda","login","cuenta","account","johara","tarjeta","proyectos","status","docs","cursos","biblioteca"]);
+const RESERVED = new Set(["www","t","api","admin","mail","email","smtp","crear","create","ra","x","e","m","preview","app","apps","static","assets","cdn","dev","test","staging","beta","demo","vorticevr","vortice","soporte","support","help","ayuda","blog","shop","tienda","login","cuenta","account","johara","tarjeta","proyectos","status","docs","cursos","biblioteca","constancia","constancias"]);
 // per-IP limits: a school or a workshop puts 50–300 people behind one IP, so these stay high; the real protection
 // is per email (codes, login tries) and the global sign-up cap
 const IP_LIMITS = { reg: 300, regAll: 1500, login: 600, handle: 3000 };
@@ -126,6 +126,12 @@ async function route(request, env, ctx) {
     if (at) {
       if (at[1] !== at[1].toLowerCase()) return Response.redirect(url.origin + "/@" + at[1].toLowerCase() + url.search, 301);
       return env.ASSETS.fetch(new Request(new URL("/portal/", url), request));
+    }
+    // a workshop's certificate sign-up: vorticevr.mx/constancia/<CÓDIGO> (_cursos/talleres.js; the page reads the code from the address)
+    const tc = url.pathname.match(/^\/constancia\/([A-Za-z0-9]{4,10})\/?$/);
+    if (tc) {
+      if (tc[1] !== tc[1].toUpperCase() || !url.pathname.endsWith("/")) return Response.redirect(url.origin + "/constancia/" + tc[1].toUpperCase() + "/" + url.search, 301);
+      return env.ASSETS.fetch(new Request(new URL("/constancia/", url), request));
     }
     const cp = cursosPage(url.pathname);
     if (cp) {

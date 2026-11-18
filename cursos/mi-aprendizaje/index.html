@@ -57,6 +57,13 @@ else VC.call("mis").then(r => {
     $("clist").innerHTML = certs.map(c => `<div class="panel row crow"><div><h3>${E(c.title)}</h3><div class="mono">Folio ${E(c.certificate.folio)}${c.certificate.revoked ? " · revocada" : ""}</div></div>
       <div class="acts"><a class="btn sun" href="/api/cursos/constancia/${E(c.certificate.token)}.pdf" target="_blank" rel="noopener">PDF</a><a class="btn" href="/cursos/verificar/${E(c.certificate.token)}/">Verificación</a></div></div>`).join("");
   }
+  // workshops (vorticevr.mx/constancia/<CÓDIGO>): their certificates go in the same list
+  VC.call("talleres/mias").then(w => {
+    if (!w.list.length) return;
+    $("certs").hidden = false;
+    $("clist").insertAdjacentHTML("beforeend", w.list.map(k => `<div class="panel row crow"><div><h3>${E(k.title)}</h3><div class="mute" style="font-size:.88rem">Taller · ${E(k.period || "")}</div><div class="mono">Folio ${E(k.folio)}${k.revoked ? " · revocada" : ""}</div></div>
+      <div class="acts"><a class="btn sun" href="/api/cursos/constancia/${E(k.token)}.pdf" target="_blank" rel="noopener">PDF</a><a class="btn" href="/cursos/verificar/${E(k.token)}/">Verificación</a></div></div>`).join(""));
+  }).catch(() => {});
 }).catch(e => {
   if (e.status === 401) location.href = VC.loginUrl("cursos/mi-aprendizaje");
   else $("list").innerHTML = `<div class="empty">${E(e.message)}</div>`;
