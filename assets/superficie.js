@@ -94,6 +94,8 @@ const CSS = `
 .sf-ar{font:700 .95rem "Sora",system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;border:1px solid #d2b8ff;border-radius:999px;padding:16px 28px;color:#fff;background:linear-gradient(135deg,#8b3fd6,#5a1f8f);box-shadow:0 0 30px rgba(139,63,214,.55);display:inline-flex;align-items:center;gap:10px;cursor:pointer}
 .sf-ar svg{width:22px;height:22px;fill:#fff}
 .sf-ar:disabled{opacity:.55}
+.sf-hmd{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+.sf-vr{background:linear-gradient(135deg,#2a1450,#120726)}
 .sf-note{margin:0;max-width:36ch;text-align:center;color:#b9addb;font-size:.88rem;line-height:1.45}
 .sf-steps{margin:0;padding:0;list-style:none;display:grid;gap:4px;color:#b9addb;font-size:.86rem;text-align:left;max-width:36ch}
 .sf-steps b{color:#f2ecff}
@@ -112,6 +114,7 @@ export async function run(o) {
   el.innerHTML = `<div class="sf-top"><div class="sf-k"></div><h1></h1></div>
     <div class="sf-stage"><div class="sf-load">Preparando tu experiencia…</div></div>
     <div class="sf-bot"><button class="sf-ar" type="button" hidden>${AR_ICON}<span>Verlo en tu espacio</span></button>
+      <div class="sf-hmd" hidden><button class="sf-ar sf-mr" type="button" hidden>${AR_ICON}<span>Realidad mixta</span></button><button class="sf-ar sf-vr" type="button" hidden>${AR_ICON}<span>Realidad virtual</span></button></div>
       <ol class="sf-steps" hidden><li>1. Toca <b>Verlo en tu espacio</b>.</li><li>2. Apunta al <b>piso o a una mesa</b> y mueve el celular despacio.</li><li>3. Cuando aparezca, camina a su alrededor.</li></ol>
       <p class="sf-note" hidden></p><nav class="sf-soc" aria-label="Redes"></nav></div>`;
   el.querySelector(".sf-k").textContent = types.size === 1 && types.has("model") ? "Objeto en 3D para tu espacio" : "Realidad aumentada en tu espacio";
@@ -145,17 +148,24 @@ export async function run(o) {
       .then(b => { mv.setAttribute("ios-src", URL.createObjectURL(b)); usdzOk = true; }).catch(e => console.error(e))
       .finally(() => { btn.disabled = false; btn.querySelector("span").textContent = "Verlo en tu espacio"; });
   }
+  // a headset (Meta Quest…): mixed or virtual reality, taken and turned with the hands (assets/superficie-mr.js)
+  let MR = null, mrAR = false, mrVR = false;
+  if (navigator.xr && /OculusBrowser|Quest|Pico|Wolvic|Mobile VR/i.test(navigator.userAgent)) {
+    try { [mrAR, mrVR] = await Promise.all(["immersive-ar", "immersive-vr"].map(m => navigator.xr.isSessionSupported(m).catch(() => false))); } catch (e) {}
+    if (mrAR || mrVR) try { MR = await import("./superficie-mr.js"); } catch (e) { console.error(e); MR = null; }
+  }
   // Android (WebXR): our own view, with photo and video with the logo (assets/superficie-xr.js). iPhone: Quick Look.
   let XR = null;
-  try { if (navigator.xr && await navigator.xr.isSessionSupported("immersive-ar")) XR = await import("./superficie-xr.js"); } catch (e) { XR = null; }
+  if (!MR) try { if (navigator.xr && await navigator.xr.isSessionSupported("immersive-ar")) XR = await import("./superficie-xr.js"); } catch (e) { XR = null; }
   steps.lastElementChild.innerHTML = XR ? "3. Toca la pantalla para ponerlo, <b>pellizca con dos dedos</b> para hacerlo más grande o más chico y toma tu <b>foto o video</b>." : "3. <b>Pellizca con dos dedos</b> para hacerlo más grande o más chico y camina a su alrededor. Para tu <b>foto</b>, toca el botón blanco de abajo; para <b>video</b>, mantenlo presionado.";
   mv.addEventListener("load", () => {
     load.remove();
     stage.appendChild(Object.assign(document.createElement("span"), { className: "sf-hint", textContent: "Gíralo con el dedo" }));
     const show = () => {
+      if (MR) return;
       const can = !!XR || !!mv.canActivateAR, phone = matchMedia("(hover: none)").matches;
       btn.hidden = !can; steps.hidden = !can; note.hidden = can;
-      note.textContent = phone ? "Tu celular no permite ver esto en tu espacio. Puedes girarlo aquí con el dedo." : "Abre este link en tu celular para verlo en tu espacio, sobre el piso o una mesa.";
+      note.textContent = phone ? "Tu celular no permite ver esto en tu espacio. Puedes girarlo aquí con el dedo." : "Abre este link en tu celular para verlo en tu espacio, sobre el piso o una mesa, o en el navegador de tu visor Meta Quest para verlo en realidad mixta y tomarlo con tus manos.";
     };
     show(); setTimeout(show, 700); setTimeout(show, 2500);   // canActivateAR is known a moment after the model loads
   });
@@ -189,5 +199,19 @@ export async function run(o) {
     if (audio) { try { audio.currentTime = 0; } catch (e) {} audio.play().catch(() => {}); }
     mv.activateAR();
   };
+  if (MR) headset();
   stage.prepend(mv);
+
+  function headset() {
+    btn.hidden = true; note.hidden = true; steps.hidden = false; mv.removeAttribute("ar");
+    const box = el.querySelector(".sf-hmd"), mr = el.querySelector(".sf-mr"), vr = el.querySelector(".sf-vr");
+    box.hidden = false; mr.hidden = !mrAR; vr.hidden = !mrVR;
+    steps.innerHTML = `<li>1. Toca <b>${mrAR ? "Realidad mixta" : "Realidad virtual"}</b>: aparece en el piso frente a ti.</li><li>2. <b>Pellizca</b> (o aprieta el gatillo) para tomarlo: muévelo y gíralo con tu mano.</li><li>3. Con <b>las dos manos</b> lo haces más grande o más chico.</li>`;
+    const go = mode => {
+      if (sndBtn) sndBtn.hidden = true;
+      MR.startMR({ glb, slug: cfg.slug, title: cfg.title, audio, mode, onEnd: () => { if (sndBtn) sndBtn.hidden = false; } })
+        .catch(e => { console.error(e); if (sndBtn) sndBtn.hidden = false; note.hidden = false; note.textContent = "No se pudo abrir. Revisa que el navegador del visor tenga permiso para sesiones inmersivas."; });
+    };
+    mr.onclick = () => go("ar"); vr.onclick = () => go("vr");
+  }
 }

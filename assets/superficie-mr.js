@@ -1,0 +1,300 @@
+// "Realidad aumentada en superficie" in a headset (Meta Quest and others with WebXR), used by assets/superficie.js
+// when the page opens in the headset's browser, instead of model-viewer or the phone view (superficie-xr.js).
+//   · mode "ar" = mixed reality (passthrough: your room and your real hands; nothing is drawn on the hands)
+//     mode "vr" = virtual reality (a night floor with stars; the hands are subtle translucent hands)
+//   · it appears on the floor, ~1.2 m in front of you, facing you
+//   · one hand (pinch, or the controller's trigger / grip): take it, near or from afar with the ray, and it follows
+//     your hand: move it, turn it, tilt it
+//   · two hands: bigger or smaller (5 %–2000 %), turn it and move it at the same time
+//   · a small panel that follows you (lower left): Enderezar (upright and on the floor), Tamaño real, Traer (in front
+//     of you) and Salir. The size is remembered like on the phone (localStorage vvr-escala-<slug>).
+// startMR() must be called right inside the tap: the session is asked for before anything else.
+import * as THREE from "three";
+import * as ESC from "./escena.js";
+import { sfx } from "./sonidos.js";
+
+const MIN = 0.05, MAX = 20;
+const isHMD = () => /OculusBrowser|Quest|Pico|Wolvic|Mobile VR/i.test(navigator.userAgent);
+export { isHMD };
+
+// o: { glb (ArrayBuffer), slug, title, audio: <audio> | null, mode: "ar" | "vr", onEnd() }
+export function startMR(o) {
+  if (o.audio) { const au = o.audio; try { au.currentTime = 0; } catch (e) {} au.play().catch(() => {}); }   // inside the tap
+  const req = navigator.xr.requestSession(o.mode === "vr" ? "immersive-vr" : "immersive-ar", { requiredFeatures: ["local-floor"], optionalFeatures: ["hand-tracking", "bounded-floor", "layers"] });
+  return req.then(s => run(s, o)).catch(e => { if (o.audio) o.audio.pause(); throw e; });
+}
+
+async function run(session, o) {
+  const AR = o.mode !== "vr";
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: AR });
+  renderer.setPixelRatio(1); renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.xr.enabled = true; renderer.xr.setReferenceSpaceType("local-floor");
+  renderer.domElement.style.display = "none"; document.body.appendChild(renderer.domElement);
+  const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(70, 1, 0.01, 100);
+  await ESC.light(renderer, scene);
+  if (!AR) world(scene);
+
+  // ---- the experience, inside a holder that the hands move ----
+  const { GLTFLoader } = await import("three/addons/loaders/GLTFLoader.js");
+  const gltf = await new GLTFLoader().parseAsync(o.glb.slice(0), "");
+  const holder = new THREE.Group(); holder.visible = false; holder.add(gltf.scene); scene.add(holder);
+  const box = new THREE.Box3().setFromObject(gltf.scene), size = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
+  {
+    const c = document.createElement("canvas"); c.width = c.height = 128; const g = c.getContext("2d"), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, "rgba(0,0,0,.45)"); gr.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+    const sh = new THREE.Mesh(new THREE.PlaneGeometry(Math.max(size.x, 0.1) * 1.4, Math.max(size.z, 0.1) * 1.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+    sh.rotation.x = -Math.PI / 2; sh.position.set(mid.x, 0.002, mid.z); holder.add(sh);
+  }
+  const hitBox = box.clone().expandByScalar(0.03);
+  const outline = new THREE.Box3Helper(hitBox, 0xffbe55); outline.material.transparent = true; outline.material.opacity = 0.45; outline.material.depthTest = false; outline.visible = false; holder.add(outline);
+  const mixer = gltf.animations.length ? new THREE.AnimationMixer(gltf.scene) : null;
+  if (mixer) gltf.animations.forEach(a => mixer.clipAction(a).play());
+
+  // ---- size ----
+  const KEY = "vvr-escala-" + (o.slug || "x");
+  let scale = 1; try { const v = parseFloat(localStorage.getItem(KEY)); if (v >= MIN && v <= MAX) scale = v; } catch (e) {}
+  const save = () => { try { if (Math.abs(scale - 1) < 0.02) localStorage.removeItem(KEY); else localStorage.setItem(KEY, String(scale)); } catch (e) {} };
+  const target = { pos: new THREE.Vector3(), quat: new THREE.Quaternion(), scale };   // where the hands want it (smoothed)
+
+  // ---- hands and controllers ----
+  const srcs = [0, 1].map(i => {
+    const ray = renderer.xr.getController(i), grip = renderer.xr.getControllerGrip(i), hand = renderer.xr.getHand(i);
+    scene.add(ray, grip, hand);
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, -1)]),
+      new THREE.LineBasicMaterial({ color: 0xd2b8ff, transparent: true, opacity: 0.55 }));
+    line.visible = false; ray.add(line);
+    const s = { i, ray, grip, hand, line, input: null, grab: null, hover: null };
+    ray.addEventListener("connected", e => { s.input = e.data; });
+    ray.addEventListener("disconnected", () => { s.input = null; release(s); });
+    ray.addEventListener("selectstart", () => press(s));
+    ray.addEventListener("selectend", () => release(s));
+    ray.addEventListener("squeezestart", () => { if (!(s.input && s.input.hand)) press(s, true); });   // the grip button also takes it
+    ray.addEventListener("squeezeend", () => { if (!(s.input && s.input.hand)) release(s); });
+    return s;
+  });
+  if (!AR) hands(srcs).catch(e => console.error(e));   // in mixed reality your real hands are seen: nothing is drawn on them
+
+  // the pose that holds it: for a hand, the pinch point with the wrist's turn; for a controller, its grip
+  const tmpM = new THREE.Matrix4(), tmpV = new THREE.Vector3(), tmpQ = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1);
+  function poseOf(s, out) {
+    if (s.input && s.input.hand) {
+      const j = s.hand.joints, w = j && j["wrist"], th = j && j["thumb-tip"], ix = j && j["index-finger-tip"];
+      if (!w || !th || !ix || !w.visible) return false;
+      tmpV.copy(th.position).add(ix.position).multiplyScalar(0.5);
+      out.compose(tmpV, w.quaternion, one); return true;
+    }
+    const g = s.grip.visible ? s.grip : s.ray.visible ? s.ray : null;
+    if (!g) return false;
+    g.updateMatrixWorld(true); out.copy(g.matrixWorld); return true;
+  }
+  const pointOf = (s, out) => { if (!poseOf(s, tmpM)) return false; out.setFromMatrixPosition(tmpM); return true; };
+  const pulse = (s, k = 0.4, ms = 40) => { try { const h = s.input && s.input.gamepad && s.input.gamepad.hapticActuators; h && h[0] && h[0].pulse(k, ms); } catch (e) {} };
+
+  const raycaster = new THREE.Raycaster(), inv = new THREE.Matrix4();
+  function aim(s) {   // what its ray points at: { what: "panel" | "obj", d, uv }
+    if (!s.ray.visible) return null;
+    s.ray.updateMatrixWorld(true);
+    raycaster.ray.origin.setFromMatrixPosition(s.ray.matrixWorld);
+    raycaster.ray.direction.set(0, 0, -1).transformDirection(s.ray.matrixWorld);
+    let best = null;
+    if (panel.mesh.visible) { const h = raycaster.intersectObject(panel.mesh, false)[0]; if (h) best = { what: "panel", d: h.distance, uv: h.uv }; }
+    if (holder.visible) {
+      holder.updateMatrixWorld(true); inv.copy(holder.matrixWorld).invert();
+      const r = raycaster.ray.clone().applyMatrix4(inv), p = r.intersectBox(hitBox, new THREE.Vector3());
+      if (p) { const d = p.applyMatrix4(holder.matrixWorld).distanceTo(raycaster.ray.origin); if (!best || d < best.d) best = { what: "obj", d }; }
+    }
+    return best;
+  }
+  function near(s) {   // the hand is touching it
+    if (!holder.visible || !pointOf(s, tmpV)) return false;
+    holder.updateMatrixWorld(true); inv.copy(holder.matrixWorld).invert();
+    return hitBox.clone().expandByScalar(0.06 / scale).containsPoint(tmpV.applyMatrix4(inv));
+  }
+
+  let grabbedOnce = false, two = null;
+  function press(s, squeeze) {
+    if (s.grab) return;
+    const a = squeeze ? null : aim(s);
+    if (a && a.what === "panel" && !near(s)) { panel.click(a.uv); pulse(s, 0.3, 30); return; }
+    if (!(near(s) || (a && a.what === "obj") || squeeze && near(s))) return;
+    s.grab = { off: new THREE.Matrix4() };
+    if (!grabbedOnce) { grabbedOnce = true; panel.hint = "Con las dos manos: más grande o más chico"; panel.draw(); }
+    sfx.pop(); pulse(s, 0.5, 50);
+    regrab();
+  }
+  function release(s) {
+    if (!s.grab) return;
+    s.grab = null; two = null; save(); regrab(); panel.draw();
+  }
+  // whenever the hands that hold it change, each one starts again from where it is now
+  function regrab() {
+    const held = srcs.filter(s => s.grab);
+    const hm = new THREE.Matrix4().compose(target.pos, target.quat, one);
+    for (const s of held) if (poseOf(s, tmpM)) s.grab.off.copy(tmpM).invert().multiply(hm);
+    two = null;
+    if (held.length === 2) {
+      const a = new THREE.Vector3(), b = new THREE.Vector3();
+      if (pointOf(held[0], a) && pointOf(held[1], b)) two = { d: Math.max(0.02, a.distanceTo(b)), ang: Math.atan2(b.x - a.x, b.z - a.z), mid: a.clone().add(b).multiplyScalar(0.5), pos: target.pos.clone(), quat: target.quat.clone(), scale: target.scale };
+    }
+  }
+  let ticks = 0;
+  function follow() {
+    const held = srcs.filter(s => s.grab);
+    if (held.length === 1) {
+      if (poseOf(held[0], tmpM)) { tmpM.multiply(held[0].grab.off); tmpM.decompose(target.pos, target.quat, tmpV); }
+    } else if (held.length === 2 && two) {
+      const a = new THREE.Vector3(), b = new THREE.Vector3();
+      if (!pointOf(held[0], a) || !pointOf(held[1], b)) return;
+      const k = Math.min(MAX, Math.max(MIN, two.scale * a.distanceTo(b) / two.d)) / two.scale;
+      const dy = Math.atan2(b.x - a.x, b.z - a.z) - two.ang, q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), dy);
+      const m = a.clone().add(b).multiplyScalar(0.5);
+      target.scale = two.scale * k;
+      target.quat.copy(q).multiply(two.quat);
+      // it grows and turns around the point between the hands, and moves with them
+      target.pos.copy(two.pos).sub(two.mid).multiplyScalar(k).applyQuaternion(q).add(m);
+      scale = target.scale;
+      const step = Math.round(Math.log(scale) / Math.log(1.15)); if (step !== ticks) { ticks = step; sfx.tick(.6); held.forEach(s => pulse(s, 0.15, 15)); panel.draw(); }
+    }
+  }
+
+  // ---- the panel ----
+  const head = new THREE.Vector3(), fwd = new THREE.Vector3();
+  function headPose() {
+    const c = renderer.xr.getCamera(); c.updateMatrixWorld(true);
+    head.setFromMatrixPosition(c.matrixWorld); fwd.set(0, 0, -1).transformDirection(c.matrixWorld); fwd.y = 0;
+    if (fwd.lengthSq() < 1e-4) fwd.set(0, 0, -1); fwd.normalize();
+  }
+  function inFront(dist) {   // on the floor, dist in front of you, facing you
+    headPose();
+    target.pos.set(head.x + fwd.x * dist, 0, head.z + fwd.z * dist);
+    target.quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(-fwd.x, -fwd.z));
+  }
+  function upright() {   // only its turn around the vertical stays; its base back on the floor
+    const e = new THREE.Euler().setFromQuaternion(target.quat, "YXZ");
+    target.quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), e.y); target.pos.y = 0;
+  }
+  const panel = makePanel(o.title, {
+    upright: () => { upright(); sfx.pop(); },
+    real: () => { target.scale = scale = 1; save(); sfx.pop(); },
+    bring: () => { inFront(Math.max(0.8, 0.6 + size.length() * scale * 0.5)); sfx.appear(); },
+    exit: () => session.end(),
+  }, () => Math.round(scale * 100) + " %");
+  scene.add(panel.mesh);
+  let panelOut = true;
+  function panelFollow(dt) {
+    headPose();
+    const left = new THREE.Vector3(fwd.z, 0, -fwd.x);   // to your left
+    const want = head.clone().addScaledVector(fwd, 0.55).addScaledVector(left, 0.32); want.y = head.y - 0.32;
+    const off = panel.mesh.position.distanceTo(want);
+    if (off > 0.35) panelOut = true;
+    if (panelOut) { panel.mesh.position.lerp(want, 1 - Math.exp(-dt * 3)); if (off < 0.03) panelOut = false; }
+    panel.mesh.lookAt(head);
+  }
+
+  await renderer.xr.setSession(session);
+  if (o.debug) o.debug({ holder, target, panel, srcs, get scale() { return scale; } });   // tests with an emulated headset
+  const clock = new THREE.Clock(); let started = false;
+  renderer.setAnimationLoop((t, frame) => {
+    const dt = Math.min(0.1, clock.getDelta()); if (!frame) return;
+    if (!started) {   // the first pose: there it appears
+      started = true; inFront(Math.max(1.1, 0.8 + size.length() * scale * 0.5));
+      holder.position.copy(target.pos); holder.quaternion.copy(target.quat); holder.scale.setScalar(scale); holder.visible = true;
+      headPose(); panel.mesh.position.copy(head).addScaledVector(fwd, 0.55); panel.mesh.position.y = head.y - 0.32;
+      sfx.appear();
+    }
+    follow();
+    const k = 1 - Math.exp(-dt * 22);   // smooths the trembling of the hands
+    holder.position.lerp(target.pos, k); holder.quaternion.slerp(target.quat, k); holder.scale.setScalar(holder.scale.x + (target.scale - holder.scale.x) * k);
+    let hoverObj = false, hoverPanel = null;
+    for (const s of srcs) {
+      const a = s.grab ? null : aim(s);
+      s.line.visible = !!a && !near(s);
+      if (s.line.visible) s.line.scale.z = a.d;
+      if (a && a.what === "obj") hoverObj = true;
+      if (a && a.what === "panel") hoverPanel = a.uv;
+      if (!s.grab && near(s)) hoverObj = true;
+    }
+    outline.visible = hoverObj || srcs.some(s => s.grab);
+    panel.hover(hoverPanel);
+    panelFollow(dt);
+    if (mixer) mixer.update(dt);
+    renderer.render(scene, camera);
+  });
+
+  session.addEventListener("end", () => {
+    renderer.setAnimationLoop(null); save();
+    renderer.dispose(); renderer.domElement.remove();
+    if (o.audio) o.audio.pause();
+    o.onEnd && o.onEnd();
+  });
+}
+
+// virtual reality: night sky with stars and a soft floor
+function world(scene) {
+  scene.background = new THREE.Color(0x0b0418);
+  const c = document.createElement("canvas"); c.width = c.height = 512; const g = c.getContext("2d");
+  const gr = g.createRadialGradient(256, 256, 0, 256, 256, 256);
+  gr.addColorStop(0, "#3a1d6e"); gr.addColorStop(0.55, "#1d0c3d"); gr.addColorStop(1, "rgba(11,4,24,0)"); g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
+  g.strokeStyle = "rgba(210,184,255,.18)"; g.lineWidth = 2;
+  for (let r = 40; r < 256; r += 40) { g.beginPath(); g.arc(256, 256, r, 0, Math.PI * 2); g.stroke(); }
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(7, 64), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+  floor.rotation.x = -Math.PI / 2; scene.add(floor);
+  const n = 1400, p = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { const v = new THREE.Vector3().randomDirection(); v.y = Math.abs(v.y) * 0.9 + 0.05; v.normalize().multiplyScalar(40 + Math.random() * 20); p.set([v.x, v.y, v.z], i * 3); }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(p, 3));
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xe9ddff, size: 0.12, sizeAttenuation: true, transparent: true, opacity: 0.8 })));
+}
+
+// virtual reality: subtle translucent hands (no dots, no bones); controllers with their own model
+async function hands(srcs) {
+  const [{ XRHandModelFactory }, { XRControllerModelFactory }] = await Promise.all([
+    import("three/addons/webxr/XRHandModelFactory.js"), import("three/addons/webxr/XRControllerModelFactory.js")]);
+  const hf = new XRHandModelFactory(); hf.setPath("https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/generic-hand/");
+  const cf = new XRControllerModelFactory();
+  const mat = new THREE.MeshPhysicalMaterial({ color: 0xe6dcff, transparent: true, opacity: 0.32, roughness: 0.35, metalness: 0, transmission: 0, depthWrite: false, emissive: 0x6b3fb0, emissiveIntensity: 0.25 });
+  for (const s of srcs) {
+    const hm = hf.createHandModel(s.hand, "mesh"); s.hand.add(hm);
+    // the factory loads its own skin: once it is there, it becomes glass
+    const glass = () => hm.traverse(o => { if (o.isMesh && o.material !== mat) { o.material = mat; o.renderOrder = 2; } });
+    const iv = setInterval(glass, 500); setTimeout(() => clearInterval(iv), 20000);
+    s.grip.add(cf.createControllerModel(s.grip));
+    // the factories wait for "connected": if the hand or controller was already there, tell them again
+    if (s.input) (s.input.hand ? s.hand : s.grip).dispatchEvent({ type: "connected", data: s.input });
+  }
+}
+
+// the panel: a line of help and four buttons, drawn on a canvas
+function makePanel(title, act, pct) {
+  const W = 1024, H = 300, c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.42 * H / W), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false }));
+  mesh.renderOrder = 10;
+  const BTN = [["upright", "Enderezar"], ["real", "Tamaño real"], ["bring", "Traer"], ["exit", "Salir"]];
+  const p = { mesh, hint: "Pellizca para tomarlo · muévelo y gíralo con tu mano", hov: -1 };
+  const rr = (x, y, w, h, r) => { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); };
+  p.draw = () => {
+    g.clearRect(0, 0, W, H);
+    rr(4, 4, W - 8, H - 8, 46); g.fillStyle = "rgba(14,6,30,.86)"; g.fill(); g.lineWidth = 3; g.strokeStyle = "rgba(210,184,255,.45)"; g.stroke();
+    g.fillStyle = "#ffbe55"; g.font = "700 30px Sora, system-ui, sans-serif"; g.textBaseline = "middle"; g.textAlign = "left";
+    g.fillText(String(title || "Vórtice VR").slice(0, 34), 40, 52);
+    g.textAlign = "right"; g.fillStyle = "#fff"; g.font = "800 34px Sora, system-ui, sans-serif"; g.fillText(pct(), W - 40, 52);
+    g.textAlign = "left"; g.fillStyle = "#d9ccf5"; g.font = "500 30px 'IBM Plex Sans', system-ui, sans-serif"; g.fillText(p.hint, 40, 106);
+    const bw = (W - 80 - 3 * 18) / 4;
+    BTN.forEach(([k, t], i) => {
+      const x = 40 + i * (bw + 18), y = 150;
+      rr(x, y, bw, 110, 55); g.fillStyle = i === p.hov ? (k === "exit" ? "#e5243b" : "#8b3fd6") : (k === "exit" ? "rgba(229,36,59,.28)" : "rgba(255,255,255,.12)"); g.fill();
+      g.fillStyle = "#fff"; g.textAlign = "center"; g.font = "700 32px Sora, system-ui, sans-serif"; g.fillText(t, x + bw / 2, y + 56);
+    });
+    tex.needsUpdate = true;
+  };
+  const at = uv => {
+    if (!uv) return -1;
+    const x = uv.x * W, y = (1 - uv.y) * H, bw = (W - 80 - 3 * 18) / 4;
+    if (y < 150 || y > 260) return -1;
+    const i = Math.floor((x - 40) / (bw + 18)); return i >= 0 && i < 4 && (x - 40) - i * (bw + 18) <= bw ? i : -1;
+  };
+  p.hover = uv => { const i = at(uv); if (i !== p.hov) { p.hov = i; p.draw(); } };
+  p.click = uv => { const i = at(uv); if (i >= 0) { act[BTN[i][0]](); p.draw(); } };
+  p.draw();
+  return p;
+}

@@ -218,6 +218,17 @@ section{position:relative;padding-block:110px}
 
 /* experiences */
 .xgrid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:20px}
+.sfintro{max-width:62ch;color:var(--mute);margin:0 0 26px}
+.sfintro b{color:var(--ink)}
+.sfh{font-family:var(--fd);font-size:1.05rem;margin:26px 0 12px;color:var(--lav)}
+.sfgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px}
+.sfc{display:flex;flex-direction:column;border-radius:16px;overflow:hidden;border:1px solid var(--line2);background:var(--surface-solid);text-decoration:none;transition:border-color .3s,transform .3s var(--ease),box-shadow .3s}
+.sfc:hover{border-color:var(--lav);transform:translateY(-3px);box-shadow:0 20px 50px -20px rgba(139,63,214,.6)}
+.sfc .im{aspect-ratio:1;background:radial-gradient(80% 70% at 50% 40%,#2a1450,#0d0620);display:grid;place-items:center;overflow:hidden}
+.sfc .im img{width:100%;height:100%;object-fit:cover}
+.sfc .tt{padding:12px 14px 14px;font-family:var(--fd);font-weight:600;font-size:.95rem;line-height:1.3}
+.sfc .tt small{display:block;font-family:var(--fb);font-weight:400;color:var(--mute);font-size:.8rem;margin-top:3px}
+.sfc .pv{font-size:.72rem;color:var(--sun);font-family:var(--fm);letter-spacing:.1em;text-transform:uppercase}
 .xcard{grid-column:span 6;perspective:1100px;position:relative}
 .xcard.wide{grid-column:span 12}
 @media (max-width:860px){.xcard,.xcard.wide{grid-column:span 12}}
@@ -404,7 +415,7 @@ footer .explore a{color:var(--mute);text-decoration:none}footer .explore a:hover
 <header data-menu class="top" id="top"><div class="wrap">
   <a class="brand" href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
   <nav aria-label="Secciones">
-    <a href="#experiencias" data-en="Experiences">Experiencias</a><a href="#entrar" data-en="How to enter">Cómo entrar</a>
+    <a href="#experiencias" data-en="Experiences">Experiencias</a><a href="#superficie" data-en="Mixed reality">Realidad mixta</a><a href="#entrar" data-en="How to enter">Cómo entrar</a>
     <button class="lang mag" id="lang" type="button" aria-label="Ver en inglés" data-en-aria="Ver en español"><span data-en="ES">EN</span></button>
     <a class="pill acct mag" id="acct" href="../cuenta/#entrar">Entrar</a>
   </nav>
@@ -436,6 +447,16 @@ footer .explore a{color:var(--mute);text-decoration:none}footer .explore a:hover
         </div>
       </a></div>
     </div>
+  </div></section>
+
+  <!-- Every "Realidad aumentada en superficie" experience opens in a headset in mixed reality (assets/superficie-mr.js).
+       Here: the ones of whoever is signed in (also the private ones) and the community's public ones (Explora). -->
+  <section id="superficie"><div class="wrap">
+    <div class="shead reveal"><span class="kick" data-en="Mixed reality">Realidad mixta</span><h2 data-en="Your 3D, in your room, in your hands.">Tus 3D, en tu cuarto y en tus manos.</h2></div>
+    <p class="sfintro reveal" data-en="Every <b>surface augmented reality</b> experience also opens in your Meta Quest: it appears on the floor in front of you, you <b>pinch it to take it</b>, move it and turn it with your hand, and with <b>both hands</b> you make it bigger or smaller. In mixed reality or in virtual reality.">Toda experiencia de <b>realidad aumentada en superficie</b> también se abre en tu Meta Quest: aparece en el piso frente a ti, la <b>pellizcas para tomarla</b>, la mueves y la giras con tu mano, y con <b>las dos manos</b> la haces más grande o más chica. En realidad mixta o en realidad virtual.</p>
+    <div id="sfMine" hidden><h3 class="sfh" data-en="Yours">Las tuyas</h3><div class="sfgrid" id="sfMineGrid"></div></div>
+    <div id="sfAll" hidden><h3 class="sfh" data-en="From the community">De la comunidad</h3><div class="sfgrid" id="sfAllGrid"></div></div>
+    <div class="actions reveal" style="margin-top:22px"><a class="btn sun mag" href="../crear/?tipo=superficie" data-en="Create yours">Crear la tuya</a><a class="btn mag" href="../explora/?tipo=superficie" data-en="See more in Explora">Ver más en Explora</a></div>
   </div></section>
 
   <section id="entrar"><div class="wrap">
@@ -532,6 +553,29 @@ footer .explore a{color:var(--mute);text-decoration:none}footer .explore a:hover
 })();
 </script>
 
+<script>
+// "Realidad mixta": the signed-in person's surface experiences (also private) and the community's public ones
+(function(){
+  const card=(x,small)=>{ const a=document.createElement("a"); a.className="sfc"; a.href=x.url;
+    a.innerHTML=`<div class="im">${x.image?`<img loading="lazy" alt="">`:""}</div><div class="tt"></div>`;
+    if(x.image) a.querySelector("img").src=".."+x.image;
+    const t=a.querySelector(".tt"); t.textContent=x.title||"Experiencia"; if(small){ const s=document.createElement("small"); s.innerHTML=small; t.appendChild(s); }
+    return a; };
+  let tok=null; try{ const s=JSON.parse(localStorage.getItem("vvr-sesion")||"null"); tok=s&&s.token; }catch(e){}
+  const mine=new Set();
+  const loadAll=()=>fetch("../api/explora?tipo=superficie&n=12").then(r=>r.ok?r.json():{experiences:[]}).then(d=>{
+    const list=(d.experiences||[]).filter(x=>!mine.has(x.slug)); if(!list.length) return;
+    const g=document.getElementById("sfAllGrid"); list.forEach(x=>g.appendChild(card(x,x.by&&x.by.handle?"@"+x.by.handle:""))); document.getElementById("sfAll").hidden=false;
+  }).catch(()=>{});
+  if(!tok){ loadAll(); return; }
+  fetch("../api/me",{headers:{Authorization:"Bearer "+tok}}).then(r=>r.ok?r.json():null).then(d=>{
+    const list=((d&&d.experiences)||[]).filter(x=>x.kind==="superficie"&&!x.paused);
+    if(list.length){ const g=document.getElementById("sfMineGrid");
+      list.forEach(x=>{ mine.add(x.slug); g.appendChild(card({...x,image:`/m/${x.slug}/image?v=${x.updated||""}`},`<span class="pv">${x.listed?"Pública":"Privada"}</span>`)); });
+      document.getElementById("sfMine").hidden=false; }
+  }).catch(()=>{}).finally(loadAll);
+})();
+</script>
 <script src="../assets/origen.js"></script>
 <script src="../assets/cuenta-chip.js"></script>
 <script src="../assets/magia.js" defer></script>
