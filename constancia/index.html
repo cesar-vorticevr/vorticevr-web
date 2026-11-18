@@ -64,7 +64,11 @@ main{max-width:1080px}
 .p-seal img{width:4.6cqw;filter:brightness(0) invert(1)}
 .p-seal svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .p-seal text{font:700 7.4px "Cinzel",serif;fill:#7a5410}
-.p-sg{position:absolute;right:6.8cqw;bottom:16.6cqw;width:24.2cqw;text-align:center;border-top:.08cqw solid #3d2f57;padding-top:.6cqw;font:600 1.45cqw "EB Garamond",serif}
+.p-logos{display:flex;align-items:center;gap:1.8cqw;height:4cqw}.p-logos img{height:3cqw}.p-logos img.x{height:4cqw;max-width:19cqw;object-fit:contain}
+.p-logos img+img{border-left:.1cqw solid #ddd2ea;padding-left:1.8cqw}
+.p-sgs{position:absolute;right:6.8cqw;bottom:16.6cqw;width:24.2cqw;display:flex;gap:3cqw}
+.p-sgs.many{left:10.4cqw;width:auto;bottom:13.3cqw}
+.p-sg{flex:1;text-align:center;border-top:.08cqw solid #3d2f57;padding-top:.6cqw;font:600 1.45cqw "EB Garamond",serif}
 .p-sg small{display:block;font:italic 400 1.26cqw "EB Garamond",serif;color:#3d2f57}
 .p-strip{position:absolute;left:4.3cqw;right:3.3cqw;bottom:3.3cqw;height:8.8cqw;background:#f4f0fa;border-top:.08cqw solid #ddd2ea;padding:1.7cqw 2.6cqw 0 6.1cqw}
 .p-strip small{display:block;font:500 .82cqw "IBM Plex Mono",monospace;letter-spacing:.2cqw;color:#7a5410}
@@ -125,10 +129,12 @@ if (!code) {   // /constancia/ alone: type the code
 // the certificate as it will be printed (same layout as the PDF)
 function paper(t, name, cls, folio) {
   const mod = t.modality === "en_linea" ? "En línea, en vivo" : "Presencial", multi = /^del /.test(t.period);
+  const dz = t.design || { vvr: true, cesar: true, logos: [], signers: [] };
+  const sgs = [...(dz.cesar ? [{ name: "Mtro. César Adrián García Martínez", title: "Vórtice VR" }] : []), ...dz.signers];
   return `<div class="paper ${cls || ""}" id="paper" aria-hidden="true">
     <i class="p-edge"></i><div class="p-fr"></div>
     ${cls ? `<span class="tag">${cls === "off" ? "Revocada" : "✓ Emitida"}</span>` : ""}
-    <div class="p-in"><img class="p-logo" src="/assets/logo-vorticevr.png" alt="">
+    <div class="p-in"><div class="p-logos">${dz.vvr ? `<img src="/assets/logo-vorticevr.png" alt="">` : ""}${dz.logos.map(u => `<img class="x" src="${E(u)}" alt="">`).join("")}</div>
       <div class="p-fol">FOLIO<b>${E(folio || "VVR-" + new Date().getFullYear() + "-······")}</b></div>
       <div class="p-k">CONSTANCIA</div><div class="p-k2">DE PARTICIPACIÓN</div>
       <div class="p-o">Vórtice VR otorga la presente a</div>
@@ -137,7 +143,7 @@ function paper(t, name, cls, folio) {
       <div class="p-d"><div><small>DURACIÓN</small><b>${E(VC.hours(t.hours))}</b></div><div><small>MODALIDAD</small><b>${mod}</b></div>
         <div><small>${multi ? "FECHAS" : "FECHA"}</small><b>${E(t.period.replace(/^del /, "Del "))}</b></div>${t.place ? `<div class="full"><small>LUGAR</small><b>${E(t.place)}</b></div>` : ""}</div></div>
     <div class="p-seal"><svg viewBox="-70 -70 140 140"><defs><path id="sr" d="M0,-50.5 A50.5,50.5 0 1,1 -0.01,-50.5"/></defs><text><textPath href="#sr" textLength="314" lengthAdjust="spacing">VÓRTICE VR · CONSTANCIA AVALADA ·</textPath></text></svg><i><img src="/assets/icono.png" alt=""></i></div>
-    <div class="p-sg">Mtro. César Adrián García Martínez<small>Vórtice VR</small></div>
+    <div class="p-sgs${sgs.length > 1 ? " many" : ""}">${sgs.map(g => `<div class="p-sg">${E(g.name)}<small>${E(g.title || "")}</small></div>`).join("")}</div>
     <div class="p-strip"><small>VERIFICACIÓN DIGITAL</small><span>cursos.vorticevr.mx/verificar/…</span><em>Con folio y código QR para comprobar que es auténtica.</em><i></i></div></div>`;
 }
 function setName(v, typing) {

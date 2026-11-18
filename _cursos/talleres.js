@@ -36,6 +36,50 @@ export async function migrateTalleres(env) {
     try { await env.DB.batch(["date_end TEXT", "reg_manual INTEGER DEFAULT 0"].map(c => env.DB.prepare(`ALTER TABLE c_talleres ADD COLUMN ${c}`))); }
     catch (e) { console.error("migración talleres fechas", e.message); }
   }
+  // the certificate's design of each workshop (logos and signatures), copied into each certificate when it is issued
+  const tr2 = await env.DB.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'c_talleres'").first();
+  if (tr2 && !/\bdesign\b/.test(tr2.sql)) {
+    try { await env.DB.prepare("ALTER TABLE c_talleres ADD COLUMN design TEXT").run(); } catch (e) { console.error("migración talleres diseño", e.message); }
+  }
+  const cr = await env.DB.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'c_certificates'").first();
+  if (cr && !/\bdesign\b/.test(cr.sql)) {
+    try { await env.DB.prepare("ALTER TABLE c_certificates ADD COLUMN design TEXT").run(); } catch (e) { console.error("migración constancias diseño", e.message); }
+  }
+}
+
+// ---------- the certificate's design: Vórtice VR's logo on/off, César's signature on/off, up to 3 more logos and signatures ----------
+// The images are prepared in the admin's browser (cursos/admin/talleres.js) as the PDF wants them ({w, h, rgb, alpha}:
+// zlib + base64) and stored in R2 next to a PNG to show them: cursos/talleres/<taller>/<k>.json and .png. They are
+// never deleted, so an issued certificate (which keeps its own copy of the design) always finds its images.
+const KEY = /^[a-f0-9]{12}$/;
+const assetKey = (tid, k, ext) => `cursos/talleres/${tid}/${k}.${ext}`;
+export const designOf = t => { try { const d = JSON.parse(t.design || "null"); if (d) return d; } catch {} return { vvr: true, cesar: true, logos: [], signers: [] }; };
+async function cleanDesign(env, tid, d) {
+  if (!d || typeof d !== "object") return { error: "Diseño inválido." };
+  const logos = Array.isArray(d.logos) ? d.logos.slice(0, 3) : [], signers = Array.isArray(d.signers) ? d.signers.slice(0, 3) : [];
+  const out = { vvr: d.vvr !== false, cesar: d.cesar !== false, logos: [], signers: [] };
+  for (const l of logos) {
+    if (!KEY.test(String(l && l.k)) || !(await env.MEDIA.head(assetKey(tid, l.k, "json")))) return { error: "Uno de los logos no se subió bien. Súbelo otra vez." };
+    out.logos.push({ k: l.k });
+  }
+  for (const g of signers) {
+    const name = cut(g && g.name, 80), title = cut(g && g.title, 80);
+    if (name.length < 3) return { error: "Escribe el nombre de quien firma." };
+    if (g.k && (!KEY.test(String(g.k)) || !(await env.MEDIA.head(assetKey(tid, g.k, "json"))))) return { error: "Una de las firmas no se subió bien. Súbela otra vez." };
+    out.signers.push({ name, title, ...(g.k ? { k: g.k } : {}) });
+  }
+  return { design: out };
+}
+// what the PDF needs: the design with its images read from R2 (an empty object for courses and old certificates)
+export async function loadDesign(env, json) {
+  let d; try { d = JSON.parse(json || "null"); } catch {}
+  if (!d || !d.t) return {};
+  const read = async k => { const o = await env.MEDIA.get(assetKey(d.t, k, "json")); return o ? o.json() : null; };
+  return {
+    vvrLogo: d.vvr !== false, cesar: d.cesar !== false,
+    logos: (await Promise.all((d.logos || []).map(l => read(l.k)))).filter(Boolean),
+    signers: await Promise.all((d.signers || []).map(async g => ({ name: g.name, title: g.title, img: g.k ? await read(g.k) : null }))),
+  };
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -59,7 +103,11 @@ function cleanTaller(b, old = {}) {
 // its last day, or 2 days after it was created if that is later; "Cerrar" / "Abrir 24 horas" override it
 const windowOf = (c, now) => ({ opens: Math.min(now, dayStart(c.date)), closes: Math.max(dayStart(c.date_end || c.date) + 2 * DAY, now + 2 * DAY) });
 const isOpen = (t, now = Date.now()) => now >= t.opens_at && now < t.closes_at;
-const publicTaller = t => ({ code: t.code, title: t.title, date: t.date, date_end: t.date_end || "", period: periodoDe(t), hours: t.hours, place: t.place || "", modality: t.modality, opens_at: t.opens_at, closes_at: t.closes_at, open: isOpen(t) });
+const publicTaller = t => {
+  const d = designOf(t);   // for the participant's preview: the logos (public) and who signs (names only, never the signatures)
+  return { code: t.code, title: t.title, date: t.date, date_end: t.date_end || "", period: periodoDe(t), hours: t.hours, place: t.place || "", modality: t.modality, opens_at: t.opens_at, closes_at: t.closes_at, open: isOpen(t),
+    design: { vvr: d.vvr !== false, cesar: d.cesar !== false, logos: d.logos.map(l => `/api/cursos/taller/${t.code}/logo/${l.k}.png`), signers: d.signers.map(g => ({ name: g.name, title: g.title })) } };
+};
 const parts = d => { const [y, m, dd] = d.split("-").map(Number); return { y, m, d: dd }; };
 const MES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 // "17 de noviembre de 2026", "del 10 al 14 de noviembre de 2026", "del 28 de octubre al 3 de noviembre de 2026"…
@@ -88,6 +136,13 @@ export async function talleresApi(request, env, ctx, url, path, h, user, LIB) {
       me = p ? { name: p.name, status: p.status, cert: p.folio ? { folio: p.folio, token: p.verify_token, revoked: !!p.revoked } : null } : null;
     }
     return json({ taller: publicTaller(t), signedIn: !!user, accountName: user ? user.name || "" : "", me });
+  }
+  // the workshop's logos for the participant's preview (only the logos of its design; signatures are never public)
+  if ((m = path.match(/^\/api\/cursos\/taller\/([A-Z0-9]{4,10})\/logo\/([a-f0-9]{12})\.png$/i)) && M === "GET") {
+    const t = await env.DB.prepare("SELECT id, design FROM c_talleres WHERE code = ?").bind(m[1].toUpperCase()).first();
+    if (!t || !designOf(t).logos.some(l => l.k === m[2])) return json({ error: "No existe." }, 404);
+    const o = await env.MEDIA.get(assetKey(t.id, m[2], "png"));
+    return o ? new Response(o.body, { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" } }) : json({ error: "No existe." }, 404);
   }
   if ((m = path.match(/^\/api\/cursos\/taller\/([A-Z0-9]{4,10})\/unirme$/i)) && M === "POST") {
     if (!user) return json({ error: "Entra a tu cuenta para pedir tu constancia." }, 401);
@@ -137,10 +192,39 @@ export async function talleresApi(request, env, ctx, url, path, h, user, LIB) {
   if (tid && !t) return json({ error: "No existe ese taller." }, 404);
 
   if (t && path === `/api/cursos/admin/talleres/${t.id}` && M === "GET") {
-    return json({ taller: { ...publicTaller(t), id: t.id }, people: await people(t.id) });
+    return json({ taller: { ...publicTaller(t), id: t.id, design: designOf(t) }, people: await people(t.id) });
+  }
+  // a logo or a signature, already prepared by the browser: data = {w, h, rgb, alpha?} for the PDF and png to show it
+  if (t && path === `/api/cursos/admin/talleres/${t.id}/archivo` && M === "POST") {
+    let fd; try { fd = await request.formData(); } catch { return json({ error: "No llegó el archivo." }, 400); }
+    const raw = String(fd.get("data") || ""), png = fd.get("png");
+    if (raw.length > 3e6 || !png || typeof png === "string" || png.size > 2e6) return json({ error: "La imagen es muy pesada. Prueba con una más chica." }, 413);
+    let d; try { d = JSON.parse(raw); } catch { return json({ error: "La imagen no se pudo leer." }, 400); }
+    const B64 = /^[A-Za-z0-9+/]+=*$/;
+    if (!(Number.isInteger(d.w) && Number.isInteger(d.h) && d.w > 0 && d.h > 0 && d.w <= 1600 && d.h <= 1600) || !B64.test(d.rgb || "") || (d.alpha && !B64.test(d.alpha))) return json({ error: "La imagen no se pudo leer." }, 400);
+    const k = Array.from(crypto.getRandomValues(new Uint8Array(6)), b => b.toString(16).padStart(2, "0")).join("");
+    await env.MEDIA.put(assetKey(t.id, k, "json"), JSON.stringify({ w: d.w, h: d.h, rgb: d.rgb, ...(d.alpha ? { alpha: d.alpha } : {}) }), { httpMetadata: { contentType: "application/json" } });
+    await env.MEDIA.put(assetKey(t.id, k, "png"), await png.arrayBuffer(), { httpMetadata: { contentType: "image/png" } });
+    return json({ ok: true, k });
+  }
+  if (t && (m = path.match(/^\/api\/cursos\/admin\/talleres\/[0-9a-f-]{36}\/img\/([a-f0-9]{12})\.png$/)) && M === "GET") {
+    const o = await env.MEDIA.get(assetKey(t.id, m[1], "png"));
+    return o ? new Response(o.body, { headers: { "Content-Type": "image/png", "Cache-Control": "private, max-age=3600" } }) : json({ error: "No existe." }, 404);
+  }
+  // a sample certificate with this workshop's data and design, to see it before issuing
+  if (t && path === `/api/cursos/admin/talleres/${t.id}/muestra.pdf` && M === "GET") {
+    const k = { folio: "VVR-0000-000000", issued_at: now, student_name: "Nombre Apellido Apellido", course_title: t.title, hours: t.hours, modality: t.modality, period: periodoDe(t), place: t.place || "", kind: "taller", verify_token: "muestra", instructor_name: "Vórtice VR" };
+    const pdf = certificatePdf({ ...LIB.certData(k, await LIB.settings(env), LIB.baseUrl(env, url)), ...(await loadDesign(env, JSON.stringify({ t: t.id, ...designOf(t) }))) });
+    return new Response(pdf, { headers: { "Content-Type": "application/pdf", "Content-Disposition": 'inline; filename="Constancia de muestra.pdf"', "Cache-Control": "no-store" } });
   }
   if (t && path === `/api/cursos/admin/talleres/${t.id}` && M === "POST") {
     const b = await body();
+    if (b.design !== undefined) {   // only the design (it applies to the certificates issued from now on)
+      const r = await cleanDesign(env, t.id, b.design);
+      if (r.error) return json(r, 400);
+      await env.DB.prepare("UPDATE c_talleres SET design = ?, updated_at = ? WHERE id = ?").bind(JSON.stringify(r.design), now, t.id).run();
+      return json({ ok: true, design: r.design });
+    }
     if (b.registro === "cerrar") { await env.DB.prepare("UPDATE c_talleres SET closes_at = ?, reg_manual = 1, updated_at = ? WHERE id = ?").bind(now, now, t.id).run(); return json({ ok: true }); }
     if (b.registro === "abrir") {   // 24 hours more from now
       await env.DB.prepare("UPDATE c_talleres SET opens_at = MIN(opens_at, ?), closes_at = ?, reg_manual = 1, updated_at = ? WHERE id = ?").bind(now, now + DAY, now, t.id).run(); return json({ ok: true });
@@ -190,11 +274,11 @@ export async function talleresApi(request, env, ctx, url, path, h, user, LIB) {
     const year = Number(new Date(now - MX).toISOString().slice(0, 4));
     const last = await env.DB.prepare("INSERT INTO c_folios (year, n) VALUES (?, ?) ON CONFLICT(year) DO UPDATE SET n = n + ? RETURNING n").bind(year, results.length, results.length).first();
     let n = last.n - results.length;   // a block of consecutive folios, taken in one statement
-    const st = [], period = periodoDe(t);
+    const st = [], period = periodoDe(t), design = JSON.stringify({ t: t.id, ...designOf(t) });   // each certificate keeps the design it was issued with
     for (const p of results) {
       const id = LIB.uid(), tk = LIB.token(), folio = `VVR-${year}-${String(++n).padStart(6, "0")}`;
-      st.push(env.DB.prepare(`INSERT INTO c_certificates (id, enrollment_id, student_id, course_id, edition_id, kind, folio, issued_at, pdf_url, verify_token, student_name, course_title, hours, modality, period, instructor_name, course_key, objectives, place, created_at, updated_at)
-        VALUES (?, ?, ?, ?, NULL, 'taller', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Vórtice VR', '', '', ?, ?, ?)`).bind(id, "taller:" + p.id, p.user_id, "taller:" + t.id, folio, now, `/api/cursos/constancia/${tk}.pdf`, tk, p.name, t.title, t.hours, t.modality, period, t.place || "", now, now));
+      st.push(env.DB.prepare(`INSERT INTO c_certificates (id, enrollment_id, student_id, course_id, edition_id, kind, folio, issued_at, pdf_url, verify_token, student_name, course_title, hours, modality, period, instructor_name, course_key, objectives, place, design, created_at, updated_at)
+        VALUES (?, ?, ?, ?, NULL, 'taller', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Vórtice VR', '', '', ?, ?, ?, ?)`).bind(id, "taller:" + p.id, p.user_id, "taller:" + t.id, folio, now, `/api/cursos/constancia/${tk}.pdf`, tk, p.name, t.title, t.hours, t.modality, period, t.place || "", design, now, now));
       st.push(env.DB.prepare("UPDATE c_taller_people SET cert_id = ?, mail_state = ?, updated_at = ? WHERE id = ?").bind(id, mail && p.email ? "pending" : null, now, p.id));
     }
     await env.DB.batch(st);
@@ -215,7 +299,7 @@ export async function sendPending(env, h, LIB, url, max = MAIL_TICK) {
     // claim it first, so the cron and the button never send the same one twice
     const claim = await env.DB.prepare("UPDATE c_taller_people SET mail_state = 'sending' WHERE id = ? AND mail_state = 'pending'").bind(k.id).run();
     if (!claim.meta || !claim.meta.changes) continue;
-    const pdf = certificatePdf(LIB.certData(k, s, base));
+    const pdf = certificatePdf({ ...LIB.certData(k, s, base), ...(await loadDesign(env, k.design)) });
     let bin = ""; for (let i = 0; i < pdf.length; i += 0x8000) bin += String.fromCharCode.apply(null, pdf.subarray(i, i + 0x8000));
     const verify = `${base}/verificar/${k.verify_token}`;
     const ok = await h.sendMail(env, k.email, `Tu constancia del taller "${k.course_title}"`, h.shell(`<h1 style="font-size:20px">¡Gracias por participar, ${h.esc(k.student_name)}!</h1>

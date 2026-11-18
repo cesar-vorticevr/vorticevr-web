@@ -78,10 +78,17 @@ export function certificatePdf(c) {
   for (const [x, y, dx, dy] of [[L, T, 1, -1], [R, T, -1, -1], [L, B, 1, 1], [R, B, -1, 1]])
     ops.push(`${rgb(C.gold)} RG 1.3 w ${P(x)} ${P(y + dy * 16)} m ${P(x)} ${P(y)} l ${P(x + dx * 16)} ${P(y)} l S`);
 
-  // ---------- header: logo and folio ----------
-  const X = 82, MAXW = 468;
-  const lh = 24, lw = lh * LOGO.w / LOGO.h;
-  ops.push(`q ${P(lw)} 0 0 ${lh} ${X} 542 cm /Logo Do Q`);
+  // ---------- header: the logos (Vórtice VR unless the workshop took it off, then the workshop's own) and the folio ----------
+  const X = 82, MAXW = 468, extra = [];   // the workshop's images: [resource name, image]
+  let hx = X;
+  if (c.vvrLogo !== false) { const lh = 24, lw = lh * LOGO.w / LOGO.h; ops.push(`q ${P(lw)} 0 0 ${lh} ${X} 542 cm /Logo Do Q`); hx += lw; }
+  (c.logos || []).slice(0, 3).forEach((im, i) => {
+    let h = 32, w = h * im.w / im.h; if (w > 150) { w = 150; h = w * im.h / im.w; }
+    if (hx > X) { hx += 14; line(hx, 538, hx, 570, C.line, 0.8); hx += 14; }
+    extra.push(["L" + i, im]);
+    ops.push(`q ${P(w)} 0 0 ${P(h)} ${P(hx)} ${P(554 - h / 2)} cm /L${i} Do Q`);
+    hx += w;
+  });
   right(R - 30, 558, 6.5, "N", "FOLIO", C.label, 1.6);
   right(R - 30, 543, 11, "N", c.folio, C.ink, 0.4);
 
@@ -156,8 +163,32 @@ export function certificatePdf(c) {
     center(cx, SLY - 15, s, "B", name || "", C.ink);
     center(cx, SLY - 28, 10, "I", role, C.text);
   };
-  sig(RX, signer, c.signerTitle || (taller ? "Vórtice VR" : "Por Vórtice VR"), withFirma);
-  if (!taller) sig(X + 110, c.instructor, "Instructor del curso", false);
+  if (!taller) { sig(RX, signer, c.signerTitle || "Por Vórtice VR", withFirma); sig(X + 110, c.instructor, "Instructor del curso", false); }
+  else {
+    // a workshop: César's (unless taken off) and up to 3 more, each with its own PNG; one goes on the right, several in a row
+    const sigs = [];
+    if (c.cesar !== false) sigs.push({ name: signer, role: c.signerTitle || "Vórtice VR", res: withFirma ? "Firma" : null, im: FIRMA });
+    (c.signers || []).slice(0, 3).forEach((g, i) => { if (g.img) extra.push(["G" + i, g.img]); sigs.push({ name: g.name, role: g.title || "", res: g.img ? "G" + i : null, im: g.img }); });
+    const draw = (g, cx, ly, hmax, wmax) => {
+      if (!g.res) return;
+      let h2 = hmax, w2 = h2 * g.im.w / g.im.h; if (w2 > wmax) { w2 = wmax; h2 = w2 * g.im.h / g.im.w; }
+      ops.push(`q ${P(w2)} 0 0 ${P(h2)} ${P(cx - w2 / 2 + (g.res === "Firma" ? 6 : 0))} ${P(ly - (g.res === "Firma" ? 8 : 6))} cm /${g.res} Do Q`);
+    };
+    if (sigs.length === 1) { draw(sigs[0], RX, SLY, 78, 190); sig(RX, sigs[0].name, sigs[0].role, false); }
+    else if (sigs.length) {
+      // under the data: the images may grow up to where the last field ends
+      const yEnd = y + 23, ly = 128, colW = (R - 30 - X) / sigs.length, lw2 = Math.min(190, colW - 22), hmax = Math.max(34, Math.min(66, yEnd - (ly - 6)));
+      sigs.forEach((g, i) => {
+        const cx = X + colW * (i + 0.5);
+        draw(g, cx, ly, hmax, lw2);
+        line(cx - lw2 / 2, ly, cx + lw2 / 2, ly, C.text, 0.6);
+        let s2 = 11; while (s2 > 7.5 && tw(g.name || "", s2, "B") > lw2 + 10) s2 -= 0.5;
+        center(cx, ly - 14, s2, "B", g.name || "", C.ink);
+        let s3 = 9.5; while (s3 > 7 && tw(g.role, s3, "I") > lw2 + 10) s3 -= 0.5;
+        center(cx, ly - 26, s3, "I", g.role, C.text);
+      });
+    }
+  }
 
   // ---------- digital verification strip ----------
   const SB = 96;
@@ -200,6 +231,11 @@ export function certificatePdf(c) {
   const icono = add(img(ICONO.w, ICONO.h, "DeviceGray", "RunLengthDecode", add(img(ICONO.w, ICONO.h, "DeviceGray", "FlateDecode"), b64bytes(ICONO.alpha))), whiteRun(ICONO.w * ICONO.h));   // the isotipo in white: a white image with its alpha
   const firmaA = add(img(FIRMA.w, FIRMA.h, "DeviceGray", "FlateDecode"), b64bytes(FIRMA.alpha));
   const firma = add(img(FIRMA.w, FIRMA.h, "DeviceRGB", "FlateDecode", firmaA), b64bytes(FIRMA.rgb));
+  // the workshop's logos and signatures: { w, h, rgb, alpha? } prepared in the admin's browser (zlib, base64)
+  const extraRefs = extra.map(([res, im]) => {
+    const a = im.alpha ? add(img(im.w, im.h, "DeviceGray", "FlateDecode"), b64bytes(im.alpha)) : 0;
+    return `/${res} ${add(img(im.w, im.h, "DeviceRGB", "FlateDecode", a), b64bytes(im.rgb))} 0 R`;
+  }).join(" ");
   const fontRefs = {};
   for (const [res, key] of Object.entries(F)) {
     const f = FONTS[key];
@@ -209,7 +245,7 @@ export function certificatePdf(c) {
   }
   objs[catalog - 1][0] = `<< /Type /Catalog /Pages ${pages} 0 R >>`;
   objs[pages - 1][0] = `<< /Type /Pages /Kids [${page} 0 R] /Count 1 >>`;
-  objs[page - 1][0] = `<< /Type /Page /Parent ${pages} 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << ${Object.entries(fontRefs).map(([r, id]) => `/${r} ${id} 0 R`).join(" ")} >> /XObject << /Logo ${logo} 0 R /Firma ${firma} 0 R /Icono ${icono} 0 R >> >> /Contents ${contents} 0 R >>`;
+  objs[page - 1][0] = `<< /Type /Page /Parent ${pages} 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << ${Object.entries(fontRefs).map(([r, id]) => `/${r} ${id} 0 R`).join(" ")} >> /XObject << /Logo ${logo} 0 R /Firma ${firma} 0 R /Icono ${icono} 0 R ${extraRefs} >> >> /Contents ${contents} 0 R >>`;
   const parts = [], offsets = [];
   let len = 0;
   const push = p => { const b = typeof p === "string" ? asciiBytes(p) : p; parts.push(b); len += b.length; };

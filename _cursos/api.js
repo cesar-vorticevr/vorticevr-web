@@ -8,7 +8,7 @@ import { COURSE, MODULES, EXAM, SEED_VERSION, ONBOARDING_SLUG } from "./induccio
 import { certificatePdf } from "./pdf.js";
 import { pagosApi, migratePagos, cursosWebhook, sellable, billingOn } from "./pagos.js";
 import { estudioApi, migrateEstudio } from "./estudio.js";
-import { talleresApi, migrateTalleres, sendPending } from "./talleres.js";
+import { talleresApi, migrateTalleres, sendPending, loadDesign } from "./talleres.js";
 import { vivoApi, migrateVivo, cursosCron, publicEditions, editionCheck, liveFor, periodText } from "./vivo.js";
 
 let ready = false;
@@ -298,7 +298,7 @@ export async function cursosApi(request, env, ctx, url, path, h) {
   if ((m = path.match(/^\/api\/cursos\/constancia\/([A-Za-z0-9_-]{10,40})\.pdf$/)) && M === "GET") {
     const k = await env.DB.prepare("SELECT * FROM c_certificates WHERE verify_token = ?").bind(m[1]).first();
     if (!k) return json({ error: "No encontramos esta constancia." }, 404);
-    const pdf = certificatePdf(certData(k, await settings(env), baseUrl(env, url)));
+    const pdf = certificatePdf({ ...certData(k, await settings(env), baseUrl(env, url)), ...(await loadDesign(env, k.design)) });   // workshops: their logos and signatures
     return new Response(pdf, { headers: { "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="Constancia ${k.folio}.pdf"`, "Cache-Control": "no-store" } });
   }
 
