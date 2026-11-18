@@ -18,12 +18,13 @@
   const fields = (t = {}) => `
     <label>Concepto del taller<input type="text" name="title" maxlength="140" required value="${E(t.title || "")}" placeholder="Ej. Taller de realidad aumentada para docentes"></label>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px">
-      <label>Fecha<input type="date" name="date" required value="${E(t.date || today())}"></label>
+      <label>Fecha en que se impartió<input type="date" name="date" required value="${E(t.date || "")}"></label>
+      <label>Último día (si duró varios días)<input type="date" name="date_end" value="${E(t.date_end || "")}"></label>
       <label>Horas<input type="number" name="hours" min="0.5" max="200" step="0.5" required value="${E(t.hours || 3)}"></label>
       <label>Modalidad<select name="modality"><option value="presencial"${t.modality !== "en_linea" ? " selected" : ""}>Presencial</option><option value="en_linea"${t.modality === "en_linea" ? " selected" : ""}>En línea</option></select></label>
     </div>
     <label>Lugar o escuela (opcional, sale en la constancia)<input type="text" name="place" maxlength="120" value="${E(t.place || "")}" placeholder="Ej. Escuela Secundaria Técnica 5, Villahermosa"></label>`;
-  const formData = f => ({ title: f.title.value, date: f.date.value, hours: Number(f.hours.value), modality: f.modality.value, place: f.place.value });
+  const formData = f => ({ title: f.title.value, date: f.date.value, date_end: f.date_end.value, hours: Number(f.hours.value), modality: f.modality.value, place: f.place.value });
 
   async function list() {
     const r = await VC.call("admin/talleres");
@@ -31,7 +32,7 @@
       <p class="mute" style="margin-top:-4px">Te da un link y un QR para proyectar. Cada participante entra con su cuenta y escribe su nombre; tú revisas la lista y emites las constancias.</p>
       <form class="set" id="tnew">${fields()}<div><button class="btn sun" type="submit">Crear taller</button></div></form></div>
       <div class="panel tw">${r.list.length ? `<table><thead><tr><th>Fecha</th><th>Taller</th><th>Código</th><th>En la lista</th><th>Emitidas</th><th>Registro</th></tr></thead><tbody>
-        ${r.list.map(t => `<tr data-id="${E(t.id)}" style="cursor:pointer"><td>${E(fecha(t.date))}</td><td><a href="#taller=${E(t.id)}">${E(t.title)}</a><div class="mute">${VC.hours(t.hours)}${t.place ? " · " + E(t.place) : ""}</div></td>
+        ${r.list.map(t => `<tr data-id="${E(t.id)}" style="cursor:pointer"><td>${E(t.period)}</td><td><a href="#taller=${E(t.id)}">${E(t.title)}</a><div class="mute">${VC.hours(t.hours)}${t.place ? " · " + E(t.place) : ""}</div></td>
           <td class="mono" style="color:var(--ink)">${E(t.code)}</td><td>${t.n}</td><td>${t.issued}</td><td>${t.open ? `<span style="color:var(--ok)">Abierto</span>` : Date.now() < t.opens_at ? "Se abre el día" : "Cerrado"}</td></tr>`).join("")}</tbody></table>`
         : `<div class="empty">Todavía no hay talleres.</div>`}</div>`;
     $("tnew").onsubmit = async e => {
@@ -49,7 +50,7 @@
     $("view").innerHTML = `<p><a href="#talleres">← Todos los talleres</a></p>
       <div class="panel" style="margin-bottom:16px;display:grid;gap:18px;grid-template-columns:minmax(0,1fr) auto;align-items:start">
         <div><div class="kick">Taller · ${E(MOD[t.modality] || "")}</div><h2 style="margin:4px 0 6px">${E(t.title)}</h2>
-          <div class="mute">${E(fecha(t.date))} · ${VC.hours(t.hours)}${t.place ? " · " + E(t.place) : ""}</div>
+          <div class="mute">${E(t.period)} · ${VC.hours(t.hours)}${t.place ? " · " + E(t.place) : ""}</div>
           <div style="margin:16px 0 6px">Link para los participantes:</div>
           <div style="color:var(--ink);font:500 1.05rem 'IBM Plex Mono',monospace;overflow-wrap:anywhere">${E(link.replace(/^https?:\/\//, ""))}</div>
           <div class="mute" style="margin-top:4px">Código: <b class="mono" style="color:var(--sun);letter-spacing:.15em">${E(t.code)}</b> (también se escribe en ${E(location.host)}/constancia)</div>

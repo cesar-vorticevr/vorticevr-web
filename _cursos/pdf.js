@@ -126,7 +126,7 @@ export function certificatePdf(c) {
   for (const l of wrap(c.course, 19, "T", 590).slice(0, 2)) { y -= 25; center(y, 19, "T", l, C.purple, 0.6); }
   const hrs = c.hours ? `${String(c.hours).replace(/\.0$/, "")} ${Number(c.hours) === 1 ? "hora" : "horas"}` : "";
   const facts = [hrs && `con una duración de ${hrs}`, c.modality && `en modalidad ${MODALITY[c.modality] || c.modality}`,
-    c.period && (taller ? `impartido el ${c.period}` : /^del /i.test(c.period) ? c.period.replace(/^D/, "d") : `concluido el ${c.period}`), ].filter(Boolean);
+    c.period && (taller ? (/^del /i.test(c.period) ? `impartido ${c.period}` : `impartido el ${c.period}`) : /^del /i.test(c.period) ? c.period.replace(/^D/, "d") : `concluido el ${c.period}`), ].filter(Boolean);
   y -= 6;
   // the facts, and the place on its own line
   const fl = wrap(facts.join(", ") + (c.place ? "," : "."), 12.5, "G", 580).slice(0, 2);

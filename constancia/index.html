@@ -128,7 +128,7 @@ function paper(t, name, cls, folio) {
       <div class="p-o">Vórtice VR otorga la presente a</div>
       <div class="p-n" id="pn"></div><div class="p-u"><i></i><b></b><i></i></div>
       <div class="p-f">por su participación en el taller</div><div class="p-t">${E(t.title)}</div>
-      <div class="p-d">con una duración de ${E(VC.hours(t.hours))}, en modalidad ${mod}, impartido el ${E(fecha(t.date))}${t.place ? `,<br>en ${E(t.place)}` : ""}.</div>
+      <div class="p-d">con una duración de ${E(VC.hours(t.hours))}, en modalidad ${mod}, impartido ${/^del /.test(t.period) ? "" : "el "}${E(t.period)}${t.place ? `,<br>en ${E(t.place)}` : ""}.</div>
       <div class="p-s"><div class="p-qr">VERIFIQUE SU AUTENTICIDAD<i></i>FOLIO<b>${E(folio || "VVR-" + new Date().getFullYear() + "-······")}</b></div>
         <div class="p-sg">Mtro. César Adrián García Martínez<small>Vórtice VR</small></div>
         <div class="p-seal"><i class="r l"></i><i class="r d"></i><div class="g"><span>AVAL<small>${new Date().getFullYear()}</small></span></div></div></div></div></div>`;
@@ -147,7 +147,7 @@ async function load() {
   catch (e) { main.innerHTML = `<div class="card code in" style="text-align:center"><p>${E(e.message)}</p><a class="btn" href="/constancia/">Escribir otro código</a></div>`; return; }
   const t = r.taller, me = r.me;
   const hero = `<div class="hero in"><div class="kick">✦ Constancia de participación</div><h1>${E(t.title)}</h1>
-    <div class="pills"><span>📅 <b>${E(fecha(t.date))}</b></span><span>⏱ <b>${VC.hours(t.hours)}</b></span><span>${t.modality === "en_linea" ? "💻" : "📍"} <b>${E(MOD[t.modality] || "")}</b></span>${t.place ? `<span>🏫 <b>${E(t.place)}</b></span>` : ""}</div></div>`;
+    <div class="pills"><span>📅 <b>${E(t.period.replace(/^del /, "Del "))}</b></span><span>⏱ <b>${VC.hours(t.hours)}</b></span><span>${t.modality === "en_linea" ? "💻" : "📍"} <b>${E(MOD[t.modality] || "")}</b></span>${t.place ? `<span>🏫 <b>${E(t.place)}</b></span>` : ""}</div></div>`;
   let side = "", cls = "", name = me ? me.name : "", folio = "";
   if (me && me.cert) {   // issued: download it
     cls = me.cert.revoked ? "off" : "done"; folio = me.cert.folio;

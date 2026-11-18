@@ -30,22 +30,47 @@ export async function migrateTalleres(env) {
     try { await env.DB.prepare("ALTER TABLE c_certificates ADD COLUMN place TEXT").run(); }
     catch (e) { console.error("migración talleres", e.message); }
   }
+  // a workshop of several days (date = first day, date_end = last one) and whether the admin moved the sign-up window by hand
+  const tr = await env.DB.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'c_talleres'").first();
+  if (tr && !/\bdate_end\b/.test(tr.sql)) {
+    try { await env.DB.batch(["date_end TEXT", "reg_manual INTEGER DEFAULT 0"].map(c => env.DB.prepare(`ALTER TABLE c_talleres ADD COLUMN ${c}`))); }
+    catch (e) { console.error("migración talleres fechas", e.message); }
+  }
 }
 
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 function cleanTaller(b, old = {}) {
   const title = b.title !== undefined ? cut(b.title, 140) : old.title;
   const date = b.date !== undefined ? String(b.date || "") : old.date;
+  let end = b.date_end !== undefined ? String(b.date_end || "") : old.date_end || "";
   const hours = b.hours !== undefined ? Math.round(Number(b.hours) * 2) / 2 : old.hours;
   const place = b.place !== undefined ? cut(b.place, 120) : old.place || "";
   const modality = b.modality !== undefined ? (MODS.includes(b.modality) ? b.modality : "presencial") : old.modality || "presencial";
   if (!title || title.length < 4) return { error: "Escribe el concepto del taller." };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(dayStart(date))) return { error: "Elige la fecha del taller." };
+  if (!DATE.test(date) || isNaN(dayStart(date))) return { error: "Elige la fecha en que se impartió el taller." };
+  if (end === date) end = "";
+  if (end && (!DATE.test(end) || isNaN(dayStart(end)))) return { error: "El último día no es una fecha válida." };
+  if (end && end < date) return { error: "El último día no puede ser antes del primero." };
+  if (end && dayStart(end) - dayStart(date) > 366 * DAY) return { error: "Un taller no puede durar más de un año." };
   if (!(hours >= 0.5 && hours <= 200)) return { error: "Las horas van de 0.5 a 200." };
-  return { title, date, hours, place, modality };
+  return { title, date, date_end: end || null, hours, place, modality };
 }
+// the sign-up opens as soon as the workshop is created (also for one given days ago) and closes 2 days after
+// its last day, or 2 days after it was created if that is later; "Cerrar" / "Abrir 24 horas" override it
+const windowOf = (c, now) => ({ opens: Math.min(now, dayStart(c.date)), closes: Math.max(dayStart(c.date_end || c.date) + 2 * DAY, now + 2 * DAY) });
 const isOpen = (t, now = Date.now()) => now >= t.opens_at && now < t.closes_at;
-const publicTaller = t => ({ code: t.code, title: t.title, date: t.date, hours: t.hours, place: t.place || "", modality: t.modality, opens_at: t.opens_at, closes_at: t.closes_at, open: isOpen(t) });
-const fechaDe = d => new Date(dayStart(d) + MX).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+const publicTaller = t => ({ code: t.code, title: t.title, date: t.date, date_end: t.date_end || "", period: periodoDe(t), hours: t.hours, place: t.place || "", modality: t.modality, opens_at: t.opens_at, closes_at: t.closes_at, open: isOpen(t) });
+const parts = d => { const [y, m, dd] = d.split("-").map(Number); return { y, m, d: dd }; };
+const MES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+// "17 de noviembre de 2026", "del 10 al 14 de noviembre de 2026", "del 28 de octubre al 3 de noviembre de 2026"…
+export function periodoDe(t) {
+  const a = parts(t.date);
+  if (!t.date_end || t.date_end === t.date) return `${a.d} de ${MES[a.m - 1]} de ${a.y}`;
+  const b = parts(t.date_end);
+  if (a.y !== b.y) return `del ${a.d} de ${MES[a.m - 1]} de ${a.y} al ${b.d} de ${MES[b.m - 1]} de ${b.y}`;
+  if (a.m !== b.m) return `del ${a.d} de ${MES[a.m - 1]} al ${b.d} de ${MES[b.m - 1]} de ${b.y}`;
+  return `del ${a.d} al ${b.d} de ${MES[b.m - 1]} de ${b.y}`;
+}
 
 export async function talleresApi(request, env, ctx, url, path, h, user, LIB) {
   if (!path.startsWith("/api/cursos/taller/") && !path.startsWith("/api/cursos/admin/talleres") && path !== "/api/cursos/talleres/mias") return null;
@@ -102,9 +127,9 @@ export async function talleresApi(request, env, ctx, url, path, h, user, LIB) {
     if (c.error) return json(c, 400);
     let code = newCode();
     for (let i = 0; i < 5 && (await env.DB.prepare("SELECT 1 FROM c_talleres WHERE code = ?").bind(code).first()); i++) code = newCode();
-    const id = LIB.uid(), opens = dayStart(c.date), closes = opens + 2 * DAY;   // the day of the workshop and the next one
-    await env.DB.prepare("INSERT INTO c_talleres (id, code, title, date, hours, place, modality, opens_at, closes_at, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .bind(id, code, c.title, c.date, c.hours, c.place, c.modality, opens, closes, user.id, now, now).run();
+    const id = LIB.uid(), w = windowOf(c, now);
+    await env.DB.prepare("INSERT INTO c_talleres (id, code, title, date, date_end, hours, place, modality, opens_at, closes_at, reg_manual, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)")
+      .bind(id, code, c.title, c.date, c.date_end, c.hours, c.place, c.modality, w.opens, w.closes, user.id, now, now).run();
     return json({ ok: true, id, code });
   }
   const tid = path.match(/^\/api\/cursos\/admin\/talleres\/([0-9a-f-]{36})/);
@@ -116,17 +141,17 @@ export async function talleresApi(request, env, ctx, url, path, h, user, LIB) {
   }
   if (t && path === `/api/cursos/admin/talleres/${t.id}` && M === "POST") {
     const b = await body();
-    if (b.registro === "cerrar") { await env.DB.prepare("UPDATE c_talleres SET closes_at = ?, updated_at = ? WHERE id = ?").bind(now, now, t.id).run(); return json({ ok: true }); }
-    if (b.registro === "abrir") {   // 24 hours more from now (also before the day of the workshop)
-      await env.DB.prepare("UPDATE c_talleres SET opens_at = MIN(opens_at, ?), closes_at = ?, updated_at = ? WHERE id = ?").bind(now, now + DAY, now, t.id).run(); return json({ ok: true });
+    if (b.registro === "cerrar") { await env.DB.prepare("UPDATE c_talleres SET closes_at = ?, reg_manual = 1, updated_at = ? WHERE id = ?").bind(now, now, t.id).run(); return json({ ok: true }); }
+    if (b.registro === "abrir") {   // 24 hours more from now
+      await env.DB.prepare("UPDATE c_talleres SET opens_at = MIN(opens_at, ?), closes_at = ?, reg_manual = 1, updated_at = ? WHERE id = ?").bind(now, now + DAY, now, t.id).run(); return json({ ok: true });
     }
     const c = cleanTaller(b, t);
     if (c.error) return json(c, 400);
-    // a new date moves the window (only while it was the automatic one)
-    const auto = t.opens_at === dayStart(t.date) && t.closes_at === dayStart(t.date) + 2 * DAY;
-    const opens = auto && c.date !== t.date ? dayStart(c.date) : t.opens_at, closes = auto && c.date !== t.date ? dayStart(c.date) + 2 * DAY : t.closes_at;
-    await env.DB.prepare("UPDATE c_talleres SET title = ?, date = ?, hours = ?, place = ?, modality = ?, opens_at = ?, closes_at = ?, updated_at = ? WHERE id = ?")
-      .bind(c.title, c.date, c.hours, c.place, c.modality, opens, closes, now, t.id).run();
+    // new dates move the window (unless the admin opened or closed it by hand); it never closes earlier than it was
+    let opens = t.opens_at, closes = t.closes_at;
+    if (!t.reg_manual && (c.date !== t.date || (c.date_end || null) !== (t.date_end || null))) { const w = windowOf(c, now); opens = Math.min(t.opens_at, w.opens); closes = Math.max(w.closes, Math.min(t.closes_at, now + 2 * DAY)); }
+    await env.DB.prepare("UPDATE c_talleres SET title = ?, date = ?, date_end = ?, hours = ?, place = ?, modality = ?, opens_at = ?, closes_at = ?, updated_at = ? WHERE id = ?")
+      .bind(c.title, c.date, c.date_end, c.hours, c.place, c.modality, opens, closes, now, t.id).run();
     return json({ ok: true });
   }
   if (t && path === `/api/cursos/admin/talleres/${t.id}` && M === "DELETE") {
@@ -165,7 +190,7 @@ export async function talleresApi(request, env, ctx, url, path, h, user, LIB) {
     const year = Number(new Date(now - MX).toISOString().slice(0, 4));
     const last = await env.DB.prepare("INSERT INTO c_folios (year, n) VALUES (?, ?) ON CONFLICT(year) DO UPDATE SET n = n + ? RETURNING n").bind(year, results.length, results.length).first();
     let n = last.n - results.length;   // a block of consecutive folios, taken in one statement
-    const st = [], period = fechaDe(t.date);
+    const st = [], period = periodoDe(t);
     for (const p of results) {
       const id = LIB.uid(), tk = LIB.token(), folio = `VVR-${year}-${String(++n).padStart(6, "0")}`;
       st.push(env.DB.prepare(`INSERT INTO c_certificates (id, enrollment_id, student_id, course_id, edition_id, kind, folio, issued_at, pdf_url, verify_token, student_name, course_title, hours, modality, period, instructor_name, course_key, objectives, place, created_at, updated_at)
