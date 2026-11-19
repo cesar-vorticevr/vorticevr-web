@@ -1,9 +1,12 @@
 // Galería 3D in virtual reality (a headset's browser: Meta Quest and others with WebXR), started by assets/galeria.js
 // with "Recorrer en realidad virtual". The same room, lights and pieces; only the way you move changes. Hands first
 // (no controllers needed); controllers work too (trigger = pinch).
-//  · You don't walk for real (César: it's dangerous): you jump. Raise your hand and point at the floor: a lilac arc
-//    and a ring show where you'll land; pinch and you appear there (a quick fade, nothing moves you smoothly, so it
-//    doesn't make you dizzy). Leaning in or crouching works as in real life. If you walk away from your spot, the view
+//  · You don't walk for real (César: it's dangerous). Two ways to move:
+//    - jump: look at the floor, point at it and hold the pinch 2 s (motes of light gather at your fingers); then a
+//      trail of light and a soft glow show where you'll land; let go and you appear there (a quick fade). Nothing
+//      shows while you just move your hands (César: the arc was always there and got in the way).
+//    - swim: breaststroke with both open hands (out in front, sweep them out and back) and you glide forward,
+//      like flying in a dream; the glide slows down by itself. A soft vignette while gliding, sparkles off the hands. Leaning in or crouching works as in real life. If you walk away from your spot, the view
 //    darkens and asks you to stay ("Quédate en tu lugar").
 //  · Point at a piece (or the room's text) and pinch: you land in front of it, at the distance that shows it whole,
 //    and its card (cédula) floats beside you: title, size, story, Anterior / Siguiente.
@@ -169,9 +172,9 @@ export function startVR(session, A) {
   const srcs = [0, 1].map(i => {
     const ray = renderer.xr.getController(i), grip = renderer.xr.getControllerGrip(i), hand = renderer.xr.getHand(i);
     rig.add(ray, grip, hand);
-    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(), V(0, 0, -1)]), new THREE.LineBasicMaterial({ color: 0xd2b8ff, transparent: true, opacity: .6 }));
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(), V(0, 0, -1)]), new THREE.LineBasicMaterial({ color: 0xd2b8ff, transparent: true, opacity: .32 }));
     line.visible = false; ray.add(line);
-    const s = { i, ray, grip, hand, line, input: null, aim: null, grab: null, menuHand: false, poke: false, pokeT: 0, btnDown: false };
+    const s = { i, ray, grip, hand, line, input: null, aim: null, grab: null, charge: null, menuHand: false, poke: false, pokeT: 0, btnDown: false };
     ray.addEventListener("connected", e => { s.input = e.data; });
     ray.addEventListener("disconnected", () => { drop(s); s.input = null; });
     ray.addEventListener("selectstart", () => press(s));
@@ -291,7 +294,7 @@ export function startVR(session, A) {
     if (a.what === "ghost") return sendHome(pcs.get(a.key));
     if (a.what === "portal") return goSala(a.next);
     if (a.what === "obra") return goPiece(a.key);
-    if (a.what === "floor") { const [x, z] = a.p; return jump(x, z, rigYaw() + headYawLocal(), () => { if (focusKey !== null) showCard(null); }); }
+    if (a.what === "floor") { s.charge = { t: 0, ready: false }; return; }   // hold it 2 s to jump (charging in tick)
   }
   const rigYaw = () => rig.rotation.y;
   function take(s, q) {
@@ -306,6 +309,11 @@ export function startVR(session, A) {
   }
   let tookOnce = false;
   function drop(s) {
+    if (s.charge) {   // letting go of a pinch held on the floor: jump if it was ready
+      const c = s.charge, a = s.aim; s.charge = null;
+      if (c.ready && a && a.what === "floor" && !busy) { const [x, z] = a.p; jump(x, z, rigYaw() + headYawLocal(), () => { if (focusKey !== null) showCard(null); }); }
+      return;
+    }
     const gq = s.grab; if (!gq) return;
     const q = gq.q; s.grab = null; q.hands = q.hands.filter(x => x !== s);
     if (q.hands.length) { regrab(q); return; }
@@ -426,17 +434,33 @@ export function startVR(session, A) {
   }
 
   /* ---------- pointing ---------- */
-  const arcN = 22;
-  const arc = new THREE.InstancedMesh(new THREE.SphereGeometry(.012, 8, 6), new THREE.MeshBasicMaterial({ color: 0xd2b8ff, transparent: true, opacity: .85, toneMapped: false }), arcN * 2);
-  arc.frustumCulled = false; arc.count = 0; scene.add(arc);
-  const ringM = new THREE.MeshBasicMaterial({ color: 0xd2b8ff, transparent: true, opacity: .9, depthWrite: false, toneMapped: false });
-  const landing = [0, 1].map(() => {
-    const g = new THREE.Group(), ring = new THREE.Mesh(new THREE.RingGeometry(.2, .26, 40), ringM); ring.rotation.x = -Math.PI / 2; g.add(ring);
-    const dot = new THREE.Mesh(new THREE.CircleGeometry(.07, 24), ringM); dot.rotation.x = -Math.PI / 2; g.add(dot); g.visible = false; scene.add(g); return g;
+  // light, not lines: soft glowing motes (additive) for the trail, the charge at the fingers and the landing
+  const glowTex = (() => {
+    const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(.25, "rgba(255,255,255,.55)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(c);
+  })();
+  const LILAC = new THREE.Color(0xd2b8ff), GOLD = new THREE.Color(0xffd27f);
+  function motes(n, size) {   // a cloud of n glowing points whose positions and brightness are set every frame
+    const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(n * 3), 3)); geo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+    const p = new THREE.Points(geo, new THREE.PointsMaterial({ map: glowTex, size, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+    p.frustumCulled = false; p.visible = false; scene.add(p);
+    p.set = (i, x, y, z, col, k) => { geo.attributes.position.setXYZ(i, x, y, z); geo.attributes.color.setXYZ(i, col.r * k, col.g * k, col.b * k); };
+    p.done = () => { geo.attributes.position.needsUpdate = true; geo.attributes.color.needsUpdate = true; };
+    return p;
+  }
+  const arcN = 36, tmpC = new THREE.Color();
+  const fx = [0, 1].map(() => {
+    const trail = motes(arcN, .05), charge = motes(14, .035), rise = motes(10, .05);
+    const disc = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: glowTex, color: 0xffd9a0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+    disc.rotation.x = -Math.PI / 2; disc.visible = false; scene.add(disc);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(.28, .29, 64), new THREE.MeshBasicMaterial({ color: 0xffe2ad, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+    ring.rotation.x = -Math.PI / 2; ring.visible = false; scene.add(ring);
+    return { trail, charge, rise, disc, ring, seeds: Array.from({ length: 14 }, () => [Math.random() * 6.28, Math.random() * 6.28, .6 + Math.random() * .8]) };
   });
+  const gaze = V();
   const hl = new THREE.Box3Helper(new THREE.Box3(), 0xffbe55); hl.material.depthTest = false; hl.material.transparent = true; hl.material.opacity = .7; hl.renderOrder = 999; hl.visible = false; scene.add(hl);
-  const dummy = new THREE.Object3D();
-  function aimOf(s, arcAt) {
+  function aimOf(s) {
     if (s.grab || s.menuHand || !s.ray.visible) return null;
     s.ray.updateMatrixWorld(true);
     const o = V().setFromMatrixPosition(s.ray.matrixWorld), d = V(0, 0, -1).transformDirection(s.ray.matrixWorld);
@@ -458,13 +482,10 @@ export function startVR(session, A) {
     let T = (-bq - Math.sqrt(disc)) / (2 * a); if (!(T > 0)) return null;
     const land = o.clone().addScaledVector(v0, T); land.y += a * T * T;
     if (Math.hypot(land.x - head.x, land.z - head.z) > 14) return null;
+    // only where you're looking (César: "mirando el piso")
+    if (gaze.angleTo(land.clone().sub(head).normalize()) > .75) return null;
     const [x, z] = A.resolve(land.x, land.z);
-    for (let i = 1; i <= arcN; i++) {
-      const t = T * i / arcN; dummy.position.copy(o).addScaledVector(v0, t); dummy.position.y += a * t * t;
-      if (i === arcN) dummy.position.set(x, .02, z);
-      dummy.updateMatrix(); arc.setMatrixAt(arcAt + i - 1, dummy.matrix);
-    }
-    return { what: "floor", p: [x, z], arc: true };
+    return { what: "floor", p: [x, z], arc: { o, v0, a, T } };
   }
 
   /* ---------- the menu on the palm (or the controller's X / Y) ---------- */
@@ -565,6 +586,98 @@ export function startVR(session, A) {
     if (then) setTimeout(then, 250);
   }
 
+  /* ---------- jumping: hold the pinch on the floor ---------- */
+  const HOLD = 2;   // seconds
+  function charging(s, F, a, dt, now) {
+    const c = s.charge;
+    if (c && !(a && a.what === "floor")) c.t = Math.max(0, c.t - dt * 2);   // looked away: it fades back
+    else if (c && !c.ready) { c.t += dt; if (c.t >= HOLD) { c.ready = true; sfx.sparkle(5); pulse(s, .4, 40); } }
+    // motes that gather around the fingers while you hold the pinch
+    const k = c ? Math.min(1, c.t / HOLD) : 0;
+    F.charge.visible = !!c && k > .02 && !busy;
+    if (F.charge.visible && pointOf(s, tmpV)) {
+      F.seeds.forEach(([a1, a2, sp], j) => {
+        const r = .09 * (1 - k) + .015, ang = a1 + now * sp * (1.5 + k * 3);
+        tmpC.copy(LILAC).lerp(GOLD, k);
+        F.charge.set(j, tmpV.x + Math.cos(ang) * r, tmpV.y + Math.sin(a2 + now * sp) * r * .6, tmpV.z + Math.sin(ang) * r, tmpC, .25 + k * .75);
+      });
+      F.charge.done();
+    }
+    // when ready: a trail of light that flows to a soft glow on the floor
+    const show = !!(c && c.ready && a && a.arc) && !busy;
+    F.trail.visible = F.disc.visible = F.ring.visible = F.rise.visible = show;
+    if (!show) return;
+    const { o, v0, a: ac, T } = a.arc, [x, z] = a.p;
+    for (let j = 0; j < arcN; j++) {
+      const u = ((j / arcN) + now * .45) % 1, t = T * u;
+      tmpC.copy(LILAC).lerp(GOLD, u);
+      F.trail.set(j, o.x + v0.x * t, o.y + v0.y * t + ac * t * t, o.z + v0.z * t, tmpC, Math.sin(u * Math.PI) * .9);   // dim at both ends
+    }
+    F.trail.done();
+    const breathe = 1 + Math.sin(now * 3) * .06;
+    F.disc.position.set(x, .012, z); F.disc.scale.setScalar(1.1 * breathe); F.disc.material.opacity = .55;
+    F.ring.position.set(x, .014, z); F.ring.scale.setScalar(breathe); F.ring.material.opacity = .5;
+    for (let j = 0; j < 10; j++) {   // motes rising from it
+      const u = (j / 10 + now * .35) % 1, ang = j * 2.4;
+      F.rise.set(j, x + Math.cos(ang) * .22, .02 + u * .6, z + Math.sin(ang) * .22, GOLD, Math.sin(u * Math.PI) * .8);
+    }
+    F.rise.done();
+  }
+
+  /* ---------- swimming: breaststroke with both open hands ---------- */
+  const swimV = V(), prevHand = [null, null], handNow = [V(), V()], handV = [V(), V()];
+  const sparks = motes(60, .03), spark = Array.from({ length: 60 }, () => ({ p: V(), v: V(), life: 0 })); let sparkI = 0;
+  sparks.visible = true;
+  const vig = (() => {   // a soft vignette while gliding, so moving doesn't make you dizzy
+    const c = document.createElement("canvas"); c.width = c.height = 256; const g = c.getContext("2d"), gr = g.createRadialGradient(128, 128, 60, 128, 128, 128);
+    gr.addColorStop(0, "rgba(5,2,11,0)"); gr.addColorStop(1, "rgba(5,2,11,1)"); g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(.9, .9), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, opacity: 0, depthTest: false, depthWrite: false }));
+    m.position.set(0, 0, -.25); m.renderOrder = 999; m.visible = false; camera.add(m); return m;
+  })();
+  let swamOnce = false;
+  const openHand = s => { const th = joint(s, "thumb-tip"), ix = joint(s, "index-finger-tip"); return !!(th && ix) && th.getWorldPosition(V()).distanceTo(ix.getWorldPosition(V())) > .045; };
+  function swim(dt) {
+    const L = srcs.find(s => side(s) === "left"), R = srcs.find(s => side(s) === "right");
+    let thrust = 0;
+    const ok = L && R && isHand(L) && isHand(R) && !busy && ![L, R].some(s => s.grab || s.charge || s.menuHand);
+    const got = [L, R].map((s, i) => {
+      const w = s && isHand(s) ? joint(s, "middle-finger-metacarpal") : null;
+      if (!w) return false;
+      const p = w.getWorldPosition(V()).sub(head);   // in your head's frame: right, up, forward
+      handNow[i].set(p.dot(right), p.y, p.dot(fwd)); return true;
+    });
+    if (ok && got[0] && got[1] && prevHand[0] && prevHand[1] && openHand(L) && openHand(R)) {
+      const k = 1 / Math.max(dt, 1e-3), e = 1 - Math.exp(-dt * 10);   // the hands' speed, smoothed (tracking jitter is not a stroke)
+      handV[0].lerp(handNow[0].clone().sub(prevHand[0]).multiplyScalar(k), e); handV[1].lerp(handNow[1].clone().sub(prevHand[1]).multiplyScalar(k), e);
+      const vl = handV[0], vr2 = handV[1];
+      const inFront = handNow.every(h => h.z > .12 && h.y > -.8 && h.y < .15);
+      const backL = -vl.z, backR = -vr2.z, outL = -vl.x, outR = vr2.x;   // pulling back, sweeping out
+      if (inFront && backL > .3 && backR > .3 && outL > -.25 && outR > -.25 && outL + outR > -.1) {
+        thrust = Math.min(backL, backR, 2.5);
+        if (!swamOnce) { swamOnce = true; say("¡Estás nadando!", ["Sigue con brazadas de pecho para avanzar"], 3); }
+        [L, R].forEach(s => { if (Math.random() < .5) { const sp = spark[sparkI++ % spark.length]; joint(s, "middle-finger-metacarpal").getWorldPosition(sp.p); sp.v.set((Math.random() - .5) * .3, Math.random() * .2, (Math.random() - .5) * .3); sp.life = 1; } });
+      }
+    }
+    if (!(got[0] && got[1])) { handV[0].set(0, 0, 0); handV[1].set(0, 0, 0); }
+    prevHand[0] = got[0] ? handNow[0].clone() : null; prevHand[1] = got[1] ? handNow[1].clone() : null;
+    if (thrust) swimV.addScaledVector(fwd, thrust * 3.4 * dt);
+    swimV.multiplyScalar(Math.exp(-dt * .9));   // the glide slows by itself
+    if (swimV.length() > 2.4) swimV.setLength(2.4);
+    const sp = swimV.length();
+    if (sp > .02 && !busy) {   // glide, without going through walls or pieces
+      const [x, z] = A.resolve(head.x + swimV.x * dt, head.z + swimV.z * dt);
+      rig.position.x += x - head.x; rig.position.z += z - head.z;
+      if (Math.hypot(x - head.x, z - head.z) < sp * dt * .3) swimV.set(0, 0, 0);   // bumped into something
+      if (focusKey !== null && sp > .4) showCard(null);
+    } else swimV.set(0, 0, 0);
+    vig.material.opacity = clamp(sp / 1.6, 0, 1) * .6; vig.visible = vig.material.opacity > .01;
+    for (let j = 0; j < spark.length; j++) {
+      const q = spark[j]; if (q.life > 0) { q.life -= dt * 1.4; q.p.addScaledVector(q.v, dt); }
+      sparks.set(j, q.p.x, q.p.y, q.p.z, GOLD, Math.max(0, q.life) * .8);
+    }
+    sparks.done();
+  }
+
   /* ---------- the loop ---------- */
   let started = false, frames = 0;
   const P0 = A.player;
@@ -576,7 +689,7 @@ export function startVR(session, A) {
       started = true;
       const S = A.spec, inside = Math.hypot(P0.x - S.start.x, P0.z - S.start.z) > .4;
       placeHead(inside ? P0.x : S.start.x, inside ? P0.z : S.start.to, inside ? P0.yaw : 0);
-      say("Bienvenido a la galería", ["Apunta al piso y pellizca para ir · pellizca una obra para verla", "Voltea tu mano izquierda: ahí está el menú"], 9);
+      say("Bienvenido a la galería", ["Mira el piso y sostén el pellizco 2 segundos para ir · o nada de pecho", "Pellizca una obra para verla · tu palma izquierda es el menú"], 10);
       sfx.appear();
     }
     // fading: jumps, and walking away from your spot
@@ -584,12 +697,12 @@ export function startVR(session, A) {
     const drift = Math.hypot(camera.position.x - anchor.x, camera.position.z - anchor.z);
     walkK = clamp((drift - STAY[0]) / (STAY[1] - STAY[0]), 0, 1) * .9;
     fadeMat.opacity = Math.max(fadeK, walkK); fadeMesh.visible = fadeMat.opacity > .001;
-    if (walkK > .15 && !msgWalk) { msgWalk = true; say("Quédate en tu lugar", ["Para avanzar no camines: apunta al piso y pellizca"], 1e9); }
+    if (walkK > .15 && !msgWalk) { msgWalk = true; say("Quédate en tu lugar", ["Para avanzar no camines: nada de pecho o sostén el pellizco mirando el piso"], 1e9); }
     else if (walkK < .05 && msgWalk) { msgWalk = false; msgT = 0; }
     if (!msgWalk && msgT > 0 && (msgT -= dt) <= 0) msg.mesh.visible = false;
     if (msgWalk) msg.mesh.visible = true;
 
-    menuPose(); pokes(dt);
+    menuPose(); pokes(dt); swim(dt);
     // controllers: X / Y shows the menu, the stick turns
     for (const s of srcs) {
       const gp = s.input && s.input.gamepad; if (!gp || isHand(s)) continue;
@@ -601,19 +714,19 @@ export function startVR(session, A) {
     }
 
     // what each hand points at
-    let arcs = 0, hov = null, menuHov = null, cardHov = null;
+    let hov = null, menuHov = null, cardHov = null;
+    gaze.set(0, 0, -1).transformDirection(camera.matrixWorld);
+    const now = performance.now() / 1000;
     srcs.forEach((s, i) => {
-      const a = aimOf(s, arcs);
+      const a = aimOf(s);
       s.aim = a;
       s.line.visible = !!a && !a.arc && !busy;
       if (s.line.visible) s.line.scale.z = a.d;
-      landing[i].visible = !!(a && a.arc) && !busy;
-      if (landing[i].visible) { landing[i].position.set(a.p[0], .015, a.p[1]); arcs += arcN; }
+      charging(s, fx[i], a, dt, now);
       if (a && (a.what === "model" || a.what === "obra" || a.what === "ghost")) hov = a;
       if (a && a.what === "menu") menuHov = a.k; if (a && a.what === "card") cardHov = a.k;
       if (!a && !s.grab) { const nq = nearModel(s); if (nq) hov = { what: "model", q: nq }; }
     });
-    arc.count = busy ? 0 : arcs; arc.instanceMatrix.needsUpdate = true;
     if (!srcs.some(s => s.poke)) { menu.hover(menuHov); card.hover(cardHov); }
     // the outline of what you point at (or hold)
     const held = [...pcs.values()].find(q => q.state === "held");
@@ -652,8 +765,8 @@ export function startVR(session, A) {
     headPose(); P0.x = head.x; P0.z = head.z; P0.yaw = Math.atan2(-fwd.x, -fwd.z); P0.pitch = -.03;
     for (const s of srcs) { rig.remove(s.ray, s.grip, s.hand); }
     for (const q of pcs.values()) if (q.ghost) scene.remove(q.ghost);
-    scene.remove(menu.mesh, card.mesh, arc, hl, ...landing);
-    camera.remove(fadeMesh, msg.mesh); rig.remove(camera); scene.remove(rig);
+    scene.remove(menu.mesh, card.mesh, hl, sparks); for (const F of fx) scene.remove(F.trail, F.charge, F.rise, F.disc, F.ring);
+    camera.remove(fadeMesh, msg.mesh, vig); rig.remove(camera); scene.remove(rig);
     camera.position.set(P0.x, A.EYE, P0.z); camera.quaternion.identity(); camera.rotation.set(P0.pitch, P0.yaw, 0);
     renderer.xr.enabled = false;
     A.ended();
@@ -661,7 +774,7 @@ export function startVR(session, A) {
   const me = {
     tick, onBuilt,
     end() { if (!ended) session.end().catch(() => {}); },
-    debug: { rig, srcs, pcs, take, drop, detach, makeBody, physics, onBuilt, menu, card, get focusKey() { return focusKey; }, goPiece, step, tidyAll, menuAct, get busy() { return busy; } },
+    debug: { rig, srcs, pcs, take, drop, press, swimV, fx, detach, makeBody, physics, onBuilt, menu, card, get focusKey() { return focusKey; }, goPiece, step, tidyAll, menuAct, get busy() { return busy; } },
   };
   if (A.debugVR) A.debugVR(me.debug);
   return me;
