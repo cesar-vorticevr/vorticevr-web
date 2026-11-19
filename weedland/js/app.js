@@ -1,4 +1,4 @@
-// Weedland Station: interfaz (entrada, stands, catálogo, juegos, premios, cultivo, mercado, tienda, nave, pasaporte).
+// Weedland Hacienda: interfaz (entrada, stands, catálogo, juegos, premios, cultivo, mercado, tienda, nave, pasaporte).
 import { PAISES, PABELLONES, PREMIO_DIA, catalogo, preguntasMarca, nombrePais, videosDe, NIVELES } from "./datos.js";
 import { leerPerfil, guardarPerfil, leerJuego, guardarJuego, marcas, sumar, codigo, CLAVES, registrarVista } from "./estado.js";
 import { urlDe } from "./medios.js";
@@ -29,10 +29,10 @@ function entrada() {
   caja.hidden = false;
   caja.innerHTML = `
     <div class="entrada-caja">
-      <div class="planeta-entrada">🪐</div>
+      <div class="planeta-entrada">🌴</div>
       <div class="entrada-logo">Weedland</div>
-      <div class="entrada-sub">STATION</div>
-      <p>La expo interactiva del sector cannábico legal. Recorre los stands, mira los catálogos de las marcas, juega y gana premios reales.</p>
+      <div class="entrada-sub">HACIENDA</div>
+      <p>Una hacienda wellness para el sector cannábico legal. Recorre los claustros de las marcas, mira sus catálogos, juega y gana premios reales.</p>
       <label for="pais" class="suave chico-t">¿Desde qué país nos visitas?</label>
       <select id="pais">${PAISES.map((p) => `<option value="${p.id}">${p.nombre}</option>`).join("")}</select>
       <button id="soy-mayor" class="btn ancho"></button>
@@ -95,7 +95,7 @@ async function iniciar() {
 function crearEtiqueta({ id, icono, nombre, color, isla }) {
   const b = document.createElement("button");
   b.className = "etiqueta" + (isla ? " isla" : ""); b.style.setProperty("--c", color);
-  if (isla) { b.innerHTML = `<span>${icono}</span>${esc(nombre)}<em>ISLA</em>`; b.onclick = () => { sonido.tap(); caminarA("stand", id, () => abrirStand(id)); }; $("#etiquetas").appendChild(b); return b; }
+  if (isla) { b.innerHTML = `<span>${icono}</span>${esc(nombre)}<em>CASA</em>`; b.onclick = () => { sonido.tap(); caminarA("stand", id, () => abrirStand(id)); }; $("#etiquetas").appendChild(b); return b; }
   b.innerHTML = `<span>${icono}</span>${esc(nombre)}`;
   b.onclick = () => { sonido.tap(); if (id === "plaza") irPlaza(); else if (id === "mercado") caminarA("mercado", null, () => abrirMercado()); else if (id === "micultivo") caminarA("micultivo", null, () => abrirCultivo()); else if (id === "nave") caminarA("nave", null, () => abrirNave()); else caminarA("pabellon", id); };
   $("#etiquetas").appendChild(b);
@@ -155,7 +155,7 @@ function alCerca(id) {
   const m = marca(id);
   const pu = id.startsWith("puesto:") ? puesto(id.slice(7)) : null;
   b.innerHTML = m ? `<span class="logo-mini" style="${vars(m)}">${m.icono}</span> Entrar a ${esc(m.nombre)} ▶`
-    : pu ? `${pu.icono} ${esc(pu.nombre)} ▶` : id === "tienda" ? "🏪 Abrir tu tienda ▶" : "🚀 Subir a la nave ▶";
+    : pu ? `${pu.icono} ${esc(pu.nombre)} ▶` : id === "tienda" ? "🏪 Abrir tu tienda ▶" : "🎈 Subir al globo ▶";
   b.style.cssText = m ? vars(m) : `--c:${pu ? pu.color : id === "tienda" ? "#7dffb3" : "#6ff0ff"}`;
   b.hidden = !!actual || document.body.classList.contains("en-tour");
   if (!b.hidden) sonido.burbuja();
@@ -270,7 +270,7 @@ function abrirPabellon(id) {
     <p class="nota">Toca un stand en el 3D o en la lista para entrar.</p>`, { tipo: "pabellon", id, c: `--c:${p.color}` });
   conectarItems();
 }
-const insignia = (m) => (m.nivel === "isla" ? `<span class="nivel isla">🏝️ Isla</span>` : m.nivel === "premium" ? `<span class="nivel">⭐ Premium</span>` : "");
+const insignia = (m) => (m.nivel === "isla" ? `<span class="nivel isla">🏛️ Casa</span>` : m.nivel === "premium" ? `<span class="nivel">⭐ Premium</span>` : "");
 const enPabellon = (m, pid) => m.pab === pid && m.nivel !== "isla";
 function itemMarca(m) {
   const visto = J.visitados.includes(m.id);
@@ -288,7 +288,7 @@ function abrirStand(id, tab = "inicio", volarCam = true) {
   abrirPanel(`
     <div class="cab-marca"><div class="logo-m" data-logo="${m.id}">${m.icono}</div>
       <div><h2>${esc(m.nombre)}</h2><p>${esc(m.lema)}</p>
-      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">${m.nivel ? `<span class="chip c">${m.nivel === "isla" ? "🏝️" : "⭐"} ${NIVELES[m.nivel]}</span>` : ""}<span class="chip">${pab(m.pab).icono} ${esc(pab(m.pab).nombre)}</span><span class="chip">${esc(nombrePais(m.pais))}</span></div></div></div>
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">${m.nivel ? `<span class="chip c">${m.nivel === "isla" ? "🏛️" : "⭐"} ${NIVELES[m.nivel]}</span>` : ""}<span class="chip">${pab(m.pab).icono} ${esc(pab(m.pab).nombre)}</span><span class="chip">${esc(nombrePais(m.pais))}</span></div></div></div>
     <div class="tabs">
       <button data-tab="inicio">Inicio</button>
       <button data-tab="catalogo">Catálogo · ${cat.length}</button>
@@ -622,7 +622,7 @@ function tabPremios(m, caja) {
 function abrirDirectorio() {
   abrirPanel(`
     <h2>Marcas de la expo</h2>
-    <p class="suave" style="margin:4px 0 12px">${MARCAS.length} stands en ${PABELLONES.length} pabellones · ${J.visitados.length} visitados</p>
+    <p class="suave" style="margin:4px 0 12px">${MARCAS.length} stands en ${PABELLONES.length} claustros · ${J.visitados.length} visitados</p>
     <input class="buscar" id="qd" placeholder="Busca una marca o un producto…" autocomplete="off">
     <div id="dir"></div>`, { tipo: "directorio", nav: "directorio", alto: true });
   const pintar = (q = "") => {
@@ -635,7 +635,7 @@ function abrirDirectorio() {
       html += res.length ? `<div class="grupo-t">Productos (${res.length})</div><div class="lista-m">${res.slice(0, 30).map(({ m, p }) => `<button class="item-m" data-pm="${m.id}|${p.id}" style="${vars(m)}"><div class="logo-m">${p.icono}</div><div class="txt"><b>${esc(p.nombre)}</b><small>${esc(m.nombre)} · ${esc(p.precio)}</small></div></button>`).join("")}</div>` : "";
       if (!html) html = `<p class="suave">No encontramos “${esc(q)}”.</p>`;
     } else {
-      html = `<div class="grupo-t" style="--c:#ffd76a">🏝️ Islas de marca</div><div class="lista-m">${MARCAS.filter((m) => m.nivel === "isla").map(itemMarca).join("")}</div>` +
+      html = `<div class="grupo-t" style="--c:#ffd76a">🏛️ Casas de marca</div><div class="lista-m">${MARCAS.filter((m) => m.nivel === "isla").map(itemMarca).join("")}</div>` +
         PABELLONES.map((p) => `<div class="grupo-t" style="--c:${p.color}">${p.icono} ${esc(p.nombre)}</div><div class="lista-m">${MARCAS.filter((m) => enPabellon(m, p.id)).sort((a, b) => (b.nivel ? 1 : 0) - (a.nivel ? 1 : 0)).map(itemMarca).join("")}</div>`).join("");
     }
     $("#dir").innerHTML = html;
@@ -694,7 +694,7 @@ function abrirPasaporte() {
       return `<div class="grupo-t" style="--c:${p.color}">${p.icono} ${esc(p.nombre)} ${J.bonos.includes(p.id) ? `<span class="hecho">✓ completo</span>` : ""}</div>
         <div class="sellos">${ms.map((m) => `<button class="sello ${J.visitados.includes(m.id) ? "si" : ""}" data-marca="${m.id}" style="${vars(m)}"><div><span>${J.visitados.includes(m.id) ? m.icono : "？"}</span>${esc(m.nombre)}</div></button>`).join("")}</div>`;
     }).join("")}
-    <div class="grupo-t" style="--c:#ffd76a">🏝️ Islas de marca</div>
+    <div class="grupo-t" style="--c:#ffd76a">🏛️ Casas de marca</div>
     <div class="sellos">${MARCAS.filter((m) => m.nivel === "isla").map((m) => `<button class="sello ${J.visitados.includes(m.id) ? "si" : ""}" data-marca="${m.id}" style="${vars(m)}"><div><span>${J.visitados.includes(m.id) ? m.icono : "？"}</span>${esc(m.nombre)}</div></button>`).join("")}</div>
     <div class="grupo-t" style="--c:#ffd76a">🛒 Mercado</div>
     <div class="sellos">${PUESTOS.map((pu) => `<div class="sello ${J.sabias.includes(pu.id) || J.talleresVistos.includes(pu.id) ? "si" : ""}" style="--c:${pu.color}"><div><span>${pu.icono}</span>${esc(pu.nombre)}</div></div>`).join("")}</div>`,
@@ -1089,7 +1089,7 @@ function abrirTienda() {
   const vendibles = Object.entries(J.inv).filter(([k, n]) => n > 0 && OBJETOS[k]);
   abrirPanel(`
     <div class="cab-marca"><div class="logo-m" style="--c:#7dffb3;--c2:#0f5d43">🏪</div>
-      <div><h2>Tu tienda</h2><p>Pon a la venta lo que cosechas y fabricas. Los visitantes de la estación llegan a comprar y te pagan en estrellas.</p></div></div>
+      <div><h2>Tu tienda</h2><p>Pon a la venta lo que cosechas y fabricas. Los visitantes de la hacienda llegan a comprar y te pagan en estrellas.</p></div></div>
     <div class="seccion"><h3>En venta (${J.tienda.length}/${MAX_TIENDA})</h3>
       ${J.tienda.length ? `<div class="lista-m">${J.tienda.map((it, k) => `<div class="item-m"><div class="logo-m" style="--c:#7dffb3;--c2:#0f5d43">${OBJETOS[it.item].icono}</div><div class="txt"><b>${esc(OBJETOS[it.item].nombre)}</b><small>Esperando comprador…</small></div><span class="costo">${it.precio} ⭐</span><button class="btn chico sec" data-quitar="${k}">✕</button></div>`).join("")}</div>` : `<p class="suave chico-t">Tu tienda está vacía.</p>`}
     </div>
@@ -1118,14 +1118,14 @@ function abrirTienda() {
   }));
 }
 
-// ---------- nave: tour espacial ----------
+// ---------- globo: paseo narrado y descenso al cenote ----------
 const COSTO_TOUR = 25;
 function abrirNave() {
-  const caja = modal(`<div class="ico-g">🚀</div><h3>Tour espacial</h3>
-    <p class="suave">Nova te lleva volando por toda la estación, te narra cada lugar y luego… atraviesan un agujero negro. Dura 1 minuto y medio.</p>
-    <p class="nota">⚠️ El túnel tiene colores y movimiento intensos. Si eres sensible a la luz o te mareas, mejor no lo tomes.</p>
-    <div class="acciones"><button class="btn oro" data-ok ${J.polen < COSTO_TOUR ? "disabled" : ""}>Despegar · ${COSTO_TOUR} ⭐</button><button class="btn sec" data-x>Ahora no</button></div>
-    ${J.polen < COSTO_TOUR ? `<p class="nota">Te faltan ${COSTO_TOUR - J.polen} ⭐.</p>` : ""}`, "--c:#6ff0ff");
+  const caja = modal(`<div class="ico-g">🎈</div><h3>Paseo en globo</h3>
+    <p class="suave">Nova te lleva en globo sobre toda la hacienda, te narra cada lugar y al final bajan a un cenote lleno de luz y color. Dura 1 minuto y medio.</p>
+    <p class="nota">⚠️ El cenote tiene colores y movimiento intensos. Si eres sensible a la luz o te mareas, mejor no lo tomes.</p>
+    <div class="acciones"><button class="btn oro" data-ok ${J.polen < COSTO_TOUR ? "disabled" : ""}>Subir al globo · ${COSTO_TOUR} ⭐</button><button class="btn sec" data-x>Ahora no</button></div>
+    ${J.polen < COSTO_TOUR ? `<p class="nota">Te faltan ${COSTO_TOUR - J.polen} ⭐.</p>` : ""}`, "--c:var(--oro)");
   $("[data-x]", caja).onclick = cerrarModal;
   $("[data-ok]", caja).onclick = () => { if (!gastar(COSTO_TOUR)) return; cerrarModal(); despegar(); };
 }
@@ -1153,7 +1153,7 @@ function despegar() {
     alFin: () => {
       document.body.classList.remove("en-tour"); $("#tour-ui").hidden = true; destello();
       try { speechSynthesis.cancel(); } catch {}
-      toast("¡Bienvenido de regreso a la base! 🚀");
+      toast("De regreso en la hacienda 🎈");
     },
   });
 }
@@ -1178,9 +1178,9 @@ function regaloDiario() {
 
 // ---------- guía (Nova): opcional, se cierra con ✕ y no vuelve sola ----------
 const PASOS = [
-  { t: "¡Hola! Soy Nova 👋", p: "Bienvenido a Weedland Station: una expo en el espacio con los stands de las marcas." },
-  { t: "Camina por la expo", p: matchMedia("(pointer: coarse)").matches ? "Muévete con el joystick o toca el suelo para caminar. Si tocas un stand, una pantalla o un dron, tu astronauta va solito hasta ahí." : "Camina con W A S D o las flechas, o haz clic en el suelo. Si das clic en un stand, una pantalla o un dron, tu astronauta va solito hasta ahí." },
-  { t: "Gana estrellas 🌟", p: "Ganas estrellas al visitar stands, ver videos, jugar y vender en tu tienda. Con ellas compras semillas, aditamentos, el tour en la nave… o cupones reales de las marcas en 🎁 Premios." },
+  { t: "Hola, soy Nova 🌿", p: "Bienvenido a la hacienda Weedland: una expo wellness al aire libre, con los stands de las marcas bajo los portales." },
+  { t: "Camina por la expo", p: matchMedia("(pointer: coarse)").matches ? "Muévete con el joystick o toca el suelo para caminar. Si tocas un stand, una pantalla o un dron, tu personaje camina solo hasta ahí." : "Camina con W A S D o las flechas, o haz clic en el suelo. Si das clic en un stand, una pantalla o un dron, tu personaje camina solo hasta ahí." },
+  { t: "Gana estrellas 🌟", p: "Ganas estrellas al visitar stands, ver videos, jugar y vender en tu tienda. Con ellas compras semillas, aditamentos, el paseo en globo… o cupones reales de las marcas en 🎁 Premios." },
   { t: "Tu cultivo 🌱", p: "En Mi cultivo siembras semillas registradas de las marcas. En el Mercado las aceleras, transformas la cosecha y luego la vendes en tu tienda." },
 ];
 function guia(i) {
@@ -1188,7 +1188,7 @@ function guia(i) {
   if (i >= PASOS.length) return cerrarGuia(true);
   el.hidden = false;
   const ult = i === PASOS.length - 1;
-  el.innerHTML = `<div class="nova">🤖</div><button class="cerrar" data-x aria-label="Cerrar guía">✕</button>
+  el.innerHTML = `<div class="nova">🌿</div><button class="cerrar" data-x aria-label="Cerrar guía">✕</button>
     <h4>${PASOS[i].t}</h4><p>${PASOS[i].p}</p>
     <div class="fila">${ult ? `<button class="btn chico" data-stand>Llévame a un stand</button>` : `<button class="btn chico" data-sig>Siguiente ▶</button>`}
     <span class="puntos">${PASOS.map((_, k) => `<i class="${k <= i ? "si" : ""}"></i>`).join("")}</span></div>`;

@@ -255,7 +255,7 @@ export function videosDe(m) {
   if (m.nivel === "isla") v.push({ id: `${m.id}#4`, titulo: "Detrás de cámaras", icono: "🎥" });
   return v;
 }
-export const NIVELES = { stand: "Stand", premium: "Stand premium", isla: "Isla de marca" };
+export const NIVELES = { stand: "Stand", premium: "Stand premium", isla: "Casa de marca" };
 
 // Arma el catálogo completo de una marca (base × variantes + productos que la marca agregó en su panel)
 export function catalogo(m) {
