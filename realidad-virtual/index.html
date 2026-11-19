@@ -415,7 +415,7 @@ footer .explore a{color:var(--mute);text-decoration:none}footer .explore a:hover
 <header data-menu class="top" id="top"><div class="wrap">
   <a class="brand" href="../" aria-label="Vórtice VR, inicio"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a>
   <nav aria-label="Secciones">
-    <a href="#experiencias" data-en="Experiences">Experiencias</a><a href="#superficie" data-en="Mixed reality">Realidad mixta</a><a href="#entrar" data-en="How to enter">Cómo entrar</a>
+    <a href="#experiencias" data-en="Experiences">Experiencias</a><a href="#superficie" data-en="Mixed reality">Realidad mixta</a><a href="#galerias" data-en="Galleries">Galerías</a><a href="#entrar" data-en="How to enter">Cómo entrar</a>
     <button class="lang mag" id="lang" type="button" aria-label="Ver en inglés" data-en-aria="Ver en español"><span data-en="ES">EN</span></button>
     <a class="pill acct mag" id="acct" href="../cuenta/#entrar">Entrar</a>
   </nav>
@@ -457,6 +457,16 @@ footer .explore a{color:var(--mute);text-decoration:none}footer .explore a:hover
     <div id="sfMine" hidden><h3 class="sfh" data-en="Yours">Las tuyas</h3><div class="sfgrid" id="sfMineGrid"></div></div>
     <div id="sfAll" hidden><h3 class="sfh" data-en="From the community">De la comunidad</h3><div class="sfgrid" id="sfAllGrid"></div></div>
     <div class="actions reveal" style="margin-top:22px"><a class="btn sun mag" href="../crear/?tipo=superficie" data-en="Create yours">Crear la tuya</a><a class="btn mag" href="../explora/?tipo=superficie" data-en="See more in Explora">Ver más en Explora</a></div>
+  </div></section>
+
+  <!-- Every 3D gallery (Galerías Vórtice VR) can be walked in virtual reality with the hands (assets/galeria-vr.js).
+       Here: the signed-in person's gallery and the public ones (/api/galerias). -->
+  <section id="galerias"><div class="wrap">
+    <div class="shead reveal"><span class="kick" data-en="Galleries in virtual reality">Galerías en realidad virtual</span><h2 data-en="Walk through the art. Pick up the sculptures.">Recorre el arte. Toma las esculturas.</h2></div>
+    <p class="sfintro reveal" data-en="Every <b>3D gallery</b> opens in your Meta Quest with <b>Walk it in virtual reality</b>. You don't walk: <b>point at the floor and pinch</b> to jump there, or pinch a piece to stand in front of it with its label beside you. The <b>3D pieces</b> are taken with your hand: turn them, make them bigger, even throw them; <b>Tidy up</b> puts everything back. The menu is on your left palm.">Toda <b>galería en 3D</b> se abre en tu Meta Quest con <b>Recorrer en realidad virtual</b>. No caminas: <b>apuntas al piso y pellizcas</b> para aparecer ahí, o pellizcas una obra para quedar frente a ella con su cédula al lado. Las <b>piezas 3D</b> se toman con la mano: las giras, las haces más grandes y hasta las avientas; <b>Ordenar piezas</b> deja todo en su lugar. El menú está en tu palma izquierda.</p>
+    <div id="glMine" hidden><h3 class="sfh" data-en="Yours">La tuya</h3><div class="sfgrid" id="glMineGrid"></div></div>
+    <div id="glAll" hidden><h3 class="sfh" data-en="From the community">De la comunidad</h3><div class="sfgrid" id="glAllGrid"></div></div>
+    <div class="actions reveal" style="margin-top:22px"><a class="btn sun mag" href="../crear/galeria/" data-en="Set up your gallery">Monta tu galería</a><a class="btn mag" href="../galerias/" data-en="All the galleries">Todas las galerías</a></div>
   </div></section>
 
   <section id="entrar"><div class="wrap">
@@ -567,13 +577,23 @@ footer .explore a{color:var(--mute);text-decoration:none}footer .explore a:hover
     const list=(d.experiences||[]).filter(x=>!mine.has(x.slug)); if(!list.length) return;
     const g=document.getElementById("sfAllGrid"); list.forEach(x=>g.appendChild(card(x,x.by&&x.by.handle?"@"+x.by.handle:""))); document.getElementById("sfAll").hidden=false;
   }).catch(()=>{});
-  if(!tok){ loadAll(); return; }
+  // the galleries: yours (if you have one) and the public ones
+  const myGal=new Set();
+  const loadGal=()=>fetch("../api/galerias").then(r=>r.ok?r.json():{galerias:[]}).then(d=>{
+    const list=(d.galerias||[]).filter(x=>!myGal.has(x.slug)).slice(0,12); if(!list.length) return;
+    const g=document.getElementById("glAllGrid"); list.forEach(x=>g.appendChild(card({...x,title:x.name},x.autor?x.autor.replace(/[<>&]/g,""):""))); document.getElementById("glAll").hidden=false;
+  }).catch(()=>{});
+  if(!tok){ loadAll(); loadGal(); return; }
   fetch("../api/me",{headers:{Authorization:"Bearer "+tok}}).then(r=>r.ok?r.json():null).then(d=>{
+    const gal=((d&&d.experiences)||[]).filter(x=>x.kind==="galeria"&&!x.paused);
+    if(gal.length){ const g=document.getElementById("glMineGrid");
+      gal.forEach(x=>{ myGal.add(x.slug); g.appendChild(card({...x,image:`/m/${x.slug}/image?v=${x.updated||""}`})); });
+      document.getElementById("glMine").hidden=false; }
     const list=((d&&d.experiences)||[]).filter(x=>x.kind==="superficie"&&!x.paused);
     if(list.length){ const g=document.getElementById("sfMineGrid");
       list.forEach(x=>{ mine.add(x.slug); g.appendChild(card({...x,image:`/m/${x.slug}/image?v=${x.updated||""}`},`<span class="pv">${x.listed?"Pública":"Privada"}</span>`)); });
       document.getElementById("sfMine").hidden=false; }
-  }).catch(()=>{}).finally(loadAll);
+  }).catch(()=>{}).finally(()=>{ loadAll(); loadGal(); });
 })();
 </script>
 <script src="../assets/origen.js"></script>

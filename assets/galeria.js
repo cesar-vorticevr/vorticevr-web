@@ -15,7 +15,8 @@
 //   nombre, texto, obras: [ { id, img (an item "foto"), mount: pared | caballete, w, h (cm), frame, mat, t, d } |
 //   { id, model (an item "model"), mount: pedestal | piso, s (cm), frame (the pedestal's), gira, t, d } ] }] }
 // Galleries from before ({sala, amb, obras}, no mount) are one classic room with easels (salasOf).
-// Counted: tour, share (o.onClick).
+// In a headset (Meta Quest…) "Recorrer en realidad virtual" walks it in virtual reality with the hands: assets/galeria-vr.js.
+// Counted: tour, share, vr (o.onClick).
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { sfx } from "./sonidos.js";
@@ -214,6 +215,7 @@ const CSS = `
 .gl-intro p{color:#cbbbe8;max-width:34ch;margin:12px auto 22px;line-height:1.45}
 .gl-go{border:0;border-radius:999px;padding:14px 30px;font:700 15px "Sora",system-ui,sans-serif;color:#1b0f00!important;background:linear-gradient(135deg,#ffd88a,#ffbe55);box-shadow:0 10px 40px rgba(255,190,85,.4)}
 .gl-go:disabled{opacity:.6}
+.gl-vrb{display:block;margin:12px auto 0;background:linear-gradient(135deg,#b07bff,#6b279b);color:#fff!important;box-shadow:0 10px 40px rgba(139,63,214,.45)}
 .gl-fade{position:absolute;inset:0;z-index:4;background:#05020b;opacity:0;pointer-events:none;transition:opacity .45s;display:grid;place-items:center;font:600 22px "Sora",system-ui,sans-serif;color:#ffd27f}
 .gl-fade.on{opacity:1}
 .gl-toast{position:absolute;left:50%;top:70px;transform:translateX(-50%);z-index:6;background:rgba(30,14,52,.94);border:1px solid rgba(210,184,255,.2);border-radius:999px;padding:8px 16px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
@@ -244,6 +246,7 @@ export function run(o) {
   el.innerHTML = `<canvas tabindex="0"></canvas>
     <div class="gl-top"><span data-logo></span><div class="gl-name" data-name></div>
       ${o.embedded ? "" : `<button class="gl-ic" type="button" data-share aria-label="Compartir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg></button>
+      <button class="gl-ic" type="button" data-vrt hidden aria-label="Recorrer en realidad virtual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8.5C3 7.7 3.7 7 4.5 7h15c.8 0 1.5.7 1.5 1.5v7c0 .8-.7 1.5-1.5 1.5h-4l-2-2.5h-3L8.5 17h-4C3.7 17 3 16.3 3 15.5z"/><circle cx="8" cy="11.5" r="1.6"/><circle cx="16" cy="11.5" r="1.6"/></svg></button>
       <button class="gl-ic" type="button" data-fs aria-label="Pantalla completa"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 5V1h4M11 1h4v4M15 11v4h-4M5 15H1v-4"/></svg></button>`}</div>
     <div class="gl-salas" data-salas hidden><button type="button" data-sp aria-label="Sala anterior">‹</button><span data-sn></span><button type="button" data-sx aria-label="Sala siguiente">›</button></div>
     <div class="gl-pill off" data-hint></div>
@@ -252,7 +255,7 @@ export function run(o) {
     <div class="gl-card" data-card hidden><div class="ct"><b data-ct></b><span class="num" data-cn></span></div><div class="sz" data-cs></div><p data-cd></p>
       <div class="gl-nav"><button type="button" data-prev>← Anterior</button><button type="button" data-next>Siguiente →</button><button class="x" type="button" data-close aria-label="Cerrar">×</button></div></div>
     <div class="gl-fade" data-fade></div>
-    <div class="gl-intro" data-intro><div><div class="k">Galería en 3D</div><h1 data-ih></h1><div class="by" data-iby></div><p>Camina entre las obras, acércate a cada una y descubre su historia.</p><button class="gl-go" type="button" data-go disabled>Cargando…</button></div></div>
+    <div class="gl-intro" data-intro><div><div class="k">Galería en 3D</div><h1 data-ih></h1><div class="by" data-iby></div><p>Camina entre las obras, acércate a cada una y descubre su historia.</p><button class="gl-go" type="button" data-go disabled>Cargando…</button><button class="gl-go gl-vrb" type="button" data-vr hidden>Recorrer en realidad virtual</button></div></div>
     <div class="gl-toast" data-toast></div>`;
   o.root.appendChild(el);
   const $ = s => el.querySelector(s);
@@ -833,7 +836,8 @@ export function run(o) {
         OBST.push({ x: sp.x, z: sp.z, r: Math.max(.5, sm * .6) });
         if (lights < 10) { addSpot(root, 0, R.H - .12, 1.6, 0, topY + h / 2, 0, R.spotI * .8); lights++; }
         tag(root, i); pieces.add(root);
-        placed.set(i, { cx: sp.x, cy: topY + h / 2, cz: sp.z, nx: fx, nz: fz, w: sm, h: Math.max(h, .3), model: true, size: ob.s ? `${Math.round(sm * 100)} cm` : "" });
+        placed.set(i, { cx: sp.x, cy: topY + h / 2, cz: sp.z, nx: fx, nz: fz, w: sm, h: Math.max(h, .3), model: true, size: ob.s ? `${Math.round(sm * 100)} cm` : "",
+          obj: turn, gira: !!(ob.gira && !REDUCED), ped: { x: sp.x, z: sp.z, hw: onPed ? pw / 2 + .03 : 0, top: topY } });   // obj, ped: what the hands take in virtual reality (galeria-vr.js)
       } else {
         root.add(buildEasel());
         const tex = assets[i], a = tex && tex.image ? tex.image.width / tex.image.height : .8, rs = realSize(ob, a);
@@ -871,6 +875,7 @@ export function run(o) {
     }
     pieces.traverse(x => { if (x.userData.glow) glows.push(x); });
     if (o.onLayout) o.onLayout({ sala: salaI, missing: missing.sort((a, b) => a - b) });
+    if (vr) vr.onBuilt();
     if (focusKey !== null && !placed.has(focusKey)) { focusKey = null; showCard(); }
     $("[data-tour]").hidden = !!(focusKey !== null || !order().length || state !== "in");
   }
@@ -878,7 +883,7 @@ export function run(o) {
 
   /* ---------- walking and looking ---------- */
   const player = { x: 0, z: 0, yaw: 0, pitch: -.03 };
-  let anim = null, bob = 0, focusKey = null, state = "intro";
+  let anim = null, bob = 0, focusKey = null, state = "intro", vr = null;   // vr: the virtual reality mode while it is on
   const keys = new Set(), joy = { x: 0, y: 0 };
   function resolve(x, z) {
     const B = spec.bounds;
@@ -1109,6 +1114,7 @@ export function run(o) {
 
   /* ---------- loop ---------- */
   const ro = new ResizeObserver(() => {
+    if (renderer.xr.isPresenting) return;
     const [w, h] = size(); renderer.setSize(w, h, false);
     camera.aspect = w / h; camera.fov = w < h ? 72 : 62; camera.updateProjectionMatrix();
   });
@@ -1118,8 +1124,8 @@ export function run(o) {
   const clock = new THREE.Clock();
   renderer.setAnimationLoop(() => {
     const raw = clock.getDelta(), dt = Math.min(raw, .1), t = clock.elapsedTime;
-    if (!vis || !room) return;
-    update(dt, raw);
+    if ((!vis && !vr) || !room) return;
+    if (vr) vr.tick(dt, t); else update(dt, raw);
     for (const m of mixers) m.update(dt);
     for (const g of turners) g.rotation.y += dt * .35;
     if (!REDUCED) {
@@ -1151,6 +1157,46 @@ export function run(o) {
   let textKey = "";
   start();
 
+  /* ---------- virtual reality (assets/galeria-vr.js) ---------- */
+  // only where it can open: a headset's browser (Meta Quest…) or a computer with a headset connected; never on a phone
+  const HMD = /OculusBrowser|Quest|Pico|Wolvic|Mobile VR/i.test(navigator.userAgent);
+  if (!o.embedded && navigator.xr && (HMD || !MOBILE)) {
+    navigator.xr.isSessionSupported("immersive-vr").then(ok => {
+      if (!ok || !alive) return;
+      $("[data-vr]").hidden = false; $("[data-vrt]").hidden = false;
+      import("./galeria-vr.js").catch(() => {});   // ready before the tap
+    }).catch(() => {});
+  }
+  const vrApi = {
+    renderer, scene, camera, sfx, EYE,
+    get spec() { return spec; }, get room() { return room; }, get pieces() { return pieces; }, get placed() { return placed; }, get turners() { return turners; },
+    get salaI() { return salaI; }, salas, sala, obras, order, resolve, salaName, count, title: () => G().name || cfg.title || "Galería",
+    goSala: j => goSala(j),
+    info(key) {   // what a piece's card says
+      if (key === "txt") return { t: salaI === 0 ? G().name || cfg.title || "La exposición" : salaName(sala(), salaI), s: salaI === 0 && G().autor ? `Presenta: ${G().autor}` : "", d: String(sala().texto || "").trim(), txt: true };
+      const ob = obras()[key] || {}; return { t: ob.t || "Sin título", s: placed.get(key)?.size || "", d: ob.d || "" };
+    },
+    player, debugVR: o.debugVR,   // tests with an emulated headset
+    ended() {
+      vr = null; anim = null; focusKey = null; showCard();
+      const [w, h] = size(); renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 72 : 62; camera.zoom = 1; camera.updateProjectionMatrix();
+    },
+  };
+  function startVR() {
+    if (vr || !navigator.xr) return;
+    // the session is asked for right inside the tap, before anything else
+    const req = navigator.xr.requestSession("immersive-vr", { requiredFeatures: ["local-floor"], optionalFeatures: ["hand-tracking", "bounded-floor", "layers"] });
+    sfx.tap();
+    Promise.all([req, import("./galeria-vr.js")]).then(([session, M]) => {
+      if (!alive) { session.end(); return; }
+      if (state !== "in") enter();
+      anim = null; focusKey = null; showCard();
+      vr = M.startVR(session, vrApi); count("vr");
+    }).catch(e => { console.warn(e); toast("No se pudo abrir la realidad virtual"); });
+  }
+  $("[data-vr]").onclick = startVR;
+  if ($("[data-vrt]")) $("[data-vrt]").onclick = startVR;
+
   return {
     update(c, b) {
       cfg = c; if (b !== undefined) brand = b;
@@ -1177,7 +1223,7 @@ export function run(o) {
       return new Promise(r => c.toBlob(r, v.type || "image/jpeg", v.q || .86));
     },
     destroy() {
-      alive = false; renderer.setAnimationLoop(null); ro.disconnect(); io.disconnect(); offs.forEach(f => f()); clearTimeout(hintT); clearTimeout(toastT);
+      alive = false; if (vr) vr.end(); renderer.setAnimationLoop(null); ro.disconnect(); io.disconnect(); offs.forEach(f => f()); clearTimeout(hintT); clearTimeout(toastT);
       scene.traverse(x => { if (x.geometry) x.geometry.dispose(); if (x.material) x.material.dispose(); });
       owned.forEach(x => x.dispose()); for (const p of texCache.values()) p.then(t => t && t.dispose()); envTex.dispose(); renderer.dispose(); el.remove();
     },
