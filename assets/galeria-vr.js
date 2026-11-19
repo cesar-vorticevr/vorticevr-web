@@ -2,11 +2,12 @@
 // with "Recorrer en realidad virtual". The same room, lights and pieces; only the way you move changes. Hands first
 // (no controllers needed); controllers work too (trigger = pinch).
 //  · You don't walk for real (César: it's dangerous). Two ways to move:
-//    - jump: look at the floor, point at it and hold the pinch 2 s (motes of light gather at your fingers); then a
+//    - jump: look at the floor, point at it and hold the pinch half a second (motes of light gather at your fingers); then a
 //      trail of light and a soft glow show where you'll land; let go and you appear there (a quick fade). Nothing
 //      shows while you just move your hands (César: the arc was always there and got in the way).
-//    - swim: breaststroke with both open hands (out in front, sweep them out and back) and you glide forward,
-//      like flying in a dream; the glide slows down by itself. A soft vignette while gliding, sparkles off the hands. Leaning in or crouching works as in real life. If you walk away from your spot, the view
+//    - pull the air: half close a hand (as if grabbing something invisible) and pull it toward you: you move the other
+//      way, faster than the hand (each pull counts, one hand or both), and keep gliding when you open it, like flying in
+//      a dream; closing the hand without moving brakes. A soft vignette while gliding, sparkles off the hands. Leaning in or crouching works as in real life. If you walk away from your spot, the view
 //    darkens and asks you to stay ("Quédate en tu lugar").
 //  · Point at a piece (or the room's text) and pinch: you land in front of it, at the distance that shows it whole,
 //    and its card (cédula) floats beside you: title, size, story, Anterior / Siguiente.
@@ -14,8 +15,10 @@
 //    both hands, bigger or smaller and turned. Let go while moving and it flies: it falls, bounces and rolls (a small
 //    rigid body: gravity, the floor, the walls, the pedestals; in space it falls off the platform and comes back).
 //    Out of its place, a glowing "Regresar" floats over its pedestal: pinch it and the piece flies home.
-//  · The menu is on your left palm: turn it toward you (controllers: X or Y). Anterior / Siguiente (the tour),
-//    girar 45°, Ordenar piezas (everything back home), the rooms and Salir. Tap it with your right index finger.
+//  · The menu is on your left palm: turn your left fist toward you and open it (a hint over the hand says so); closing
+//    it or turning it away hides it (controllers: X or Y). Anterior / Siguiente (the tour), girar 45°, Ordenar piezas
+//    (everything back home), the rooms and Salir. Its buttons are held, not tapped (César: Salir got pressed by
+//    accident): 1 s with your right index finger or the ray, 2 s for Salir, filling up as you hold.
 //  · The hands are subtle translucent hands (no dots, no bones), as in assets/superficie-mr.js.
 // Changing rooms or leaving puts every piece back in its place first.
 // startVR(session, api) → { tick(dt, t), onBuilt(), end() }; api comes from galeria.js (run → vrApi).
@@ -98,6 +101,11 @@ export function startVR(session, A) {
     const on = p.hov === b.k;
     g.fillStyle = b.off ? "rgba(255,255,255,.05)" : kind === "exit" ? (on ? "#e5243b" : "rgba(229,36,59,.3)") : kind === "gold" ? (on ? "#ffd27f" : "#ffbe55") : on ? "#8b3fd6" : "rgba(255,255,255,.13)";
     g.fill();
+    if (p.prog && p.prog.k === b.k && !b.off) {   // held: it fills up from the left
+      g.save(); rr(g, b.x, b.y, b.w, b.h, b.h / 2); g.clip();
+      g.fillStyle = kind === "exit" ? "#ff4d63" : kind === "gold" ? "#fff1c9" : "#b07bff"; g.fillRect(b.x, b.y, b.w * Math.min(1, p.prog.f), b.h); g.restore();
+      rr(g, b.x, b.y, b.w, b.h, b.h / 2); g.lineWidth = 5; g.strokeStyle = "#ffd27f"; g.stroke();
+    }
     g.fillStyle = b.off ? "rgba(255,255,255,.3)" : kind === "gold" ? "#1b0f00" : "#fff"; g.textAlign = "center"; g.textBaseline = "middle";
     g.font = "700 38px Sora, system-ui, sans-serif"; g.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + 2);
   };
@@ -116,10 +124,16 @@ export function startVR(session, A) {
     g.fillText(n > 1 ? `Sala ${A.salaI + 1} de ${n}` : "Menú", 980, 62);
     const moved = [...pcs.values()].some(q => q.state !== "home");
     for (const b of MB) b.off = (b.k === "salaP" && A.salaI === 0) || (b.k === "salaN" && A.salaI >= n - 1) || (b.k === "tidy" && !moved) || ((b.k === "prev" || b.k === "next") && !A.order().length && n < 2);
+    g.textAlign = "center"; g.fillStyle = "rgba(217,204,245,.7)"; g.font = "500 26px 'IBM Plex Sans', system-ui, sans-serif"; g.fillText("Mantén oprimido un botón para usarlo", 512, 118);
     const lab = { prev: "◀  Anterior", next: focusKey === null ? "Iniciar recorrido  ▶" : "Siguiente  ▶", turnL: "⟲  Girar", tidy: "Ordenar piezas", turnR: "Girar  ⟳", salaP: "‹  Sala", salaN: "Sala  ›", exit: "Salir" };
     for (const b of MB) btn(g, p, b, lab[b.k], b.k === "exit" ? "exit" : b.k === "next" ? "gold" : "");
   }, () => MB);
   scene.add(menu.mesh);
+  const palmHint = panel(768, 150, .2, (g, p) => {
+    rr(g, 4, 4, 760, 142, 70); g.fillStyle = "rgba(14,6,30,.82)"; g.fill(); g.lineWidth = 3; g.strokeStyle = "rgba(255,190,85,.6)"; g.stroke();
+    g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = "#fff"; g.font = "700 44px Sora, system-ui, sans-serif"; g.fillText(p.t || "", 384, 78);
+  });
+  scene.add(palmHint.mesh);
 
   // ---- the card of the piece you're looking at ----
   let focusKey = null;
@@ -177,8 +191,8 @@ export function startVR(session, A) {
     const s = { i, ray, grip, hand, line, input: null, aim: null, grab: null, charge: null, menuHand: false, poke: false, pokeT: 0, btnDown: false };
     ray.addEventListener("connected", e => { s.input = e.data; });
     ray.addEventListener("disconnected", () => { drop(s); s.input = null; });
-    ray.addEventListener("selectstart", () => press(s));
-    ray.addEventListener("selectend", () => drop(s));
+    ray.addEventListener("selectstart", () => { s.selecting = true; press(s); });
+    ray.addEventListener("selectend", () => { s.selecting = false; if (hold && hold.s === s && hold.ray) setHold(null); drop(s); });
     ray.addEventListener("squeezestart", () => { if (!isHand(s)) press(s, true); });
     ray.addEventListener("squeezeend", () => { if (!isHand(s)) drop(s); });
     return s;
@@ -287,8 +301,9 @@ export function startVR(session, A) {
     const near = nearModel(s);
     if (near) return take(s, near);
     const a = squeeze ? null : s.aim; if (!a) return;
+    if (a.what === "menu") { if (a.k) setHold({ k: a.k, t: 0, s, ray: true }); return; }   // held, not tapped
+    if (isHand(s) && curled(s)) return;          // a half closed hand is pulling the air, not pointing
     pulse(s, .3, 30);
-    if (a.what === "menu") return menuAct(a.k);
     if (a.what === "card") return cardAct(a.k);
     if (a.what === "model") return take(s, a.q);
     if (a.what === "ghost") return sendHome(pcs.get(a.key));
@@ -491,27 +506,61 @@ export function startVR(session, A) {
   /* ---------- the menu on the palm (or the controller's X / Y) ---------- */
   const PALM = V(0, -1, 0);   // the wrist's -Y comes out of the palm
   let menuFree = false;       // controllers: the menu floats in front of you
-  function menuPose() {
+  // how closed a hand is: the middle, ring and little fingertips near the wrist (the index and thumb are free to pinch)
+  const curlOf = s => {
+    const w = joint(s, "wrist"), k = joint(s, "middle-finger-phalanx-proximal"); if (!w || !k) return null;
+    const wp = w.getWorldPosition(V()), ref = Math.max(.04, k.getWorldPosition(V()).distanceTo(wp));
+    let sum = 0, n = 0;
+    for (const t of ["middle-finger-tip", "ring-finger-tip", "pinky-finger-tip"]) { const j = joint(s, t); if (j) { sum += j.getWorldPosition(V()).distanceTo(wp); n++; } }
+    return n ? sum / n / ref : null;   // open ≈ 1.8, a fist ≈ 1
+  };
+  const curled = s => { const c = curlOf(s); if (c === null) return false; s.curled = s.curled ? c < 1.55 : c < 1.4; return s.curled; };
+  const pal = { armed: false, open: false, away: 0 };
+  function menuPose(dt) {
     const L = srcs.find(s => side(s) === "left" && isHand(s));
     for (const s of srcs) s.menuHand = false;
+    palmHint.mesh.visible = false;
     if (L) {
       const w = joint(L, "wrist"), mid = joint(L, "middle-finger-metacarpal");
       if (w && mid) {
         const wp = w.getWorldPosition(V()), n = PALM.clone().applyQuaternion(w.getWorldQuaternion(new THREE.Quaternion()));
         const toHead = head.clone().sub(wp).normalize();
         if (n.dot(toHead) > .55 && !L.grab) {
-          L.menuHand = true;
-          const mp = mid.getWorldPosition(V());
-          menu.mesh.position.copy(mp).addScaledVector(n, .07).addScaledVector(UP, .1);
-          menu.mesh.lookAt(head); menu.mesh.visible = true; return;
-        }
+          L.menuHand = true; pal.away = 0;
+          const fist = curled(L), mp = mid.getWorldPosition(V());
+          // first a fist, then open it: the menu (closing it again hides it)
+          if (fist) { if (pal.open) { pal.open = false; setHold(null); } pal.armed = true; }
+          else if (pal.armed && !pal.open) { pal.open = true; pal.armed = false; sfx.sparkle(3); menu.redraw(); }
+          if (pal.open) {
+            menu.mesh.position.copy(mp).addScaledVector(n, .07).addScaledVector(UP, .1);
+            menu.mesh.lookAt(head); menu.mesh.visible = true; return;
+          }
+          const t = fist ? "Abre el puño: menú" : "Cierra el puño y ábrelo: menú";
+          if (palmHint.t !== t) { palmHint.t = t; palmHint.redraw(); }
+          palmHint.mesh.position.copy(mp).addScaledVector(n, .06).addScaledVector(UP, .06); palmHint.mesh.lookAt(head); palmHint.mesh.visible = true;
+        } else if ((pal.away += dt) > .4) { pal.open = false; pal.armed = false; }
       }
     }
     if (menuFree) {
       if (menu.mesh.position.distanceTo(head) > 1.2 || !menu.mesh.visible) { headPose(); menu.mesh.position.copy(head).addScaledVector(fwd, .55); menu.mesh.position.y = head.y - .2; }
       menu.mesh.lookAt(head); menu.mesh.visible = true; return;
     }
-    menu.mesh.visible = false;
+    menu.mesh.visible = false; if (hold && !hold.ray) setHold(null);
+  }
+  // holding a menu button: 1 s (Salir 2 s), with the button filling up
+  let hold = null;
+  function setHold(h) { hold = h; menu.prog = h ? { k: h.k, f: 0 } : null; menu.redraw(); }
+  function holdTick(dt) {
+    if (!hold) return;
+    if (!menu.mesh.visible) return setHold(null);
+    if (!hold.ray && !hold.s.poke) return setHold(null);
+    if (hold.ray && !(hold.s.selecting && hold.s.aim && hold.s.aim.what === "menu" && hold.s.aim.k === hold.k)) return setHold(null);
+    if (hold.done) return;
+    const b = MB.find(x => x.k === hold.k); if (!b || b.off) return setHold(null);
+    const need = hold.k === "exit" ? 2 : 1;
+    hold.t += dt; menu.prog.f = hold.t / need; menu.redraw();
+    if (Math.floor(hold.t * 4) !== Math.floor((hold.t - dt) * 4)) pulse(hold.s, .12, 10);
+    if (hold.t >= need) { hold.done = true; menu.prog.f = 1; pulse(hold.s, .5, 50); menuAct(hold.k); if (hold) { hold.done = true; } }
   }
   // a fingertip touching a panel's button
   function pokes(dt) {
@@ -525,7 +574,10 @@ export function startVR(session, A) {
         if (Math.abs(l.z) < .02 / p.mesh.scale.z && Math.abs(l.x) <= .5 && Math.abs(l.y) <= .5) { const k = p.at({ x: l.x + .5, y: l.y + .5 }); if (k) touching = { what, k, p }; }
       }
       if (touching) touching.p.hover(touching.k);
-      if (touching && !s.poke && s.pokeT <= 0) { s.pokeT = .45; sfx.tap(); pulse(s, .3, 20); touching.what === "menu" ? menuAct(touching.k) : cardAct(touching.k); }
+      if (touching && touching.what === "menu") {
+        if (!hold || hold.k !== touching.k || hold.s !== s || hold.ray) setHold({ k: touching.k, t: 0, s });
+      } else if (hold && hold.s === s && !hold.ray) setHold(null);
+      if (touching && touching.what === "card" && !s.poke && s.pokeT <= 0) { s.pokeT = .45; sfx.tap(); pulse(s, .3, 20); cardAct(touching.k); }
       s.poke = !!touching;
     }
   }
@@ -587,7 +639,7 @@ export function startVR(session, A) {
   }
 
   /* ---------- jumping: hold the pinch on the floor ---------- */
-  const HOLD = 2;   // seconds
+  const HOLD = .5;   // seconds (César: 2 s was too long)
   function charging(s, F, a, dt, now) {
     const c = s.charge;
     if (c && !(a && a.what === "floor")) c.t = Math.max(0, c.t - dt * 2);   // looked away: it fades back
@@ -624,7 +676,8 @@ export function startVR(session, A) {
     F.rise.done();
   }
 
-  /* ---------- swimming: breaststroke with both open hands ---------- */
+  /* ---------- pulling the air: a half closed hand pulled toward you moves you the other way ---------- */
+  const PULL = 3.2, MAXV = 5;   // how much faster than the hand; top speed (m/s)
   const swimV = V(), prevHand = [null, null], handNow = [V(), V()], handV = [V(), V()];
   const sparks = motes(60, .03), spark = Array.from({ length: 60 }, () => ({ p: V(), v: V(), life: 0 })); let sparkI = 0;
   sparks.visible = true;
@@ -635,34 +688,27 @@ export function startVR(session, A) {
     m.position.set(0, 0, -.25); m.renderOrder = 999; m.visible = false; camera.add(m); return m;
   })();
   let swamOnce = false;
-  const openHand = s => { const th = joint(s, "thumb-tip"), ix = joint(s, "index-finger-tip"); return !!(th && ix) && th.getWorldPosition(V()).distanceTo(ix.getWorldPosition(V())) > .045; };
   function swim(dt) {
-    const L = srcs.find(s => side(s) === "left"), R = srcs.find(s => side(s) === "right");
-    let thrust = 0;
-    const ok = L && R && isHand(L) && isHand(R) && !busy && ![L, R].some(s => s.grab || s.charge || s.menuHand);
-    const got = [L, R].map((s, i) => {
-      const w = s && isHand(s) ? joint(s, "middle-finger-metacarpal") : null;
-      if (!w) return false;
-      const p = w.getWorldPosition(V()).sub(head);   // in your head's frame: right, up, forward
-      handNow[i].set(p.dot(right), p.y, p.dot(fwd)); return true;
+    const want = V(); let pulling = 0;
+    srcs.forEach((s, i) => {
+      const w = isHand(s) ? joint(s, "middle-finger-metacarpal") : null;
+      if (!w) { prevHand[i] = null; handV[i].set(0, 0, 0); s.pull = false; return; }
+      handNow[i].copy(w.getWorldPosition(V()).sub(head));   // relative to your head, so moving doesn't count as the hand moving
+      if (prevHand[i]) handV[i].lerp(handNow[i].clone().sub(prevHand[i]).divideScalar(Math.max(dt, 1e-3)), 1 - Math.exp(-dt * 14));
+      prevHand[i] = handNow[i].clone();
+      s.pull = !busy && !s.grab && !s.menuHand && curled(s);
+      if (!s.pull) return;
+      // grabbing the air: you go the other way of the hand, on the floor
+      want.x -= handV[i].x * PULL; want.z -= handV[i].z * PULL; pulling++;
+      if (s.charge && Math.hypot(handV[i].x, handV[i].z) > .35) s.charge = null;   // it's a pull, not a jump
+      if (Math.hypot(handV[i].x, handV[i].z) > .4 && Math.random() < .6) { const sp = spark[sparkI++ % spark.length]; w.getWorldPosition(sp.p); sp.v.set((Math.random() - .5) * .3, Math.random() * .2, (Math.random() - .5) * .3); sp.life = 1; }
     });
-    if (ok && got[0] && got[1] && prevHand[0] && prevHand[1] && openHand(L) && openHand(R)) {
-      const k = 1 / Math.max(dt, 1e-3), e = 1 - Math.exp(-dt * 10);   // the hands' speed, smoothed (tracking jitter is not a stroke)
-      handV[0].lerp(handNow[0].clone().sub(prevHand[0]).multiplyScalar(k), e); handV[1].lerp(handNow[1].clone().sub(prevHand[1]).multiplyScalar(k), e);
-      const vl = handV[0], vr2 = handV[1];
-      const inFront = handNow.every(h => h.z > .12 && h.y > -.8 && h.y < .15);
-      const backL = -vl.z, backR = -vr2.z, outL = -vl.x, outR = vr2.x;   // pulling back, sweeping out
-      if (inFront && backL > .3 && backR > .3 && outL > -.25 && outR > -.25 && outL + outR > -.1) {
-        thrust = Math.min(backL, backR, 2.5);
-        if (!swamOnce) { swamOnce = true; say("¡Estás nadando!", ["Sigue con brazadas de pecho para avanzar"], 3); }
-        [L, R].forEach(s => { if (Math.random() < .5) { const sp = spark[sparkI++ % spark.length]; joint(s, "middle-finger-metacarpal").getWorldPosition(sp.p); sp.v.set((Math.random() - .5) * .3, Math.random() * .2, (Math.random() - .5) * .3); sp.life = 1; } });
-      }
-    }
-    if (!(got[0] && got[1])) { handV[0].set(0, 0, 0); handV[1].set(0, 0, 0); }
-    prevHand[0] = got[0] ? handNow[0].clone() : null; prevHand[1] = got[1] ? handNow[1].clone() : null;
-    if (thrust) swimV.addScaledVector(fwd, thrust * 3.4 * dt);
-    swimV.multiplyScalar(Math.exp(-dt * .9));   // the glide slows by itself
-    if (swimV.length() > 2.4) swimV.setLength(2.4);
+    if (pulling) {
+      want.y = 0; if (pulling > 1) want.multiplyScalar(.75);
+      swimV.lerp(want, 1 - Math.exp(-dt * 9));   // closing the hand still = a brake
+      if (!swamOnce && swimV.length() > .8) { swamOnce = true; say("¡Estás volando!", ["Cada jalón te impulsa · abre la mano para deslizarte"], 3); }
+    } else swimV.multiplyScalar(Math.exp(-dt * .7));   // gliding, it slows by itself
+    swimV.y = 0; if (swimV.length() > MAXV) swimV.setLength(MAXV);
     const sp = swimV.length();
     if (sp > .02 && !busy) {   // glide, without going through walls or pieces
       const [x, z] = A.resolve(head.x + swimV.x * dt, head.z + swimV.z * dt);
@@ -670,7 +716,7 @@ export function startVR(session, A) {
       if (Math.hypot(x - head.x, z - head.z) < sp * dt * .3) swimV.set(0, 0, 0);   // bumped into something
       if (focusKey !== null && sp > .4) showCard(null);
     } else swimV.set(0, 0, 0);
-    vig.material.opacity = clamp(sp / 1.6, 0, 1) * .6; vig.visible = vig.material.opacity > .01;
+    vig.material.opacity = clamp(sp / 2.5, 0, 1) * .6; vig.visible = vig.material.opacity > .01;
     for (let j = 0; j < spark.length; j++) {
       const q = spark[j]; if (q.life > 0) { q.life -= dt * 1.4; q.p.addScaledVector(q.v, dt); }
       sparks.set(j, q.p.x, q.p.y, q.p.z, GOLD, Math.max(0, q.life) * .8);
@@ -689,7 +735,7 @@ export function startVR(session, A) {
       started = true;
       const S = A.spec, inside = Math.hypot(P0.x - S.start.x, P0.z - S.start.z) > .4;
       placeHead(inside ? P0.x : S.start.x, inside ? P0.z : S.start.to, inside ? P0.yaw : 0);
-      say("Bienvenido a la galería", ["Mira el piso y sostén el pellizco 2 segundos para ir · o nada de pecho", "Pellizca una obra para verla · tu palma izquierda es el menú"], 10);
+      say("Bienvenido a la galería", ["Jala el aire con la mano medio cerrada para avanzar · o pellizca el piso", "Pellizca una obra para verla · abre el puño izquierdo para el menú"], 10);
       sfx.appear();
     }
     // fading: jumps, and walking away from your spot
@@ -697,12 +743,12 @@ export function startVR(session, A) {
     const drift = Math.hypot(camera.position.x - anchor.x, camera.position.z - anchor.z);
     walkK = clamp((drift - STAY[0]) / (STAY[1] - STAY[0]), 0, 1) * .9;
     fadeMat.opacity = Math.max(fadeK, walkK); fadeMesh.visible = fadeMat.opacity > .001;
-    if (walkK > .15 && !msgWalk) { msgWalk = true; say("Quédate en tu lugar", ["Para avanzar no camines: nada de pecho o sostén el pellizco mirando el piso"], 1e9); }
+    if (walkK > .15 && !msgWalk) { msgWalk = true; say("Quédate en tu lugar", ["Para avanzar no camines: jala el aire con la mano o pellizca el piso"], 1e9); }
     else if (walkK < .05 && msgWalk) { msgWalk = false; msgT = 0; }
     if (!msgWalk && msgT > 0 && (msgT -= dt) <= 0) msg.mesh.visible = false;
     if (msgWalk) msg.mesh.visible = true;
 
-    menuPose(); pokes(dt); swim(dt);
+    menuPose(dt); pokes(dt); holdTick(dt); swim(dt);
     // controllers: X / Y shows the menu, the stick turns
     for (const s of srcs) {
       const gp = s.input && s.input.gamepad; if (!gp || isHand(s)) continue;
@@ -765,7 +811,7 @@ export function startVR(session, A) {
     headPose(); P0.x = head.x; P0.z = head.z; P0.yaw = Math.atan2(-fwd.x, -fwd.z); P0.pitch = -.03;
     for (const s of srcs) { rig.remove(s.ray, s.grip, s.hand); }
     for (const q of pcs.values()) if (q.ghost) scene.remove(q.ghost);
-    scene.remove(menu.mesh, card.mesh, hl, sparks); for (const F of fx) scene.remove(F.trail, F.charge, F.rise, F.disc, F.ring);
+    scene.remove(menu.mesh, card.mesh, palmHint.mesh, hl, sparks); for (const F of fx) scene.remove(F.trail, F.charge, F.rise, F.disc, F.ring);
     camera.remove(fadeMesh, msg.mesh, vig); rig.remove(camera); scene.remove(rig);
     camera.position.set(P0.x, A.EYE, P0.z); camera.quaternion.identity(); camera.rotation.set(P0.pitch, P0.yaw, 0);
     renderer.xr.enabled = false;
@@ -774,7 +820,7 @@ export function startVR(session, A) {
   const me = {
     tick, onBuilt,
     end() { if (!ended) session.end().catch(() => {}); },
-    debug: { rig, srcs, pcs, take, drop, press, swimV, fx, detach, makeBody, physics, onBuilt, menu, card, get focusKey() { return focusKey; }, goPiece, step, tidyAll, menuAct, get busy() { return busy; } },
+    debug: { rig, srcs, pcs, take, drop, press, swimV, fx, pal, palmHint, curlOf, get hold() { return hold; }, detach, makeBody, physics, onBuilt, menu, card, get focusKey() { return focusKey; }, goPiece, step, tidyAll, menuAct, get busy() { return busy; } },
   };
   if (A.debugVR) A.debugVR(me.debug);
   return me;
