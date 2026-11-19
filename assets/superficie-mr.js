@@ -6,8 +6,12 @@
 //   · one hand (pinch, or the controller's trigger / grip): take it, near or from afar with the ray, and it follows
 //     your hand: move it, turn it, tilt it
 //   · two hands: bigger or smaller (5 %–2000 %), turn it and move it at the same time
-//   · a small panel that follows you (lower left): Enderezar (upright and on the floor), Tamaño real, Traer (in front
-//     of you) and Salir. The size is remembered like on the phone (localStorage vvr-escala-<slug>).
+//   · the menu (Enderezar = upright and on the floor, Tamaño real, Traer = in front of you, Salir, and the size): with
+//     hands it comes out of your left fist, as in the gallery (assets/galeria-vr.js): turn the fist toward you and open
+//     it (a hint over the hand says so); closing it or turning it away hides it. César: the panel always there on the
+//     side was uncomfortable. With controllers it follows you (lower left). Its buttons are held, not tapped: 1 s with
+//     the right index finger or the ray, 2 s for Salir, filling up as you hold.
+//     The size is remembered like on the phone (localStorage vvr-escala-<slug>).
 // startMR() must be called right inside the tap: the session is asked for before anything else.
 import * as THREE from "three";
 import * as ESC from "./escena.js";
@@ -66,8 +70,8 @@ async function run(session, o) {
     const s = { i, ray, grip, hand, line, input: null, grab: null, hover: null };
     ray.addEventListener("connected", e => { s.input = e.data; });
     ray.addEventListener("disconnected", () => { s.input = null; release(s); });
-    ray.addEventListener("selectstart", () => press(s));
-    ray.addEventListener("selectend", () => release(s));
+    ray.addEventListener("selectstart", () => { s.selecting = true; press(s); });
+    ray.addEventListener("selectend", () => { s.selecting = false; if (hold && hold.s === s && hold.ray) setHold(null); release(s); });
     ray.addEventListener("squeezestart", () => { if (!(s.input && s.input.hand)) press(s, true); });   // the grip button also takes it
     ray.addEventListener("squeezeend", () => { if (!(s.input && s.input.hand)) release(s); });
     return s;
@@ -115,7 +119,8 @@ async function run(session, o) {
   function press(s, squeeze) {
     if (s.grab) return;
     const a = squeeze ? null : aim(s);
-    if (a && a.what === "panel" && !near(s)) { panel.click(a.uv); pulse(s, 0.3, 30); return; }
+    if (s.menuHand) return;   // the left palm is showing the menu
+    if (a && a.what === "panel" && !near(s)) { const i = panel.at(a.uv); if (i >= 0) setHold({ i, t: 0, s, ray: true }); return; }   // held, not tapped
     if (!(near(s) || (a && a.what === "obj") || squeeze && near(s))) return;
     s.grab = { off: new THREE.Matrix4() };
     if (!grabbedOnce) { grabbedOnce = true; panel.hint = "Con las dos manos: más grande o más chico"; panel.draw(); }
@@ -158,7 +163,7 @@ async function run(session, o) {
   }
 
   // ---- the panel ----
-  const head = new THREE.Vector3(), fwd = new THREE.Vector3();
+  const head = new THREE.Vector3(), fwd = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0);
   function headPose() {
     const c = renderer.xr.getCamera(); c.updateMatrixWorld(true);
     head.setFromMatrixPosition(c.matrixWorld); fwd.set(0, 0, -1).transformDirection(c.matrixWorld); fwd.y = 0;
@@ -179,7 +184,7 @@ async function run(session, o) {
     bring: () => { inFront(Math.max(0.8, 0.6 + size.length() * scale * 0.5)); sfx.appear(); },
     exit: () => session.end(),
   }, () => Math.round(scale * 100) + " %");
-  scene.add(panel.mesh);
+  scene.add(panel.mesh); panel.mesh.visible = false;
   let panelOut = true;
   function panelFollow(dt) {
     headPose();
@@ -191,8 +196,85 @@ async function run(session, o) {
     panel.mesh.lookAt(head);
   }
 
+  // ---- the menu on the left fist (hands) or following you (controllers) ----
+  const isHand = s => !!(s.input && s.input.hand);
+  const joint = (s, n) => { const j = s.hand.joints && s.hand.joints[n]; return j && j.visible ? j : null; };
+  const curlOf = s => {   // the middle, ring and little fingertips near the wrist: open ≈ 1.8, a fist ≈ 1 (a pinch doesn't count)
+    const w = joint(s, "wrist"), k = joint(s, "middle-finger-phalanx-proximal"); if (!w || !k) return null;
+    const wp = w.getWorldPosition(new THREE.Vector3()), ref = Math.max(0.04, k.getWorldPosition(new THREE.Vector3()).distanceTo(wp));
+    let sum = 0, n = 0;
+    for (const t of ["middle-finger-tip", "ring-finger-tip", "pinky-finger-tip"]) { const j = joint(s, t); if (j) { sum += j.getWorldPosition(new THREE.Vector3()).distanceTo(wp); n++; } }
+    return n ? sum / n / ref : null;
+  };
+  const curled = s => { const c = curlOf(s); if (c === null) return false; s.curled = s.curled ? c < 1.55 : c < 1.4; return s.curled; };
+  const PALM = new THREE.Vector3(0, -1, 0);   // the wrist's -Y comes out of the palm
+  const pal = { armed: false, open: false, away: 0 };
+  const palmHint = (() => {
+    const c = document.createElement("canvas"); c.width = 768; c.height = 150; const g = c.getContext("2d");
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2 * 150 / 768), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false }));
+    mesh.renderOrder = 11; mesh.visible = false; scene.add(mesh);
+    return { mesh, t: "", set(t) { if (t === this.t) return; this.t = t; g.clearRect(0, 0, 768, 150);
+      g.beginPath(); g.roundRect ? g.roundRect(4, 4, 760, 142, 70) : g.rect(4, 4, 760, 142); g.fillStyle = "rgba(14,6,30,.82)"; g.fill(); g.lineWidth = 3; g.strokeStyle = "rgba(255,190,85,.6)"; g.stroke();
+      g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = "#fff"; g.font = "700 44px Sora, system-ui, sans-serif"; g.fillText(t, 384, 78); tex.needsUpdate = true; } };
+  })();
+  function menuPose(dt) {
+    for (const s of srcs) s.menuHand = false;
+    palmHint.mesh.visible = false;
+    if (!srcs.some(isHand)) { panel.mesh.scale.setScalar(1); panel.mesh.visible = true; panelFollow(dt); return; }   // controllers
+    panel.mesh.scale.setScalar(0.75);
+    const L = srcs.find(s => isHand(s) && s.input.handedness === "left");
+    const w = L && joint(L, "wrist"), mid = L && joint(L, "middle-finger-metacarpal");
+    if (w && mid) {
+      headPose();
+      const wp = w.getWorldPosition(new THREE.Vector3()), n = PALM.clone().applyQuaternion(w.getWorldQuaternion(new THREE.Quaternion()));
+      if (n.dot(head.clone().sub(wp).normalize()) > 0.55 && !L.grab) {
+        L.menuHand = true; pal.away = 0;
+        const fist = curled(L), mp = mid.getWorldPosition(new THREE.Vector3());
+        // first a fist, then open it: the menu (closing it again hides it)
+        if (fist) { if (pal.open) { pal.open = false; setHold(null); } pal.armed = true; }
+        else if (pal.armed && !pal.open) { pal.open = true; pal.armed = false; sfx.sparkle(3); panel.draw(); }
+        if (pal.open) {
+          panel.mesh.position.copy(mp).addScaledVector(n, 0.07).addScaledVector(UP, 0.08);
+          panel.mesh.lookAt(head); panel.mesh.visible = true; return;
+        }
+        palmHint.set(fist ? "Abre el puño: menú" : "Cierra el puño y ábrelo: menú");
+        palmHint.mesh.position.copy(mp).addScaledVector(n, 0.06).addScaledVector(UP, 0.06); palmHint.mesh.lookAt(head); palmHint.mesh.visible = true;
+      } else if ((pal.away += dt) > 0.4) { pal.open = false; pal.armed = false; }
+    }
+    panel.mesh.visible = false;
+  }
+  // a fingertip on a button
+  function pokes() {
+    for (const s of srcs) {
+      const tip = isHand(s) ? joint(s, "index-finger-tip") : null;
+      s.poke = false;
+      if (!tip || s.menuHand || s.grab || !panel.mesh.visible) continue;
+      const l = panel.mesh.worldToLocal(tip.getWorldPosition(new THREE.Vector3()));
+      const W = 0.42, H = 0.42 * 300 / 1024;
+      if (Math.abs(l.z) > 0.02 || Math.abs(l.x) > W / 2 || Math.abs(l.y) > H / 2) continue;
+      const i = panel.at({ x: l.x / W + 0.5, y: l.y / H + 0.5 }); if (i < 0) continue;
+      s.poke = true; panel.hoverIdx(i);
+      if (!hold || hold.i !== i || hold.s !== s || hold.ray) setHold({ i, t: 0, s });
+    }
+  }
+  // holding a button: 1 s (Salir 2 s), with the button filling up
+  let hold = null;
+  function setHold(h) { hold = h; panel.prog = h ? { i: h.i, f: 0 } : null; panel.draw(); }
+  function holdTick(dt) {
+    if (!hold) return;
+    if (!panel.mesh.visible) return setHold(null);
+    if (!hold.ray && !hold.s.poke) return setHold(null);
+    if (hold.ray && !(hold.s.selecting && hold.s.aimBtn === hold.i)) return setHold(null);
+    if (hold.done) return;
+    const need = panel.key(hold.i) === "exit" ? 2 : 1;
+    hold.t += dt; panel.prog.f = hold.t / need; panel.draw();
+    if (Math.floor(hold.t * 4) !== Math.floor((hold.t - dt) * 4)) pulse(hold.s, 0.12, 10);
+    if (hold.t >= need) { hold.done = true; panel.prog.f = 1; pulse(hold.s, 0.5, 50); sfx.pop(); panel.act(hold.i); }
+  }
+
   await renderer.xr.setSession(session);
-  if (o.debug) o.debug({ holder, target, panel, srcs, get scale() { return scale; } });   // tests with an emulated headset
+  if (o.debug) o.debug({ holder, target, panel, srcs, pal, palmHint, curlOf, get hold() { return hold; }, get scale() { return scale; } });   // tests with an emulated headset
   const clock = new THREE.Clock(); let started = false;
   renderer.setAnimationLoop((t, frame) => {
     const dt = Math.min(0.1, clock.getDelta()); if (!frame) return;
@@ -212,11 +294,12 @@ async function run(session, o) {
       if (s.line.visible) s.line.scale.z = a.d;
       if (a && a.what === "obj") hoverObj = true;
       if (a && a.what === "panel") hoverPanel = a.uv;
+      s.aimBtn = a && a.what === "panel" ? panel.at(a.uv) : -1;
       if (!s.grab && near(s)) hoverObj = true;
     }
     outline.visible = hoverObj || srcs.some(s => s.grab);
-    panel.hover(hoverPanel);
-    panelFollow(dt);
+    if (!srcs.some(s => s.poke)) panel.hover(hoverPanel);
+    menuPose(dt); pokes(dt); holdTick(dt);
     if (mixer) mixer.update(dt);
     renderer.render(scene, camera);
   });
@@ -270,7 +353,7 @@ function makePanel(title, act, pct) {
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.42 * H / W), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false }));
   mesh.renderOrder = 10;
   const BTN = [["upright", "Enderezar"], ["real", "Tamaño real"], ["bring", "Traer"], ["exit", "Salir"]];
-  const p = { mesh, hint: "Pellizca para tomarlo · muévelo y gíralo con tu mano", hov: -1 };
+  const p = { mesh, hint: "Pellizca para tomarlo · mantén oprimido un botón", hov: -1 };
   const rr = (x, y, w, h, r) => { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); };
   p.draw = () => {
     g.clearRect(0, 0, W, H);
@@ -283,6 +366,10 @@ function makePanel(title, act, pct) {
     BTN.forEach(([k, t], i) => {
       const x = 40 + i * (bw + 18), y = 150;
       rr(x, y, bw, 110, 55); g.fillStyle = i === p.hov ? (k === "exit" ? "#e5243b" : "#8b3fd6") : (k === "exit" ? "rgba(229,36,59,.28)" : "rgba(255,255,255,.12)"); g.fill();
+      if (p.prog && p.prog.i === i) {   // held: it fills up from the left
+        g.save(); rr(x, y, bw, 110, 55); g.clip(); g.fillStyle = k === "exit" ? "#ff4d63" : "#b07bff"; g.fillRect(x, y, bw * Math.min(1, p.prog.f), 110); g.restore();
+        rr(x, y, bw, 110, 55); g.lineWidth = 5; g.strokeStyle = "#ffd27f"; g.stroke();
+      }
       g.fillStyle = "#fff"; g.textAlign = "center"; g.font = "700 32px Sora, system-ui, sans-serif"; g.fillText(t, x + bw / 2, y + 56);
     });
     tex.needsUpdate = true;
@@ -295,6 +382,9 @@ function makePanel(title, act, pct) {
   };
   p.hover = uv => { const i = at(uv); if (i !== p.hov) { p.hov = i; p.draw(); } };
   p.click = uv => { const i = at(uv); if (i >= 0) { act[BTN[i][0]](); p.draw(); } };
+  p.at = at; p.key = i => BTN[i][0];
+  p.act = i => { act[BTN[i][0]](); p.draw(); };
+  p.hoverIdx = i => { if (i !== p.hov) { p.hov = i; p.draw(); } };
   p.draw();
   return p;
 }

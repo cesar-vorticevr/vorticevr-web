@@ -1,13 +1,11 @@
 // Galería 3D in virtual reality (a headset's browser: Meta Quest and others with WebXR), started by assets/galeria.js
 // with "Recorrer en realidad virtual". The same room, lights and pieces; only the way you move changes. Hands first
 // (no controllers needed); controllers work too (trigger = pinch).
-//  · You don't walk for real (César: it's dangerous). Two ways to move:
-//    - jump: look at the floor, point at it and hold the pinch half a second (motes of light gather at your fingers); then a
-//      trail of light and a soft glow show where you'll land; let go and you appear there (a quick fade). Nothing
-//      shows while you just move your hands (César: the arc was always there and got in the way).
-//    - pull the air: half close a hand (as if grabbing something invisible) and pull it toward you: you move the other
-//      way, faster than the hand (each pull counts, one hand or both), and keep gliding when you open it, like flying in
-//      a dream; closing the hand without moving brakes. A soft vignette while gliding, sparkles off the hands. Leaning in or crouching works as in real life. If you walk away from your spot, the view
+//  · You don't walk for real (César: it's dangerous) and nothing ever moves you smoothly (César got dizzy when the
+//    "pull the air" glide moved him by itself; it was removed): you jump. Look at the floor, point at it with either hand
+//    and hold the pinch half a second (motes of light gather at your fingers); then a trail of light and a soft glow show
+//    where you'll land; let go and you appear there (a quick fade) in a burst of sparkles. Nothing shows while you just
+//    move your hands (César: the arc was always there and got in the way). Leaning in or crouching works as in real life. If you walk away from your spot, the view
 //    darkens and asks you to stay ("Quédate en tu lugar").
 //  · Point at a piece (or the room's text) and pinch: you land in front of it, at the distance that shows it whole,
 //    and its card (cédula) floats beside you: title, size, story, Anterior / Siguiente.
@@ -67,7 +65,7 @@ export function startVR(session, A) {
   async function jump(x, z, yaw, then) {
     if (busy) return; busy = true;
     sfx.whoosh(.3); await fade(1, 120);
-    placeHead(x, z, yaw); if (then) then();
+    placeHead(x, z, yaw); burst(x, z); sfx.sparkle(4); if (then) then();
     await fade(0, 220); busy = false;
   }
 
@@ -302,7 +300,6 @@ export function startVR(session, A) {
     if (near) return take(s, near);
     const a = squeeze ? null : s.aim; if (!a) return;
     if (a.what === "menu") { if (a.k) setHold({ k: a.k, t: 0, s, ray: true }); return; }   // held, not tapped
-    if (isHand(s) && curled(s)) return;          // a half closed hand is pulling the air, not pointing
     pulse(s, .3, 30);
     if (a.what === "card") return cardAct(a.k);
     if (a.what === "model") return take(s, a.q);
@@ -464,14 +461,14 @@ export function startVR(session, A) {
     p.done = () => { geo.attributes.position.needsUpdate = true; geo.attributes.color.needsUpdate = true; };
     return p;
   }
-  const arcN = 36, tmpC = new THREE.Color();
+  const arcN = 56, tmpC = new THREE.Color();
   const fx = [0, 1].map(() => {
-    const trail = motes(arcN, .05), charge = motes(14, .035), rise = motes(10, .05);
+    const trail = motes(arcN, .06), charge = motes(24, .045), rise = motes(18, .055);
     const disc = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: glowTex, color: 0xffd9a0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
     disc.rotation.x = -Math.PI / 2; disc.visible = false; scene.add(disc);
     const ring = new THREE.Mesh(new THREE.RingGeometry(.28, .29, 64), new THREE.MeshBasicMaterial({ color: 0xffe2ad, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
     ring.rotation.x = -Math.PI / 2; ring.visible = false; scene.add(ring);
-    return { trail, charge, rise, disc, ring, seeds: Array.from({ length: 14 }, () => [Math.random() * 6.28, Math.random() * 6.28, .6 + Math.random() * .8]) };
+    return { trail, charge, rise, disc, ring, seeds: Array.from({ length: 24 }, () => [Math.random() * 6.28, Math.random() * 6.28, .6 + Math.random() * .8]) };
   });
   const gaze = V();
   const hl = new THREE.Box3Helper(new THREE.Box3(), 0xffbe55); hl.material.depthTest = false; hl.material.transparent = true; hl.material.opacity = .7; hl.renderOrder = 999; hl.visible = false; scene.add(hl);
@@ -669,57 +666,28 @@ export function startVR(session, A) {
     const breathe = 1 + Math.sin(now * 3) * .06;
     F.disc.position.set(x, .012, z); F.disc.scale.setScalar(1.1 * breathe); F.disc.material.opacity = .55;
     F.ring.position.set(x, .014, z); F.ring.scale.setScalar(breathe); F.ring.material.opacity = .5;
-    for (let j = 0; j < 10; j++) {   // motes rising from it
-      const u = (j / 10 + now * .35) % 1, ang = j * 2.4;
-      F.rise.set(j, x + Math.cos(ang) * .22, .02 + u * .6, z + Math.sin(ang) * .22, GOLD, Math.sin(u * Math.PI) * .8);
+    for (let j = 0; j < 18; j++) {   // motes rising from it
+      const u = (j / 18 + now * .35) % 1, ang = j * 2.4, rr2 = .12 + (j % 3) * .07;
+      F.rise.set(j, x + Math.cos(ang + u) * rr2, .02 + u * .75, z + Math.sin(ang + u) * rr2, j % 2 ? GOLD : LILAC, Math.sin(u * Math.PI) * .9);
     }
     F.rise.done();
   }
 
-  /* ---------- pulling the air: a half closed hand pulled toward you moves you the other way ---------- */
-  const PULL = 3.2, MAXV = 5;   // how much faster than the hand; top speed (m/s)
-  const swimV = V(), prevHand = [null, null], handNow = [V(), V()], handV = [V(), V()];
-  const sparks = motes(60, .03), spark = Array.from({ length: 60 }, () => ({ p: V(), v: V(), life: 0 })); let sparkI = 0;
+  /* ---------- sparkles: a burst where you land ---------- */
+  const sparks = motes(110, .04), spark = Array.from({ length: 110 }, () => ({ p: V(), v: V(), life: 0, c: GOLD })); let sparkI = 0;
   sparks.visible = true;
-  const vig = (() => {   // a soft vignette while gliding, so moving doesn't make you dizzy
-    const c = document.createElement("canvas"); c.width = c.height = 256; const g = c.getContext("2d"), gr = g.createRadialGradient(128, 128, 60, 128, 128, 128);
-    gr.addColorStop(0, "rgba(5,2,11,0)"); gr.addColorStop(1, "rgba(5,2,11,1)"); g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(.9, .9), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, opacity: 0, depthTest: false, depthWrite: false }));
-    m.position.set(0, 0, -.25); m.renderOrder = 999; m.visible = false; camera.add(m); return m;
-  })();
-  let swamOnce = false;
-  function swim(dt) {
-    const want = V(); let pulling = 0;
-    srcs.forEach((s, i) => {
-      const w = isHand(s) ? joint(s, "middle-finger-metacarpal") : null;
-      if (!w) { prevHand[i] = null; handV[i].set(0, 0, 0); s.pull = false; return; }
-      handNow[i].copy(w.getWorldPosition(V()).sub(head));   // relative to your head, so moving doesn't count as the hand moving
-      if (prevHand[i]) handV[i].lerp(handNow[i].clone().sub(prevHand[i]).divideScalar(Math.max(dt, 1e-3)), 1 - Math.exp(-dt * 14));
-      prevHand[i] = handNow[i].clone();
-      s.pull = !busy && !s.grab && !s.menuHand && curled(s);
-      if (!s.pull) return;
-      // grabbing the air: you go the other way of the hand, on the floor
-      want.x -= handV[i].x * PULL; want.z -= handV[i].z * PULL; pulling++;
-      if (s.charge && Math.hypot(handV[i].x, handV[i].z) > .35) s.charge = null;   // it's a pull, not a jump
-      if (Math.hypot(handV[i].x, handV[i].z) > .4 && Math.random() < .6) { const sp = spark[sparkI++ % spark.length]; w.getWorldPosition(sp.p); sp.v.set((Math.random() - .5) * .3, Math.random() * .2, (Math.random() - .5) * .3); sp.life = 1; }
-    });
-    if (pulling) {
-      want.y = 0; if (pulling > 1) want.multiplyScalar(.75);
-      swimV.lerp(want, 1 - Math.exp(-dt * 9));   // closing the hand still = a brake
-      if (!swamOnce && swimV.length() > .8) { swamOnce = true; say("¡Estás volando!", ["Cada jalón te impulsa · abre la mano para deslizarte"], 3); }
-    } else swimV.multiplyScalar(Math.exp(-dt * .7));   // gliding, it slows by itself
-    swimV.y = 0; if (swimV.length() > MAXV) swimV.setLength(MAXV);
-    const sp = swimV.length();
-    if (sp > .02 && !busy) {   // glide, without going through walls or pieces
-      const [x, z] = A.resolve(head.x + swimV.x * dt, head.z + swimV.z * dt);
-      rig.position.x += x - head.x; rig.position.z += z - head.z;
-      if (Math.hypot(x - head.x, z - head.z) < sp * dt * .3) swimV.set(0, 0, 0);   // bumped into something
-      if (focusKey !== null && sp > .4) showCard(null);
-    } else swimV.set(0, 0, 0);
-    vig.material.opacity = clamp(sp / 2.5, 0, 1) * .6; vig.visible = vig.material.opacity > .01;
+  function burst(x, z) {
+    for (let j = 0; j < 46; j++) {
+      const sp = spark[sparkI++ % spark.length], a = Math.random() * 6.283, r = Math.random() * .35;
+      sp.p.set(x + Math.cos(a) * r, .03 + Math.random() * .3, z + Math.sin(a) * r);
+      sp.v.set(Math.cos(a) * (.2 + Math.random() * .5), .5 + Math.random() * 1.1, Math.sin(a) * (.2 + Math.random() * .5));
+      sp.life = .7 + Math.random() * .5; sp.c = Math.random() < .6 ? GOLD : LILAC;
+    }
+  }
+  function sparkTick(dt) {
     for (let j = 0; j < spark.length; j++) {
-      const q = spark[j]; if (q.life > 0) { q.life -= dt * 1.4; q.p.addScaledVector(q.v, dt); }
-      sparks.set(j, q.p.x, q.p.y, q.p.z, GOLD, Math.max(0, q.life) * .8);
+      const q = spark[j]; if (q.life > 0) { q.life -= dt * .9; q.v.y -= dt * .6; q.v.multiplyScalar(1 - dt * .8); q.p.addScaledVector(q.v, dt); }
+      sparks.set(j, q.p.x, q.p.y, q.p.z, q.c, Math.max(0, q.life) * .9);
     }
     sparks.done();
   }
@@ -735,7 +703,7 @@ export function startVR(session, A) {
       started = true;
       const S = A.spec, inside = Math.hypot(P0.x - S.start.x, P0.z - S.start.z) > .4;
       placeHead(inside ? P0.x : S.start.x, inside ? P0.z : S.start.to, inside ? P0.yaw : 0);
-      say("Bienvenido a la galería", ["Jala el aire con la mano medio cerrada para avanzar · o pellizca el piso", "Pellizca una obra para verla · abre el puño izquierdo para el menú"], 10);
+      say("Bienvenido a la galería", ["Mira el piso y sostén el pellizco con cualquier mano para ir", "Pellizca una obra para verla · abre el puño izquierdo para el menú"], 10);
       sfx.appear();
     }
     // fading: jumps, and walking away from your spot
@@ -743,12 +711,12 @@ export function startVR(session, A) {
     const drift = Math.hypot(camera.position.x - anchor.x, camera.position.z - anchor.z);
     walkK = clamp((drift - STAY[0]) / (STAY[1] - STAY[0]), 0, 1) * .9;
     fadeMat.opacity = Math.max(fadeK, walkK); fadeMesh.visible = fadeMat.opacity > .001;
-    if (walkK > .15 && !msgWalk) { msgWalk = true; say("Quédate en tu lugar", ["Para avanzar no camines: jala el aire con la mano o pellizca el piso"], 1e9); }
+    if (walkK > .15 && !msgWalk) { msgWalk = true; say("Quédate en tu lugar", ["Para avanzar no camines: mira el piso y sostén el pellizco"], 1e9); }
     else if (walkK < .05 && msgWalk) { msgWalk = false; msgT = 0; }
     if (!msgWalk && msgT > 0 && (msgT -= dt) <= 0) msg.mesh.visible = false;
     if (msgWalk) msg.mesh.visible = true;
 
-    menuPose(dt); pokes(dt); holdTick(dt); swim(dt);
+    menuPose(dt); pokes(dt); holdTick(dt); sparkTick(dt);
     // controllers: X / Y shows the menu, the stick turns
     for (const s of srcs) {
       const gp = s.input && s.input.gamepad; if (!gp || isHand(s)) continue;
@@ -812,7 +780,7 @@ export function startVR(session, A) {
     for (const s of srcs) { rig.remove(s.ray, s.grip, s.hand); }
     for (const q of pcs.values()) if (q.ghost) scene.remove(q.ghost);
     scene.remove(menu.mesh, card.mesh, palmHint.mesh, hl, sparks); for (const F of fx) scene.remove(F.trail, F.charge, F.rise, F.disc, F.ring);
-    camera.remove(fadeMesh, msg.mesh, vig); rig.remove(camera); scene.remove(rig);
+    camera.remove(fadeMesh, msg.mesh); rig.remove(camera); scene.remove(rig);
     camera.position.set(P0.x, A.EYE, P0.z); camera.quaternion.identity(); camera.rotation.set(P0.pitch, P0.yaw, 0);
     renderer.xr.enabled = false;
     A.ended();
@@ -820,7 +788,7 @@ export function startVR(session, A) {
   const me = {
     tick, onBuilt,
     end() { if (!ended) session.end().catch(() => {}); },
-    debug: { rig, srcs, pcs, take, drop, press, swimV, fx, pal, palmHint, curlOf, get hold() { return hold; }, detach, makeBody, physics, onBuilt, menu, card, get focusKey() { return focusKey; }, goPiece, step, tidyAll, menuAct, get busy() { return busy; } },
+    debug: { rig, srcs, pcs, take, drop, press, fx, burst, pal, palmHint, curlOf, get hold() { return hold; }, detach, makeBody, physics, onBuilt, menu, card, get focusKey() { return focusKey; }, goPiece, step, tidyAll, menuAct, get busy() { return busy; } },
   };
   if (A.debugVR) A.debugVR(me.debug);
   return me;
