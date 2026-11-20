@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pantalla mágica · Vórtice VR</title>
+<meta name="description" content="Una pantalla con mariposas mágicas en 3D: escanea el QR, pinta tu mariposa en el celular y suéltala para verla volar.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="../assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<style>
+  :root { --bg: #05020b; --lila: #d2b8ff; --morado: #8b3fd6; --oro: #ffbe55; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: #fff; font-family: Sora, system-ui, sans-serif; cursor: default; }
+  body.quieto { cursor: none; }
+  canvas#gl { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  .ui { position: fixed; z-index: 2; pointer-events: none; }
+  #titulo { left: 3.2vw; top: 3vh; }
+  #titulo .k { font: 500 clamp(11px, .9vw, 18px) "IBM Plex Mono", monospace; letter-spacing: .35em; text-transform: uppercase; color: var(--oro); text-shadow: 0 0 18px rgba(255,190,85,.6); }
+  #titulo h1 { margin: .35em 0 0; font-weight: 800; font-size: clamp(28px, 3.6vw, 76px); line-height: 1; letter-spacing: -.02em;
+    background: linear-gradient(100deg, #fff 0%, var(--lila) 40%, #ffd9a0 60%, #fff 80%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: brillo 7s linear infinite; filter: drop-shadow(0 0 26px rgba(139,63,214,.55)); }
+  #cuenta { margin-top: .7em; font-size: clamp(13px, 1.05vw, 22px); color: var(--lila); opacity: .9; }
+  @keyframes brillo { to { background-position: -250% 0; } }
+  #logo { right: 3vw; top: 3.4vh; width: clamp(90px, 8vw, 170px); opacity: .9; filter: drop-shadow(0 0 14px rgba(139,63,214,.7)); }
+  #qr { right: 2.6vw; bottom: 3.4vh; width: clamp(190px, 15vw, 330px); padding: clamp(12px, 1vw, 20px); border-radius: 26px; pointer-events: auto;
+    background: linear-gradient(160deg, rgba(40,14,80,.72), rgba(12,4,26,.78)); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 0 0 1px rgba(210,184,255,.22), 0 0 60px rgba(139,63,214,.45), inset 0 1px 0 rgba(255,255,255,.12); text-align: center; transition: transform .5s, opacity .5s; }
+  #qr::before { content: ""; position: absolute; inset: -2px; border-radius: 28px; padding: 2px; background: conic-gradient(from var(--a, 0deg), var(--oro), var(--morado), var(--lila), var(--oro));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: gira 6s linear infinite; opacity: .9; }
+  @property --a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+  @keyframes gira { to { --a: 360deg; } }
+  #qr canvas { width: 100%; height: auto; display: block; border-radius: 16px; background: #fff; }
+  #qr .t { margin: .75em 0 .2em; font-weight: 800; font-size: clamp(14px, 1.15vw, 24px); line-height: 1.15; }
+  #qr .s { font-size: clamp(11px, .8vw, 16px); color: var(--lila); }
+  #qr .c { margin-top: .5em; font: 500 clamp(11px, .8vw, 16px) "IBM Plex Mono", monospace; letter-spacing: .25em; color: var(--oro); }
+  #qr.oculto { opacity: 0; transform: translateY(30px) scale(.9); pointer-events: none; }
+  #toasts { left: 50%; bottom: 5vh; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .toast { padding: .7em 1.4em; border-radius: 999px; font-weight: 600; font-size: clamp(15px, 1.3vw, 28px); white-space: nowrap;
+    background: linear-gradient(90deg, rgba(139,63,214,.55), rgba(255,190,85,.35)); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 0 40px rgba(255,190,85,.35), 0 0 0 1px rgba(255,255,255,.18); animation: toast 6s ease forwards; }
+  .toast b { color: var(--oro); }
+  @keyframes toast { 0% { opacity: 0; transform: translateY(20px) scale(.9); } 8%, 82% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-14px); } }
+  #ayuda { left: 3.2vw; bottom: 3vh; font-size: 13px; color: rgba(210,184,255,.75); line-height: 1.6; transition: opacity 1s; }
+  #ayuda kbd { font: 500 12px "IBM Plex Mono", monospace; padding: 1px 6px; border-radius: 5px; background: rgba(255,255,255,.1); color: #fff; }
+  #aviso { inset: 0; display: none; place-items: center; text-align: center; background: rgba(5,2,11,.85); pointer-events: auto; z-index: 5; }
+  #aviso.on { display: grid; }
+  #aviso button { margin-top: 18px; font: 600 16px Sora; padding: .8em 1.6em; border: 0; border-radius: 999px; background: var(--oro); color: #1b0a36; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div class="ui" id="titulo"><div class="k">✦ Pantalla mágica</div><h1 id="h1">Jardín de mariposas</h1><div id="cuenta">Escanea el código y suelta la tuya</div></div>
+<img class="ui" id="logo" src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR">
+<div class="ui" id="qr"><canvas id="qrc" width="600" height="600"></canvas><div class="t">Pinta tu mariposa<br>y suéltala aquí</div><div class="s">Escanea con la cámara de tu celular</div><div class="c" id="codigo">SALA ····</div></div>
+<div class="ui" id="toasts"></div>
+<div class="ui" id="ayuda"><kbd>F</kbd> pantalla completa · <kbd>Q</kbd> mostrar u ocultar el QR · doble clic en una mariposa para quitarla</div>
+<div class="ui" id="aviso"><div><h2 id="avisoT">Esa sala ya es de otra pantalla</h2><p id="avisoP" style="color:var(--lila)">Abre una sala nueva para esta pantalla.</p><button id="avisoB">Abrir una sala nueva</button></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script type="module">
+import * as THREE from "three";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { ESPECIES, rng, componer, aura } from "../assets/pantalla/especies.js?v=1";
+
+const qs = new URLSearchParams(location.search);
+if (qs.get("titulo")) document.getElementById("h1").textContent = qs.get("titulo").slice(0, 40);
+const store = { get(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+const rnd32 = n => [...crypto.getRandomValues(new Uint8Array(n))].map(b => b.toString(36).padStart(2, "0")).join("").replace(/[^a-z0-9]/g, "").slice(0, n * 2);
+const nuevaSala = () => { const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; return [...crypto.getRandomValues(new Uint8Array(5))].map(b => A[b % A.length]).join(""); };
+
+// ---------- escena ----------
+const canvas = document.getElementById("gl");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 200);
+camera.position.set(0, 0, 14);
+scene.add(camera);
+scene.add(new THREE.HemisphereLight(0xb58cff, 0x2a0b45, 1.1));
+const luna = new THREE.DirectionalLight(0xfff0dd, 1.6); luna.position.set(-6, 10, 8); scene.add(luna);
+const calida = new THREE.PointLight(0xffbe55, 30, 30, 1.6); calida.position.set(4, -3, 6); scene.add(calida);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.85, 0.65, 0.62);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+// fondo: nebulosa que se mueve (un plano pegado a la cámara)
+const fondoMat = new THREE.ShaderMaterial({
+  depthWrite: false, depthTest: false,
+  uniforms: { t: { value: 0 }, asp: { value: innerWidth / innerHeight } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.999, 1.0); }`,
+  fragmentShader: `varying vec2 vUv; uniform float t; uniform float asp;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(h(i), h(i+vec2(1,0)), f.x), mix(h(i+vec2(0,1)), h(i+vec2(1,1)), f.x), f.y); }
+    float fbm(vec2 p){ float v = 0.0, a = .5; for (int i = 0; i < 6; i++) { v += a * n(p); p = p * 2.03 + vec2(1.7, 9.2); a *= .5; } return v; }
+    void main(){
+      vec2 p = vUv - .5; p.x *= asp;
+      float q = fbm(p * 2.2 + vec2(t * .012, -t * .008));
+      float r = fbm(p * 3.1 + q * 1.6 + vec2(-t * .02, t * .015));
+      vec3 c = vec3(.02, .008, .045);
+      c = mix(c, vec3(.20, .05, .38), smoothstep(.35, .85, r) * .85);
+      c = mix(c, vec3(.55, .22, .85), pow(smoothstep(.55, .95, r * q * 1.7), 2.0) * .55);
+      c += vec3(1.0, .62, .25) * pow(smoothstep(.6, 1.0, fbm(p * 1.4 - vec2(t * .01, 0.0) + r)), 3.0) * .22;
+      // aurora suave arriba
+      float au = exp(-pow((vUv.y - .78 - .06 * sin(p.x * 2.0 + t * .1)) * 9.0, 2.0)) * (.5 + .5 * sin(p.x * 5.0 + t * .2));
+      c += vec3(.35, .18, .75) * au * .35;
+      // luz del jardín abajo
+      c += vec3(.55, .25, .7) * pow(1.0 - vUv.y, 3.0) * .35;
+      c *= 1.0 - .55 * length(p * vec2(.75, 1.0));
+      gl_FragColor = vec4(pow(c, vec3(1.9)) * 1.5, 1.0);   // a lineal: el OutputPass lo pasa a sRGB
+    }`,
+});
+const fondo = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fondoMat); fondo.frustumCulled = false; fondo.renderOrder = -10; scene.add(fondo);
+
+// textura de destello (estrella de 4 picos con halo)
+function estrellaTex() {
+  const c = document.createElement("canvas"); c.width = c.height = 128; const x = c.getContext("2d");
+  const g = x.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(.15, "rgba(255,255,255,.75)"); g.addColorStop(.4, "rgba(255,255,255,.12)"); g.addColorStop(1, "rgba(255,255,255,0)");
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  x.globalCompositeOperation = "lighter"; x.fillStyle = "rgba(255,255,255,.9)";
+  for (const r of [0, Math.PI / 2]) { x.save(); x.translate(64, 64); x.rotate(r); x.beginPath(); x.moveTo(-60, 0); x.quadraticCurveTo(0, -3, 60, 0); x.quadraticCurveTo(0, 3, -60, 0); x.fill(); x.restore(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const STAR = estrellaTex();
+const ptsVS = `attribute float size; attribute vec3 color; attribute float alpha; varying vec3 vC; varying float vA; uniform float px;
+  void main(){ vC = color; vA = alpha; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = size * px / -mv.z; gl_Position = projectionMatrix * mv; }`;
+const ptsFS = `uniform sampler2D map; varying vec3 vC; varying float vA; void main(){ vec4 s = texture2D(map, gl_PointCoord); gl_FragColor = vec4(vC * s.rgb, s.a * vA); }`;
+const ptsMat = () => new THREE.ShaderMaterial({ uniforms: { map: { value: STAR }, px: { value: innerHeight * 0.9 } }, vertexShader: ptsVS, fragmentShader: ptsFS, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+
+// estrellas lejanas que titilan + polen dorado que flota
+function campo(n, fn) {
+  const g = new THREE.BufferGeometry(), P = new Float32Array(n * 3), C = new Float32Array(n * 3), S = new Float32Array(n), A = new Float32Array(n), D = [];
+  for (let i = 0; i < n; i++) fn(i, P, C, S, A, D);
+  g.setAttribute("position", new THREE.BufferAttribute(P, 3)); g.setAttribute("color", new THREE.BufferAttribute(C, 3));
+  g.setAttribute("size", new THREE.BufferAttribute(S, 1)); g.setAttribute("alpha", new THREE.BufferAttribute(A, 1));
+  const m = ptsMat(), p = new THREE.Points(g, m); p.frustumCulled = false; p.userData.D = D; scene.add(p); return p;
+}
+const estrellas = campo(900, (i, P, C, S, A, D) => {
+  P[i * 3] = (Math.random() - .5) * 120; P[i * 3 + 1] = (Math.random() - .5) * 70; P[i * 3 + 2] = -30 - Math.random() * 30;
+  const w = Math.random(); C.set(w < .15 ? [1, .8, .5] : w < .35 ? [.8, .7, 1] : [1, 1, 1], i * 3);
+  S[i] = .5 + Math.random() * 1.3; A[i] = .55; D.push({ f: .5 + Math.random() * 2.5, ph: Math.random() * 7, s: S[i] });
+});
+const polen = campo(260, (i, P, C, S, A, D) => {
+  P[i * 3] = (Math.random() - .5) * 26; P[i * 3 + 1] = (Math.random() - .5) * 14; P[i * 3 + 2] = -8 + Math.random() * 14;
+  C.set(Math.random() < .6 ? [1, .74, .35] : [.82, .7, 1], i * 3); S[i] = .15 + Math.random() * .4; A[i] = .7;
+  D.push({ v: .15 + Math.random() * .35, ph: Math.random() * 7, f: .4 + Math.random(), s: S[i] });
+});
+
+// destellos que sueltan las mariposas (una sola nube, reciclada)
+const NSP = 5000;
+const sp = campo(NSP, (i, P, C, S, A, D) => { P[i * 3 + 2] = -999; S[i] = 0; A[i] = 0; D.push({ life: 0, max: 1, vx: 0, vy: 0, vz: 0, s: 1 }); });
+let spi = 0;
+function chispa(x, y, z, col, s = 1, vel = .25, vida = 1.6) {
+  const i = spi = (spi + 1) % NSP, P = sp.geometry.attributes.position.array, C = sp.geometry.attributes.color.array, d = sp.userData.D[i];
+  P[i * 3] = x; P[i * 3 + 1] = y; P[i * 3 + 2] = z;
+  const w = Math.random() < .35; C[i * 3] = w ? 1 : col[0]; C[i * 3 + 1] = w ? 1 : col[1]; C[i * 3 + 2] = w ? 1 : col[2];
+  const a = Math.random() * 6.283, b = Math.acos(Math.random() * 2 - 1);
+  d.vx = Math.sin(b) * Math.cos(a) * vel; d.vy = Math.sin(b) * Math.sin(a) * vel - .05; d.vz = Math.cos(b) * vel;
+  d.life = d.max = vida * (.5 + Math.random() * .8); d.s = (.25 + Math.random() * .7) * s;
+}
+function estallido(p, col, n = 220, fuerza = 2.4) { for (let i = 0; i < n; i++) chispa(p.x, p.y, p.z, col, 1.6, fuerza * (.3 + Math.random()), 2.2); }
+
+// ---------- mariposas ----------
+const ESP = ESPECIES.mariposa;
+const mariposas = new Map();   // id → agente
+let vw = 10, vh = 6;
+function medidas() {
+  const d = camera.position.z; vh = 2 * d * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)); vw = vh * camera.aspect;
+}
+medidas();
+const loader = new THREE.TextureLoader();
+const tmp = new THREE.Vector3(), tmpQ = new THREE.Quaternion(), tmpM = new THREE.Matrix4(), UP = new THREE.Vector3(0, 1, 0);
+const tips = [new THREE.Vector3(), new THREE.Vector3()];
+const F = new THREE.Vector3(), X = new THREE.Vector3(), Y = new THREE.Vector3(), ZL = new THREE.Vector3(0, 0, 1), lado = new THREE.Quaternion(), sep = new THREE.Vector3();
+
+function texDe(img) {
+  const t = new THREE.Texture(img); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.needsUpdate = true; return t;
+}
+function crearAgente({ id, img, name, real }) {
+  const a1 = aura(ESP, img), glow = new THREE.CanvasTexture(a1.canvas); glow.colorSpace = THREE.SRGBColorSpace;
+  const m = ESP.build(THREE, texDe(img), glow);
+  const esc = .9 + Math.random() * .35;
+  m.root.scale.setScalar(esc);
+  m.root.traverse(o => { if (o.isMesh) o.userData.agente = id; });
+  scene.add(m.root);
+  const ag = { id, m, name, real, col: a1.color, esc, p: new THREE.Vector3(), v: new THREE.Vector3(), meta: new THREE.Vector3(), cambio: 0, fase: Math.random() * 7,
+    frec: 7 + Math.random() * 3, planeo: 0, dx: 0, dy: 0, estado: "volando", t: 0, etiqueta: null, vel: 1.5 + Math.random() * .8 };
+  return ag;
+}
+function metaNueva(ag) {
+  ag.meta.set((Math.random() - .5) * vw * .8, (Math.random() - .5) * vh * .7, -5 + Math.random() * 7.5);
+  ag.cambio = 5 + Math.random() * 6;
+}
+function etiqueta(texto) {
+  const c = document.createElement("canvas"), x = c.getContext("2d"); c.width = 1024; c.height = 160;
+  x.font = "800 82px Sora, sans-serif"; const w = Math.min(1000, x.measureText(texto).width + 90);
+  x.fillStyle = "rgba(30,10,60,.55)"; x.beginPath(); x.roundRect((1024 - w) / 2, 18, w, 124, 62); x.fill();
+  x.strokeStyle = "rgba(255,190,85,.8)"; x.lineWidth = 4; x.stroke();
+  x.fillStyle = "#fff"; x.textAlign = "center"; x.textBaseline = "middle"; x.shadowColor = "#ffbe55"; x.shadowBlur = 24; x.fillText(texto, 512, 84);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false }));
+  s.scale.set(3.2, .5, 1); s.renderOrder = 10; scene.add(s); return s;
+}
+function llega(ag) {
+  // nace de una explosión de luz abajo, sube al centro y muestra su nombre
+  ag.p.set((Math.random() - .5) * vw * .3, -vh * .5 - 1, 2.5);
+  ag.v.set(0, 3, 0);
+  ag.meta.set((Math.random() - .5) * vw * .3, -vh * .05, 1.5); ag.cambio = 4;
+  ag.estado = "llegando"; ag.t = 0;
+  estallido(new THREE.Vector3(ag.p.x, -vh * .5 + .3, 2.5), ag.col, 320, 3.2);
+  if (ag.name) ag.etiqueta = etiqueta(ag.name);
+  toast(ag.name ? `✦ Llegó la mariposa de <b>${esc(ag.name)}</b>` : "✦ ¡Llegó una mariposa nueva!");
+}
+function aparece(ag) { ag.p.set((Math.random() - .5) * vw * .8, (Math.random() - .5) * vh * .7, -4 + Math.random() * 6); ag.v.set(Math.random() - .5, Math.random() - .5, 0); metaNueva(ag); }
+function seVa(ag) {
+  if (ag.estado === "saliendo") return;
+  ag.estado = "saliendo"; ag.t = 0;
+  const s = Math.random() < .5 ? -1 : 1;
+  ag.meta.set(s * vw * .9, vh * .9, -6); ag.cambio = 99; ag.vel *= 1.6;
+  for (const mt of ag.m.root.userData.mats) { mt.transparent = true; }
+}
+function quitar(ag) {
+  scene.remove(ag.m.root);
+  ag.m.root.traverse(o => { if (o.isMesh) { o.geometry.dispose(); } });
+  for (const mt of ag.m.root.userData.mats) { mt.map?.dispose(); mt.dispose(); }
+  if (ag.etiqueta) { scene.remove(ag.etiqueta); ag.etiqueta.material.map.dispose(); ag.etiqueta.material.dispose(); }
+  mariposas.delete(ag.id);
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+function toast(html) {
+  const box = document.getElementById("toasts"), d = document.createElement("div");
+  d.className = "toast"; d.innerHTML = html; box.appendChild(d); setTimeout(() => d.remove(), 6200);
+  while (box.children.length > 3) box.firstChild.remove();
+}
+
+// las de "casa": diseños al azar mientras hay pocas mariposas de la gente
+const MIN = 9;
+let semilla = 1;
+function deCasa() {
+  const c = document.createElement("canvas"); c.width = ESP.W; c.height = ESP.H;
+  const p = document.createElement("canvas"); p.width = ESP.W; p.height = ESP.H;
+  ESP.patron(p.getContext("2d"), rng(Date.now() + semilla++ * 7919));
+  componer(ESP, p, c);
+  const id = "casa" + semilla, ag = crearAgente({ id, img: c, name: "", real: false });
+  mariposas.set(id, ag); aparece(ag);
+}
+function equilibrar() {
+  const vivas = [...mariposas.values()].filter(a => a.m && a.estado !== "saliendo");
+  const reales = vivas.filter(a => a.real).length, casa = vivas.filter(a => !a.real);
+  const faltan = MIN - reales;
+  if (casa.length < faltan) for (let i = casa.length; i < faltan; i++) deCasa();
+  else if (casa.length > Math.max(0, faltan)) seVa(casa[0]);
+  const n = reales;
+  document.getElementById("cuenta").textContent = n ? `${n} ${n === 1 ? "mariposa volando" : "mariposas volando"} · suelta la tuya` : "Escanea el código y suelta la tuya";
+}
+
+function agregarReal(it, conLlegada) {
+  if (mariposas.has(it.id)) return;
+  mariposas.set(it.id, { cargando: true, estado: "cargando" });
+  const img = new Image(); img.crossOrigin = "anonymous";
+  img.onload = () => {
+    const ag = crearAgente({ id: it.id, img, name: it.name, real: true });
+    mariposas.set(it.id, ag);
+    conLlegada ? llega(ag) : aparece(ag);
+    equilibrar();
+  };
+  img.onerror = () => mariposas.delete(it.id);
+  img.src = `/api/pantalla/img/${it.id}`;
+}
+
+// ---------- sala y tiempo real (la pantalla pregunta cada 2 s) ----------
+let sala = (qs.get("sala") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8), llave = "";
+async function abrir(forzarNueva) {
+  const guard = store.get("pm-pantalla") || {};
+  if (forzarNueva || !sala) sala = (!forzarNueva && guard.sala) || nuevaSala();
+  llave = guard.sala === sala && guard.llave ? guard.llave : rnd32(16);
+  const r = await fetch(`/api/pantalla/${sala}/abrir`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ llave }) });
+  if (r.status === 409) {
+    if (!qs.get("sala")) return abrir(true);
+    document.getElementById("aviso").classList.add("on"); return false;
+  }
+  if (!r.ok) throw new Error("abrir " + r.status);
+  store.set("pm-pantalla", { sala, llave });
+  const u = new URL(location.href); u.searchParams.set("sala", sala); history.replaceState(null, "", u);
+  pintarQR();
+  return true;
+}
+document.getElementById("avisoB").onclick = () => { const u = new URL(location.href); u.searchParams.delete("sala"); location.href = u; };
+function pintarQR() {
+  const url = `${location.origin}/pantalla-magica/pintar/?sala=${sala}`;
+  const qr = qrcode(0, "M"); qr.addData(url); qr.make();
+  const n = qr.getModuleCount(), c = document.getElementById("qrc"), x = c.getContext("2d"), M = 36, cell = (600 - 2 * M) / n;
+  x.fillStyle = "#fff"; x.fillRect(0, 0, 600, 600); x.fillStyle = "#2a0e55";
+  for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (qr.isDark(r, k)) x.fillRect(M + k * cell - .3, M + r * cell - .3, cell + .6, cell + .6);
+  document.getElementById("codigo").textContent = "SALA " + sala;
+}
+let since = 0, primera = true;
+async function revisar() {
+  try {
+    const r = await fetch(`/api/pantalla/${sala}?since=${since}`, { cache: "no-store" });
+    if (r.ok) {
+      const j = await r.json();
+      for (const it of j.items) agregarReal(it, !primera);
+      for (const id of j.gone) { const ag = mariposas.get(id); if (ag && ag.m) seVa(ag); else mariposas.delete(id); }
+      since = j.now; primera = false;
+      equilibrar();
+    }
+  } catch (e) {}
+  setTimeout(revisar, document.hidden ? 6000 : 2000);
+}
+
+// ---------- vuelo ----------
+const clock = new THREE.Clock();
+let tt = 0;
+function vuelo(ag, dt) {
+  ag.t += dt; ag.cambio -= dt;
+  if (ag.estado === "llegando" && ag.t > 3.5) { ag.estado = "volando"; metaNueva(ag); }
+  if (ag.estado === "volando" && (ag.cambio < 0 || ag.p.distanceTo(ag.meta) < 1)) metaNueva(ag);
+  // dirección deseada hacia la meta, con un vaivén suave
+  tmp.subVectors(ag.meta, ag.p).normalize();
+  tmp.x += Math.sin(tt * .7 + ag.fase) * .35; tmp.y += Math.cos(tt * .9 + ag.fase * 1.3) * .3;
+  // que no se encimen
+  for (const o of mariposas.values()) if (o !== ag && o.m) { const d = ag.p.distanceTo(o.p); if (d < 2.2 && d > 0.001) tmp.addScaledVector(sep.subVectors(ag.p, o.p), (2.2 - d) * .6 / d); }
+  tmp.normalize().multiplyScalar(ag.vel * (ag.estado === "llegando" ? 1.4 : 1));
+  ag.v.lerp(tmp, Math.min(1, dt * 1.1));
+  ag.p.addScaledVector(ag.v, dt);
+  // aleteo: a ratos planea
+  ag.planeo -= dt;
+  if (ag.planeo < -6 - Math.random() * 6) ag.planeo = 1.2 + Math.random() * 1.5;
+  const planea = ag.planeo > 0 && ag.estado === "volando";
+  ag.fase += dt * (planea ? 1.5 : ag.frec * (ag.v.y > .3 ? 1.25 : 1));
+  const aleteo = planea ? .28 + Math.sin(ag.fase) * .06 : .32 + Math.sin(ag.fase) * .62;
+  ag.m.update(aleteo);
+  const r = ag.m.root;
+  r.position.copy(ag.p); r.position.y += Math.cos(ag.fase) * .05 * ag.esc;
+  // la cabeza hacia donde va y la espalda hacia la gente (para que se vea su diseño), un poco inclinada; se ladea al dar vuelta
+  if (ag.v.lengthSq() > 1e-4) {
+    F.set(ag.v.x, ag.v.y, ag.v.z * .3).normalize();
+    Y.set(Math.sin(ag.fase * .13) * .15, .25 + (planea ? 0 : .08 * Math.sin(ag.fase)), 1).normalize();
+    Y.addScaledVector(F, -Y.dot(F)).normalize();
+    X.crossVectors(Y, F);
+    tmpM.makeBasis(X, Y, F);
+    tmpQ.setFromRotationMatrix(tmpM);
+    let giro = (ag.dx * ag.v.y - ag.dy * ag.v.x) / (Math.max(ag.v.lengthSq(), .05) * Math.max(dt, .001));   // rad/s
+    if (!Number.isFinite(giro)) giro = 0;
+    ag.roll = THREE.MathUtils.lerp(ag.roll || 0, THREE.MathUtils.clamp(giro * .35, -.6, .6), Math.min(1, dt * 2));
+    lado.setFromAxisAngle(ZL, ag.roll);
+    tmpQ.multiply(lado);
+    ag.dx = ag.v.x; ag.dy = ag.v.y;
+    r.quaternion.slerp(tmpQ, Math.min(1, dt * 3.5));
+  }
+  // destellos de las puntas de las alas
+  { ag.m.tips(tips); const n = ag.real ? 2 : 1; for (let i = 0; i < n; i++) if (Math.random() < (ag.real ? .95 : .5)) { const tp = tips[i % 2 ? 1 : Math.random() < .5 ? 0 : 1]; chispa(tp.x, tp.y, tp.z, ag.col, ag.real ? 1.3 : .9, .14, 1.8); } }
+  if (ag.etiqueta) {
+    ag.etiqueta.position.set(ag.p.x, ag.p.y - .9 * ag.esc - .25, ag.p.z);
+    const k = ag.t < 10 ? Math.min(1, ag.t * 2) : Math.max(0, 1 - (ag.t - 10) / 1.5);
+    ag.etiqueta.material.opacity = k;
+    if (k <= 0 && ag.t > 10) { scene.remove(ag.etiqueta); ag.etiqueta.material.map.dispose(); ag.etiqueta = null; }
+  }
+  if (ag.estado === "saliendo") {
+    const k = Math.max(0, 1 - ag.t / 4);
+    for (const mt of r.userData.mats) mt.opacity = k;
+    if (ag.t > 4.2) quitar(ag);
+  }
+  // si se sale mucho del cuadro, que regrese
+  if (ag.estado === "volando" && (Math.abs(ag.p.x) > vw * .62 || Math.abs(ag.p.y) > vh * .62)) metaNueva(ag);
+}
+
+function animar() {
+  requestAnimationFrame(animar);
+  const dt = Math.max(1 / 240, Math.min(clock.getDelta(), 1 / 20)); tt += dt;
+  fondoMat.uniforms.t.value = tt;
+  for (const ag of [...mariposas.values()]) if (ag.m) vuelo(ag, dt);
+  // titileo
+  { const S = estrellas.geometry.attributes.size.array, D = estrellas.userData.D; for (let i = 0; i < D.length; i++) S[i] = D[i].s * (.55 + .45 * Math.sin(tt * D[i].f + D[i].ph)); estrellas.geometry.attributes.size.needsUpdate = true; }
+  { const P = polen.geometry.attributes.position.array, S = polen.geometry.attributes.size.array, D = polen.userData.D;
+    for (let i = 0; i < D.length; i++) { P[i * 3 + 1] += D[i].v * dt; P[i * 3] += Math.sin(tt * D[i].f + D[i].ph) * dt * .15; if (P[i * 3 + 1] > 8) P[i * 3 + 1] = -8; S[i] = D[i].s * (.5 + .5 * Math.sin(tt * D[i].f * 2 + D[i].ph)); }
+    polen.geometry.attributes.position.needsUpdate = true; polen.geometry.attributes.size.needsUpdate = true; }
+  { const P = sp.geometry.attributes.position.array, S = sp.geometry.attributes.size.array, A = sp.geometry.attributes.alpha.array, D = sp.userData.D;
+    for (let i = 0; i < NSP; i++) { const d = D[i]; if (d.life <= 0) { if (A[i]) { A[i] = 0; S[i] = 0; } continue; }
+      d.life -= dt; const k = Math.max(0, d.life / d.max);
+      P[i * 3] += d.vx * dt; P[i * 3 + 1] += d.vy * dt; P[i * 3 + 2] += d.vz * dt; d.vx *= .985; d.vy = d.vy * .985 - .02 * dt; d.vz *= .985;
+      S[i] = d.s * (k < .8 ? k / .8 : (1 - k) * 5) * 1.2; A[i] = Math.min(1, k * 1.6) * (.75 + .25 * Math.sin(tt * 30 + i)); }
+    sp.geometry.attributes.position.needsUpdate = true; sp.geometry.attributes.size.needsUpdate = true; sp.geometry.attributes.alpha.needsUpdate = true; }
+  composer.render();
+}
+
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); medidas();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); bloom.resolution.set(innerWidth / 2, innerHeight / 2);
+  fondoMat.uniforms.asp.value = camera.aspect;
+  for (const p of [estrellas, polen, sp]) p.material.uniforms.px.value = innerHeight * .9;
+});
+renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+
+// teclado y moderación
+addEventListener("keydown", e => {
+  if (e.key === "f" || e.key === "F") { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); }
+  if (e.key === "q" || e.key === "Q") document.getElementById("qr").classList.toggle("oculto");
+});
+const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
+addEventListener("dblclick", async e => {
+  ptr.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ptr, camera);
+  const objs = []; for (const a of mariposas.values()) if (a.m && a.real && a.estado !== "saliendo") a.m.root.traverse(o => o.userData.ala && objs.push(o));
+  const hit = ray.intersectObjects(objs)[0]; if (!hit) return;
+  const ag = mariposas.get(hit.object.userData.agente); if (!ag) return;
+  if (!confirm(`¿Quitar ${ag.name ? "la mariposa de " + ag.name : "esta mariposa"} de la pantalla?`)) return;
+  seVa(ag);
+  fetch(`/api/pantalla/${sala}/quitar`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ llave, id: ag.id }) });
+});
+// el cursor y la ayuda se esconden solos
+let quieto; const mover = () => { document.body.classList.remove("quieto"); document.getElementById("ayuda").style.opacity = 1; clearTimeout(quieto); quieto = setTimeout(() => { document.body.classList.add("quieto"); document.getElementById("ayuda").style.opacity = 0; }, 4000); };
+addEventListener("mousemove", mover); mover();
+
+equilibrar();
+animar();
+document.fonts?.ready.then(() => {});
+abrir(false).then(ok => ok && revisar()).catch(() => { document.getElementById("avisoT").textContent = "No se pudo encender la pantalla"; document.getElementById("avisoP").textContent = "Revisa el internet y recarga la página."; document.getElementById("avisoB").textContent = "Recargar"; document.getElementById("avisoB").onclick = () => location.reload(); document.getElementById("aviso").classList.add("on"); });
+</script>
+</body>
+</html>

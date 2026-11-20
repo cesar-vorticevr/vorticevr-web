@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Pinta tu mariposa · Vórtice VR</title>
+<meta name="description" content="Pinta tu mariposa y suéltala en la pantalla mágica.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05020b">
+<link rel="icon" href="../../assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<style>
+  :root { --bg: #05020b; --lila: #d2b8ff; --morado: #8b3fd6; --oro: #ffbe55; --panel: rgba(255,255,255,.06); --borde: rgba(210,184,255,.18); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: #fff; font-family: Sora, system-ui, sans-serif; overscroll-behavior: none; }
+  body { min-height: 100svh; background: radial-gradient(120% 60% at 50% 0%, #2a0e55 0%, #0d0420 55%, var(--bg) 100%); touch-action: manipulation; }
+  main { max-width: 560px; margin: 0 auto; padding: calc(12px + env(safe-area-inset-top)) 16px calc(22px + env(safe-area-inset-bottom)); }
+  header { display: flex; align-items: center; gap: 10px; }
+  header img { height: 26px; }
+  header .sala { margin-left: auto; font: 500 12px "IBM Plex Mono", monospace; letter-spacing: .2em; color: var(--oro); padding: 5px 10px; border-radius: 999px; background: rgba(255,190,85,.1); border: 1px solid rgba(255,190,85,.3); }
+  h1 { margin: 14px 0 2px; font-size: 26px; font-weight: 800; letter-spacing: -.02em; background: linear-gradient(90deg, #fff, var(--lila), #ffd9a0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { margin: 0 0 12px; color: var(--lila); font-size: 14px; }
+  #lienzo { position: relative; border-radius: 22px; overflow: hidden; background: radial-gradient(circle at 50% 55%, #241044, #0a0318 75%); box-shadow: 0 0 0 1px var(--borde), 0 18px 60px rgba(139,63,214,.35); touch-action: none; }
+  #lienzo canvas { display: block; width: 100%; height: auto; touch-action: none; }
+  #vista { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(5,2,11,.6); backdrop-filter: blur(8px); }
+  #vista button { all: unset; cursor: pointer; font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 999px; color: var(--lila); }
+  #vista button.on { background: var(--lila); color: #1b0a36; }
+  .fila { display: flex; gap: 8px; margin-top: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .fila::-webkit-scrollbar { display: none; }
+  .tool { all: unset; flex: 0 0 auto; cursor: pointer; display: grid; place-items: center; gap: 2px; min-width: 58px; padding: 8px 6px 7px; border-radius: 14px; background: var(--panel); border: 1px solid var(--borde); font-size: 11px; color: var(--lila); text-align: center; }
+  .tool svg { width: 24px; height: 24px; }
+  .tool.on { background: linear-gradient(160deg, rgba(139,63,214,.6), rgba(255,190,85,.25)); color: #fff; border-color: rgba(255,190,85,.6); box-shadow: 0 0 18px rgba(255,190,85,.3); }
+  .colores { display: grid; grid-template-columns: repeat(9, 1fr); gap: 7px; margin-top: 12px; }
+  .col { all: unset; cursor: pointer; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(255,255,255,.15); position: relative; }
+  .col.on { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #fff, 0 0 14px rgba(255,255,255,.5); }
+  .col.arco { background: conic-gradient(red, #ff0, lime, cyan, blue, #f0f, red); }
+  .col input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+  .tam { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+  .tam button { all: unset; cursor: pointer; width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: var(--panel); border: 1px solid var(--borde); }
+  .tam button.on { border-color: var(--oro); background: rgba(255,190,85,.15); }
+  .tam button i { display: block; border-radius: 50%; background: #fff; }
+  .tam .sep { flex: 1; }
+  .chip { all: unset; cursor: pointer; font-size: 13px; font-weight: 600; padding: 10px 14px; border-radius: 12px; background: var(--panel); border: 1px solid var(--borde); color: #fff; display: inline-flex; gap: 6px; align-items: center; }
+  .chip.on { border-color: var(--oro); color: var(--oro); }
+  label.nombre { display: block; margin-top: 16px; font-size: 13px; color: var(--lila); }
+  label.nombre input { display: block; width: 100%; margin-top: 6px; padding: 14px 16px; font: 600 17px Sora; color: #fff; background: rgba(255,255,255,.07); border: 1px solid var(--borde); border-radius: 14px; outline: none; }
+  label.nombre input:focus { border-color: var(--oro); }
+  .soltar { all: unset; cursor: pointer; display: block; width: 100%; box-sizing: border-box; margin-top: 16px; padding: 18px; text-align: center; font-weight: 800; font-size: 19px; color: #1b0a36; border-radius: 18px;
+    background: linear-gradient(100deg, #ffbe55, #ffe2a8, #ffbe55); background-size: 200% 100%; animation: oro 3s linear infinite; box-shadow: 0 0 34px rgba(255,190,85,.55), 0 10px 30px rgba(139,63,214,.4); position: relative; overflow: hidden; }
+  .soltar:disabled, .soltar[disabled] { opacity: .55; animation: none; }
+  @keyframes oro { to { background-position: -200% 0; } }
+  .nota { margin: 10px 0 0; text-align: center; font-size: 12px; color: rgba(210,184,255,.7); }
+  #err { margin: 10px 0 0; text-align: center; color: #ff9db0; font-size: 14px; min-height: 1em; }
+  /* sin sala */
+  #sinSala { display: none; text-align: center; padding-top: 12vh; }
+  #sinSala input { width: 220px; text-align: center; font: 500 28px "IBM Plex Mono", monospace; letter-spacing: .3em; text-transform: uppercase; padding: 12px; color: #fff; background: rgba(255,255,255,.07); border: 1px solid var(--borde); border-radius: 14px; outline: none; }
+  /* 3D y vuelo */
+  #ver { position: fixed; inset: 0; z-index: 10; display: none; background: radial-gradient(circle at 50% 45%, #2a0e55, #05020b 75%); }
+  #ver.on { display: block; }
+  #ver canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+  #ver .msg { position: absolute; left: 0; right: 0; bottom: calc(40px + env(safe-area-inset-bottom)); text-align: center; padding: 0 20px; pointer-events: none; }
+  #ver .msg h2 { margin: 0 0 6px; font-size: 26px; font-weight: 800; }
+  #ver .msg p { margin: 0; color: var(--lila); }
+  #ver .acciones { pointer-events: auto; margin-top: 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  #ver .cerrar { position: absolute; top: calc(14px + env(safe-area-inset-top)); right: 14px; all: unset; position: absolute; cursor: pointer; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.1); font-size: 22px; }
+  .fade { animation: fade .6s ease both; } @keyframes fade { from { opacity: 0; transform: translateY(12px); } }
+</style>
+</head>
+<body>
+<main>
+  <header><img src="../../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span class="sala" id="salaChip"></span></header>
+
+  <section id="sinSala">
+    <h1>Pantalla mágica</h1>
+    <p class="sub">Escribe el código que sale en la pantalla</p>
+    <input id="codigoIn" maxlength="8" autocomplete="off" autocapitalize="characters" placeholder="ABCDE"><br>
+    <button class="soltar" id="codigoBtn" style="max-width:260px;margin:18px auto 0">Entrar</button>
+  </section>
+
+  <section id="app">
+    <h1>Pinta tu mariposa</h1>
+    <p class="sub" id="ayuda">Pinta un ala y la otra se pinta sola. Luego suéltala en la pantalla ✦</p>
+    <div id="lienzo"><canvas id="disp"></canvas>
+      <div id="vista"><button data-v="mitad" class="on">Un ala</button><button data-v="toda">Toda</button></div>
+    </div>
+
+    <div class="fila" id="tools">
+      <button class="tool on" data-t="pincel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 3l3 3-9 9-3-3z"/><path d="M9 12c-3 0-5 2-5 5 0 1-1 2-2 2 2 2 7 2 8-1 .5-1.5.5-3-1-6z"/></svg>Pincel</button>
+      <button class="tool" data-t="brillo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>Brillos</button>
+      <button class="tool" data-t="arcoiris"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M3 17a9 9 0 0118 0" stroke="#ff6b8a"/><path d="M6 17a6 6 0 0112 0" stroke="#ffd36b"/><path d="M9 17a3 3 0 016 0" stroke="#7be0ff"/></svg>Arcoíris</button>
+      <button class="tool" data-t="cubeta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 11l7-7 7 7-7 7z"/><path d="M19 14s2 2.5 2 4a2 2 0 01-4 0c0-1.5 2-4 2-4z" fill="currentColor"/></svg>Rellenar</button>
+      <button class="tool" data-t="borrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M16 3l5 5-11 11H5l-2-2z"/><path d="M9 9l6 6"/></svg>Borrador</button>
+    </div>
+
+    <div class="colores" id="colores"></div>
+
+    <div class="tam" id="tams">
+      <button data-s="12"><i style="width:7px;height:7px"></i></button>
+      <button data-s="28" class="on"><i style="width:14px;height:14px"></i></button>
+      <button data-s="56"><i style="width:22px;height:22px"></i></button>
+      <span class="sep"></span>
+      <button class="chip" id="deshacer" style="width:auto;height:auto">↶ Deshacer</button>
+      <button class="chip on" id="espejo" style="width:auto;height:auto">⇋ Espejo</button>
+    </div>
+    <div class="fila">
+      <button class="chip" id="sorpresa">✦ Sorpréndeme</button>
+      <button class="chip" id="ver3d">🦋 Verla en 3D</button>
+      <button class="chip" id="limpiar">Empezar de nuevo</button>
+    </div>
+
+    <label class="nombre">Tu nombre (sale en la pantalla, opcional)<input id="nombre" maxlength="18" autocomplete="given-name" placeholder="Ej. Sofi"></label>
+    <button class="soltar" id="soltar">✦ Soltar mi mariposa</button>
+    <p id="err"></p>
+    <p class="nota">Tienes una mariposa en la pantalla a la vez: si sueltas otra, reemplaza a la tuya.</p>
+  </section>
+</main>
+
+<div id="ver"><canvas id="v3d"></canvas><button class="cerrar" id="cerrar3d">✕</button><div class="msg" id="verMsg"></div></div>
+
+<script type="module">
+import { ESPECIES, componer, aura, rng } from "../../assets/pantalla/especies.js?v=1";
+import { sfx } from "../../assets/sonidos.js";
+
+const $ = id => document.getElementById(id);
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const qs = new URLSearchParams(location.search);
+const sala = (qs.get("sala") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+if (!/^[A-Z0-9]{4,8}$/.test(sala)) {
+  $("app").style.display = "none"; $("sinSala").style.display = "block";
+  const ir = () => { const c = $("codigoIn").value.toUpperCase().replace(/[^A-Z0-9]/g, ""); if (c.length >= 4) location.search = "?sala=" + c; };
+  $("codigoBtn").onclick = ir; $("codigoIn").onkeydown = e => e.key === "Enter" && ir();
+  throw new Error("sin sala");
+}
+$("salaChip").textContent = "SALA " + sala;
+let uid = store.get("pm-uid");
+if (!uid || !/^[a-z0-9]{12,40}$/.test(uid)) { uid = [...crypto.getRandomValues(new Uint8Array(12))].map(b => b.toString(36)).join("").replace(/[^a-z0-9]/g, "").padEnd(16, "x").slice(0, 24); store.set("pm-uid", uid); }
+$("nombre").value = store.get("pm-nombre") || "";
+
+// ---------- lienzo ----------
+const ESP = ESPECIES.mariposa, W = ESP.W, H = ESP.H, BASE = "#fff4e6";
+const pint = document.createElement("canvas"); pint.width = W; pint.height = H;
+const px = pint.getContext("2d");
+const tex = document.createElement("canvas");
+const partes = ESP.partes(), sil = ESP.silueta();
+function nuevo() { px.globalCompositeOperation = "source-over"; px.fillStyle = BASE; px.fillRect(0, 0, W, H); }
+nuevo();
+{ const g = store.get("pm-dibujo"); if (g) { const im = new Image(); im.onload = () => { px.drawImage(im, 0, 0, W, H); pedir(); }; im.src = g; } }
+
+const disp = $("disp"), dx = disp.getContext("2d");
+let espejo = true, vista = "mitad";
+function vp() { return vista === "mitad" ? { x0: W / 2 - 40, w: W / 2 + 40 } : { x0: 0, w: W }; }
+function medir() {
+  const r = $("lienzo").getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2), v = vp();
+  let w = r.width, h = w * H / v.w;
+  const max = innerHeight * .5; if (h > max) h = max;
+  disp.style.height = h + "px";
+  disp.width = Math.round(w * dpr); disp.height = Math.round(h * dpr);
+  pedir();
+}
+let pend = false;
+function pedir() { if (!pend) { pend = true; requestAnimationFrame(dibujar); } }
+function dibujar() {
+  pend = false;
+  componer(ESP, pint, tex);
+  const v = vp(), k = Math.min(disp.width / v.w, disp.height / H), ox = (disp.width - v.w * k) / 2, oy = (disp.height - H * k) / 2;
+  dx.setTransform(1, 0, 0, 1, 0, 0); dx.clearRect(0, 0, disp.width, disp.height);
+  dx.setTransform(k, 0, 0, k, ox - v.x0 * k, oy);
+  // halo alrededor de la silueta
+  dx.save(); dx.shadowColor = "rgba(210,184,255,.55)"; dx.shadowBlur = 40 * k * 4; dx.fillStyle = "rgba(210,184,255,.08)"; dx.fill(sil); dx.restore();
+  dx.drawImage(tex, 0, 0);
+  ESP.cuerpo(dx);
+  if (vista === "mitad" && espejo) { dx.fillStyle = "rgba(10,3,24,.0)"; }
+  disp._t = { k, ox, oy, x0: v.x0 };
+}
+addEventListener("resize", medir);
+
+// ---------- herramientas ----------
+const COLS = ["#ff3b6b", "#ff7a2f", "#ffbe55", "#ffe94d", "#7dea5a", "#22c59a", "#38d6ff", "#3a7bff", "#8b3fd6", "#d2b8ff", "#ff7ad9", "#b3123f", "#6b2c0f", "#0e5a4a", "#12235e", "#1b0a36", "#ffffff"];
+let color = "#8b3fd6", tool = "pincel", tam = 28, hue = 0;
+{
+  const box = $("colores");
+  for (const c of COLS) { const b = document.createElement("button"); b.className = "col" + (c === color ? " on" : ""); b.style.background = c; b.dataset.c = c; box.appendChild(b); }
+  const libre = document.createElement("button"); libre.className = "col arco"; libre.innerHTML = '<input type="color" value="#8b3fd6" aria-label="Otro color">'; box.appendChild(libre);
+  box.addEventListener("click", e => { const b = e.target.closest(".col"); if (!b || !b.dataset.c) return; color = b.dataset.c; marcar(b); if (tool === "borrar" || tool === "arcoiris") setTool("pincel"); sfx.tap(); });
+  libre.querySelector("input").addEventListener("input", e => { color = e.target.value; marcar(libre); if (tool === "borrar" || tool === "arcoiris") setTool("pincel"); });
+  function marcar(b) { box.querySelectorAll(".col").forEach(x => x.classList.toggle("on", x === b)); }
+}
+function setTool(t) { tool = t; document.querySelectorAll("#tools .tool").forEach(b => b.classList.toggle("on", b.dataset.t === t)); }
+$("tools").addEventListener("click", e => { const b = e.target.closest(".tool"); if (b) { setTool(b.dataset.t); sfx.tap(); } });
+$("tams").addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (!b) return; tam = +b.dataset.s; $("tams").querySelectorAll("[data-s]").forEach(x => x.classList.toggle("on", x === b)); sfx.tap(); });
+$("espejo").onclick = () => { espejo = !espejo; $("espejo").classList.toggle("on", espejo); if (!espejo) setVista("toda"); $("ayuda").textContent = espejo ? "Pinta un ala y la otra se pinta sola. Luego suéltala en la pantalla ✦" : "Pinta cada ala como quieras. Luego suéltala en la pantalla ✦"; sfx.tap(); };
+function setVista(v) { vista = v; $("vista").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === v)); medir(); }
+$("vista").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { setVista(b.dataset.v); sfx.tap(); } });
+
+// deshacer
+const hist = [];
+function guardarPaso() { hist.push(px.getImageData(0, 0, W, H)); if (hist.length > 12) hist.shift(); }
+$("deshacer").onclick = () => { const s = hist.pop(); if (s) { px.putImageData(s, 0, 0); pedir(); autoguardar(); sfx.tap(); } };
+$("limpiar").onclick = () => { guardarPaso(); nuevo(); pedir(); autoguardar(); sfx.whoosh(); };
+$("sorpresa").onclick = () => { guardarPaso(); nuevo(); ESP.patron(px, rng(Date.now())); pedir(); autoguardar(); sfx.sparkle(); };
+let tGuardar; function autoguardar() { clearTimeout(tGuardar); tGuardar = setTimeout(() => { try { store.set("pm-dibujo", pint.toDataURL("image/webp", .8)); } catch (e) {} }, 600); }
+
+// pintar
+function aTex(e) { const r = disp.getBoundingClientRect(), t = disp._t, dpr = disp.width / r.width; return [((e.clientX - r.left) * dpr - t.ox) / t.k + t.x0, ((e.clientY - r.top) * dpr - t.oy) / t.k]; }
+function trazo(x0, y0, x1, y1) {
+  const pts = espejo ? [[x0, y0, x1, y1], [W - x0, y0, W - x1, y1]] : [[x0, y0, x1, y1]];
+  if (tool === "brillo") {
+    const d = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.round(d / 6));
+    for (let i = 0; i < n; i++) {
+      const t = i / n, bx = x0 + (x1 - x0) * t + (Math.random() - .5) * tam * 1.4, by = y0 + (y1 - y0) * t + (Math.random() - .5) * tam * 1.4, r = 2 + Math.random() * tam * .22;
+      const c = Math.random() < .3 ? "#ffffff" : Math.random() < .3 ? "#ffe2a8" : color;
+      for (const xx of espejo ? [bx, W - bx] : [bx]) estrella(xx, by, r, c);
+    }
+    return;
+  }
+  px.lineCap = px.lineJoin = "round"; px.lineWidth = tam;
+  if (tool === "arcoiris") { hue = (hue + Math.hypot(x1 - x0, y1 - y0) * .6) % 360; px.strokeStyle = `hsl(${hue} 95% 60%)`; }
+  else px.strokeStyle = tool === "borrar" ? BASE : color;
+  for (const [a, b, c, d] of pts) { px.beginPath(); px.moveTo(a, b); px.lineTo(c, d); px.stroke(); }
+}
+function estrella(x, y, r, c) {
+  px.save(); px.translate(x, y); px.rotate(Math.random() * Math.PI); px.fillStyle = c;
+  px.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, rr = i % 2 ? r * .35 : r; px.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } px.closePath(); px.fill(); px.restore();
+}
+function cubeta(x, y) {
+  const p = partes.find(p => px.isPointInPath(p.path, x, y));
+  if (!p) return false;
+  const ids = espejo ? [p.id, ESP.espejo[p.id]] : [p.id];
+  px.save(); px.fillStyle = color;
+  for (const id of ids) px.fill(partes.find(q => q.id === id).path);
+  px.restore(); sfx.splash(); return true;
+}
+let ultimo = null, dedo = null;
+disp.addEventListener("pointerdown", e => {
+  if (dedo !== null) return;
+  dedo = e.pointerId; disp.setPointerCapture(e.pointerId);
+  const [x, y] = aTex(e);
+  guardarPaso();
+  if (tool === "cubeta") { if (!cubeta(x, y)) hist.pop(); pedir(); autoguardar(); dedo = null; return; }
+  ultimo = [x, y]; trazo(x, y, x + .01, y); pedir();
+});
+disp.addEventListener("pointermove", e => {
+  if (e.pointerId !== dedo || !ultimo) return;
+  const ev = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  for (const c of ev.length ? ev : [e]) { const [x, y] = aTex(c); trazo(ultimo[0], ultimo[1], x, y); ultimo = [x, y]; }
+  pedir();
+});
+const fin = e => { if (e.pointerId !== dedo) return; dedo = null; ultimo = null; autoguardar(); };
+disp.addEventListener("pointerup", fin); disp.addEventListener("pointercancel", fin);
+
+// ---------- 3D: verla y soltarla ----------
+let T = null;
+async function tres() {
+  if (T) return T;
+  const THREE = await import("three");
+  const c = $("v3d"), renderer = new THREE.WebGLRenderer({ canvas: c, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(40, 1, .1, 100); cam.position.set(0, 0, 6);
+  scene.add(new THREE.HemisphereLight(0xc9a8ff, 0x2a0b45, 1.3));
+  const d = new THREE.DirectionalLight(0xffffff, 1.5); d.position.set(-2, 4, 5); scene.add(d);
+  // chispas
+  const N = 600, g = new THREE.BufferGeometry(), P = new Float32Array(N * 3), V = [], L = new Float32Array(N);
+  g.setAttribute("position", new THREE.BufferAttribute(P, 3));
+  const sc = document.createElement("canvas"); sc.width = sc.height = 64; const sx = sc.getContext("2d"), gr = sx.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, "#fff"); gr.addColorStop(.3, "rgba(255,226,168,.8)"); gr.addColorStop(1, "rgba(255,190,85,0)"); sx.fillStyle = gr; sx.fillRect(0, 0, 64, 64);
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: .12, map: new THREE.CanvasTexture(sc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  for (let i = 0; i < N; i++) { P[i * 3 + 2] = -99; V.push(new THREE.Vector3()); }
+  scene.add(pts);
+  let si = 0; const chispa = (p, s = .6) => { const i = si = (si + 1) % N; P[i * 3] = p.x; P[i * 3 + 1] = p.y; P[i * 3 + 2] = p.z; V[i].set((Math.random() - .5) * s, (Math.random() - .5) * s, (Math.random() - .5) * s); L[i] = 1; };
+  T = { THREE, renderer, scene, cam, pts, P, V, L, chispa, N };
+  return T;
+}
+let anim = null;
+async function mostrar3D(modo) {
+  componer(ESP, pint, tex);
+  const t = await tres(), { THREE, renderer, scene, cam } = t;
+  $("ver").classList.add("on");
+  const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix();
+  const copia = document.createElement("canvas"); copia.width = W; copia.height = H; copia.getContext("2d").drawImage(tex, 0, 0);
+  const mapa = new THREE.CanvasTexture(copia); mapa.colorSpace = THREE.SRGBColorSpace;
+  const au = aura(ESP, copia), glow = new THREE.CanvasTexture(au.canvas); glow.colorSpace = THREE.SRGBColorSpace;
+  const m = ESP.build(THREE, mapa, glow);
+  const root = new THREE.Group(); root.add(m.root); scene.add(root);
+  m.root.rotation.x = -1.1;   // la espalda hacia ti
+  root.scale.setScalar(Math.min(1, innerWidth / innerHeight * 1.25));
+  let rotY = 0, arrastre = null, t0 = performance.now(), vuela = modo === "soltar";
+  const tips = [new THREE.Vector3(), new THREE.Vector3()];
+  const c = $("v3d");
+  c.onpointerdown = e => { arrastre = e.clientX; }; c.onpointermove = e => { if (arrastre !== null) { rotY += (e.clientX - arrastre) * .01; arrastre = e.clientX; } }; c.onpointerup = c.onpointercancel = () => arrastre = null;
+  cancelAnimationFrame(anim);
+  const loop = now => {
+    anim = requestAnimationFrame(loop);
+    const s = (now - t0) / 1000;
+    m.update(.2 + Math.sin(s * (vuela ? 11 : 6)) * .9);
+    if (vuela && s > 1.6) {
+      const k = s - 1.6;
+      root.position.set(Math.sin(k * 2) * .6 * k, k * k * 2.2, -k * 1.5);
+      root.rotation.z = Math.sin(k * 3) * .3;
+      if (k > 2.6 && !root.userData.ido) { root.userData.ido = true; listo(); }
+    } else { root.rotation.y = rotY + Math.sin(s * .6) * .4; root.position.y = Math.sin(s * 1.5) * .08; }
+    m.tips(tips); for (const tp of tips) if (Math.random() < .8) t.chispa(tp, vuela ? .9 : .5);
+    for (let i = 0; i < t.N; i++) if (t.L[i] > 0) { t.L[i] -= .016; t.P[i * 3] += t.V[i].x * .016; t.P[i * 3 + 1] += t.V[i].y * .016 - .004; t.P[i * 3 + 2] += t.V[i].z * .016; if (t.L[i] <= 0) t.P[i * 3 + 2] = -99; }
+    t.pts.geometry.attributes.position.needsUpdate = true;
+    renderer.render(scene, cam);
+  };
+  anim = requestAnimationFrame(loop);
+  cerrar = () => { cancelAnimationFrame(anim); scene.remove(root); m.root.traverse(o => o.isMesh && o.geometry.dispose()); mapa.dispose(); glow.dispose(); $("ver").classList.remove("on"); $("verMsg").innerHTML = ""; };
+}
+let cerrar = () => {};
+$("cerrar3d").onclick = () => cerrar();
+$("ver3d").onclick = () => { sfx.appear(); mostrar3D("ver"); $("verMsg").innerHTML = '<p>Así se verá en la pantalla. Desliza para girarla.</p>'; };
+function listo() {
+  sfx.win();
+  $("verMsg").innerHTML = `<div class="fade"><h2>¡Ya vuela en la pantalla! ✦</h2><p>Búscala entre las demás mariposas.</p>
+    <div class="acciones"><button class="soltar" id="otra" style="width:auto;padding:14px 22px;font-size:16px;margin:0">Pintar otra</button></div></div>`;
+  $("otra").onclick = () => cerrar();
+}
+
+// ---------- soltar ----------
+$("soltar").onclick = async () => {
+  $("err").textContent = "";
+  const btn = $("soltar"); btn.disabled = true; btn.textContent = "Preparando tu mariposa…";
+  try {
+    componer(ESP, pint, tex);
+    let blob = await new Promise(r => tex.toBlob(r, "image/webp", .9));
+    if (!blob || blob.type !== "image/webp") blob = await new Promise(r => tex.toBlob(r, "image/png"));
+    const nombre = $("nombre").value.trim().slice(0, 18); store.set("pm-nombre", nombre);
+    const f = new FormData(); f.append("uid", uid); f.append("kind", "mariposa"); f.append("name", nombre); f.append("img", blob, "mariposa");
+    btn.textContent = "Soltándola…";
+    const r = await fetch(`/api/pantalla/${sala}/soltar`, { method: "POST", body: f });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || "No se pudo soltar. Intenta de nuevo.");
+    sfx.sparkle();
+    $("verMsg").innerHTML = "";
+    await mostrar3D("soltar");
+  } catch (e) { $("err").textContent = e.message; sfx.wrong?.(); }
+  btn.disabled = false; btn.textContent = "✦ Soltar mi mariposa";
+};
+
+medir();
+</script>
+</body>
+</html>
