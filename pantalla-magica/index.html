@@ -8,7 +8,7 @@
 <meta name="robots" content="noindex">
 <link rel="icon" href="../assets/icono.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=IBM+Plex+Mono:wght@500&family=Cormorant+Garamond:ital,wght@1,600&display=swap" rel="stylesheet">
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -57,11 +57,10 @@
 </head>
 <body>
 <canvas id="gl"></canvas>
-<div class="ui" id="titulo"><h1 id="h1">Jardín de mariposas</h1></div>
+<div class="ui" id="titulo"><h1 id="h1"></h1></div>
 <img class="ui" id="logo" src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR">
 <div class="ui" id="qr"><canvas id="qrc" width="600" height="600"></canvas></div>
-<div class="ui" id="toasts"></div>
-<div class="ui" id="ayuda"><kbd>F</kbd> pantalla completa · <kbd>Q</kbd> mostrar u ocultar el QR · doble clic en una mariposa para quitarla<br>Para un iPad en el evento (pintan una persona tras otra): <a id="kiosco" target="_blank" style="color:#ffbe55;pointer-events:auto"></a></div>
+<div class="ui" id="ayuda"><kbd>F</kbd> pantalla completa · <kbd>Q</kbd> mostrar u ocultar el QR · <kbd>D</kbd> mostrar u ocultar los deseos · doble clic en una figura para quitarla<br>Mundo: <span id="mundos"></span><br>Para un iPad en el evento (pintan una persona tras otra): <a id="kiosco" target="_blank" style="color:#ffbe55;pointer-events:auto"></a></div>
 <div class="ui" id="aviso"><div><h2 id="avisoT">Esa sala ya es de otra pantalla</h2><p id="avisoP" style="color:var(--lila)">Abre una sala nueva para esta pantalla.</p><button id="avisoB">Abrir una sala nueva</button></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
@@ -71,13 +70,23 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { ESPECIES, rng, componer, aura } from "../assets/pantalla/especies.js?v=1";
+import { ESPECIES, MUNDOS, rng, componer, aura } from "../assets/pantalla/especies.js?v=3";
 
 const qs = new URLSearchParams(location.search);
-if (qs.get("titulo")) document.getElementById("h1").textContent = qs.get("titulo").slice(0, 40);
+const MUNDO = MUNDOS[qs.get("mundo")] ? qs.get("mundo") : "jardin", MD = MUNDOS[MUNDO];
+document.getElementById("h1").textContent = (qs.get("titulo") || MD.titulo).slice(0, 40);
+document.title = MD.titulo + " · Vórtice VR";
 const store = { get(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 const rnd32 = n => [...crypto.getRandomValues(new Uint8Array(n))].map(b => b.toString(36).padStart(2, "0")).join("").replace(/[^a-z0-9]/g, "").slice(0, n * 2);
 const nuevaSala = () => { const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; return [...crypto.getRandomValues(new Uint8Array(5))].map(b => A[b % A.length]).join(""); };
+const R = (a, b) => a + Math.random() * (b - a);
+
+// cómo se ve cada mundo: fondo (modo del shader), luz y partículas que flotan
+const LOOK = {
+  jardin: { modo: 0, hemi: [0xb58cff, 0x2a0b45, 1.1], estrellas: true, part: { n: 260, col: () => Math.random() < .6 ? [1, .74, .35] : [.82, .7, 1], s: [.15, .4], v: [.15, .35] } },
+  oceano: { modo: 1, hemi: [0x8fe6ff, 0x03203a, 1.4], estrellas: false, part: { n: 300, col: () => [.65, .9, 1], s: [.12, .42], v: [.35, 1.1] } },
+  cielo: { modo: 2, hemi: [0xffc48a, 0x1a0b3a, 1.0], estrellas: true, part: { n: 200, col: () => Math.random() < .7 ? [1, .55, .2] : [1, .85, .5], s: [.08, .28], v: [.2, .5] } },
+}[MUNDO];
 
 // ---------- escena ----------
 const canvas = document.getElementById("gl");
@@ -88,7 +97,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 200);
 camera.position.set(0, 0, 14);
 scene.add(camera);
-scene.add(new THREE.HemisphereLight(0xb58cff, 0x2a0b45, 1.1));
+scene.add(new THREE.HemisphereLight(...LOOK.hemi));
 const luna = new THREE.DirectionalLight(0xfff0dd, 1.6); luna.position.set(-6, 10, 8); scene.add(luna);
 const calida = new THREE.PointLight(0xffbe55, 30, 30, 1.6); calida.position.set(4, -3, 6); scene.add(calida);
 
@@ -98,29 +107,48 @@ const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight 
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
-// fondo: nebulosa que se mueve (un plano pegado a la cámara)
+// fondo de cada mundo (un plano pegado a la cámara): 0 nebulosa del jardín, 1 océano con rayos de luz, 2 cielo de noche con luna
 const fondoMat = new THREE.ShaderMaterial({
   depthWrite: false, depthTest: false,
-  uniforms: { t: { value: 0 }, asp: { value: innerWidth / innerHeight } },
+  uniforms: { t: { value: 0 }, asp: { value: innerWidth / innerHeight }, modo: { value: LOOK.modo } },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.999, 1.0); }`,
-  fragmentShader: `varying vec2 vUv; uniform float t; uniform float asp;
+  fragmentShader: `varying vec2 vUv; uniform float t; uniform float asp; uniform float modo;
     float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(h(i), h(i+vec2(1,0)), f.x), mix(h(i+vec2(0,1)), h(i+vec2(1,1)), f.x), f.y); }
     float fbm(vec2 p){ float v = 0.0, a = .5; for (int i = 0; i < 6; i++) { v += a * n(p); p = p * 2.03 + vec2(1.7, 9.2); a *= .5; } return v; }
     void main(){
       vec2 p = vUv - .5; p.x *= asp;
-      float q = fbm(p * 2.2 + vec2(t * .012, -t * .008));
-      float r = fbm(p * 3.1 + q * 1.6 + vec2(-t * .02, t * .015));
-      vec3 c = vec3(.02, .008, .045);
-      c = mix(c, vec3(.20, .05, .38), smoothstep(.35, .85, r) * .85);
-      c = mix(c, vec3(.55, .22, .85), pow(smoothstep(.55, .95, r * q * 1.7), 2.0) * .55);
-      c += vec3(1.0, .62, .25) * pow(smoothstep(.6, 1.0, fbm(p * 1.4 - vec2(t * .01, 0.0) + r)), 3.0) * .22;
-      // aurora suave arriba
-      float au = exp(-pow((vUv.y - .78 - .06 * sin(p.x * 2.0 + t * .1)) * 9.0, 2.0)) * (.5 + .5 * sin(p.x * 5.0 + t * .2));
-      c += vec3(.35, .18, .75) * au * .35;
-      // luz del jardín abajo
-      c += vec3(.55, .25, .7) * pow(1.0 - vUv.y, 3.0) * .35;
-      c *= 1.0 - .55 * length(p * vec2(.75, 1.0));
+      vec3 c;
+      if (modo < .5) {
+        float q = fbm(p * 2.2 + vec2(t * .012, -t * .008));
+        float r = fbm(p * 3.1 + q * 1.6 + vec2(-t * .02, t * .015));
+        c = vec3(.02, .008, .045);
+        c = mix(c, vec3(.20, .05, .38), smoothstep(.35, .85, r) * .85);
+        c = mix(c, vec3(.55, .22, .85), pow(smoothstep(.55, .95, r * q * 1.7), 2.0) * .55);
+        c += vec3(1.0, .62, .25) * pow(smoothstep(.6, 1.0, fbm(p * 1.4 - vec2(t * .01, 0.0) + r)), 3.0) * .22;
+        float au = exp(-pow((vUv.y - .78 - .06 * sin(p.x * 2.0 + t * .1)) * 9.0, 2.0)) * (.5 + .5 * sin(p.x * 5.0 + t * .2));
+        c += vec3(.35, .18, .75) * au * .35;
+        c += vec3(.55, .25, .7) * pow(1.0 - vUv.y, 3.0) * .35;
+        c *= 1.0 - .55 * length(p * vec2(.75, 1.0));
+      } else if (modo < 1.5) {
+        float q = fbm(p * 1.8 + vec2(t * .01, t * .006));
+        c = mix(vec3(.0, .015, .04), vec3(.0, .16, .28), smoothstep(0.0, 1.0, vUv.y) * .85 + q * .2);
+        float ray = pow(max(0.0, sin((p.x * 1.3 + (1.0 - vUv.y) * .35) * 7.0 + t * .15 + q * 2.0)), 6.0) * smoothstep(.1, 1.0, vUv.y);
+        c += vec3(.25, .6, .7) * ray * .32;
+        float ca = pow(fbm(p * 6.0 + vec2(t * .08, -t * .05)), 3.0) * smoothstep(.72, 1.0, vUv.y);
+        c += vec3(.45, .85, .95) * ca * .6;
+        c += vec3(.05, .3, .35) * pow(1.0 - vUv.y, 3.0) * .2;
+        c *= 1.0 - .45 * length(p * vec2(.7, 1.0));
+      } else {
+        float q = fbm(p * 2.0 + vec2(t * .008, 0.0));
+        c = mix(vec3(.24, .07, .22), vec3(.008, .008, .05), smoothstep(0.0, .75, vUv.y));
+        c += vec3(1.0, .45, .15) * pow(1.0 - vUv.y, 5.0) * .55;
+        c += vec3(.12, .06, .22) * smoothstep(.45, .9, q) * .6;
+        float au = exp(-pow((vUv.y - .82 - .05 * sin(p.x * 2.0 + t * .1)) * 10.0, 2.0)) * (.5 + .5 * sin(p.x * 4.0 + t * .15));
+        c += vec3(.2, .35, .7) * au * .25;
+        vec2 lp = vec2(asp * .22, .34); float d = length(p - lp);
+        c += vec3(1.0, .93, .8) * (smoothstep(.04, .036, d) * (.55 + .12 * fbm(p * 30.0)) + exp(-d * 16.0) * .12);
+      }
       gl_FragColor = vec4(pow(c, vec3(1.9)) * 1.5, 1.0);   // a lineal: el OutputPass lo pasa a sRGB
     }`,
 });
@@ -141,7 +169,6 @@ const ptsVS = `attribute float size; attribute vec3 color; attribute float alpha
 const ptsFS = `uniform sampler2D map; varying vec3 vC; varying float vA; void main(){ vec4 s = texture2D(map, gl_PointCoord); gl_FragColor = vec4(vC * s.rgb, s.a * vA); }`;
 const ptsMat = () => new THREE.ShaderMaterial({ uniforms: { map: { value: STAR }, px: { value: innerHeight * 0.9 } }, vertexShader: ptsVS, fragmentShader: ptsFS, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
 
-// estrellas lejanas que titilan + polen dorado que flota
 function campo(n, fn) {
   const g = new THREE.BufferGeometry(), P = new Float32Array(n * 3), C = new Float32Array(n * 3), S = new Float32Array(n), A = new Float32Array(n), D = [];
   for (let i = 0; i < n; i++) fn(i, P, C, S, A, D);
@@ -149,18 +176,20 @@ function campo(n, fn) {
   g.setAttribute("size", new THREE.BufferAttribute(S, 1)); g.setAttribute("alpha", new THREE.BufferAttribute(A, 1));
   const m = ptsMat(), p = new THREE.Points(g, m); p.frustumCulled = false; p.userData.D = D; scene.add(p); return p;
 }
-const estrellas = campo(900, (i, P, C, S, A, D) => {
+// estrellas lejanas que titilan (no en el océano)
+const estrellas = campo(LOOK.estrellas ? 900 : 0, (i, P, C, S, A, D) => {
   P[i * 3] = (Math.random() - .5) * 120; P[i * 3 + 1] = (Math.random() - .5) * 70; P[i * 3 + 2] = -30 - Math.random() * 30;
   const w = Math.random(); C.set(w < .15 ? [1, .8, .5] : w < .35 ? [.8, .7, 1] : [1, 1, 1], i * 3);
   S[i] = .5 + Math.random() * 1.3; A[i] = .55; D.push({ f: .5 + Math.random() * 2.5, ph: Math.random() * 7, s: S[i] });
 });
-const polen = campo(260, (i, P, C, S, A, D) => {
+// lo que flota: polen en el jardín, burbujas en el océano, chispas de fuego en el cielo
+const polen = campo(LOOK.part.n, (i, P, C, S, A, D) => {
   P[i * 3] = (Math.random() - .5) * 26; P[i * 3 + 1] = (Math.random() - .5) * 14; P[i * 3 + 2] = -8 + Math.random() * 14;
-  C.set(Math.random() < .6 ? [1, .74, .35] : [.82, .7, 1], i * 3); S[i] = .15 + Math.random() * .4; A[i] = .7;
-  D.push({ v: .15 + Math.random() * .35, ph: Math.random() * 7, f: .4 + Math.random(), s: S[i] });
+  C.set(LOOK.part.col(), i * 3); S[i] = R(...LOOK.part.s); A[i] = .7;
+  D.push({ v: R(...LOOK.part.v), ph: Math.random() * 7, f: .4 + Math.random(), s: S[i] });
 });
 
-// destellos que sueltan las mariposas (una sola nube, reciclada)
+// destellos que sueltan las figuras (una sola nube, reciclada)
 const NSP = 5000;
 const sp = campo(NSP, (i, P, C, S, A, D) => { P[i * 3 + 2] = -999; S[i] = 0; A[i] = 0; D.push({ life: 0, max: 1, vx: 0, vy: 0, vz: 0, s: 1 }); });
 let spi = 0;
@@ -174,110 +203,126 @@ function chispa(x, y, z, col, s = 1, vel = .25, vida = 1.6) {
 }
 function estallido(p, col, n = 220, fuerza = 2.4) { for (let i = 0; i < n; i++) chispa(p.x, p.y, p.z, col, 1.6, fuerza * (.3 + Math.random()), 2.2); }
 
-// ---------- mariposas ----------
-const ESP = ESPECIES.mariposa;
-const mariposas = new Map();   // id → agente
+// ---------- figuras ----------
+const figuras = new Map();   // id → agente
 let vw = 10, vh = 6;
-function medidas() {
-  const d = camera.position.z; vh = 2 * d * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)); vw = vh * camera.aspect;
-}
+function medidas() { const d = camera.position.z; vh = 2 * d * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)); vw = vh * camera.aspect; }
 medidas();
-const loader = new THREE.TextureLoader();
-const tmp = new THREE.Vector3(), tmpQ = new THREE.Quaternion(), tmpM = new THREE.Matrix4(), UP = new THREE.Vector3(0, 1, 0);
+const tmp = new THREE.Vector3(), tmpQ = new THREE.Quaternion(), tmpM = new THREE.Matrix4(), tmpE = new THREE.Euler();
 const tips = [new THREE.Vector3(), new THREE.Vector3()];
 const F = new THREE.Vector3(), X = new THREE.Vector3(), Y = new THREE.Vector3(), ZL = new THREE.Vector3(0, 0, 1), lado = new THREE.Quaternion(), sep = new THREE.Vector3();
 
-function texDe(img) {
-  const t = new THREE.Texture(img); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.needsUpdate = true; return t;
-}
-function crearAgente({ id, img, name, real }) {
-  const a1 = aura(ESP, img), glow = new THREE.CanvasTexture(a1.canvas); glow.colorSpace = THREE.SRGBColorSpace;
-  const m = ESP.build(THREE, texDe(img), glow);
-  const esc = .9 + Math.random() * .35;
+function texDe(img) { const t = new THREE.Texture(img); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.needsUpdate = true; return t; }
+function crearAgente({ id, img, name, msg, real, kind }) {
+  const E = ESPECIES[kind] || ESPECIES.mariposa;
+  const a1 = aura(E, img), glow = new THREE.CanvasTexture(a1.canvas); glow.colorSpace = THREE.SRGBColorSpace;
+  const m = E.build(THREE, texDe(img), glow, a1.color);
+  const esc = R(...E.esc);
   m.root.scale.setScalar(esc);
   m.root.traverse(o => { if (o.isMesh) o.userData.agente = id; });
   scene.add(m.root);
-  const ag = { id, m, name, real, col: a1.color, esc, p: new THREE.Vector3(), v: new THREE.Vector3(), meta: new THREE.Vector3(), cambio: 0, fase: Math.random() * 7,
-    frec: 7 + Math.random() * 3, planeo: 0, dx: 0, dy: 0, estado: "volando", t: 0, etiqueta: null, vel: 1.5 + Math.random() * .8 };
-  return ag;
+  if (!m.root.userData.mats.some(mt => mt.map === glow)) glow.dispose();   // las figuras sin aura no la usan
+  return { id, E, m, name, msg, real, col: a1.color, esc, p: new THREE.Vector3(), v: new THREE.Vector3(), meta: new THREE.Vector3(), cambio: 0, fase: Math.random() * 7,
+    frec: E.aleteo ? R(...E.aleteo.frec) : 1, planeo: 0, dx: 0, dy: 0, estado: "volando", t: 0, etiqueta: null, spin: Math.random() * 6.28,
+    vel: E.mov === "sube" ? E.vel * R(.8, 1.3) : E.vel * R(1.5, 2.3), dardo: 0, rapido: 1 };
 }
 function metaNueva(ag) {
-  ag.meta.set((Math.random() - .5) * vw * .8, (Math.random() - .5) * vh * .7, -5 + Math.random() * 7.5);
-  ag.cambio = 5 + Math.random() * 6;
+  const z = ag.E.mov === "vuelo" ? R(-5, 2.5) : R(-4, 2);
+  ag.meta.set(R(-.4, .4) * vw, R(-.35, .35) * vh, z);
+  ag.cambio = R(5, 11);
 }
-function etiqueta(texto) {
-  const c = document.createElement("canvas"), x = c.getContext("2d"); c.width = 1024; c.height = 160;
-  x.font = "800 82px Sora, sans-serif"; const w = Math.min(1000, x.measureText(texto).width + 90);
-  x.fillStyle = "rgba(30,10,60,.55)"; x.beginPath(); x.roundRect((1024 - w) / 2, 18, w, 124, 62); x.fill();
-  x.strokeStyle = "rgba(255,190,85,.8)"; x.lineWidth = 4; x.stroke();
-  x.fillStyle = "#fff"; x.textAlign = "center"; x.textBaseline = "middle"; x.shadowColor = "#ffbe55"; x.shadowBlur = 24; x.fillText(texto, 512, 84);
+// el deseo (y el nombre) que acompaña a una figura: letra elegante con brillo
+function deseo(msg, name) {
+  const c = document.createElement("canvas"), x = c.getContext("2d"), W = 1400;
+  const f1 = "italic 600 76px 'Cormorant Garamond', Georgia, serif", f2 = "600 44px Sora, sans-serif";
+  const lines = [];
+  if (msg) {
+    x.font = f1; let line = "";
+    for (const w of msg.split(" ")) { const t = line ? line + " " + w : w; if (x.measureText(t).width > W - 160 && line) { lines.push(line); line = w; } else line = t; }
+    if (line) lines.push(line);
+  }
+  const H = 60 + lines.length * 92 + (name ? 70 : 0) + 30;
+  c.width = W; c.height = H;
+  // velo oscuro suave detrás, para que se lea sobre las figuras y el fondo
+  const vg = x.createRadialGradient(W / 2, W / 2, 10, W / 2, W / 2, W / 2);
+  vg.addColorStop(0, "rgba(5,2,11,.55)"); vg.addColorStop(.6, "rgba(5,2,11,.3)"); vg.addColorStop(1, "rgba(5,2,11,0)");
+  x.save(); x.scale(1, H / W); x.fillStyle = vg; x.fillRect(0, 0, W, W); x.restore();
+  x.textAlign = "center"; x.textBaseline = "middle";
+  x.shadowColor = "rgba(210,184,255,.95)"; x.shadowBlur = 30;
+  x.font = f1; x.fillStyle = "#fff";
+  lines.forEach((l, i) => x.fillText((i === 0 ? "“" : "") + l + (i === lines.length - 1 ? "”" : ""), W / 2, 70 + i * 92));
+  if (name) {
+    x.font = msg ? f2 : f1; x.fillStyle = msg ? "#ffbe55" : "#fff"; x.shadowColor = "rgba(255,190,85,.9)";
+    x.fillText(msg ? "— " + name : name, W / 2, msg ? H - 60 : H / 2);
+  }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false }));
-  s.scale.set(3.2, .5, 1); s.renderOrder = 10; scene.add(s); return s;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false, opacity: 0 }));
+  const w = 6.6; s.scale.set(w, w * H / W, 1); s.renderOrder = 10; scene.add(s);
+  s.userData.h = w * H / W;
+  return s;
 }
+let verDeseos = true;
+function mostrarDeseo(ag, dura) {
+  if (!verDeseos || (!ag.msg && !ag.name) || ag.etiqueta) return;
+  ag.etiqueta = deseo(ag.msg, ag.name); ag.etT = 0; ag.etDura = dura;
+}
+function quitarEtiqueta(ag) { if (!ag.etiqueta) return; scene.remove(ag.etiqueta); ag.etiqueta.material.map.dispose(); ag.etiqueta.material.dispose(); ag.etiqueta = null; }
+
 function llega(ag) {
-  // nace de una explosión de luz abajo, sube al centro y muestra su nombre
-  ag.p.set((Math.random() - .5) * vw * .3, -vh * .5 - 1, 2.5);
+  // nace de una explosión de luz abajo y sube con su deseo
+  ag.p.set(R(-.15, .15) * vw, -vh * .5 - 1, 2.5);
   ag.v.set(0, 3, 0);
-  ag.meta.set((Math.random() - .5) * vw * .3, -vh * .05, 1.5); ag.cambio = 4;
+  ag.meta.set(R(-.15, .15) * vw, -vh * .05, 1.5); ag.cambio = 4;
   ag.estado = "llegando"; ag.t = 0;
   estallido(new THREE.Vector3(ag.p.x, -vh * .5 + .3, 2.5), ag.col, 320, 3.2);
-  if (ag.name) ag.etiqueta = etiqueta(ag.name);
-  toast(ag.name ? `✦ Llegó la mariposa de <b>${esc(ag.name)}</b>` : "✦ ¡Llegó una mariposa nueva!");
+  mostrarDeseo(ag, 14);
 }
-function aparece(ag) { ag.p.set((Math.random() - .5) * vw * .8, (Math.random() - .5) * vh * .7, -4 + Math.random() * 6); ag.v.set(Math.random() - .5, Math.random() - .5, 0); metaNueva(ag); }
+function aparece(ag) { ag.p.set(R(-.4, .4) * vw, R(-.35, .35) * vh, R(-4, 2)); ag.v.set(Math.random() - .5, Math.random() - .5, 0); metaNueva(ag); }
 function seVa(ag) {
   if (ag.estado === "saliendo") return;
   ag.estado = "saliendo"; ag.t = 0;
   const s = Math.random() < .5 ? -1 : 1;
   ag.meta.set(s * vw * .9, vh * .9, -6); ag.cambio = 99; ag.vel *= 1.6;
-  for (const mt of ag.m.root.userData.mats) { mt.transparent = true; }
+  for (const mt of ag.m.root.userData.mats) mt.transparent = true;
 }
 function quitar(ag) {
   scene.remove(ag.m.root);
-  ag.m.root.traverse(o => { if (o.isMesh) { o.geometry.dispose(); } });
+  ag.m.root.traverse(o => { if (o.isMesh) o.geometry.dispose(); });
   for (const mt of ag.m.root.userData.mats) { mt.map?.dispose(); mt.dispose(); }
-  if (ag.etiqueta) { scene.remove(ag.etiqueta); ag.etiqueta.material.map.dispose(); ag.etiqueta.material.dispose(); }
-  mariposas.delete(ag.id);
-}
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-function toast(html) {
-  return;   // sin textos en la pantalla (César): solo el nombre junto a la mariposa
-  const box = document.getElementById("toasts"), d = document.createElement("div");
-  d.className = "toast"; d.innerHTML = html; box.appendChild(d); setTimeout(() => d.remove(), 6200);
-  while (box.children.length > 3) box.firstChild.remove();
+  quitarEtiqueta(ag);
+  figuras.delete(ag.id);
 }
 
-// las de "casa": diseños al azar mientras hay pocas mariposas de la gente
+// las de "casa": diseños al azar mientras hay pocas figuras de la gente
 const MIN = 9;
 let semilla = 1;
 function deCasa() {
-  const c = document.createElement("canvas"); c.width = ESP.W; c.height = ESP.H;
-  const p = document.createElement("canvas"); p.width = ESP.W; p.height = ESP.H;
-  ESP.patron(p.getContext("2d"), rng(Date.now() + semilla++ * 7919));
-  componer(ESP, p, c);
-  const id = "casa" + semilla, ag = crearAgente({ id, img: c, name: "", real: false });
-  mariposas.set(id, ag); aparece(ag);
+  const kind = MD.especies[semilla % MD.especies.length], E = ESPECIES[kind];
+  const c = document.createElement("canvas"); c.width = E.W; c.height = E.H;
+  const p = document.createElement("canvas"); p.width = E.W; p.height = E.H;
+  E.patron(p.getContext("2d"), rng(Date.now() + semilla++ * 7919));
+  componer(E, p, c);
+  const id = "casa" + semilla, ag = crearAgente({ id, img: c, name: "", msg: "", real: false, kind });
+  figuras.set(id, ag); aparece(ag);
 }
 function equilibrar() {
-  const vivas = [...mariposas.values()].filter(a => a.m && a.estado !== "saliendo");
+  const vivas = [...figuras.values()].filter(a => a.m && a.estado !== "saliendo");
   const reales = vivas.filter(a => a.real).length, casa = vivas.filter(a => !a.real);
   const faltan = MIN - reales;
   if (casa.length < faltan) for (let i = casa.length; i < faltan; i++) deCasa();
   else if (casa.length > Math.max(0, faltan)) seVa(casa[0]);
 }
-
 function agregarReal(it, conLlegada) {
-  if (mariposas.has(it.id)) return;
-  mariposas.set(it.id, { cargando: true, estado: "cargando" });
+  if (figuras.has(it.id)) return;
+  figuras.set(it.id, { cargando: true, estado: "cargando" });
   const img = new Image(); img.crossOrigin = "anonymous";
   img.onload = () => {
-    const ag = crearAgente({ id: it.id, img, name: it.name, real: true });
-    mariposas.set(it.id, ag);
+    const ag = crearAgente({ id: it.id, img, name: it.name, msg: it.msg, real: true, kind: it.kind });
+    figuras.set(it.id, ag);
     conLlegada ? llega(ag) : aparece(ag);
     equilibrar();
   };
-  img.onerror = () => mariposas.delete(it.id);
+  img.onerror = () => figuras.delete(it.id);
   img.src = `/api/pantalla/img/${it.id}`;
 }
 
@@ -287,14 +332,14 @@ async function abrir(forzarNueva) {
   const guard = store.get("pm-pantalla") || {};
   if (forzarNueva || !sala) sala = (!forzarNueva && guard.sala) || nuevaSala();
   llave = guard.sala === sala && guard.llave ? guard.llave : rnd32(16);
-  const r = await fetch(`/api/pantalla/${sala}/abrir`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ llave }) });
+  const r = await fetch(`/api/pantalla/${sala}/abrir`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ llave, mundo: MUNDO }) });
   if (r.status === 409) {
     if (!qs.get("sala")) return abrir(true);
     document.getElementById("aviso").classList.add("on"); return false;
   }
   if (!r.ok) throw new Error("abrir " + r.status);
   store.set("pm-pantalla", { sala, llave });
-  const u = new URL(location.href); u.searchParams.set("sala", sala); history.replaceState(null, "", u);
+  const u = new URL(location.href); u.searchParams.set("sala", sala); u.searchParams.set("mundo", MUNDO); history.replaceState(null, "", u);
   pintarQR();
   return true;
 }
@@ -306,6 +351,10 @@ function pintarQR() {
   x.fillStyle = "#fff"; x.fillRect(0, 0, 600, 600); x.fillStyle = "#2a0e55";
   for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (qr.isDark(r, k)) x.fillRect(M + k * cell - .3, M + r * cell - .3, cell + .6, cell + .6);
   const k = document.getElementById("kiosco"); k.href = url + "&kiosco=1"; k.textContent = url.replace(/^https?:\/\//, "") + "&kiosco=1";
+  document.getElementById("mundos").innerHTML = Object.entries(MUNDOS).map(([id, m]) => {
+    const u = new URL(location.href); u.searchParams.set("mundo", id); u.searchParams.delete("titulo");
+    return id === MUNDO ? `<b style="color:#fff">${m.nombre}</b>` : `<a href="${u}" style="color:#ffbe55;pointer-events:auto">${m.nombre}</a>`;
+  }).join(" · ");
 }
 let since = 0, primera = true;
 async function revisar() {
@@ -314,7 +363,7 @@ async function revisar() {
     if (r.ok) {
       const j = await r.json();
       for (const it of j.items) agregarReal(it, !primera);
-      for (const id of j.gone) { const ag = mariposas.get(id); if (ag && ag.m) seVa(ag); else mariposas.delete(id); }
+      for (const id of j.gone) { const ag = figuras.get(id); if (ag && ag.m) seVa(ag); else figuras.delete(id); }
       since = j.now; primera = false;
       equilibrar();
     }
@@ -322,69 +371,115 @@ async function revisar() {
   setTimeout(revisar, document.hidden ? 6000 : 2000);
 }
 
-// ---------- vuelo ----------
+// ---------- movimiento de cada tipo ----------
 const clock = new THREE.Clock();
 let tt = 0;
-function vuelo(ag, dt) {
-  ag.t += dt; ag.cambio -= dt;
-  if (ag.estado === "llegando" && ag.t > 3.5) { ag.estado = "volando"; metaNueva(ag); }
-  if (ag.estado === "volando" && (ag.cambio < 0 || ag.p.distanceTo(ag.meta) < 1)) metaNueva(ag);
-  // dirección deseada hacia la meta, con un vaivén suave
+function rumbo(ag, dt, k = 1) {
+  // hacia su meta con un vaivén, sin encimarse con las demás
   tmp.subVectors(ag.meta, ag.p).normalize();
   tmp.x += Math.sin(tt * .7 + ag.fase) * .35; tmp.y += Math.cos(tt * .9 + ag.fase * 1.3) * .3;
-  // que no se encimen
-  for (const o of mariposas.values()) if (o !== ag && o.m) { const d = ag.p.distanceTo(o.p); if (d < 2.2 && d > 0.001) tmp.addScaledVector(sep.subVectors(ag.p, o.p), (2.2 - d) * .6 / d); }
-  tmp.normalize().multiplyScalar(ag.vel * (ag.estado === "llegando" ? 1.4 : 1));
+  for (const o of figuras.values()) if (o !== ag && o.m && o.E.mov !== "sube") { const d = ag.p.distanceTo(o.p); if (d < 2.2 && d > 0.001) tmp.addScaledVector(sep.subVectors(ag.p, o.p), (2.2 - d) * .6 / d); }
+  tmp.normalize().multiplyScalar(ag.vel * k * (ag.estado === "llegando" ? 1.4 : 1));
   ag.v.lerp(tmp, Math.min(1, dt * 1.1));
   ag.p.addScaledVector(ag.v, dt);
-  // aleteo: a ratos planea
-  ag.planeo -= dt;
-  if (ag.planeo < -6 - Math.random() * 6) ag.planeo = 1.2 + Math.random() * 1.5;
-  const planea = ag.planeo > 0 && ag.estado === "volando";
-  ag.fase += dt * (planea ? 1.5 : ag.frec * (ag.v.y > .3 ? 1.25 : 1));
-  const aleteo = planea ? .28 + Math.sin(ag.fase) * .06 : .32 + Math.sin(ag.fase) * .62;
-  ag.m.update(aleteo);
-  const r = ag.m.root;
-  r.position.copy(ag.p); r.position.y += Math.cos(ag.fase) * .05 * ag.esc;
-  // la cabeza hacia donde va y la espalda hacia la gente (para que se vea su diseño), un poco inclinada; se ladea al dar vuelta
-  if (ag.v.lengthSq() > 1e-4) {
-    F.set(ag.v.x, ag.v.y, ag.v.z * .3).normalize();
-    Y.set(Math.sin(ag.fase * .13) * .15, .25 + (planea ? 0 : .08 * Math.sin(ag.fase)), 1).normalize();
-    Y.addScaledVector(F, -Y.dot(F)).normalize();
-    X.crossVectors(Y, F);
-    tmpM.makeBasis(X, Y, F);
-    tmpQ.setFromRotationMatrix(tmpM);
-    let giro = (ag.dx * ag.v.y - ag.dy * ag.v.x) / (Math.max(ag.v.lengthSq(), .05) * Math.max(dt, .001));   // rad/s
-    if (!Number.isFinite(giro)) giro = 0;
-    ag.roll = THREE.MathUtils.lerp(ag.roll || 0, THREE.MathUtils.clamp(giro * .35, -.6, .6), Math.min(1, dt * 2));
-    lado.setFromAxisAngle(ZL, ag.roll);
-    tmpQ.multiply(lado);
-    ag.dx = ag.v.x; ag.dy = ag.v.y;
-    r.quaternion.slerp(tmpQ, Math.min(1, dt * 3.5));
+}
+function mover(ag, dt) {
+  ag.t += dt; ag.cambio -= dt;
+  const E = ag.E, r = ag.m.root;
+  if (ag.estado === "llegando" && ag.t > 3.5) { ag.estado = "volando"; metaNueva(ag); }
+  if (E.mov !== "sube" && ag.estado === "volando" && (ag.cambio < 0 || ag.p.distanceTo(ag.meta) < 1)) metaNueva(ag);
+
+  if (E.mov === "vuelo") {
+    // libélula: se queda quieta en el aire y sale disparada
+    if (E.dardo) { ag.dardo -= dt; if (ag.dardo < 0) { ag.rapido = ag.rapido > 1 ? .12 : 2.2; ag.dardo = ag.rapido > 1 ? R(.5, 1) : R(.6, 1.6); } }
+    rumbo(ag, dt, E.dardo ? ag.rapido : 1);
+    ag.planeo -= dt;
+    if (!E.dardo && ag.planeo < -6 - Math.random() * 6) ag.planeo = R(1.2, 2.7);
+    const planea = ag.planeo > 0 && ag.estado === "volando";
+    ag.fase += dt * (planea ? 1.5 : ag.frec * (ag.v.y > .3 ? 1.25 : 1));
+    const A = E.aleteo, aleteo = planea ? .28 + Math.sin(ag.fase) * .06 : A.base + Math.sin(ag.fase) * A.amp;
+    ag.m.update(aleteo);
+    r.position.copy(ag.p); r.position.y += Math.cos(ag.fase) * .05 * ag.esc;
+    // la cabeza hacia donde va y la espalda hacia la gente (para que se vea su diseño); se ladea al dar vuelta
+    if (ag.v.lengthSq() > 1e-4) {
+      F.set(ag.v.x, ag.v.y, ag.v.z * .3).normalize();
+      Y.set(Math.sin(ag.fase * .13) * .15, .25 + (planea ? 0 : .08 * Math.sin(ag.fase)), 1).normalize();
+      Y.addScaledVector(F, -Y.dot(F)).normalize();
+      X.crossVectors(Y, F);
+      tmpM.makeBasis(X, Y, F); tmpQ.setFromRotationMatrix(tmpM);
+      let giro = (ag.dx * ag.v.y - ag.dy * ag.v.x) / (Math.max(ag.v.lengthSq(), .05) * Math.max(dt, .001));
+      if (!Number.isFinite(giro)) giro = 0;
+      ag.roll = THREE.MathUtils.lerp(ag.roll || 0, THREE.MathUtils.clamp(giro * .35, -.6, .6), Math.min(1, dt * 2));
+      lado.setFromAxisAngle(ZL, ag.roll); tmpQ.multiply(lado);
+      ag.dx = ag.v.x; ag.dy = ag.v.y;
+      r.quaternion.slerp(tmpQ, Math.min(1, dt * 3.5));
+    }
+  } else if (E.mov === "nado") {
+    // pez: de lado hacia la gente; da la vuelta al cambiar de dirección
+    rumbo(ag, dt, .9);
+    ag.m.tick(tt * 1.3 + ag.fase, Math.min(1.6, .5 + ag.v.length() / ag.vel));
+    r.position.copy(ag.p);
+    if (Math.abs(ag.v.x) > .05) ag.yaw = THREE.MathUtils.lerp(ag.yaw ?? 0, ag.v.x >= 0 ? 0 : Math.PI, Math.min(1, dt * 2.2));
+    const pitch = THREE.MathUtils.clamp(Math.atan2(ag.v.y, Math.abs(ag.v.x) + .2) * .7, -.6, .6);
+    tmpE.set(0, ag.yaw ?? 0, pitch, "YZX"); tmpQ.setFromEuler(tmpE);
+    r.quaternion.slerp(tmpQ, Math.min(1, dt * 4));
+  } else if (E.mov === "medusa") {
+    // medusa: se impulsa cuando se contrae y se deja llevar
+    const c = ag.m.tick(tt + ag.fase);
+    rumbo(ag, dt, .35 + c * 1.5);
+    r.position.copy(ag.p);
+    tmpE.set(.5 + ag.v.y * .15, 0, THREE.MathUtils.clamp(-ag.v.x * .35, -.5, .5)); tmpQ.setFromEuler(tmpE);
+    r.quaternion.slerp(tmpQ, Math.min(1, dt * 1.5));
+  } else {
+    // farolito y globo: suben despacio meciéndose y giran; al salir por arriba vuelven a aparecer abajo
+    const vy = ag.vel * (ag.estado === "llegando" ? 2.2 : ag.estado === "saliendo" ? 3 : 1);
+    ag.p.y += vy * dt;
+    ag.p.x += Math.sin(tt * .3 + ag.fase) * .22 * dt;
+    if (ag.estado !== "saliendo" && ag.p.y > vh * .5 + 2) { ag.p.set(R(-.42, .42) * vw, -vh * .5 - 2, R(-6, 2)); }
+    ag.m.tick(tt + ag.fase);
+    ag.spin += E.giro * dt;
+    r.position.copy(ag.p);
+    tmpE.set(Math.sin(tt * .4 + ag.fase) * .05, ag.spin, Math.sin(tt * .5 + ag.fase) * .07); r.quaternion.setFromEuler(tmpE);
   }
-  // destellos de las puntas de las alas
-  { ag.m.tips(tips); const n = ag.real ? 2 : 1; for (let i = 0; i < n; i++) if (Math.random() < (ag.real ? .95 : .5)) { const tp = tips[i % 2 ? 1 : Math.random() < .5 ? 0 : 1]; chispa(tp.x, tp.y, tp.z, ag.col, ag.real ? 1.3 : .9, .14, 1.8); } }
+
+  // destellos
+  if (ag.m.tips) { ag.m.tips(tips); const n = ag.real ? 2 : 1; for (let i = 0; i < n; i++) if (Math.random() < (ag.real ? .95 : .5)) { const tp = tips[i % 2 ? 1 : Math.random() < .5 ? 0 : 1]; chispa(tp.x, tp.y, tp.z, ag.col, ag.real ? 1.3 : .9, .14, 1.8); } }
+  // el deseo flota sobre su figura
   if (ag.etiqueta) {
-    ag.etiqueta.position.set(ag.p.x, ag.p.y - .9 * ag.esc - .25, ag.p.z);
-    const k = ag.t < 10 ? Math.min(1, ag.t * 2) : Math.max(0, 1 - (ag.t - 10) / 1.5);
-    ag.etiqueta.material.opacity = k;
-    if (k <= 0 && ag.t > 10) { scene.remove(ag.etiqueta); ag.etiqueta.material.map.dispose(); ag.etiqueta = null; }
+    ag.etT += dt;
+    const e = ag.etiqueta, hgt = e.userData.h;
+    // sin salirse de la pantalla ni quedar detrás del QR (abajo a la derecha)
+    const ex = THREE.MathUtils.clamp(ag.p.x, -vw / 2 + 3.5, vw / 2 - 3.5), ey = THREE.MathUtils.clamp(ag.p.y + 1.1 * ag.esc + hgt / 2, -vh / 2 + hgt / 2 + .4, vh / 2 - hgt / 2 - .3);
+    e.position.set(ex > vw / 2 - 6.5 && ey < -vh / 2 + 4.5 ? vw / 2 - 6.5 : ex, ey, ag.p.z + .5);
+    const k = ag.etT < 1.2 ? ag.etT / 1.2 : Math.max(0, 1 - (ag.etT - ag.etDura) / 1.8);
+    e.material.opacity = k;
+    if (ag.etT > ag.etDura + 1.8) quitarEtiqueta(ag);
   }
   if (ag.estado === "saliendo") {
+    if (E.mov !== "sube") rumbo(ag, dt);
     const k = Math.max(0, 1 - ag.t / 4);
-    for (const mt of r.userData.mats) mt.opacity = k;
+    for (const mt of r.userData.mats) mt.opacity = Math.min(mt.opacity, k);
+    if (ag.etiqueta) ag.etiqueta.material.opacity = Math.min(ag.etiqueta.material.opacity, k);
     if (ag.t > 4.2) quitar(ag);
   }
-  // si se sale mucho del cuadro, que regrese
-  if (ag.estado === "volando" && (Math.abs(ag.p.x) > vw * .62 || Math.abs(ag.p.y) > vh * .62)) metaNueva(ag);
+  if (E.mov !== "sube" && ag.estado === "volando" && (Math.abs(ag.p.x) > vw * .62 || Math.abs(ag.p.y) > vh * .62)) metaNueva(ag);
+}
+
+// ecos: de vez en cuando un deseo vuelve a aparecer sobre su figura
+let eco = 8;
+function ecos(dt) {
+  eco -= dt; if (eco > 0) return;
+  eco = R(10, 18);
+  const con = [...figuras.values()].filter(a => a.m && a.real && a.msg && !a.etiqueta && a.estado === "volando");
+  if (con.length) mostrarDeseo(con[Math.floor(Math.random() * con.length)], 9);
 }
 
 function animar() {
   requestAnimationFrame(animar);
   const dt = Math.max(1 / 240, Math.min(clock.getDelta(), 1 / 20)); tt += dt;
   fondoMat.uniforms.t.value = tt;
-  for (const ag of [...mariposas.values()]) if (ag.m) vuelo(ag, dt);
-  // titileo
+  for (const ag of [...figuras.values()]) if (ag.m) mover(ag, dt);
+  ecos(dt);
   { const S = estrellas.geometry.attributes.size.array, D = estrellas.userData.D; for (let i = 0; i < D.length; i++) S[i] = D[i].s * (.55 + .45 * Math.sin(tt * D[i].f + D[i].ph)); estrellas.geometry.attributes.size.needsUpdate = true; }
   { const P = polen.geometry.attributes.position.array, S = polen.geometry.attributes.size.array, D = polen.userData.D;
     for (let i = 0; i < D.length; i++) { P[i * 3 + 1] += D[i].v * dt; P[i * 3] += Math.sin(tt * D[i].f + D[i].ph) * dt * .15; if (P[i * 3 + 1] > 8) P[i * 3 + 1] = -8; S[i] = D[i].s * (.5 + .5 * Math.sin(tt * D[i].f * 2 + D[i].ph)); }
@@ -408,26 +503,28 @@ renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHei
 
 // teclado y moderación
 addEventListener("keydown", e => {
-  if (e.key === "f" || e.key === "F") { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); }
-  if (e.key === "q" || e.key === "Q") document.getElementById("qr").classList.toggle("oculto");
+  const k = e.key.toLowerCase();
+  if (k === "f") { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); }
+  if (k === "q") document.getElementById("qr").classList.toggle("oculto");
+  if (k === "d") { verDeseos = !verDeseos; if (!verDeseos) for (const a of figuras.values()) if (a.m) quitarEtiqueta(a); }
 });
 const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
 addEventListener("dblclick", async e => {
   ptr.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ptr, camera);
-  const objs = []; for (const a of mariposas.values()) if (a.m && a.real && a.estado !== "saliendo") a.m.root.traverse(o => o.userData.ala && objs.push(o));
+  const objs = []; for (const a of figuras.values()) if (a.m && a.real && a.estado !== "saliendo") a.m.root.traverse(o => o.userData.ala && objs.push(o));
   const hit = ray.intersectObjects(objs)[0]; if (!hit) return;
-  const ag = mariposas.get(hit.object.userData.agente); if (!ag) return;
-  if (!confirm(`¿Quitar ${ag.name ? "la mariposa de " + ag.name : "esta mariposa"} de la pantalla?`)) return;
+  const ag = figuras.get(hit.object.userData.agente); if (!ag) return;
+  if (!confirm(`¿Quitar ${ag.name ? "la figura de " + ag.name : "esta figura"} y su deseo de la pantalla?`)) return;
   seVa(ag);
   fetch(`/api/pantalla/${sala}/quitar`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ llave, id: ag.id }) });
 });
 // el cursor y la ayuda se esconden solos
-let quieto; const mover = () => { document.body.classList.remove("quieto"); document.getElementById("ayuda").style.opacity = 1; clearTimeout(quieto); quieto = setTimeout(() => { document.body.classList.add("quieto"); document.getElementById("ayuda").style.opacity = 0; }, 4000); };
-addEventListener("mousemove", mover); mover();
+let quieto; const moverMouse = () => { document.body.classList.remove("quieto"); document.getElementById("ayuda").style.opacity = 1; clearTimeout(quieto); quieto = setTimeout(() => { document.body.classList.add("quieto"); document.getElementById("ayuda").style.opacity = 0; }, 4000); };
+addEventListener("mousemove", moverMouse); moverMouse();
 
+document.fonts?.load("italic 600 40px 'Cormorant Garamond'").catch(() => {});
 equilibrar();
 animar();
-document.fonts?.ready.then(() => {});
 abrir(false).then(ok => ok && revisar()).catch(() => { document.getElementById("avisoT").textContent = "No se pudo encender la pantalla"; document.getElementById("avisoP").textContent = "Revisa el internet y recarga la página."; document.getElementById("avisoB").textContent = "Recargar"; document.getElementById("avisoB").onclick = () => location.reload(); document.getElementById("aviso").classList.add("on"); });
 </script>
 </body>

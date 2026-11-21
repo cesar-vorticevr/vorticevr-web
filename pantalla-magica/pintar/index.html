@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Pinta tu mariposa · Vórtice VR</title>
-<meta name="description" content="Pinta tu mariposa y suéltala en la pantalla mágica.">
+<title>Pinta tu figura · Vórtice VR</title>
+<meta name="description" content="Pinta tu figura, escribe tu deseo y suéltala en la pantalla mágica.">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#05020b">
 <link rel="icon" href="../../assets/icono.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=IBM+Plex+Mono:wght@500&family=Cormorant+Garamond:ital,wght@1,600&display=swap" rel="stylesheet">
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -71,6 +71,13 @@
   #ver .acciones { pointer-events: auto; margin-top: 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
   #ver .cerrar { position: absolute; top: calc(14px + env(safe-area-inset-top)); right: 14px; all: unset; position: absolute; cursor: pointer; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.1); font-size: 22px; }
   .fade { animation: fade .6s ease both; } @keyframes fade { from { opacity: 0; transform: translateY(12px); } }
+  .figs { display: flex; gap: 10px; margin: 0 0 12px; }
+  .fig { all: unset; cursor: pointer; flex: 1; display: grid; justify-items: center; gap: 4px; padding: 8px 6px 7px; border-radius: 16px; background: var(--panel); border: 1px solid var(--borde); font-size: 13px; font-weight: 600; color: var(--lila); }
+  .fig canvas { width: 100%; max-width: 120px; height: 56px; object-fit: contain; }
+  .fig.on { color: #fff; border-color: rgba(255,190,85,.7); background: linear-gradient(160deg, rgba(139,63,214,.55), rgba(255,190,85,.2)); box-shadow: 0 0 20px rgba(255,190,85,.3); }
+  label.nombre textarea { display: block; width: 100%; margin-top: 6px; padding: 14px 16px; font: italic 600 19px "Cormorant Garamond", Georgia, serif; color: #fff; background: rgba(255,255,255,.07); border: 1px solid var(--borde); border-radius: 14px; outline: none; resize: none; }
+  label.nombre textarea:focus { border-color: var(--oro); }
+  label.nombre small { color: rgba(210,184,255,.65); }
 </style>
 </head>
 <body>
@@ -79,14 +86,15 @@
 
   <section id="sinSala">
     <h1>Pantalla mágica</h1>
-    <p class="sub">Escribe el código que sale en la pantalla</p>
+    <p class="sub" id="sinSalaP">Escribe el código que sale en la pantalla</p>
     <input id="codigoIn" maxlength="8" autocomplete="off" autocapitalize="characters" placeholder="ABCDE"><br>
     <button class="soltar" id="codigoBtn" style="max-width:260px;margin:18px auto 0">Entrar</button>
   </section>
 
-  <section id="app">
-    <h1>Pinta tu mariposa</h1>
-    <p class="sub" id="ayuda">Pinta un ala y la otra se pinta sola. Luego suéltala en la pantalla ✦</p>
+  <section id="app" style="display:none">
+    <h1 id="titulo">Pinta tu figura</h1>
+    <p class="sub" id="ayuda"></p>
+    <div class="figs" id="figs"></div>
     <div id="lienzo"><canvas id="disp"></canvas>
       <div id="vista"><button data-v="mitad" class="on">Un ala</button><button data-v="toda">Toda</button></div>
     </div>
@@ -111,58 +119,93 @@
     </div>
     <div class="fila">
       <button class="chip" id="sorpresa">✦ Sorpréndeme</button>
-      <button class="chip" id="ver3d">🦋 Verla en 3D</button>
+      <button class="chip" id="ver3d">✦ Verla en 3D</button>
       <button class="chip" id="limpiar">Empezar de nuevo</button>
     </div>
 
-    <label class="nombre">Tu nombre (sale en la pantalla, opcional)<input id="nombre" maxlength="18" autocomplete="given-name" placeholder="Ej. Sofi"></label>
-    <button class="soltar" id="soltar">✦ Soltar mi mariposa</button>
+    <label class="nombre">Tu deseo <small>(lo verán todos en la pantalla)</small><textarea id="deseo" maxlength="90" rows="2"></textarea></label>
+    <label class="nombre">Tu nombre <small>(opcional)</small><input id="nombre" maxlength="18" autocomplete="given-name" placeholder="Ej. Sofi"></label>
+    <button class="soltar" id="soltar">✦ Soltar</button>
     <p id="err"></p>
-    <p class="nota" id="nota">Tienes una mariposa en la pantalla a la vez: si sueltas otra, reemplaza a la tuya.</p>
+    <p class="nota" id="nota">Tienes una figura en la pantalla a la vez: si sueltas otra, reemplaza a la tuya. Sin groserías, links ni teléfonos.</p>
   </section>
 </main>
 
 <div id="ver"><canvas id="v3d"></canvas><button class="cerrar" id="cerrar3d">✕</button><div class="msg" id="verMsg"></div></div>
 
 <script type="module">
-import { ESPECIES, componer, aura, rng } from "../../assets/pantalla/especies.js?v=1";
+import { ESPECIES, MUNDOS, componer, aura, rng } from "../../assets/pantalla/especies.js?v=3";
 import { sfx } from "../../assets/sonidos.js";
 
 const $ = id => document.getElementById(id);
-const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }, del(k) { try { localStorage.removeItem(k); } catch (e) {} } };
 const qs = new URLSearchParams(location.search);
 const sala = (qs.get("sala") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
-if (!/^[A-Z0-9]{4,8}$/.test(sala)) {
+function pedirCodigo(msg) {
   $("app").style.display = "none"; $("sinSala").style.display = "block";
-  const ir = () => { const c = $("codigoIn").value.toUpperCase().replace(/[^A-Z0-9]/g, ""); if (c.length >= 4) location.search = "?sala=" + c; };
+  if (msg) $("sinSalaP").textContent = msg;
+  const ir = () => { const c = $("codigoIn").value.toUpperCase().replace(/[^A-Z0-9]/g, ""); if (c.length >= 4) location.search = "?sala=" + c + (qs.get("kiosco") === "1" ? "&kiosco=1" : ""); };
   $("codigoBtn").onclick = ir; $("codigoIn").onkeydown = e => e.key === "Enter" && ir();
-  throw new Error("sin sala");
 }
+if (!/^[A-Z0-9]{4,8}$/.test(sala)) { pedirCodigo(); throw new Error("sin sala"); }
 $("salaChip").textContent = "SALA " + sala;
-let uid = store.get("pm-uid");
-if (!uid || !/^[a-z0-9]{12,40}$/.test(uid)) { uid = [...crypto.getRandomValues(new Uint8Array(12))].map(b => b.toString(36)).join("").replace(/[^a-z0-9]/g, "").padEnd(16, "x").slice(0, 24); store.set("pm-uid", uid); }
-// Modo iPad (?kiosco=1): un solo aparato en el evento donde pinta una persona tras otra. Cada mariposa va con un
-// uid nuevo (no reemplaza a la anterior) y al terminar el lienzo y el nombre quedan limpios para la siguiente persona.
-const KIOSCO = qs.get("kiosco") === "1";
-const nuevoUid = () => [...crypto.getRandomValues(new Uint8Array(12))].map(b => b.toString(36)).join("").replace(/[^a-z0-9]/g, "").padEnd(16, "x").slice(0, 24);
-if (KIOSCO) {
-  $("nota").textContent = "Cuando la sueltes, el lienzo queda listo para la siguiente persona.";
-  try { localStorage.removeItem("pm-dibujo"); } catch (e) {}
-} else $("nombre").value = store.get("pm-nombre") || "";
 
-// ---------- lienzo ----------
-const ESP = ESPECIES.mariposa, W = ESP.W, H = ESP.H, BASE = "#fff4e6";
-const pint = document.createElement("canvas"); pint.width = W; pint.height = H;
-const px = pint.getContext("2d");
+// qué mundo tiene la pantalla (sus figuras)
+let MUNDO = "jardin";
+try {
+  const r = await fetch(`/api/pantalla/${sala}/info`, { cache: "no-store" });
+  if (r.status === 404) { pedirCodigo("Esa pantalla no está encendida. Revisa el código."); throw new Error("sala"); }
+  const j = await r.json(); if (MUNDOS[j.mundo]) MUNDO = j.mundo;
+} catch (e) { if (e.message === "sala") throw e; }
+const MD = MUNDOS[MUNDO];
+$("app").style.display = "";
+$("deseo").placeholder = MD.deseo;
+
+let uid = store.get("pm-uid");
+const nuevoUid = () => [...crypto.getRandomValues(new Uint8Array(12))].map(b => b.toString(36)).join("").replace(/[^a-z0-9]/g, "").padEnd(16, "x").slice(0, 24);
+if (!uid || !/^[a-z0-9]{12,40}$/.test(uid)) { uid = nuevoUid(); store.set("pm-uid", uid); }
+// Modo iPad (?kiosco=1): un solo aparato en el evento donde pinta una persona tras otra. Cada figura va con un
+// uid nuevo (no reemplaza a la anterior) y al terminar el lienzo, el deseo y el nombre quedan limpios.
+const KIOSCO = qs.get("kiosco") === "1";
+if (KIOSCO) $("nota").textContent = "Cuando la sueltes, todo queda listo para la siguiente persona. Sin groserías, links ni teléfonos.";
+else $("nombre").value = store.get("pm-nombre") || "";
+
+// ---------- lienzo (cambia con la figura) ----------
+const BASE = "#fff4e6";
+let KIND, ESP, W, H, pint, px, partes, sil;
 const tex = document.createElement("canvas");
-const partes = ESP.partes(), sil = ESP.silueta();
+let espejo = true, vista = "mitad";
+const art = () => ESP.femenino ? "a" : "o";
+function ayudaTxt() {
+  const fin = ` Luego suélt${art() === "a" ? "ala" : "alo"} en la pantalla ✦`;
+  if (ESP.tela) return `Esta es la tela que envuelve tu ${ESP.nombre.toLowerCase()}: pinta todo alrededor.` + fin;
+  if (KIND === "pez") return "Pinta tu pez de lado: cuerpo, cola y aletas." + fin;
+  if (KIND === "medusa") return "Esta es la campana de tu medusa vista desde arriba." + fin;
+  return (espejo ? "Pinta un ala y la otra se pinta sola." : "Pinta cada ala como quieras.") + fin;
+}
+function setEspecie(kind) {
+  KIND = kind; ESP = ESPECIES[kind]; W = ESP.W; H = ESP.H;
+  pint = document.createElement("canvas"); pint.width = W; pint.height = H; px = pint.getContext("2d");
+  partes = ESP.partes(); sil = ESP.silueta(); hist.length = 0;
+  espejo = !!ESP.simetria; $("espejo").style.display = ESP.simetria ? "" : "none"; $("espejo").classList.toggle("on", espejo);
+  $("vista").style.display = ESP.mitad ? "" : "none"; vista = ESP.mitad ? "mitad" : "toda";
+  $("vista").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === vista));
+  nuevo();
+  const g = !KIOSCO && store.get("pm-dibujo-" + kind);
+  if (g) { const im = new Image(); im.onload = () => { px.drawImage(im, 0, 0, W, H); pedir(); }; im.src = g; }
+  const n = ESP.nombre.toLowerCase();
+  $("titulo").textContent = `Pinta tu ${n}`;
+  $("ayuda").textContent = ayudaTxt();
+  $("soltar").textContent = `✦ Soltar mi ${n}`;
+  $("ver3d").textContent = `✦ Ver${art() === "a" ? "la" : "lo"} en 3D`;
+  document.querySelectorAll(".fig").forEach(b => b.classList.toggle("on", b.dataset.k === kind));
+  store.set("pm-figura-" + MUNDO, kind);
+  medir();
+}
 function nuevo() { px.globalCompositeOperation = "source-over"; px.fillStyle = BASE; px.fillRect(0, 0, W, H); }
-nuevo();
-{ const g = !KIOSCO && store.get("pm-dibujo"); if (g) { const im = new Image(); im.onload = () => { px.drawImage(im, 0, 0, W, H); pedir(); }; im.src = g; } }
 
 const disp = $("disp"), dx = disp.getContext("2d");
-let espejo = true, vista = "mitad";
-function vp() { return vista === "mitad" ? { x0: W / 2 - 40, w: W / 2 + 40 } : { x0: 0, w: W }; }
+function vp() { return ESP.mitad && vista === "mitad" ? { x0: W / 2 - 40, w: W / 2 + 40 } : { x0: 0, w: W }; }
 function medir() {
   const r = $("lienzo").getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2), v = vp();
   let w = r.width, h = w * H / v.w;
@@ -176,17 +219,32 @@ function pedir() { if (!pend) { pend = true; requestAnimationFrame(dibujar); } }
 function dibujar() {
   pend = false;
   componer(ESP, pint, tex);
-  const v = vp(), k = Math.min(disp.width / v.w, disp.height / H), ox = (disp.width - v.w * k) / 2, oy = (disp.height - H * k) / 2;
+  const v = vp(), m = ESP.tela ? 0.94 : 1, k = Math.min(disp.width / v.w, disp.height / H) * m, ox = (disp.width - v.w * k) / 2, oy = (disp.height - H * k) / 2;
   dx.setTransform(1, 0, 0, 1, 0, 0); dx.clearRect(0, 0, disp.width, disp.height);
   dx.setTransform(k, 0, 0, k, ox - v.x0 * k, oy);
-  // halo alrededor de la silueta
   dx.save(); dx.shadowColor = "rgba(210,184,255,.55)"; dx.shadowBlur = 40 * k * 4; dx.fillStyle = "rgba(210,184,255,.08)"; dx.fill(sil); dx.restore();
   dx.drawImage(tex, 0, 0);
   ESP.cuerpo(dx);
-  if (vista === "mitad" && espejo) { dx.fillStyle = "rgba(10,3,24,.0)"; }
   disp._t = { k, ox, oy, x0: v.x0 };
 }
 addEventListener("resize", medir);
+
+// las figuras del mundo, con un diseño de muestra
+{
+  const box = $("figs");
+  if (MD.especies.length < 2) box.style.display = "none";
+  for (const k of MD.especies) {
+    const E = ESPECIES[k], b = document.createElement("button"), c = document.createElement("canvas");
+    b.className = "fig"; b.dataset.k = k;
+    const p = document.createElement("canvas"); p.width = E.W; p.height = E.H; const pc = p.getContext("2d");
+    pc.fillStyle = BASE; pc.fillRect(0, 0, E.W, E.H); E.patron(pc, rng(k.length * 977 + 3));
+    const t = componer(E, p); E.cuerpo(t.getContext("2d"));
+    c.width = 240; c.height = 112; const cx = c.getContext("2d"), s = Math.min(240 / E.W, 112 / E.H);
+    cx.drawImage(t, (240 - E.W * s) / 2, (112 - E.H * s) / 2, E.W * s, E.H * s);
+    b.append(c, document.createTextNode(E.nombre)); box.appendChild(b);
+  }
+  box.addEventListener("click", e => { const b = e.target.closest(".fig"); if (b && b.dataset.k !== KIND) { setEspecie(b.dataset.k); sfx.swoosh?.(); } });
+}
 
 // ---------- herramientas ----------
 const COLS = ["#ff3b6b", "#ff7a2f", "#ffbe55", "#ffe94d", "#7dea5a", "#22c59a", "#38d6ff", "#3a7bff", "#8b3fd6", "#d2b8ff", "#ff7ad9", "#b3123f", "#6b2c0f", "#0e5a4a", "#12235e", "#1b0a36", "#ffffff"];
@@ -202,7 +260,7 @@ let color = "#8b3fd6", tool = "pincel", tam = 28, hue = 0;
 function setTool(t) { tool = t; document.querySelectorAll("#tools .tool").forEach(b => b.classList.toggle("on", b.dataset.t === t)); }
 $("tools").addEventListener("click", e => { const b = e.target.closest(".tool"); if (b) { setTool(b.dataset.t); sfx.tap(); } });
 $("tams").addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (!b) return; tam = +b.dataset.s; $("tams").querySelectorAll("[data-s]").forEach(x => x.classList.toggle("on", x === b)); sfx.tap(); });
-$("espejo").onclick = () => { espejo = !espejo; $("espejo").classList.toggle("on", espejo); if (!espejo) setVista("toda"); $("ayuda").textContent = espejo ? "Pinta un ala y la otra se pinta sola. Luego suéltala en la pantalla ✦" : "Pinta cada ala como quieras. Luego suéltala en la pantalla ✦"; sfx.tap(); };
+$("espejo").onclick = () => { espejo = !espejo; $("espejo").classList.toggle("on", espejo); if (!espejo && ESP.mitad) setVista("toda"); $("ayuda").textContent = ayudaTxt(); sfx.tap(); };
 function setVista(v) { vista = v; $("vista").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === v)); medir(); }
 $("vista").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { setVista(b.dataset.v); sfx.tap(); } });
 
@@ -212,7 +270,7 @@ function guardarPaso() { hist.push(px.getImageData(0, 0, W, H)); if (hist.length
 $("deshacer").onclick = () => { const s = hist.pop(); if (s) { px.putImageData(s, 0, 0); pedir(); autoguardar(); sfx.tap(); } };
 $("limpiar").onclick = () => { guardarPaso(); nuevo(); pedir(); autoguardar(); sfx.whoosh(); };
 $("sorpresa").onclick = () => { guardarPaso(); nuevo(); ESP.patron(px, rng(Date.now())); pedir(); autoguardar(); sfx.sparkle(); };
-let tGuardar; function autoguardar() { if (KIOSCO) return; clearTimeout(tGuardar); tGuardar = setTimeout(() => { try { store.set("pm-dibujo", pint.toDataURL("image/webp", .8)); } catch (e) {} }, 600); }
+let tGuardar; function autoguardar() { if (KIOSCO) return; clearTimeout(tGuardar); const k = KIND; tGuardar = setTimeout(() => { try { store.set("pm-dibujo-" + k, pint.toDataURL("image/webp", .8)); } catch (e) {} }, 600); }
 
 // pintar
 function aTex(e) { const r = disp.getBoundingClientRect(), t = disp._t, dpr = disp.width / r.width; return [((e.clientX - r.left) * dpr - t.ox) / t.k + t.x0, ((e.clientY - r.top) * dpr - t.oy) / t.k]; }
@@ -239,7 +297,7 @@ function estrella(x, y, r, c) {
 function cubeta(x, y) {
   const p = partes.find(p => px.isPointInPath(p.path, x, y));
   if (!p) return false;
-  const ids = espejo ? [p.id, ESP.espejo[p.id]] : [p.id];
+  const ids = espejo && ESP.espejo?.[p.id] ? [p.id, ESP.espejo[p.id]] : [p.id];
   px.save(); px.fillStyle = color;
   for (const id of ids) px.fill(partes.find(q => q.id === id).path);
   px.restore(); sfx.splash(); return true;
@@ -272,7 +330,6 @@ async function tres() {
   const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(40, 1, .1, 100); cam.position.set(0, 0, 6);
   scene.add(new THREE.HemisphereLight(0xc9a8ff, 0x2a0b45, 1.3));
   const d = new THREE.DirectionalLight(0xffffff, 1.5); d.position.set(-2, 4, 5); scene.add(d);
-  // chispas
   const N = 600, g = new THREE.BufferGeometry(), P = new Float32Array(N * 3), V = [], L = new Float32Array(N);
   g.setAttribute("position", new THREE.BufferAttribute(P, 3));
   const sc = document.createElement("canvas"); sc.width = sc.height = 64; const sx = sc.getContext("2d"), gr = sx.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, "#fff"); gr.addColorStop(.3, "rgba(255,226,168,.8)"); gr.addColorStop(1, "rgba(255,190,85,0)"); sx.fillStyle = gr; sx.fillRect(0, 0, 64, 64);
@@ -292,9 +349,9 @@ async function mostrar3D(modo) {
   const copia = document.createElement("canvas"); copia.width = W; copia.height = H; copia.getContext("2d").drawImage(tex, 0, 0);
   const mapa = new THREE.CanvasTexture(copia); mapa.colorSpace = THREE.SRGBColorSpace;
   const au = aura(ESP, copia), glow = new THREE.CanvasTexture(au.canvas); glow.colorSpace = THREE.SRGBColorSpace;
-  const m = ESP.build(THREE, mapa, glow);
+  const m = ESP.build(THREE, mapa, glow, au.color);
   const root = new THREE.Group(); root.add(m.root); scene.add(root);
-  m.root.rotation.x = -1.1;   // la espalda hacia ti
+  m.root.rotation.x = ESP.rx3d || 0;
   root.scale.setScalar(Math.min(1, innerWidth / innerHeight * 1.25));
   let rotY = 0, arrastre = null, t0 = performance.now(), vuela = modo === "soltar";
   const tips = [new THREE.Vector3(), new THREE.Vector3()];
@@ -304,14 +361,14 @@ async function mostrar3D(modo) {
   const loop = now => {
     anim = requestAnimationFrame(loop);
     const s = (now - t0) / 1000;
-    m.update(.2 + Math.sin(s * (vuela ? 11 : 6)) * .9);
+    if (m.update) m.update(.2 + Math.sin(s * (vuela ? 11 : 6)) * .9); else m.tick(s, 1);
     if (vuela && s > 1.6) {
       const k = s - 1.6;
       root.position.set(Math.sin(k * 2) * .6 * k, k * k * 2.2, -k * 1.5);
       root.rotation.z = Math.sin(k * 3) * .3;
       if (k > 2.6 && !root.userData.ido) { root.userData.ido = true; listo(); }
-    } else { root.rotation.y = rotY + Math.sin(s * .6) * .4; root.position.y = Math.sin(s * 1.5) * .08; }
-    m.tips(tips); for (const tp of tips) if (Math.random() < .8) t.chispa(tp, vuela ? .9 : .5);
+    } else { root.rotation.y = rotY + (ESP.tela ? s * .5 : Math.sin(s * .6) * .4); root.position.y = Math.sin(s * 1.5) * .08; }
+    if (m.tips) { m.tips(tips); for (const tp of tips) if (Math.random() < .8) t.chispa(tp, vuela ? .9 : .5); }
     for (let i = 0; i < t.N; i++) if (t.L[i] > 0) { t.L[i] -= .016; t.P[i * 3] += t.V[i].x * .016; t.P[i * 3 + 1] += t.V[i].y * .016 - .004; t.P[i * 3 + 2] += t.V[i].z * .016; if (t.L[i] <= 0) t.P[i * 3 + 2] = -99; }
     t.pts.geometry.attributes.position.needsUpdate = true;
     renderer.render(scene, cam);
@@ -321,15 +378,16 @@ async function mostrar3D(modo) {
 }
 let cerrar = () => {};
 $("cerrar3d").onclick = () => cerrar();
-$("ver3d").onclick = () => { sfx.appear(); mostrar3D("ver"); $("verMsg").innerHTML = '<p>Así se verá en la pantalla. Desliza para girarla.</p>'; };
+$("ver3d").onclick = () => { sfx.appear(); mostrar3D("ver"); $("verMsg").innerHTML = `<p>Así se verá en la pantalla. Desliza para girar${art() === "a" ? "la" : "lo"}.</p>`; };
 function listo() {
   sfx.win();
-  $("verMsg").innerHTML = `<div class="fade"><h2>¡Ya vuela en la pantalla! ✦</h2><p>Búscala entre las demás mariposas.</p>
-    <div class="acciones"><button class="soltar" id="otra" style="width:auto;padding:14px 22px;font-size:16px;margin:0">Pintar otra</button></div></div>`;
+  const a = art();
+  $("verMsg").innerHTML = `<div class="fade"><h2>¡Ya ${ESP.verbo} en la pantalla! ✦</h2><p>Búscal${a} con tu deseo entre las demás figuras.</p>
+    <div class="acciones"><button class="soltar" id="otra" style="width:auto;padding:14px 22px;font-size:16px;margin:0">Pintar otr${a}</button></div></div>`;
   if (!KIOSCO) { $("otra").onclick = () => cerrar(); return; }
-  // en el iPad: lienzo y nombre limpios, y regresa solo a los 6 s
+  // en el iPad: todo limpio para la siguiente persona, y regresa solo a los 6 s
   $("otra").textContent = "Siguiente persona";
-  hist.length = 0; nuevo(); $("nombre").value = ""; setVista("mitad"); if (!espejo) $("espejo").click(); setTool("pincel"); pedir();
+  $("nombre").value = ""; $("deseo").value = ""; setEspecie(KIND); setTool("pincel");
   const t = setTimeout(() => cerrar(), 6000);
   $("otra").onclick = () => { clearTimeout(t); cerrar(); };
 }
@@ -337,25 +395,27 @@ function listo() {
 // ---------- soltar ----------
 $("soltar").onclick = async () => {
   $("err").textContent = "";
-  const btn = $("soltar"); btn.disabled = true; btn.textContent = "Preparando tu mariposa…";
+  const btn = $("soltar"), txt = btn.textContent; btn.disabled = true; btn.textContent = "Preparando…";
   try {
     componer(ESP, pint, tex);
     let blob = await new Promise(r => tex.toBlob(r, "image/webp", .9));
     if (!blob || blob.type !== "image/webp") blob = await new Promise(r => tex.toBlob(r, "image/png"));
     const nombre = $("nombre").value.trim().slice(0, 18); if (!KIOSCO) store.set("pm-nombre", nombre);
-    const f = new FormData(); f.append("uid", KIOSCO ? nuevoUid() : uid); f.append("kind", "mariposa"); f.append("name", nombre); f.append("img", blob, "mariposa");
-    btn.textContent = "Soltándola…";
+    const f = new FormData(); f.append("uid", KIOSCO ? nuevoUid() : uid); f.append("kind", KIND); f.append("name", nombre); f.append("msg", $("deseo").value.trim().slice(0, 90)); f.append("img", blob, KIND);
+    btn.textContent = "Soltando…";
     const r = await fetch(`/api/pantalla/${sala}/soltar`, { method: "POST", body: f });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || "No se pudo soltar. Intenta de nuevo.");
+    if (!r.ok) { if (j.deseo) $("deseo").focus(); throw new Error(j.error || "No se pudo soltar. Intenta de nuevo."); }
     sfx.sparkle();
     $("verMsg").innerHTML = "";
     await mostrar3D("soltar");
   } catch (e) { $("err").textContent = e.message; sfx.wrong?.(); }
-  btn.disabled = false; btn.textContent = "✦ Soltar mi mariposa";
+  btn.disabled = false; btn.textContent = txt;
 };
 
-medir();
+store.del("pm-dibujo");   // el de antes, de cuando solo había mariposas
+const guardada = store.get("pm-figura-" + MUNDO);
+setEspecie(MD.especies.includes(guardada) ? guardada : MD.especies[0]);
 </script>
 </body>
 </html>
