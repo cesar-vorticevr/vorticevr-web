@@ -12,6 +12,12 @@
 
 const KINDS = ["mariposa", "libelula", "pez", "medusa", "farolito", "globo"];
 const MUNDOS = ["jardin", "oceano", "cielo"];
+// figuras de cada mundo (igual que MUNDOS de assets/pantalla/especies.js): el tope y lo que ve cada pantalla van por mundo
+const DEL_MUNDO = { jardin: ["mariposa", "libelula"], oceano: ["pez", "medusa"], cielo: ["farolito", "globo"] };
+const mundoDe = kind => Object.keys(DEL_MUNDO).find(m => DEL_MUNDO[m].includes(kind)) || "jardin";
+// la sala pública de la portada: la comparten todas las pantallas abiertas desde vorticevr.mx/pantalla-magica/; nadie la
+// "abre" y solo un admin (con su sesión) quita figuras
+export const PUBLICA = "PUBLICA";
 const MAX_VIVAS = 60;          // figuras a la vez en una sala; las más viejas se van
 const MAX_BYTES = 900 * 1024;  // textura (WebP o PNG)
 const SALA = /^[A-Z0-9]{4,8}$/;
@@ -44,7 +50,7 @@ const cleanName = s => { s = limpio(s, 18); return malo(s) || datos(s) ? "" : s;
 
 export async function pantallaApi(request, env, ctx, url, path, ip, h) {
   if (!path.startsWith("/api/pantalla/")) return null;
-  const { json, limit } = h;
+  const { json, limit, auth, isAdmin } = h;
   await tablas(env);
   const M = request.method, now = Date.now();
 
@@ -60,6 +66,8 @@ export async function pantallaApi(request, env, ctx, url, path, ip, h) {
   if (!m || !SALA.test(m[1])) return null;
   const sala = m[1], act = m[2] || "";
 
+  // the public room is not opened by anyone
+  if (sala === PUBLICA && act === "abrir") return json({ ok: true, publica: true });
   // the screen opens (or takes back) its room with its key and its world
   if (act === "abrir" && M === "POST") {
     const b = await request.json().catch(() => ({}));
@@ -76,6 +84,7 @@ export async function pantallaApi(request, env, ctx, url, path, ip, h) {
 
   // the phone asks which world the screen shows (to offer its figures)
   if (act === "info" && M === "GET") {
+    if (sala === PUBLICA) return json({ mundo: "jardin", publica: true });
     const row = await env.DB.prepare("SELECT mundo FROM pm_salas WHERE sala = ?").bind(sala).first();
     if (!row) return json({ error: "Esa pantalla no está encendida. Revisa el código." }, 404);
     return json({ mundo: row.mundo || "jardin" });
@@ -84,13 +93,14 @@ export async function pantallaApi(request, env, ctx, url, path, ip, h) {
   // the screen asks what changed since its last look (3 s overlap: the client ignores ids it already has)
   if (!act && M === "GET") {
     const since = Math.max(0, Number(url.searchParams.get("since")) || 0);
+    const mq = DEL_MUNDO[url.searchParams.get("mundo")], kinds = mq ? ` AND kind IN (${mq.map(() => "?").join(",")})` : "", kb = mq || [];
     let items, gone = [];
     if (!since) {
-      ({ results: items } = await env.DB.prepare("SELECT id, kind, name, msg, at FROM pm_items WHERE sala = ? AND gone = 0 ORDER BY at DESC LIMIT ?").bind(sala, MAX_VIVAS).all());
+      ({ results: items } = await env.DB.prepare(`SELECT id, kind, name, msg, at FROM pm_items WHERE sala = ? AND gone = 0${kinds} ORDER BY at DESC LIMIT ?`).bind(sala, ...kb, MAX_VIVAS).all());
       items.reverse();
     } else {
       const s = since - 3000;
-      ({ results: items } = await env.DB.prepare("SELECT id, kind, name, msg, at FROM pm_items WHERE sala = ? AND gone = 0 AND at > ? ORDER BY at LIMIT 40").bind(sala, s).all());
+      ({ results: items } = await env.DB.prepare(`SELECT id, kind, name, msg, at FROM pm_items WHERE sala = ? AND gone = 0 AND at > ?${kinds} ORDER BY at LIMIT 40`).bind(sala, s, ...kb).all());
       ({ results: gone } = await env.DB.prepare("SELECT id FROM pm_items WHERE sala = ? AND gone = 1 AND gone_at > ? LIMIT 100").bind(sala, s).all());
       gone = gone.map(r => r.id);
     }
@@ -99,7 +109,7 @@ export async function pantallaApi(request, env, ctx, url, path, ip, h) {
 
   // a phone releases its figure with its wish (replaces the one it already had)
   if (act === "soltar" && M === "POST") {
-    const salaRow = await env.DB.prepare("SELECT sala FROM pm_salas WHERE sala = ?").bind(sala).first();
+    const salaRow = sala === PUBLICA || await env.DB.prepare("SELECT sala FROM pm_salas WHERE sala = ?").bind(sala).first();
     if (!salaRow) return json({ error: "Esa pantalla no está encendida. Revisa el código." }, 404);
     const f = await request.formData().catch(() => null);
     if (!f) return json({ error: "No llegó tu dibujo." }, 400);
@@ -117,8 +127,8 @@ export async function pantallaApi(request, env, ctx, url, path, ip, h) {
     await env.DB.batch([
       env.DB.prepare("UPDATE pm_items SET gone = 1, gone_at = ? WHERE sala = ? AND uid = ? AND gone = 0").bind(now, sala, uid),
       env.DB.prepare("INSERT INTO pm_items (id, sala, kind, name, msg, uid, at) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(id, sala, kind, name, msg, uid, now),
-      // too many: the oldest leave
-      env.DB.prepare(`UPDATE pm_items SET gone = 1, gone_at = ? WHERE id IN (SELECT id FROM pm_items WHERE sala = ? AND gone = 0 ORDER BY at DESC LIMIT -1 OFFSET ${MAX_VIVAS})`).bind(now, sala),
+      // too many in this world: the oldest leave
+      env.DB.prepare(`UPDATE pm_items SET gone = 1, gone_at = ? WHERE id IN (SELECT id FROM pm_items WHERE sala = ? AND gone = 0 AND kind IN (?, ?) ORDER BY at DESC LIMIT -1 OFFSET ${MAX_VIVAS})`).bind(now, sala, ...DEL_MUNDO[mundoDe(kind)]),
     ]);
     return json({ ok: true, id });
   }
@@ -126,8 +136,13 @@ export async function pantallaApi(request, env, ctx, url, path, ip, h) {
   // the screen removes one (moderation: double click on it)
   if (act === "quitar" && M === "POST") {
     const b = await request.json().catch(() => ({}));
-    const row = await env.DB.prepare("SELECT llave FROM pm_salas WHERE sala = ?").bind(sala).first();
-    if (!row || row.llave !== await sha(String(b.llave || ""))) return json({ error: "Solo la pantalla puede quitar figuras." }, 403);
+    if (sala === PUBLICA) {
+      const user = await auth(request, env);
+      if (!isAdmin(env, user)) return json({ error: "En la sala pública solo un admin puede quitar figuras." }, 403);
+    } else {
+      const row = await env.DB.prepare("SELECT llave FROM pm_salas WHERE sala = ?").bind(sala).first();
+      if (!row || row.llave !== await sha(String(b.llave || ""))) return json({ error: "Solo la pantalla puede quitar figuras." }, 403);
+    }
     if (b.todas) await env.DB.prepare("UPDATE pm_items SET gone = 1, gone_at = ? WHERE sala = ? AND gone = 0").bind(now, sala).run();
     else await env.DB.prepare("UPDATE pm_items SET gone = 1, gone_at = ? WHERE sala = ? AND id = ?").bind(now, sala, String(b.id || "")).run();
     return json({ ok: true });

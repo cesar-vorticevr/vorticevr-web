@@ -28,7 +28,7 @@
 <link rel="icon" href="assets/icono.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Cormorant+Garamond:ital,wght@1,500;1,600&display=swap">
 <style>
 /* Layout: one dark "observatory" stage. Full-screen particle vortex that becomes the Vórtice VR mark,
    then playable projects as big tilt cards, services, other projects, about, contact.
@@ -405,6 +405,20 @@ header.top .brand{flex:none}
 .stcard:hover .xgo .arr{transform:rotate(-45deg);background:var(--vortex)}
 @media (max-width:760px){.stcard{grid-template-columns:1fr}.stimgs{min-height:180px}.stbody{padding:24px}}
 
+/* "Pantalla mágica": the open experience everyone shares (pantalla-magica/), with the Vórtice VR text */
+#pantalla .pmx{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:clamp(24px,4vw,56px);align-items:center}
+.pm-ph{position:relative;display:block;border-radius:22px;overflow:hidden;aspect-ratio:16/9;border:1px solid rgba(210,184,255,.25);box-shadow:0 30px 80px -30px rgba(139,63,214,.7),0 0 60px rgba(255,190,85,.12);text-decoration:none}
+.pm-ph img{width:100%;height:100%;object-fit:cover;display:block;transition:transform 1.2s var(--ease)}
+.pm-ph:hover img{transform:scale(1.04)}
+.pm-ph::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(5,2,11,.75))}
+.pm-ph>span{position:absolute;left:18px;bottom:16px;z-index:1;font:600 .78rem "Sora",system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#ffbe55}
+.pm-tx h2{margin:.35em 0 .55em;font-size:clamp(2rem,4.2vw,3.3rem);line-height:1.05}
+.pm-tx blockquote{margin:0;padding:0 0 0 18px;border-left:2px solid rgba(255,190,85,.55)}
+.pm-tx blockquote p{margin:0 0 .8em;font:italic 500 clamp(1.08rem,1.6vw,1.28rem)/1.55 "Cormorant Garamond",Georgia,serif;color:#e9e0ff}
+.pm-tx cite{display:block;font:600 .85rem "Sora",system-ui,sans-serif;font-style:normal;color:#ffbe55;margin:.2em 0 1.2em}
+.pm-tx .xmore{justify-content:flex-start;margin-top:0}
+@media (max-width:860px){#pantalla .pmx{grid-template-columns:1fr}}
+
 /* "Galerías Vórtice VR": not one more card but its own corner (paid plans), golden and with framed pictures */
 .galx{position:relative;display:flex;align-items:center;gap:26px;margin-top:22px;padding:26px 28px;border-radius:22px;text-decoration:none;color:inherit;overflow:hidden;border:1px solid rgba(255,190,85,.55);background:radial-gradient(60% 140% at 0% 0%,rgba(255,220,160,.18),transparent 60%),linear-gradient(120deg,#1a0f2c,#0b0616 70%);box-shadow:0 24px 60px -30px rgba(255,190,85,.5)}
 .galx:hover{border-color:#ffd88a}
@@ -489,6 +503,22 @@ header.top .brand{flex:none}
     <div class="xempty reveal" id="xempty" hidden><b data-en="The first ones are coming">Muy pronto, las primeras</b><span id="xemptyT" data-en="Make an experience and, in My account, turn on «Show in Explore» so it appears here.">Crea una experiencia y, en Mi cuenta, activa «Mostrar en Explora» para que aparezca aquí.</span></div>
     <div class="xmore reveal"><a class="btn primary mag" href="explora/" data-en="See all in Explore →">Ver todas en Explora →</a><a class="btn sun mag" href="crear/" data-en="Create mine">Crear la mía</a></div>
     <a class="galx reveal" href="galerias/"><span class="gx-ph" aria-hidden="true"></span><span class="gx-tx"><span class="gx-k" data-en="Vórtice VR Galleries · Pro and Premium">Galerías Vórtice VR · Pro y Premium</span><b data-en="Mount your exhibition in 3D">Monta tu exposición en 3D</b><span class="gx-p" data-en="Your artworks at their real size in a museum, a classic room or a gallery in space. Several rooms, the exhibition text and a link to share it.">Tus obras a tamaño real en un museo, una sala clásica o una galería en el espacio. Varias salas, el texto de la exposición y un link para compartirla.</span><span class="gx-go" data-en="See the galleries →">Ver las galerías →</span></span></a>
+  </div></section>
+  <section id="pantalla"><div class="wrap">
+    <div class="pmx">
+      <a class="pm-ph reveal" href="pantalla-magica/"><img src="assets/proyectos/pantalla-magica.webp" alt="Pantalla mágica: farolitos y globos pintados por la gente suben en un cielo de noche" data-en-alt="Magic screen: lanterns and balloons painted by people rise in a night sky" loading="lazy"><span data-en="Open to everyone · Garden, Ocean and Sky">Abierta para todos · Jardín, Océano y Cielo</span></a>
+      <div class="pm-tx reveal">
+        <span class="kick" data-en="Magic screen · A shared experience">Pantalla mágica · Experiencia compartida</span>
+        <h2 data-en="We never wish alone.">Nunca deseamos solos.</h2>
+        <blockquote>
+          <p data-en="We all carry something we want to let go of and something we want to see grow. A wish kept to yourself weighs; a shared one flies.">Todos llevamos algo que queremos dejar ir y algo que queremos ver crecer. Un deseo guardado pesa; uno compartido vuela.</p>
+          <p data-en="This screen belongs to no one and to everyone. Every figure is painted by a different hand, in a different place, and still they fly together in the same sky. Nothing here lasts forever: they arrive, shine for a while and leave to make room for new ones. So do the moments worth living.">Esta pantalla no es de nadie y es de todos. Cada figura la pinta una mano distinta, en un lugar distinto, y aun así vuelan juntas en el mismo cielo. Nada aquí dura para siempre: llegan, brillan un rato y se van para dejarle lugar a las nuevas. Así son también los momentos que valen la pena.</p>
+          <p data-en="Paint yours, write what you want to bloom, and set it free among everyone else's.">Pinta la tuya, escribe lo que quieres que florezca y suéltala entre las de todos.</p>
+        </blockquote>
+        <cite>— Vórtice VR</cite>
+        <div class="xmore"><a class="btn sun mag" href="pantalla-magica/" data-en="Enter the screen →">Entrar a la pantalla →</a><a class="btn mag" href="pantalla-magica/pintar/?sala=PUBLICA" data-en="Paint mine">Pintar la mía</a></div>
+      </div>
+    </div>
   </div></section>
   <section id="crea" class="mk"><div class="wrap">
     <div class="mkhero">

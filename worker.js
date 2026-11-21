@@ -269,7 +269,7 @@ async function api(request, env, ctx, url) {
   const M = request.method;
   if (path.startsWith("/api/cursos/")) return cursosApi(request, env, ctx, url, path, cursosH());
   if (path === "/api/biblioteca" || path.startsWith("/api/libro/")) { const r = await librosApi(request, env, ctx, url, path, librosH()); if (r) return r; }
-  if (path.startsWith("/api/pantalla/")) { const r = await pantallaApi(request, env, ctx, url, path, ip, { json, limit }); if (r) return r; }   // pantalla mágica (_pantalla/api.js)
+  if (path.startsWith("/api/pantalla/")) { const r = await pantallaApi(request, env, ctx, url, path, ip, { json, limit, auth, isAdmin }); if (r) return r; }   // pantalla mágica (_pantalla/api.js)
 
   // public: one experience's settings
   let m = path.match(/^\/api\/exp\/([a-z0-9-]+)$/);

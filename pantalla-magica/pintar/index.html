@@ -71,6 +71,10 @@
   #ver .acciones { pointer-events: auto; margin-top: 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
   #ver .cerrar { position: absolute; top: calc(14px + env(safe-area-inset-top)); right: 14px; all: unset; position: absolute; cursor: pointer; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.1); font-size: 22px; }
   .fade { animation: fade .6s ease both; } @keyframes fade { from { opacity: 0; transform: translateY(12px); } }
+  .mundosCel { display: none; gap: 6px; margin: 0 0 10px; }
+  .mundosCel.on { display: flex; }
+  .mundosCel button { all: unset; cursor: pointer; flex: 1; text-align: center; font-size: 13px; font-weight: 600; padding: 8px 4px; border-radius: 999px; color: var(--lila); background: var(--panel); border: 1px solid var(--borde); }
+  .mundosCel button.on { color: #1b0a36; background: linear-gradient(100deg, #ffbe55, #ffe2a8); border-color: transparent; }
   .figs { display: flex; gap: 10px; margin: 0 0 12px; }
   .fig { all: unset; cursor: pointer; flex: 1; display: grid; justify-items: center; gap: 4px; padding: 8px 6px 7px; border-radius: 16px; background: var(--panel); border: 1px solid var(--borde); font-size: 13px; font-weight: 600; color: var(--lila); }
   .fig canvas { width: 100%; max-width: 120px; height: 56px; object-fit: contain; }
@@ -94,6 +98,7 @@
   <section id="app" style="display:none">
     <h1 id="titulo">Pinta tu figura</h1>
     <p class="sub" id="ayuda"></p>
+    <div class="mundosCel" id="mundosCel"></div>
     <div class="figs" id="figs"></div>
     <div id="lienzo"><canvas id="disp"></canvas>
       <div id="vista"><button data-v="mitad" class="on">Un ala</button><button data-v="toda">Toda</button></div>
@@ -151,12 +156,20 @@ if (!/^[A-Z0-9]{4,8}$/.test(sala)) { pedirCodigo(); throw new Error("sin sala");
 $("salaChip").textContent = "SALA " + sala;
 
 // qué mundo tiene la pantalla (sus figuras)
-let MUNDO = "jardin";
+let MUNDO = "jardin", PUBLICA = sala === "PUBLICA";
 try {
   const r = await fetch(`/api/pantalla/${sala}/info`, { cache: "no-store" });
   if (r.status === 404) { pedirCodigo("Esa pantalla no está encendida. Revisa el código."); throw new Error("sala"); }
-  const j = await r.json(); if (MUNDOS[j.mundo]) MUNDO = j.mundo;
+  const j = await r.json(); if (MUNDOS[j.mundo]) MUNDO = j.mundo; if (j.publica) PUBLICA = true;
 } catch (e) { if (e.message === "sala") throw e; }
+// en la sala pública cada pantalla ve el mundo que elige: el link trae ese mundo y aquí se puede cambiar
+if (PUBLICA) {
+  if (MUNDOS[qs.get("mundo")]) MUNDO = qs.get("mundo");
+  $("salaChip").textContent = "SALA PÚBLICA";
+  const box = $("mundosCel"); box.classList.add("on");
+  box.innerHTML = Object.entries(MUNDOS).map(([id, m]) => `<button data-m="${id}" class="${id === MUNDO ? "on" : ""}">${m.nombre}</button>`).join("");
+  box.onclick = e => { const b = e.target.closest("button"); if (!b || b.dataset.m === MUNDO) return; const u = new URL(location.href); u.searchParams.set("mundo", b.dataset.m); location.href = u; };
+}
 const MD = MUNDOS[MUNDO];
 $("app").style.display = "";
 $("deseo").placeholder = MD.deseo;
@@ -417,7 +430,7 @@ store.del("pm-dibujo");   // el de antes, de cuando solo había mariposas
 const guardada = store.get("pm-figura-" + MUNDO);
 setEspecie(MD.especies.includes(guardada) ? guardada : MD.especies[0]);
 // si la pantalla cambia de mundo, el celular cambia solo a las figuras del nuevo mundo (no mientras suelta una)
-setInterval(async () => {
+if (!PUBLICA) setInterval(async () => {
   if (document.hidden || $("ver").classList.contains("on") || $("soltar").disabled) return;
   try { const j = await (await fetch(`/api/pantalla/${sala}/info`, { cache: "no-store" })).json(); if (MUNDOS[j.mundo] && j.mundo !== MUNDO) location.reload(); } catch (e) {}
 }, 8000);

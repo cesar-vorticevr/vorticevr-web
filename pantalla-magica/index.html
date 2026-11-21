@@ -5,7 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pantalla mágica · Vórtice VR</title>
 <meta name="description" content="Una pantalla con mariposas mágicas en 3D: escanea el QR, pinta tu mariposa en el celular y suéltala para verla volar.">
-<meta name="robots" content="noindex">
+<link rel="canonical" href="https://vorticevr.mx/pantalla-magica/">
+<meta property="og:title" content="Pantalla mágica · Vórtice VR">
+<meta property="og:description" content="Pinta una figura en tu celular, escribe tu deseo y suéltala en una pantalla que compartimos todos.">
+<meta property="og:url" content="https://vorticevr.mx/pantalla-magica/">
+<meta property="og:image" content="https://vorticevr.mx/assets/proyectos/pantalla-magica.webp">
 <link rel="icon" href="../assets/icono.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=IBM+Plex+Mono:wght@500&family=Cormorant+Garamond:ital,wght@1,600&display=swap" rel="stylesheet">
@@ -58,6 +62,42 @@
   #aviso { inset: 0; display: none; place-items: center; text-align: center; background: rgba(5,2,11,.85); pointer-events: auto; z-index: 5; }
   #aviso.on { display: grid; }
   #aviso button { margin-top: 18px; font: 600 16px Sora; padding: .8em 1.6em; border: 0; border-radius: 999px; background: var(--oro); color: #1b0a36; cursor: pointer; }
+  /* sala pública: la entrada con el escrito, los mundos y, en el celular, el botón para pintar */
+  #intro { position: fixed; inset: 0; z-index: 6; display: none; place-items: center; padding: 24px; overflow-y: auto;
+    background: radial-gradient(80% 70% at 50% 40%, rgba(42,14,85,.82), rgba(5,2,11,.94)); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: opacity .9s; }
+  #intro.on { display: grid; }
+  #intro.fuera { opacity: 0; pointer-events: none; }
+  #intro article { max-width: 640px; text-align: center; animation: sube 1.4s ease both; }
+  @keyframes sube { from { opacity: 0; transform: translateY(18px); } }
+  #intro .k { font: 500 12px "IBM Plex Mono", monospace; letter-spacing: .35em; text-transform: uppercase; color: var(--oro); }
+  #intro h2 { margin: .5em 0 .7em; font: 800 clamp(30px, 5vw, 54px)/1.05 Sora, sans-serif; letter-spacing: -.02em;
+    background: linear-gradient(100deg, #fff, var(--lila) 50%, #ffd9a0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #intro p { margin: 0 0 1em; font: italic 500 clamp(18px, 2vw, 23px)/1.5 "Cormorant Garamond", Georgia, serif; color: #efe6ff; }
+  #intro .firma { font: 600 14px Sora, sans-serif; color: var(--oro); font-style: normal; letter-spacing: .04em; }
+  #intro .mundos { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 26px 0 8px; }
+  #intro .mundos button, #pmundos button { font: 600 15px Sora, sans-serif; padding: .75em 1.3em; border-radius: 999px; cursor: pointer; color: #fff;
+    background: rgba(255,255,255,.07); border: 1px solid rgba(210,184,255,.3); }
+  #intro .mundos button.on { background: linear-gradient(100deg, #ffbe55, #ffe2a8); color: #1b0a36; border-color: transparent; box-shadow: 0 0 30px rgba(255,190,85,.45); }
+  #intro .entrar { margin-top: 14px; font: 800 17px Sora, sans-serif; padding: 1em 2.2em; border: 0; border-radius: 999px; cursor: pointer; color: #1b0a36;
+    background: linear-gradient(100deg, #ffbe55, #ffe2a8, #ffbe55); background-size: 200% 100%; animation: oro 3s linear infinite; box-shadow: 0 0 40px rgba(255,190,85,.5); }
+  @keyframes oro { to { background-position: -200% 0; } }
+  #intro .nota { margin-top: 18px; font: 400 13px Sora, sans-serif; color: rgba(210,184,255,.7); font-style: normal; }
+  #pmundos { left: 50%; bottom: 3.4vh; transform: translateX(-50%); display: none; gap: 8px; pointer-events: auto; transition: opacity 1s; }
+  #pmundos button { font-size: 13px; padding: .55em 1.1em; background: rgba(12,4,26,.55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  #pmundos button.on { border-color: var(--oro); color: var(--oro); }
+  body.publica #pmundos { display: flex; }
+  body.quieto #pmundos { opacity: 0; }
+  /* ?limpio=1: solo la escena y el título (para grabar video o tomar fotos) */
+  body.limpio #ayuda, body.limpio #qr, body.limpio #pmundos, body.limpio #pintar, body.limpio #intro { display: none !important; }
+  #pintar { display: none; right: 16px; bottom: 18px; pointer-events: auto; font: 800 16px Sora, sans-serif; padding: 1em 1.5em; border-radius: 999px; text-decoration: none; color: #1b0a36;
+    background: linear-gradient(100deg, #ffbe55, #ffe2a8); box-shadow: 0 0 30px rgba(255,190,85,.5); }
+  @media (max-width: 760px), (pointer: coarse) and (max-width: 1100px) {
+    body.publica #qr { display: none; }
+    body.publica #pintar { display: block; }
+    body.publica #pmundos { bottom: 86px; }
+    #ayuda { display: none; }
+  }
+  @media (max-width: 520px) { #titulo h1 { font-size: 24px; } #logo { width: 68px; } }
 </style>
 </head>
 <body>
@@ -66,6 +106,20 @@
 <img class="ui" id="logo" src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR">
 <div class="ui" id="qr"><canvas id="qrc" width="600" height="600"></canvas></div>
 <div class="ui" id="ayuda"><kbd>F</kbd> pantalla completa · <kbd>Q</kbd> mostrar u ocultar el QR · <kbd>D</kbd> mostrar u ocultar los deseos · doble clic en una figura para quitarla<br>Mundo: <span id="mundos"></span><br>Para un iPad en el evento (pintan una persona tras otra): <a id="kiosco" target="_blank" style="color:#ffbe55;pointer-events:auto"></a></div>
+<div class="ui" id="pmundos"></div>
+<a class="ui" id="pintar" href="#">✦ Pinta la tuya</a>
+<div id="intro"><article>
+  <div class="k">✦ Pantalla mágica · Vórtice VR</div>
+  <h2>Nunca deseamos solos</h2>
+  <p>Todos llevamos algo que queremos dejar ir y algo que queremos ver crecer. Un deseo guardado pesa; uno compartido vuela.</p>
+  <p>Esta pantalla no es de nadie y es de todos. Cada figura la pinta una mano distinta, en un lugar distinto, y aun así vuelan juntas en el mismo cielo. No sabemos quién la soltó ni de dónde viene: solo que alguien, en algún momento, se atrevió a desear.</p>
+  <p>Nada aquí dura para siempre. Las figuras llegan, brillan un rato y se van para dejarle lugar a las nuevas. Así son también los momentos que valen la pena: no se sostienen, se viven.</p>
+  <p>Pinta la tuya. Escribe lo que quieres que florezca. Y cuando la veas volar entre las de otros, recuerda que lo que soltamos con intención encuentra su camino.</p>
+  <p class="firma">— Vórtice VR</p>
+  <div class="mundos" id="imundos"></div>
+  <button class="entrar" id="entrar">Entrar</button>
+  <div class="nota">Escanea el código de la esquina o toca «Pinta la tuya» para soltar tu figura con tu deseo.</div>
+</article></div>
 <div class="ui" id="aviso"><div><h2 id="avisoT">Esa sala ya es de otra pantalla</h2><p id="avisoP" style="color:var(--lila)">Abre una sala nueva para esta pantalla.</p><button id="avisoB">Abrir una sala nueva</button></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
@@ -79,6 +133,12 @@ import { ESPECIES, MUNDOS, rng, componer, aura } from "../assets/pantalla/especi
 
 const qs = new URLSearchParams(location.search);
 const MUNDO = MUNDOS[qs.get("mundo")] ? qs.get("mundo") : "jardin", MD = MUNDOS[MUNDO];
+// Sala pública (la de la portada): sin ?sala ni ?privada, todas las pantallas comparten la sala PUBLICA y cada quien
+// elige el mundo que ve. Para un evento: ?privada=1 crea una sala propia (o ?sala=CÓDIGO la retoma).
+const PUBLICA = "PUBLICA";
+const ES_PUBLICA = !qs.get("sala") && qs.get("privada") !== "1" || (qs.get("sala") || "").toUpperCase() === PUBLICA;
+if (ES_PUBLICA) document.body.classList.add("publica");
+if (qs.get("limpio") === "1") document.body.classList.add("limpio");
 document.getElementById("h1").textContent = (qs.get("titulo") || MD.titulo).slice(0, 40);
 document.title = MD.titulo + " · Vórtice VR";
 const store = { get(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
@@ -311,8 +371,9 @@ function agregarReal(it, conLlegada) {
 }
 
 // ---------- sala y tiempo real (la pantalla pregunta cada 2 s) ----------
-let sala = (qs.get("sala") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8), llave = "";
+let sala = ES_PUBLICA ? PUBLICA : (qs.get("sala") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8), llave = "";
 async function abrir(forzarNueva) {
+  if (ES_PUBLICA) { pintarQR(); return true; }
   const guard = store.get("pm-pantalla") || {};
   if (forzarNueva || !sala) sala = (!forzarNueva && guard.sala) || nuevaSala();
   llave = guard.sala === sala && guard.llave ? guard.llave : rnd32(16);
@@ -323,18 +384,20 @@ async function abrir(forzarNueva) {
   }
   if (!r.ok) throw new Error("abrir " + r.status);
   store.set("pm-pantalla", { sala, llave });
-  const u = new URL(location.href); u.searchParams.set("sala", sala); u.searchParams.set("mundo", MUNDO); history.replaceState(null, "", u);
+  const u = new URL(location.href); u.searchParams.set("sala", sala); u.searchParams.set("mundo", MUNDO); u.searchParams.delete("privada"); history.replaceState(null, "", u);
   pintarQR();
   return true;
 }
 document.getElementById("avisoB").onclick = () => { const u = new URL(location.href); u.searchParams.delete("sala"); location.href = u; };
 function pintarQR() {
-  const url = `${location.origin}/pantalla-magica/pintar/?sala=${sala}`;
+  const url = `${location.origin}/pantalla-magica/pintar/?sala=${sala}` + (ES_PUBLICA ? `&mundo=${MUNDO}` : "");
+  document.getElementById("pintar").href = url;
   const qr = qrcode(0, "M"); qr.addData(url); qr.make();
   const n = qr.getModuleCount(), c = document.getElementById("qrc"), x = c.getContext("2d"), M = 36, cell = (600 - 2 * M) / n;
   x.fillStyle = "#fff"; x.fillRect(0, 0, 600, 600); x.fillStyle = "#2a0e55";
   for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (qr.isDark(r, k)) x.fillRect(M + k * cell - .3, M + r * cell - .3, cell + .6, cell + .6);
   const k = document.getElementById("kiosco"); k.href = url + "&kiosco=1"; k.textContent = url.replace(/^https?:\/\//, "") + "&kiosco=1";
+  if (ES_PUBLICA) { const pv = new URL(location.href); pv.search = "?privada=1&mundo=" + MUNDO; k.parentNode.insertAdjacentHTML("beforeend", `<br>Para un evento con su propia sala: <a href="${pv}" style="color:#ffbe55;pointer-events:auto">abrir una sala privada</a>`); }
   document.getElementById("mundos").innerHTML = Object.entries(MUNDOS).map(([id, m]) => {
     const u = new URL(location.href); u.searchParams.set("mundo", id); u.searchParams.delete("titulo");
     return id === MUNDO ? `<b style="color:#fff">${m.nombre}</b>` : `<a href="${u}" style="color:#ffbe55;pointer-events:auto">${m.nombre}</a>`;
@@ -343,7 +406,7 @@ function pintarQR() {
 let since = 0, primera = true;
 async function revisar() {
   try {
-    const r = await fetch(`/api/pantalla/${sala}?since=${since}`, { cache: "no-store" });
+    const r = await fetch(`/api/pantalla/${sala}?since=${since}&mundo=${MUNDO}`, { cache: "no-store" });
     if (r.ok) {
       const j = await r.json();
       for (const it of j.items) agregarReal(it, !primera);
@@ -504,14 +567,33 @@ addEventListener("dblclick", async e => {
   const hit = ray.intersectObjects(objs)[0]; if (!hit) return;
   const ag = figuras.get(hit.object.userData.agente); if (!ag) return;
   if (!confirm(`¿Quitar ${ag.name ? "la figura de " + ag.name : "esta figura"} y su deseo de la pantalla?`)) return;
-  seVa(ag);
-  fetch(`/api/pantalla/${sala}/quitar`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ llave, id: ag.id }) });
+  if (!ES_PUBLICA) seVa(ag);
+  let tok = ""; try { tok = JSON.parse(localStorage.getItem("vvr-sesion") || "{}").token || ""; } catch (e) {}
+  const r = await fetch(`/api/pantalla/${sala}/quitar`, { method: "POST", headers: { "Content-Type": "application/json", ...(tok ? { Authorization: "Bearer " + tok } : {}) }, body: JSON.stringify({ llave, id: ag.id }) });
+  if (!r.ok) { const j = await r.json().catch(() => ({})); alert(j.error || "No se pudo quitar."); }
 });
 // el cursor y la ayuda se esconden solos
 let quieto; const moverMouse = () => { document.body.classList.remove("quieto"); document.getElementById("ayuda").style.opacity = 1; clearTimeout(quieto); quieto = setTimeout(() => { document.body.classList.add("quieto"); document.getElementById("ayuda").style.opacity = 0; }, 4000); };
 addEventListener("mousemove", moverMouse); moverMouse();
 
 document.fonts?.load("italic 600 40px 'Cormorant Garamond'").catch(() => {});
+if (ES_PUBLICA) {
+  const ir = id => { const u = new URL(location.href); u.search = "?mundo=" + id; if (id !== MUNDO) location.href = u; };
+  const botones = cls => Object.entries(MUNDOS).map(([id, m]) => `<button data-m="${id}" class="${id === MUNDO ? "on" : ""}">${m.nombre}</button>`).join("");
+  const pm = document.getElementById("pmundos"), im = document.getElementById("imundos");
+  pm.innerHTML = botones(); im.innerHTML = botones();
+  pm.onclick = e => { const b = e.target.closest("button"); if (b) ir(b.dataset.m); };
+  // la entrada con el escrito: la primera vez de cada visita (al cambiar de mundo ya no)
+  const intro = document.getElementById("intro");
+  let visto = false; try { visto = sessionStorage.getItem("pm-intro") === "1"; } catch (e) {}
+  if (!visto) intro.classList.add("on");
+  im.onclick = e => { const b = e.target.closest("button"); if (!b) return; im.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); im.dataset.m = b.dataset.m; };
+  document.getElementById("entrar").onclick = () => {
+    try { sessionStorage.setItem("pm-intro", "1"); } catch (e) {}
+    if (im.dataset.m && im.dataset.m !== MUNDO) return ir(im.dataset.m);
+    intro.classList.add("fuera"); setTimeout(() => intro.classList.remove("on"), 900);
+  };
+}
 equilibrar();
 animar();
 abrir(false).then(ok => ok && revisar()).catch(() => { document.getElementById("avisoT").textContent = "No se pudo encender la pantalla"; document.getElementById("avisoP").textContent = "Revisa el internet y recarga la página."; document.getElementById("avisoB").textContent = "Recargar"; document.getElementById("avisoB").onclick = () => location.reload(); document.getElementById("aviso").classList.add("on"); });
