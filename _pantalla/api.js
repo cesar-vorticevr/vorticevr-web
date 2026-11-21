@@ -4,8 +4,8 @@
 //  - Sala = código de 4 a 8 letras que inventa la pantalla; la registra con una llave (solo esa pantalla puede quitar
 //    figuras) y con su mundo (jardín, océano, cielo), que dice al celular qué figuras ofrecer. Un celular sin sala
 //    abierta no puede soltar nada.
-//  - Cada celular (uid anónimo del navegador) tiene UNA figura en la pantalla: soltar otra reemplaza la suya (el modo
-//    iPad manda un uid nuevo cada vez).
+//  - Un celular puede soltar varias figuras (5 s entre una y otra): todas se quedan hasta que el mundo llega a su tope
+//    (MAX_VIVAS) y entonces se van las más viejas, sean de quien sean.
 //  - `kind` = figura (KINDS, igual que ESPECIES de assets/pantalla/especies.js); `msg` = el deseo (sin groserías,
 //    links, correos ni teléfonos).
 // Tablas pm_salas y pm_items; texturas en R2 `pantalla/<id>`. El cron diario borra lo de más de 3 días.
@@ -119,13 +119,12 @@ export async function pantallaApi(request, env, ctx, url, path, ip, h) {
     if (!img || typeof img === "string" || !/^image\/(webp|png)$/.test(img.type) || img.size > MAX_BYTES || img.size < 500) return json({ error: "Tu dibujo no se pudo leer. Intenta de nuevo." }, 400);
     const msg = limpio(f.get("msg"), 90);
     if (msg && (malo(msg) || datos(msg))) return json({ error: "Tu deseo no se puede mostrar en la pantalla: sin groserías, links, correos ni teléfonos.", deseo: true }, 400);
-    if (!(await limit(env, "pm-u:" + uid, 1, 10e3))) return json({ error: "Espera unos segundos para soltar otra.", espera: true }, 429);
+    if (!(await limit(env, "pm-u:" + uid, 1, 5e3))) return json({ error: "Espera unos segundos para soltar otra.", espera: true }, 429);
     if (!(await limit(env, "pm-ip:" + ip, 400, 3600e3))) return json({ error: "Muchas figuras desde esta red. Intenta en un rato." }, 429);
     const id = [...crypto.getRandomValues(new Uint8Array(10))].map(b => b.toString(16).padStart(2, "0")).join("");
     await env.MEDIA.put("pantalla/" + id, await img.arrayBuffer(), { httpMetadata: { contentType: img.type } });
     const name = cleanName(f.get("name"));
     await env.DB.batch([
-      env.DB.prepare("UPDATE pm_items SET gone = 1, gone_at = ? WHERE sala = ? AND uid = ? AND gone = 0").bind(now, sala, uid),
       env.DB.prepare("INSERT INTO pm_items (id, sala, kind, name, msg, uid, at) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(id, sala, kind, name, msg, uid, now),
       // too many in this world: the oldest leave
       env.DB.prepare(`UPDATE pm_items SET gone = 1, gone_at = ? WHERE id IN (SELECT id FROM pm_items WHERE sala = ? AND gone = 0 AND kind IN (?, ?) ORDER BY at DESC LIMIT -1 OFFSET ${MAX_VIVAS})`).bind(now, sala, ...DEL_MUNDO[mundoDe(kind)]),
