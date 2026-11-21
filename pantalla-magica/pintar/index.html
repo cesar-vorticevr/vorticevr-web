@@ -134,7 +134,7 @@
 <div id="ver"><canvas id="v3d"></canvas><button class="cerrar" id="cerrar3d">✕</button><div class="msg" id="verMsg"></div></div>
 
 <script type="module">
-import { ESPECIES, MUNDOS, componer, aura, rng } from "../../assets/pantalla/especies.js?v=3";
+import { ESPECIES, MUNDOS, componer, aura, rng } from "../../assets/pantalla/especies.js?v=4";
 import { sfx } from "../../assets/sonidos.js";
 
 const $ = id => document.getElementById(id);
@@ -416,6 +416,11 @@ $("soltar").onclick = async () => {
 store.del("pm-dibujo");   // el de antes, de cuando solo había mariposas
 const guardada = store.get("pm-figura-" + MUNDO);
 setEspecie(MD.especies.includes(guardada) ? guardada : MD.especies[0]);
+// si la pantalla cambia de mundo, el celular cambia solo a las figuras del nuevo mundo (no mientras suelta una)
+setInterval(async () => {
+  if (document.hidden || $("ver").classList.contains("on") || $("soltar").disabled) return;
+  try { const j = await (await fetch(`/api/pantalla/${sala}/info`, { cache: "no-store" })).json(); if (MUNDOS[j.mundo] && j.mundo !== MUNDO) location.reload(); } catch (e) {}
+}, 8000);
 </script>
 </body>
 </html>

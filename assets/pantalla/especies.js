@@ -119,8 +119,8 @@ const mariposa = {
       g.setIndex(idx); g.computeVertexNormals();
       return g;
     };
-    const mat = new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.55, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.55, metalness: 0.15, transparent: false });
-    const glowMat = glow ? new THREE.MeshBasicMaterial({ map: glow, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, opacity: 0.9 }) : null;
+    const mat = new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.3, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.55, metalness: 0.15, transparent: false });
+    const glowMat = glow ? new THREE.MeshBasicMaterial({ map: glow, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, opacity: 0.45 }) : null;
     const wings = [];
     for (const side of [1, -1]) {
       const pivot = new THREE.Group(), g = wingGeo(side);
@@ -166,8 +166,8 @@ function grid(THREE, nx, ny, fn) {   // fn(u, v) → [x, y, z, U, V]
   g.setIndex(idx); g.computeVertexNormals();
   return g;
 }
-const texMat = (THREE, tex, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.55, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.55, metalness: 0.1 }, o));
-const glowOf = (THREE, glow) => glow ? new THREE.MeshBasicMaterial({ map: glow, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }) : null;
+const texMat = (THREE, tex, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.3, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.55, metalness: 0.1 }, o));
+const glowOf = (THREE, glow) => glow ? new THREE.MeshBasicMaterial({ map: glow, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, opacity: 0.45 }) : null;
 const hex = c => c ? (Math.round(c[0] * 255) << 16 | Math.round(c[1] * 255) << 8 | Math.round(c[2] * 255)) : 0xd2b8ff;
 // llamita o resplandor cálido (sprite aditivo)
 function llama(THREE, color = "255,190,85") {
@@ -250,7 +250,7 @@ const libelula = {
     const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0d3340, emissive: hex(col), emissiveIntensity: 0.45, roughness: 0.3, metalness: 0.5 });
     const thorax = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.12, 6, 12), bodyMat); thorax.rotation.x = Math.PI / 2; thorax.position.z = 0.12; root.add(thorax);
     const tail = new THREE.Mesh(new THREE.CapsuleGeometry(0.022, 0.95, 4, 10), bodyMat); tail.rotation.x = Math.PI / 2; tail.position.z = -0.48; root.add(tail);
-    const eyeMat = new THREE.MeshStandardMaterial({ color: hex(col), emissive: hex(col), emissiveIntensity: 0.8, roughness: 0.15, metalness: 0.3 });
+    const eyeMat = new THREE.MeshStandardMaterial({ color: hex(col), emissive: hex(col), emissiveIntensity: 0.4, roughness: 0.15, metalness: 0.3 });
     for (const s of [1, -1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.055, 14, 10), eyeMat); e.position.set(s * 0.045, 0.02, 0.27); root.add(e); }
     root.userData.mats = [mat, gm, bodyMat, eyeMat].filter(Boolean);
     return {
@@ -309,7 +309,7 @@ const pez = {
     // un plano de 2 × 1 con la panza un poco inflada; la cola ondula
     const g = grid(THREE, 30, 12, (u, v) => [(u - 0.5) * 2 * S, (0.5 - v) * S, 0, u, 1 - v]);
     const base = g.attributes.position.array.slice(), uvs = g.attributes.uv.array;
-    const mat = texMat(THREE, tex, { emissiveIntensity: 0.5 }), gm = glowOf(THREE, glow);
+    const mat = texMat(THREE, tex, { emissiveIntensity: 0.3 }), gm = glowOf(THREE, glow);
     const body = new THREE.Mesh(g, mat); body.userData.ala = true; root.add(body);
     if (gm) { const k = new THREE.Mesh(g, gm); k.scale.setScalar(1.06); k.position.z = -0.03; k.renderOrder = -1; root.add(k); }
     root.userData.mats = [mat, gm].filter(Boolean);
@@ -362,13 +362,13 @@ const medusa = {
     const dome = new THREE.Mesh(grid(THREE, 40, 14, (u, v) => {
       const th = u * TAU, s = Math.sin(v * Math.PI / 2);
       return [Math.cos(th) * s * Rb, Math.cos(v * Math.PI / 2) * Hb, Math.sin(th) * s * Rb, 0.5 + Math.cos(th) * v * k, 0.5 - Math.sin(th) * v * k];
-    }), texMat(THREE, tex, { alphaTest: 0.01, transparent: true, opacity: 0.9, emissiveIntensity: 0.85, depthWrite: false }));
+    }), texMat(THREE, tex, { alphaTest: 0.01, transparent: true, opacity: 0.9, emissiveIntensity: 0.42, depthWrite: false }));
     dome.userData.ala = true;
     const bell = new THREE.Group(); bell.add(dome); root.add(bell);
     const brillo = llama(THREE, `${Math.round(col?.[0] * 255 || 210)},${Math.round(col?.[1] * 255 || 184)},${Math.round(col?.[2] * 255 || 255)}`);
-    brillo.scale.setScalar(1.9); brillo.position.y = 0.15; brillo.material.opacity = 0.45; bell.add(brillo);
+    brillo.scale.setScalar(1.9); brillo.position.y = 0.15; brillo.material.opacity = 0.18; bell.add(brillo);
     // tentáculos: cintas que ondulan
-    const N = 12, SEG = 24, tMat = new THREE.MeshBasicMaterial({ color: hex(col), transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    const N = 12, SEG = 24, tMat = new THREE.MeshBasicMaterial({ color: hex(col), transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
     const tents = [];
     for (let i = 0; i < N; i++) {
       const oral = i < 4, g = new THREE.BufferGeometry(), arr = new Float32Array((SEG + 1) * 2 * 3), idx = [];
@@ -431,18 +431,18 @@ const farolito = {
   build(THREE, tex) {
     const root = new THREE.Group(), body = new THREE.Group(); body.position.y = -0.6; root.add(body);
     const prof = [[0.30, 0], [0.36, 0.25], [0.42, 0.6], [0.45, 0.9], [0.44, 1.0]].map(([r, y]) => new THREE.Vector2(r, y));
-    const mat = texMat(THREE, tex, { alphaTest: 0, emissiveIntensity: 0.62, roughness: 0.9, metalness: 0 });
+    const mat = texMat(THREE, tex, { alphaTest: 0, emissiveIntensity: 0.3, roughness: 0.9, metalness: 0 });
     const side = new THREE.Mesh(new THREE.LatheGeometry(prof, 36), mat); side.userData.ala = true; body.add(side);
-    const capMat = new THREE.MeshStandardMaterial({ color: 0xffd9a0, emissive: 0xffb060, emissiveIntensity: 0.45, side: THREE.DoubleSide, roughness: 0.9 });
+    const capMat = new THREE.MeshStandardMaterial({ color: 0xffd9a0, emissive: 0xffb060, emissiveIntensity: 0.2, side: THREE.DoubleSide, roughness: 0.9 });
     const cap = new THREE.Mesh(new THREE.LatheGeometry([[0.44, 1.0], [0.38, 1.1], [0.22, 1.17], [0.001, 1.2]].map(([r, y]) => new THREE.Vector2(r, y)), 36), capMat); body.add(cap);
     const ringMat = new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.8 });
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.014, 6, 36), ringMat); ring.rotation.x = Math.PI / 2; body.add(ring);
     const fuego = llama(THREE); fuego.position.y = 0.12; fuego.scale.setScalar(0.32); body.add(fuego);
-    const dentro = llama(THREE, "255,150,60"); dentro.position.y = 0.3; dentro.scale.setScalar(0.9); dentro.material.opacity = 0.18; body.add(dentro);
+    const dentro = llama(THREE, "255,150,60"); dentro.position.y = 0.3; dentro.scale.setScalar(0.7); dentro.material.opacity = 0.1; body.add(dentro);
     root.userData.mats = [mat, capMat, ringMat, fuego.material, dentro.material];
     return {
       root,
-      tick(t) { const f = 0.3 + Math.sin(t * 13) * 0.03 + Math.sin(t * 7.3) * 0.02; fuego.scale.set(f * 0.8, f, 1); dentro.material.opacity = 0.16 + Math.sin(t * 9) * 0.03; },
+      tick(t) { const f = 0.3 + Math.sin(t * 13) * 0.03 + Math.sin(t * 7.3) * 0.02; fuego.scale.set(f * 0.8, f, 1); dentro.material.opacity = 0.09 + Math.sin(t * 9) * 0.02; },
       tips(out) { out[0].set(0, 0.1, 0); out[1].set((Math.random() - 0.5) * 0.5, 0.5, 0.3); body.localToWorld(out[0]); body.localToWorld(out[1]); return out; },
     };
   },
@@ -470,7 +470,7 @@ const globo = {
   build(THREE, tex) {
     const root = new THREE.Group(), body = new THREE.Group(); body.position.y = -0.55; root.add(body);
     const prof = [[0.10, 0], [0.28, 0.12], [0.50, 0.38], [0.62, 0.70], [0.63, 0.95], [0.55, 1.2], [0.38, 1.40], [0.18, 1.50], [0.001, 1.53]].map(([r, y]) => new THREE.Vector2(r, y));
-    const mat = texMat(THREE, tex, { alphaTest: 0, emissiveIntensity: 0.45, roughness: 0.5 });
+    const mat = texMat(THREE, tex, { alphaTest: 0, emissiveIntensity: 0.25, roughness: 0.5 });
     const env = new THREE.Mesh(new THREE.LatheGeometry(prof, 40), mat); env.userData.ala = true; body.add(env);
     const cesto = new THREE.MeshStandardMaterial({ color: 0x7a4b25, roughness: 0.9 });
     const box = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.22), cesto); box.position.y = -0.4; body.add(box);

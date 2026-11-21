@@ -22,7 +22,12 @@
   body.quieto { cursor: none; }
   canvas#gl { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
   .ui { position: fixed; z-index: 2; pointer-events: none; }
-  #titulo { left: 3.2vw; top: 3vh; }
+  #titulo { left: max(28px, 3.2vw); top: 3vh; }
+  .deseo { position: fixed; left: 0; top: 0; z-index: 1; pointer-events: none; opacity: 0; max-width: min(34vw, 620px); text-align: center; padding: .6em 1.4em;
+    background: radial-gradient(ellipse at center, rgba(5,2,11,.62) 0%, rgba(5,2,11,.35) 55%, rgba(5,2,11,0) 75%); will-change: transform, opacity; }
+  .deseo p { margin: 0; font: italic 600 clamp(20px, 2vw, 42px)/1.2 "Cormorant Garamond", Georgia, serif; color: #fff; text-shadow: 0 0 14px rgba(210,184,255,.55), 0 2px 8px rgba(0,0,0,.7); }
+  .deseo span { display: block; margin-top: .45em; font: 600 clamp(12px, 1vw, 20px) Sora, sans-serif; color: var(--oro); text-shadow: 0 1px 6px rgba(0,0,0,.8); }
+  .deseo span.solo { margin: 0; font: italic 600 clamp(20px, 2vw, 40px) "Cormorant Garamond", Georgia, serif; color: #fff; }
   #titulo .k { font: 500 clamp(11px, .9vw, 18px) "IBM Plex Mono", monospace; letter-spacing: .35em; text-transform: uppercase; color: var(--oro); text-shadow: 0 0 18px rgba(255,190,85,.6); }
   #titulo h1 { margin: .35em 0 0; font-weight: 800; font-size: clamp(28px, 3.6vw, 76px); line-height: 1; letter-spacing: -.02em;
     background: linear-gradient(100deg, #fff 0%, var(--lila) 40%, #ffd9a0 60%, #fff 80%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
@@ -70,7 +75,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { ESPECIES, MUNDOS, rng, componer, aura } from "../assets/pantalla/especies.js?v=3";
+import { ESPECIES, MUNDOS, rng, componer, aura } from "../assets/pantalla/especies.js?v=4";
 
 const qs = new URLSearchParams(location.search);
 const MUNDO = MUNDOS[qs.get("mundo")] ? qs.get("mundo") : "jardin", MD = MUNDOS[MUNDO];
@@ -92,7 +97,7 @@ const LOOK = {
 const canvas = document.getElementById("gl");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
-renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.95;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 200);
 camera.position.set(0, 0, 14);
@@ -103,7 +108,7 @@ const calida = new THREE.PointLight(0xffbe55, 30, 30, 1.6); calida.position.set(
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.85, 0.65, 0.62);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.4, 0.5, 0.82);   // resplandor suave: con más se quemaban los dibujos
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
@@ -147,7 +152,7 @@ const fondoMat = new THREE.ShaderMaterial({
         float au = exp(-pow((vUv.y - .82 - .05 * sin(p.x * 2.0 + t * .1)) * 10.0, 2.0)) * (.5 + .5 * sin(p.x * 4.0 + t * .15));
         c += vec3(.2, .35, .7) * au * .25;
         vec2 lp = vec2(asp * .22, .34); float d = length(p - lp);
-        c += vec3(1.0, .93, .8) * (smoothstep(.04, .036, d) * (.55 + .12 * fbm(p * 30.0)) + exp(-d * 16.0) * .12);
+        c += vec3(1.0, .93, .8) * (smoothstep(.034, .031, d) * (.32 + .08 * fbm(p * 30.0)) + exp(-d * 18.0) * .06);
       }
       gl_FragColor = vec4(pow(c, vec3(1.9)) * 1.5, 1.0);   // a lineal: el OutputPass lo pasa a sRGB
     }`,
@@ -231,42 +236,21 @@ function metaNueva(ag) {
   ag.meta.set(R(-.4, .4) * vw, R(-.35, .35) * vh, z);
   ag.cambio = R(5, 11);
 }
-// el deseo (y el nombre) que acompaña a una figura: letra elegante con brillo
+// el deseo (y el nombre) que acompaña a una figura: texto HTML encima del 3D (así el resplandor no lo quema y se lee nítido)
 function deseo(msg, name) {
-  const c = document.createElement("canvas"), x = c.getContext("2d"), W = 1400;
-  const f1 = "italic 600 76px 'Cormorant Garamond', Georgia, serif", f2 = "600 44px Sora, sans-serif";
-  const lines = [];
-  if (msg) {
-    x.font = f1; let line = "";
-    for (const w of msg.split(" ")) { const t = line ? line + " " + w : w; if (x.measureText(t).width > W - 160 && line) { lines.push(line); line = w; } else line = t; }
-    if (line) lines.push(line);
-  }
-  const H = 60 + lines.length * 92 + (name ? 70 : 0) + 30;
-  c.width = W; c.height = H;
-  // velo oscuro suave detrás, para que se lea sobre las figuras y el fondo
-  const vg = x.createRadialGradient(W / 2, W / 2, 10, W / 2, W / 2, W / 2);
-  vg.addColorStop(0, "rgba(5,2,11,.55)"); vg.addColorStop(.6, "rgba(5,2,11,.3)"); vg.addColorStop(1, "rgba(5,2,11,0)");
-  x.save(); x.scale(1, H / W); x.fillStyle = vg; x.fillRect(0, 0, W, W); x.restore();
-  x.textAlign = "center"; x.textBaseline = "middle";
-  x.shadowColor = "rgba(210,184,255,.95)"; x.shadowBlur = 30;
-  x.font = f1; x.fillStyle = "#fff";
-  lines.forEach((l, i) => x.fillText((i === 0 ? "“" : "") + l + (i === lines.length - 1 ? "”" : ""), W / 2, 70 + i * 92));
-  if (name) {
-    x.font = msg ? f2 : f1; x.fillStyle = msg ? "#ffbe55" : "#fff"; x.shadowColor = "rgba(255,190,85,.9)";
-    x.fillText(msg ? "— " + name : name, W / 2, msg ? H - 60 : H / 2);
-  }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false, opacity: 0 }));
-  const w = 6.6; s.scale.set(w, w * H / W, 1); s.renderOrder = 10; scene.add(s);
-  s.userData.h = w * H / W;
-  return s;
+  const d = document.createElement("div"); d.className = "deseo";
+  if (msg) { const p = document.createElement("p"); p.textContent = "“" + msg + "”"; d.appendChild(p); }
+  if (name) { const n = document.createElement("span"); n.textContent = msg ? "— " + name : name; if (!msg) n.className = "solo"; d.appendChild(n); }
+  document.body.appendChild(d);
+  return d;
 }
 let verDeseos = true;
 function mostrarDeseo(ag, dura) {
   if (!verDeseos || (!ag.msg && !ag.name) || ag.etiqueta) return;
   ag.etiqueta = deseo(ag.msg, ag.name); ag.etT = 0; ag.etDura = dura;
 }
-function quitarEtiqueta(ag) { if (!ag.etiqueta) return; scene.remove(ag.etiqueta); ag.etiqueta.material.map.dispose(); ag.etiqueta.material.dispose(); ag.etiqueta = null; }
+function quitarEtiqueta(ag) { if (!ag.etiqueta) return; ag.etiqueta.remove(); ag.etiqueta = null; }
+const proy = new THREE.Vector3();
 
 function llega(ag) {
   // nace de una explosión de luz abajo y sube con su deseo
@@ -313,7 +297,7 @@ function equilibrar() {
   else if (casa.length > Math.max(0, faltan)) seVa(casa[0]);
 }
 function agregarReal(it, conLlegada) {
-  if (figuras.has(it.id)) return;
+  if (figuras.has(it.id) || !MD.especies.includes(it.kind)) return;   // cada mundo muestra solo sus figuras
   figuras.set(it.id, { cargando: true, estado: "cargando" });
   const img = new Image(); img.crossOrigin = "anonymous";
   img.onload = () => {
@@ -443,23 +427,28 @@ function mover(ag, dt) {
   }
 
   // destellos
-  if (ag.m.tips) { ag.m.tips(tips); const n = ag.real ? 2 : 1; for (let i = 0; i < n; i++) if (Math.random() < (ag.real ? .95 : .5)) { const tp = tips[i % 2 ? 1 : Math.random() < .5 ? 0 : 1]; chispa(tp.x, tp.y, tp.z, ag.col, ag.real ? 1.3 : .9, .14, 1.8); } }
+  if (ag.m.tips) { ag.m.tips(tips); const n = ag.real ? 2 : 1; for (let i = 0; i < n; i++) if (Math.random() < (ag.real ? .95 : .5)) { const tp = tips[i % 2 ? 1 : Math.random() < .5 ? 0 : 1]; chispa(tp.x, tp.y, tp.z, ag.col, ag.real ? 1 : .7, .14, 1.6); } }
   // el deseo flota sobre su figura
   if (ag.etiqueta) {
     ag.etT += dt;
-    const e = ag.etiqueta, hgt = e.userData.h;
-    // sin salirse de la pantalla ni quedar detrás del QR (abajo a la derecha)
-    const ex = THREE.MathUtils.clamp(ag.p.x, -vw / 2 + 3.5, vw / 2 - 3.5), ey = THREE.MathUtils.clamp(ag.p.y + 1.1 * ag.esc + hgt / 2, -vh / 2 + hgt / 2 + .4, vh / 2 - hgt / 2 - .3);
-    e.position.set(ex > vw / 2 - 6.5 && ey < -vh / 2 + 4.5 ? vw / 2 - 6.5 : ex, ey, ag.p.z + .5);
+    const e = ag.etiqueta, W = innerWidth, H = innerHeight;
+    // encima de su figura, sin salirse de la pantalla ni quedar detrás del QR (abajo a la derecha)
+    proy.set(ag.p.x, ag.p.y + 1.05 * ag.esc, ag.p.z).project(camera);
+    let ex = (proy.x + 1) / 2 * W, ey = (1 - proy.y) / 2 * H;
+    const bw = e.offsetWidth, bh = e.offsetHeight;
+    ex = THREE.MathUtils.clamp(ex, bw / 2 + 20, W - bw / 2 - 20); ey = THREE.MathUtils.clamp(ey, bh + 20, H - 20);
+    const qr = document.getElementById("qr").getBoundingClientRect();
+    if (ex + bw / 2 > qr.left - 10 && ey > qr.top) ex = qr.left - 10 - bw / 2;
+    e.style.transform = `translate(${ex - bw / 2}px, ${ey - bh}px)`;
     const k = ag.etT < 1.2 ? ag.etT / 1.2 : Math.max(0, 1 - (ag.etT - ag.etDura) / 1.8);
-    e.material.opacity = k;
+    e.style.opacity = k;
     if (ag.etT > ag.etDura + 1.8) quitarEtiqueta(ag);
   }
   if (ag.estado === "saliendo") {
     if (E.mov !== "sube") rumbo(ag, dt);
     const k = Math.max(0, 1 - ag.t / 4);
     for (const mt of r.userData.mats) mt.opacity = Math.min(mt.opacity, k);
-    if (ag.etiqueta) ag.etiqueta.material.opacity = Math.min(ag.etiqueta.material.opacity, k);
+    if (ag.etiqueta) ag.etiqueta.style.opacity = Math.min(+ag.etiqueta.style.opacity || 0, k);
     if (ag.t > 4.2) quitar(ag);
   }
   if (E.mov !== "sube" && ag.estado === "volando" && (Math.abs(ag.p.x) > vw * .62 || Math.abs(ag.p.y) > vh * .62)) metaNueva(ag);
