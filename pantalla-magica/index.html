@@ -57,11 +57,11 @@
 </head>
 <body>
 <canvas id="gl"></canvas>
-<div class="ui" id="titulo"><div class="k">✦ Pantalla mágica</div><h1 id="h1">Jardín de mariposas</h1><div id="cuenta">Escanea el código y suelta la tuya</div></div>
+<div class="ui" id="titulo"><h1 id="h1">Jardín de mariposas</h1></div>
 <img class="ui" id="logo" src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR">
-<div class="ui" id="qr"><canvas id="qrc" width="600" height="600"></canvas><div class="t">Pinta tu mariposa<br>y suéltala aquí</div><div class="s">Escanea con la cámara de tu celular</div><div class="c" id="codigo">SALA ····</div></div>
+<div class="ui" id="qr"><canvas id="qrc" width="600" height="600"></canvas></div>
 <div class="ui" id="toasts"></div>
-<div class="ui" id="ayuda"><kbd>F</kbd> pantalla completa · <kbd>Q</kbd> mostrar u ocultar el QR · doble clic en una mariposa para quitarla</div>
+<div class="ui" id="ayuda"><kbd>F</kbd> pantalla completa · <kbd>Q</kbd> mostrar u ocultar el QR · doble clic en una mariposa para quitarla<br>Para un iPad en el evento (pintan una persona tras otra): <a id="kiosco" target="_blank" style="color:#ffbe55;pointer-events:auto"></a></div>
 <div class="ui" id="aviso"><div><h2 id="avisoT">Esa sala ya es de otra pantalla</h2><p id="avisoP" style="color:var(--lila)">Abre una sala nueva para esta pantalla.</p><button id="avisoB">Abrir una sala nueva</button></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
@@ -242,6 +242,7 @@ function quitar(ag) {
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 function toast(html) {
+  return;   // sin textos en la pantalla (César): solo el nombre junto a la mariposa
   const box = document.getElementById("toasts"), d = document.createElement("div");
   d.className = "toast"; d.innerHTML = html; box.appendChild(d); setTimeout(() => d.remove(), 6200);
   while (box.children.length > 3) box.firstChild.remove();
@@ -264,8 +265,6 @@ function equilibrar() {
   const faltan = MIN - reales;
   if (casa.length < faltan) for (let i = casa.length; i < faltan; i++) deCasa();
   else if (casa.length > Math.max(0, faltan)) seVa(casa[0]);
-  const n = reales;
-  document.getElementById("cuenta").textContent = n ? `${n} ${n === 1 ? "mariposa volando" : "mariposas volando"} · suelta la tuya` : "Escanea el código y suelta la tuya";
 }
 
 function agregarReal(it, conLlegada) {
@@ -306,7 +305,7 @@ function pintarQR() {
   const n = qr.getModuleCount(), c = document.getElementById("qrc"), x = c.getContext("2d"), M = 36, cell = (600 - 2 * M) / n;
   x.fillStyle = "#fff"; x.fillRect(0, 0, 600, 600); x.fillStyle = "#2a0e55";
   for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (qr.isDark(r, k)) x.fillRect(M + k * cell - .3, M + r * cell - .3, cell + .6, cell + .6);
-  document.getElementById("codigo").textContent = "SALA " + sala;
+  const k = document.getElementById("kiosco"); k.href = url + "&kiosco=1"; k.textContent = url.replace(/^https?:\/\//, "") + "&kiosco=1";
 }
 let since = 0, primera = true;
 async function revisar() {

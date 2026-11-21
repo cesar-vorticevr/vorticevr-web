@@ -118,7 +118,7 @@
     <label class="nombre">Tu nombre (sale en la pantalla, opcional)<input id="nombre" maxlength="18" autocomplete="given-name" placeholder="Ej. Sofi"></label>
     <button class="soltar" id="soltar">✦ Soltar mi mariposa</button>
     <p id="err"></p>
-    <p class="nota">Tienes una mariposa en la pantalla a la vez: si sueltas otra, reemplaza a la tuya.</p>
+    <p class="nota" id="nota">Tienes una mariposa en la pantalla a la vez: si sueltas otra, reemplaza a la tuya.</p>
   </section>
 </main>
 
@@ -141,7 +141,14 @@ if (!/^[A-Z0-9]{4,8}$/.test(sala)) {
 $("salaChip").textContent = "SALA " + sala;
 let uid = store.get("pm-uid");
 if (!uid || !/^[a-z0-9]{12,40}$/.test(uid)) { uid = [...crypto.getRandomValues(new Uint8Array(12))].map(b => b.toString(36)).join("").replace(/[^a-z0-9]/g, "").padEnd(16, "x").slice(0, 24); store.set("pm-uid", uid); }
-$("nombre").value = store.get("pm-nombre") || "";
+// Modo iPad (?kiosco=1): un solo aparato en el evento donde pinta una persona tras otra. Cada mariposa va con un
+// uid nuevo (no reemplaza a la anterior) y al terminar el lienzo y el nombre quedan limpios para la siguiente persona.
+const KIOSCO = qs.get("kiosco") === "1";
+const nuevoUid = () => [...crypto.getRandomValues(new Uint8Array(12))].map(b => b.toString(36)).join("").replace(/[^a-z0-9]/g, "").padEnd(16, "x").slice(0, 24);
+if (KIOSCO) {
+  $("nota").textContent = "Cuando la sueltes, el lienzo queda listo para la siguiente persona.";
+  try { localStorage.removeItem("pm-dibujo"); } catch (e) {}
+} else $("nombre").value = store.get("pm-nombre") || "";
 
 // ---------- lienzo ----------
 const ESP = ESPECIES.mariposa, W = ESP.W, H = ESP.H, BASE = "#fff4e6";
@@ -151,7 +158,7 @@ const tex = document.createElement("canvas");
 const partes = ESP.partes(), sil = ESP.silueta();
 function nuevo() { px.globalCompositeOperation = "source-over"; px.fillStyle = BASE; px.fillRect(0, 0, W, H); }
 nuevo();
-{ const g = store.get("pm-dibujo"); if (g) { const im = new Image(); im.onload = () => { px.drawImage(im, 0, 0, W, H); pedir(); }; im.src = g; } }
+{ const g = !KIOSCO && store.get("pm-dibujo"); if (g) { const im = new Image(); im.onload = () => { px.drawImage(im, 0, 0, W, H); pedir(); }; im.src = g; } }
 
 const disp = $("disp"), dx = disp.getContext("2d");
 let espejo = true, vista = "mitad";
@@ -205,7 +212,7 @@ function guardarPaso() { hist.push(px.getImageData(0, 0, W, H)); if (hist.length
 $("deshacer").onclick = () => { const s = hist.pop(); if (s) { px.putImageData(s, 0, 0); pedir(); autoguardar(); sfx.tap(); } };
 $("limpiar").onclick = () => { guardarPaso(); nuevo(); pedir(); autoguardar(); sfx.whoosh(); };
 $("sorpresa").onclick = () => { guardarPaso(); nuevo(); ESP.patron(px, rng(Date.now())); pedir(); autoguardar(); sfx.sparkle(); };
-let tGuardar; function autoguardar() { clearTimeout(tGuardar); tGuardar = setTimeout(() => { try { store.set("pm-dibujo", pint.toDataURL("image/webp", .8)); } catch (e) {} }, 600); }
+let tGuardar; function autoguardar() { if (KIOSCO) return; clearTimeout(tGuardar); tGuardar = setTimeout(() => { try { store.set("pm-dibujo", pint.toDataURL("image/webp", .8)); } catch (e) {} }, 600); }
 
 // pintar
 function aTex(e) { const r = disp.getBoundingClientRect(), t = disp._t, dpr = disp.width / r.width; return [((e.clientX - r.left) * dpr - t.ox) / t.k + t.x0, ((e.clientY - r.top) * dpr - t.oy) / t.k]; }
@@ -319,7 +326,12 @@ function listo() {
   sfx.win();
   $("verMsg").innerHTML = `<div class="fade"><h2>¡Ya vuela en la pantalla! ✦</h2><p>Búscala entre las demás mariposas.</p>
     <div class="acciones"><button class="soltar" id="otra" style="width:auto;padding:14px 22px;font-size:16px;margin:0">Pintar otra</button></div></div>`;
-  $("otra").onclick = () => cerrar();
+  if (!KIOSCO) { $("otra").onclick = () => cerrar(); return; }
+  // en el iPad: lienzo y nombre limpios, y regresa solo a los 6 s
+  $("otra").textContent = "Siguiente persona";
+  hist.length = 0; nuevo(); $("nombre").value = ""; setVista("mitad"); if (!espejo) $("espejo").click(); setTool("pincel"); pedir();
+  const t = setTimeout(() => cerrar(), 6000);
+  $("otra").onclick = () => { clearTimeout(t); cerrar(); };
 }
 
 // ---------- soltar ----------
@@ -330,8 +342,8 @@ $("soltar").onclick = async () => {
     componer(ESP, pint, tex);
     let blob = await new Promise(r => tex.toBlob(r, "image/webp", .9));
     if (!blob || blob.type !== "image/webp") blob = await new Promise(r => tex.toBlob(r, "image/png"));
-    const nombre = $("nombre").value.trim().slice(0, 18); store.set("pm-nombre", nombre);
-    const f = new FormData(); f.append("uid", uid); f.append("kind", "mariposa"); f.append("name", nombre); f.append("img", blob, "mariposa");
+    const nombre = $("nombre").value.trim().slice(0, 18); if (!KIOSCO) store.set("pm-nombre", nombre);
+    const f = new FormData(); f.append("uid", KIOSCO ? nuevoUid() : uid); f.append("kind", "mariposa"); f.append("name", nombre); f.append("img", blob, "mariposa");
     btn.textContent = "Soltándola…";
     const r = await fetch(`/api/pantalla/${sala}/soltar`, { method: "POST", body: f });
     const j = await r.json().catch(() => ({}));
