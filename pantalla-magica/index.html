@@ -129,7 +129,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { ESPECIES, MUNDOS, rng, componer, aura } from "../assets/pantalla/especies.js?v=4";
+import { ESPECIES, MUNDOS, rng, componer, aura } from "../assets/pantalla/especies.js?v=5";
 
 const qs = new URLSearchParams(location.search);
 const MUNDO = MUNDOS[qs.get("mundo")] ? qs.get("mundo") : "jardin", MD = MUNDOS[MUNDO];
@@ -466,9 +466,15 @@ function mover(ag, dt) {
     rumbo(ag, dt, .9);
     ag.m.tick(tt * 1.3 + ag.fase, Math.min(1.6, .5 + ag.v.length() / ag.vel));
     r.position.copy(ag.p);
-    if (Math.abs(ag.v.x) > .05) ag.yaw = THREE.MathUtils.lerp(ag.yaw ?? 0, ag.v.x >= 0 ? 0 : Math.PI, Math.min(1, dt * 2.2));
-    const pitch = THREE.MathUtils.clamp(Math.atan2(ag.v.y, Math.abs(ag.v.x) + .2) * .7, -.6, .6);
-    tmpE.set(0, ag.yaw ?? 0, pitch, "YZX"); tmpQ.setFromEuler(tmpE);
+    // se voltea como en espejo (se encoge y se abre del otro lado) en lugar de girar de canto:
+    // así nunca se ve de lado ni queda su resplandor delante del dibujo
+    if (Math.abs(ag.v.x) > ag.vel * .2) ag.lado = ag.v.x >= 0 ? 0 : 1;
+    ag.voltea = ag.voltea ?? ag.lado ?? 0;
+    ag.voltea += THREE.MathUtils.clamp((ag.lado ?? 0) - ag.voltea, -dt * 2.4, dt * 2.4);
+    const sx = Math.cos(ag.voltea * Math.PI), s = sx >= 0 ? 1 : -1;
+    r.scale.set(ag.esc * (Math.abs(sx) < .02 ? .02 * s : sx), ag.esc, ag.esc);
+    const pitch = THREE.MathUtils.clamp(Math.atan2(ag.v.y, Math.abs(ag.v.x) + .2) * .7, -.6, .6) * s;
+    tmpE.set(0, Math.sin(ag.voltea * Math.PI) * .35, pitch); tmpQ.setFromEuler(tmpE);
     r.quaternion.slerp(tmpQ, Math.min(1, dt * 4));
   } else if (E.mov === "medusa") {
     // medusa: se impulsa cuando se contrae y se deja llevar

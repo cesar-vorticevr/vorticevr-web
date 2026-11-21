@@ -197,7 +197,10 @@ function alasDe(THREE, root, tex, glow, opts = {}) {
 const LALAS = { ad: [CX + 252, 178, 248, 46, -0.10], bd: [CX + 236, 272, 232, 54, 0.14] };
 function lalaPath(id, side, p = new Path2D()) {
   const [x, y, rx, ry, r] = LALAS[id[0] + "d"];
-  p.ellipse(CX + side * (x - CX), y, rx, ry, side * r, 0, TAU);
+  // moveTo antes de cada elipse: si no, el trazo une un ala con la otra con una línea recta y deja un triángulo sin pintar
+  const ex = CX + side * (x - CX), a = side * r;
+  p.moveTo(ex + rx * Math.cos(a), y + rx * Math.sin(a));
+  p.ellipse(ex, y, rx, ry, a, 0, TAU);
   return p;
 }
 const libelula = {
@@ -270,8 +273,9 @@ function pezCuerpo(p = new Path2D()) {
   return p;
 }
 function pezCola(p = new Path2D()) { p.moveTo(290, 256); p.bezierCurveTo(200, 190, 120, 110, 40, 70); p.bezierCurveTo(95, 180, 95, 330, 40, 442); p.bezierCurveTo(120, 400, 200, 322, 290, 256); p.closePath(); return p; }
-function pezDorsal(p = new Path2D()) { p.moveTo(470, 125); p.quadraticCurveTo(540, 8, 740, 48); p.quadraticCurveTo(700, 80, 715, 108); p.closePath(); return p; }
-function pezAnal(p = new Path2D()) { p.moveTo(520, 392); p.quadraticCurveTo(570, 490, 700, 476); p.quadraticCurveTo(670, 440, 700, 404); p.closePath(); return p; }
+// las aletas apuntan hacia la cola (el pez mira a la derecha)
+function pezDorsal(p = new Path2D()) { p.moveTo(740, 104); p.quadraticCurveTo(660, 6, 450, 36); p.quadraticCurveTo(500, 80, 480, 122); p.closePath(); return p; }
+function pezAnal(p = new Path2D()) { p.moveTo(700, 414); p.quadraticCurveTo(640, 500, 500, 482); p.quadraticCurveTo(540, 444, 520, 394); p.closePath(); return p; }
 const pez = {
   nombre: "Pez", femenino: false, verbo: "nada", W: MW, H: MH, mitad: false, simetria: false,
   mov: "nado", vel: 1.2, esc: [0.95, 1.3], rx3d: 0,
@@ -282,7 +286,8 @@ const pez = {
     x.save(); x.clip(sil);
     x.strokeStyle = "rgba(20,10,40,.28)"; x.lineWidth = 3;
     for (let i = 0; i < 9; i++) { const a = -0.9 + i * 0.22; x.beginPath(); x.moveTo(285, 256); x.lineTo(285 - Math.cos(a) * 250, 256 + Math.sin(a) * 200); x.stroke(); }
-    for (let i = 0; i < 7; i++) { x.beginPath(); x.moveTo(490 + i * 32, 120); x.lineTo(540 + i * 30, 40); x.stroke(); }
+    for (let i = 0; i < 7; i++) { x.beginPath(); x.moveTo(500 + i * 36, 118); x.lineTo(450 + i * 34, 20); x.stroke(); }
+    for (let i = 0; i < 5; i++) { x.beginPath(); x.moveTo(530 + i * 36, 400); x.lineTo(500 + i * 34, 490); x.stroke(); }
     x.strokeStyle = "rgba(20,10,40,.5)"; x.lineWidth = 5;
     x.beginPath(); x.moveTo(790, 160); x.quadraticCurveTo(745, 262, 790, 365); x.stroke();
     x.beginPath(); x.moveTo(735, 300); x.quadraticCurveTo(660, 290, 640, 345); x.quadraticCurveTo(690, 340, 735, 318); x.stroke();
