@@ -10,6 +10,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { mediosDe, dibujarEn, tieneMedios } from "./medios.js";
 import { plantilla, copia, instancias, listaModelos } from "./modelos.js";
 import { perfilDe } from "./gente.js";
+import { crearFlora, PALETAS, cascada, matCascada } from "./jardin.js";
 
 const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const ligero = innerWidth < 760 || matchMedia("(pointer: coarse)").matches; // celular: menos selva y luces
@@ -198,9 +199,9 @@ export function crearEstacion(canvas, cfg) {
   controls.rotateSpeed = 0.6;
   controls.autoRotate = false;
 
-  // ---------- Hacienda a la hora dorada: cielo, sol, nubes y neblina cálida ----------
-  const SOL_DIR = new THREE.Vector3(-0.62, 0.2, -0.76).normalize();
-  scene.fog = new THREE.Fog("#e9c59b", 150, 560);
+  // ---------- Jardín de fantasía al atardecer: cielo rosa y lila, sol bajo, mar de nubes y neblina rosada ----------
+  const SOL_DIR = new THREE.Vector3(-0.62, 0.14, -0.76).normalize();
+  scene.fog = new THREE.Fog("#eec3c4", 150, 600);
   const cielo = new THREE.Mesh(new THREE.SphereGeometry(1100, 32, 16), new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
     uniforms: { sol: { value: SOL_DIR } },
@@ -208,10 +209,10 @@ export function crearEstacion(canvas, cfg) {
     fragmentShader: `uniform vec3 sol; varying vec3 vP;
       void main(){
         float y = vP.y;
-        vec3 alto = vec3(0.36,0.45,0.62), medio = vec3(0.95,0.78,0.6), horiz = vec3(0.99,0.86,0.66), abajo = vec3(0.6,0.47,0.33);
+        vec3 alto = vec3(0.47,0.45,0.72), medio = vec3(0.93,0.66,0.74), horiz = vec3(1.0,0.84,0.7), abajo = vec3(0.93,0.8,0.82);
         vec3 c = y > 0. ? mix(horiz, mix(medio, alto, smoothstep(0.1, 0.75, y)), smoothstep(0.0, 0.14, y)) : mix(horiz, abajo, smoothstep(0., .25, -y));
         float s = max(0., dot(vP, sol));
-        c += vec3(1.0,0.72,0.42) * pow(s, 10.) * 0.5 + vec3(1.,0.97,0.85) * pow(s, 900.) * 1.6;
+        c += vec3(1.0,0.66,0.45) * pow(s, 8.) * 0.55 + vec3(1.,0.97,0.85) * pow(s, 900.) * 1.6;
         gl_FragColor = vec4(c, 1.);
       }`,
   }));
@@ -226,16 +227,23 @@ export function crearEstacion(canvas, cfg) {
     }
     for (let i = 0; i < 9; i++) {
       const a = -2.4 + i * 0.6 + Math.random() * 0.3, d = 640 + Math.random() * 180;
-      const nube = new THREE.Sprite(new THREE.SpriteMaterial({ map: n.t, transparent: true, depthWrite: false, fog: false, color: i % 2 ? "#ffd9b8" : "#ffe9d2", opacity: 0.75 }));
+      const nube = new THREE.Sprite(new THREE.SpriteMaterial({ map: n.t, transparent: true, depthWrite: false, fog: false, color: i % 3 === 0 ? "#e9c4e6" : i % 2 ? "#ffcfd2" : "#ffe3d6", opacity: 0.8 }));
       nube.position.set(Math.cos(a) * d, 120 + Math.random() * 140, Math.sin(a) * d); nube.scale.set(260 + Math.random() * 160, 80 + Math.random() * 40, 1);
       scene.add(nube);
     }
     const sol = spriteBrillo("#ffd59a", 260); sol.position.copy(SOL_DIR).multiplyScalar(900); sol.material.opacity = 0.9; scene.add(sol);
+    // mar de nubes alrededor: la hacienda parece flotar sobre ellas
+    for (let i = 0; i < (ligero ? 26 : 44); i++) {
+      const a = (i / (ligero ? 26 : 44)) * Math.PI * 2 + Math.random() * 0.2, d = 470 + Math.random() * 160;
+      const nube = new THREE.Sprite(new THREE.SpriteMaterial({ map: n.t, transparent: true, depthWrite: false, fog: false, color: i % 3 ? "#fff0ee" : "#f6d4e4", opacity: 0.95 }));
+      nube.position.set(Math.cos(a) * d, -6 + Math.random() * 18, Math.sin(a) * d); nube.scale.set(240 + Math.random() * 180, 46 + Math.random() * 30, 1);
+      scene.add(nube);
+    }
   }
 
-  scene.add(new THREE.HemisphereLight("#ffe6c4", "#6d5a40", 1.05));
-  const sol = new THREE.DirectionalLight("#ffc98c", 2.1); sol.position.copy(SOL_DIR).multiplyScalar(120); scene.add(sol);
-  const relleno = new THREE.DirectionalLight("#b9c6ff", 0.45); relleno.position.set(70, 50, 90); scene.add(relleno);
+  scene.add(new THREE.HemisphereLight("#ffe4e8", "#7a6a58", 1.1));
+  const sol = new THREE.DirectionalLight("#ffc9a0", 2.0); sol.position.copy(SOL_DIR).multiplyScalar(120); scene.add(sol);
+  const relleno = new THREE.DirectionalLight("#d7c2ff", 0.5); relleno.position.set(70, 50, 90); scene.add(relleno);
   // reflejos cálidos del propio cielo (para el dorado y el agua)
   {
     const pm = new THREE.PMREMGenerator(renderer), solo = new THREE.Scene();
@@ -243,9 +251,9 @@ export function crearEstacion(canvas, cfg) {
     scene.environment = pm.fromScene(solo, 0.04, 0.1, 2500).texture;
   }
 
-  // Materiales: estuco crema, piedra caliza, madera oscura, follaje y dorado
-  const blanco = new THREE.MeshStandardMaterial({ color: "#efe5d2", roughness: 0.88 });
-  const gris = new THREE.MeshStandardMaterial({ color: "#cdb893", roughness: 0.92 });
+  // Materiales: piedra caliza (clara y labrada), madera, follaje y dorado
+  const blanco = new THREE.MeshStandardMaterial({ color: "#efe7d8", roughness: 0.9 });
+  const gris = new THREE.MeshStandardMaterial({ color: "#d9cdb6", roughness: 0.93 });
   const oscuro = new THREE.MeshStandardMaterial({ color: "#3a291c", roughness: 0.62 });
   const madera = new THREE.MeshStandardMaterial({ color: "#8a6240", roughness: 0.7 });
   const verde = new THREE.MeshStandardMaterial({ color: "#4f7a3a", flatShading: true, roughness: 0.85 });
@@ -283,19 +291,38 @@ export function crearEstacion(canvas, cfg) {
     g.strokeStyle = "rgba(60,40,25,.25)"; g.lineWidth = 3; g.strokeRect(0, 0, 256, 256);
     return m.t;
   }
-  function texPiedra(base = "#e6d8bd", junta = "rgba(120,95,65,.35)", w = 256) {
+  function texPiedra(base = "#e9e0cd", junta = "rgba(130,115,90,.3)", w = 256) {
     const m = texCanvas(w, w), g = m.g;
     g.fillStyle = base; g.fillRect(0, 0, w, w);
-    for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(${90 + Math.random() * 60},${70 + Math.random() * 40},40,${Math.random() * 0.07})`; g.fillRect(Math.random() * w, Math.random() * w, 2 + Math.random() * 6, 2 + Math.random() * 6); }
+    // poros y manchas de la caliza
+    for (let i = 0; i < 1100; i++) { const v = Math.random(); g.fillStyle = v < 0.7 ? `rgba(${110 + Math.random() * 50},${100 + Math.random() * 40},${80 + Math.random() * 30},${Math.random() * 0.08})` : `rgba(255,250,240,${Math.random() * 0.12})`; g.fillRect(Math.random() * w, Math.random() * w, 1 + Math.random() * 5, 1 + Math.random() * 5); }
     g.strokeStyle = junta; g.lineWidth = 2;
     const f = w / 4;
     for (let y = 0; y < 4; y++) for (let x = 0; x < 2; x++) g.strokeRect(x * w / 2 + (y % 2) * f, y * f, w / 2, f);
     return m.t;
   }
+  function texLosas(base = "#ebe2d0", tinte = null) {
+    const m = texCanvas(512, 512), g = m.g;
+    g.fillStyle = "#cfc2a8"; g.fillRect(0, 0, 512, 512);
+    // losas de tamaños distintos en hileras
+    let y = 0;
+    while (y < 512) {
+      const h = 60 + Math.floor(Math.random() * 3) * 22; let x = -Math.random() * 80;
+      while (x < 512) {
+        const w = 70 + Math.random() * 90, c = new THREE.Color(base).offsetHSL(0, 0, (Math.random() - 0.5) * 0.06);
+        if (tinte && Math.random() < 0.25) c.lerp(new THREE.Color(tinte), 0.18);
+        g.fillStyle = "#" + c.getHexString(); g.fillRect(x + 2, y + 2, w - 4, Math.min(h, 512 - y) - 4);
+        for (let i = 0; i < 26; i++) { g.fillStyle = `rgba(120,105,80,${Math.random() * 0.08})`; g.fillRect(x + Math.random() * w, y + Math.random() * h, 2 + Math.random() * 4, 2 + Math.random() * 4); }
+        x += w;
+      }
+      y += h;
+    }
+    return m.t;
+  }
   function texPasto() {
     const m = texCanvas(256, 256), g = m.g;
-    g.fillStyle = "#6f8a4a"; g.fillRect(0, 0, 256, 256);
-    for (let i = 0; i < 2600; i++) { const v = Math.random(); g.fillStyle = v < 0.5 ? `rgba(74,104,52,${0.25 + Math.random() * 0.3})` : `rgba(160,170,92,${Math.random() * 0.25})`; g.fillRect(Math.random() * 256, Math.random() * 256, 2, 3 + Math.random() * 5); }
+    g.fillStyle = "#6f9650"; g.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 2600; i++) { const v = Math.random(); g.fillStyle = v < 0.5 ? `rgba(70,112,56,${0.25 + Math.random() * 0.3})` : `rgba(170,190,100,${Math.random() * 0.25})`; g.fillRect(Math.random() * 256, Math.random() * 256, 2, 3 + Math.random() * 5); }
     return m.t;
   }
   // hoja de palma con transparencia (se dobla en 3D)
@@ -410,6 +437,11 @@ export function crearEstacion(canvas, cfg) {
     transparent: true,
   });
   anim.push((t) => (matAgua.uniforms.t.value = t));
+  // flores, árboles y cascadas del jardín de fantasía (se plantan todas juntas al final)
+  const flora = crearFlora(scene, { ligero });
+  const matCaida = matCascada();
+  anim.push((t) => { if (!quieto) matCaida.uniforms.t.value = t; });
+
 
   // ---------- faroles con luz cálida (sin luces reales: un brillo que no cuesta) ----------
   const geoPoste = new THREE.CylinderGeometry(0.07, 0.1, 2.2, 6); geoPoste.translate(0, 1.1, 0);
@@ -435,14 +467,14 @@ export function crearEstacion(canvas, cfg) {
   // ---------- patio central: piso de mosaico, fuente, templete con pantalla de 4 caras ----------
   function patio(radio, alto, tex, rep) {
     const g = new THREE.Group();
-    const lado = new THREE.MeshStandardMaterial({ map: repetir(texPiedra("#d9c7a5"), radio, 0.3), roughness: 0.9 });
+    const lado = new THREE.MeshStandardMaterial({ map: repetir(texPiedra("#ddd1ba"), radio, 0.3), roughness: 0.9 });
     const arriba = new THREE.MeshStandardMaterial({ map: repetir(tex, rep, rep), roughness: 0.75 });
     const piso = new THREE.Mesh(new THREE.CylinderGeometry(radio, radio + 0.25, 0.5, 72), [lado, arriba, lado]);
     piso.position.y = alto - 0.25; g.add(piso);
     const filo = new THREE.Mesh(new THREE.TorusGeometry(radio - 0.6, 0.06, 6, 96), oro); filo.rotation.x = Math.PI / 2; filo.position.y = alto + 0.01; g.add(filo);
     return g;
   }
-  scene.add(patio(R_PLAZA, 0.7, texMosaico("#c08a62", "#efe4cf", "#8a9c78"), 21));
+  scene.add(patio(R_PLAZA, 0.7, texLosas("#efe7d6", "#f2b8c8"), 6));
   {
     // fuente
     const fuenteG = new THREE.Group(); scene.add(fuenteG);
@@ -457,6 +489,12 @@ export function crearEstacion(canvas, cfg) {
     vestir(fuenteG, "fuente", { ancho: 7.4, y: 0.7 });
     anim.push((t) => { if (!quieto) chorro.scale.y = 1 + Math.sin(t * 5) * 0.08; });
     obst.push({ c: [0, 0, 3.7] });
+    for (let k = 0; k < 7; k++) { const a = k * 0.9 + Math.random() * 0.4, r = 1.8 + Math.random() * 0.9; flora.loto(Math.cos(a) * r, 1.3, Math.sin(a) * r); }
+    // orilla del patio: flores y lavanda entre senderos
+    for (let k = 0; k < 8; k++) for (let a = rad(k * 45 + 9); a < rad(k * 45 + 36); a += 0.06) {
+      const x = Math.cos(a) * (R_PLAZA - 1.1), z = Math.sin(a) * (R_PLAZA - 1.1);
+      if (k % 2) flora.lavanda(x, z, 1, PALETAS.lavanda, 0.7); else flora.flor(x, z, 1.1, PALETAS.rosa, 0.7);
+    }
     // templete: 4 columnas que cargan la pantalla de 4 caras
     const W = 8.4, H = 4.7, C = 4.75;
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => {
@@ -467,6 +505,11 @@ export function crearEstacion(canvas, cfg) {
       obst.push({ c: [x, z, 0.8] });
     });
     const viga = new THREE.Mesh(new THREE.BoxGeometry(2 * C + 1.3, 0.55, 2 * C + 1.3), blanco); viga.position.y = 10.92; scene.add(viga);
+    // buganvilia que sube por las columnas y cuelga de la viga
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => {
+      for (let y = 2; y < 10.5; y += 0.9) { const a = Math.random() * 6.3; flora.racimo(sx * C + Math.cos(a) * 0.55, y, sz * C + Math.sin(a) * 0.55, 0.4 + Math.random() * 0.25); }
+    });
+    for (let i = 0; i < 40; i++) { const lado = i % 4, t = Math.random() * 2 - 1, d = C + 0.6; const x = lado < 2 ? t * d : (lado === 2 ? d : -d), z = lado < 2 ? (lado ? d : -d) : t * d; flora.racimo(x, 10.6 + Math.random() * 0.6, z, 0.5 + Math.random() * 0.4); }
     const filoV = new THREE.Mesh(new THREE.BoxGeometry(2 * C + 1.4, 0.08, 2 * C + 1.4), oro); filoV.position.y = 11.2; scene.add(filoV);
     const caja = new THREE.Group(); caja.position.y = 13.55; scene.add(caja);
     for (let i = 0; i < 4; i++) {
@@ -532,7 +575,15 @@ export function crearEstacion(canvas, cfg) {
     // faroles a los lados y, en los largos, una avenida de palmas
     const px = -az, pz = ax; // perpendicular
     for (let k = ini + 3; k < fin - 1.5; k += 7) [-1, 1].forEach((s) => farol(ax * k + px * s * 3, az * k + pz * s * 3));
-    if (largo > 30) for (let k = ini + 7; k < fin - 4; k += 10) [-1, 1].forEach((s) => { palma(ax * k + px * s * 5.2, az * k + pz * s * 5.2, 8 + Math.random() * 3); mata(ax * (k + 3.5) + px * s * 4.6, az * (k + 3.5) + pz * s * 4.6, 0.8); });
+    if (largo > 30) for (let k = ini + 7; k < fin - 4; k += 10) [-1, 1].forEach((s) => {
+      const x = ax * k + px * s * 5.2, z = az * k + pz * s * 5.2;
+      if (Math.round(k / 10) % 2) { flora.cipres(x, z, 9 + Math.random() * 3); obst.push({ c: [x, z, 0.7] }); } else palma(x, z, 8 + Math.random() * 3);
+    });
+    // lavanda y flores a la orilla del sendero
+    for (let k = ini + 1.5; k < fin - 1; k += ligero ? 2.2 : 1.4) [-1, 1].forEach((s) => {
+      const x = ax * k + px * s * 3.9, z = az * k + pz * s * 3.9;
+      if (Math.round(k / 7) % 2) flora.lavanda(x, z, 0.95); else flora.flor(x, z, 1, Math.random() < 0.5 ? PALETAS.rosa : PALETAS.blanco);
+    });
     const haciaPlaza = centro.clone().negate().normalize();
     return (modulos[id] = { id, centro, haciaPlaza, r, d, angulo });
   }
@@ -540,26 +591,71 @@ export function crearEstacion(canvas, cfg) {
   // ----- claustro: arquería (portales) y muro alrededor de cada pabellón, abierto solo al frente -----
   const texArcos = (() => {
     const m = texCanvas(256, 512), g = m.g;
-    const f = g.createLinearGradient(0, 0, 0, 512); f.addColorStop(0, "#f2e7d2"); f.addColorStop(1, "#e2d1b1");
+    const f = g.createLinearGradient(0, 0, 0, 512); f.addColorStop(0, "#f3ece0"); f.addColorStop(1, "#ddd2bd");
+    for (let i = 0; i < 700; i++) { g.fillStyle = `rgba(120,105,80,${Math.random() * 0.07})`; g.fillRect(Math.random() * 256, Math.random() * 512, 2 + Math.random() * 6, 2 + Math.random() * 6); }
+    g.fillStyle = f; g.globalAlpha = 0.85; g.fillRect(0, 0, 256, 512); g.globalAlpha = 1;
     g.fillStyle = f; g.fillRect(0, 0, 256, 512);
     // hueco del arco (transparente)
     g.globalCompositeOperation = "destination-out";
     g.beginPath(); g.moveTo(40, 512); g.lineTo(40, 250); g.arc(128, 250, 88, Math.PI, 0); g.lineTo(216, 512); g.closePath(); g.fill();
     g.globalCompositeOperation = "source-over";
-    g.strokeStyle = "#c9a25a"; g.lineWidth = 6; g.beginPath(); g.moveTo(40, 512); g.lineTo(40, 250); g.arc(128, 250, 88, Math.PI, 0); g.lineTo(216, 512); g.stroke();
-    g.fillStyle = "#c9a25a"; g.fillRect(0, 70, 256, 6); g.fillRect(0, 22, 256, 4);
+    g.strokeStyle = "#cbbd9f"; g.lineWidth = 10; g.beginPath(); g.moveTo(40, 512); g.lineTo(40, 250); g.arc(128, 250, 88, Math.PI, 0); g.lineTo(216, 512); g.stroke();
+    g.fillStyle = "#d6c9ad"; g.fillRect(0, 66, 256, 10); g.fillStyle = "#c9a25a"; g.fillRect(0, 22, 256, 3);
     g.fillStyle = "rgba(120,90,55,.18)"; g.fillRect(0, 0, 14, 512); g.fillRect(242, 0, 14, 512);
     return m.t;
   })();
   const texMuro = (() => {
     const m = texCanvas(256, 512), g = m.g;
-    g.fillStyle = "#e7cfa6"; g.fillRect(0, 0, 256, 512);
-    for (let i = 0; i < 500; i++) { g.fillStyle = `rgba(150,110,60,${Math.random() * 0.06})`; g.fillRect(Math.random() * 256, Math.random() * 512, 3 + Math.random() * 10, 3 + Math.random() * 10); }
+    g.fillStyle = "#e6dcc9"; g.fillRect(0, 0, 256, 512);
+    for (let i = 0; i < 500; i++) { g.fillStyle = `rgba(120,105,80,${Math.random() * 0.07})`; g.fillRect(Math.random() * 256, Math.random() * 512, 3 + Math.random() * 10, 3 + Math.random() * 10); }
     g.strokeStyle = "rgba(150,110,60,.35)"; g.lineWidth = 4; g.beginPath(); g.moveTo(52, 512); g.lineTo(52, 250); g.arc(128, 250, 76, Math.PI, 0); g.lineTo(204, 512); g.stroke();
     g.fillStyle = "#c9a25a"; g.fillRect(0, 70, 256, 5);
     return m.t;
   })();
-  function claustro(mod, p) {
+  // Cada claustro es un jardín distinto (al recorrer la hacienda cambia el ambiente)
+  const ZONAS = {
+    genetica: { nombre: "Jardín botánico", tinte: "#b9a6e0", flores: PALETAS.lavanda, flores2: PALETAS.blanco, bugan: PALETAS.buganvilia, arbol: "cipres", lavanda: true },
+    accesorios: { nombre: "Patio de los limoneros", tinte: "#f2d98a", flores: PALETAS.amarillo, flores2: PALETAS.coral, bugan: PALETAS.coral, arbol: "limonero" },
+    canamo: { nombre: "Terrazas del spa", tinte: "#f2b8c8", flores: PALETAS.rosa, flores2: PALETAS.blanco, bugan: PALETAS.buganvilia, arbol: "cipres", cascada: true },
+    cultivo: { nombre: "Huerto de las cascadas", tinte: "#a9cf9a", flores: PALETAS.blanco, flores2: PALETAS.amarillo, bugan: PALETAS.rosa, arbol: "limonero", lavanda: true, cascada: true },
+  };
+  // flores y árboles por fuera del claustro, y una cascada detrás en algunas zonas
+  function decorarZona(mod, z) {
+    const base = Math.atan2(-mod.haciaPlaza.z, mod.haciaPlaza.x), gap = rad(24);
+    const cx = mod.centro.x, cz = mod.centro.z;
+    const enAng = (a, r) => [cx + Math.cos(a) * r, cz - Math.sin(a) * r];
+    const paso = ligero ? 0.11 : 0.075;
+    for (let a = base + gap; a < base + Math.PI * 2 - gap; a += paso) {
+      const [x1, z1] = enAng(a, R_MURO + 1.8), [x2, z2] = enAng(a + paso / 2, R_MURO + 2.9);
+      if (z.lavanda && Math.floor(a / paso) % 2) flora.lavanda(x1, z1, 1.1); else flora.flor(x1, z1, 1.2, z.flores);
+      flora.flor(x2, z2, 1, z.flores2);
+    }
+    // árboles cada tanto (se esquivan al caminar)
+    for (let a = base + gap + 0.15; a < base + Math.PI * 2 - gap; a += ligero ? 0.42 : 0.3) {
+      if (Math.cos(a - base) > 0.2 && z.cascada) continue; // al fondo va la cascada
+      const [x, zz] = enAng(a, R_MURO + 5.2);
+      if (z.arbol === "cipres") { flora.cipres(x, zz, 8 + Math.random() * 4); obst.push({ c: [x, zz, 0.7] }); }
+      else { flora.limonero(x, zz, 0.9 + Math.random() * 0.3); obst.push({ c: [x, zz, 0.6] }); }
+    }
+    // buganvilias encima de los portales, colgando sobre los arcos
+    const H = 6.6;
+    for (let a = base + rad(17); a < base + Math.PI * 2 - rad(17); a += ligero ? 0.05 : 0.032) {
+      if (Math.random() < 0.35) continue;
+      const r = R_ARCOS + Math.random() * (R_MURO - R_ARCOS);
+      const [x, zz] = enAng(a, r);
+      flora.racimo(x, 0.6 + H + 0.3 + Math.random() * 0.4, zz, 0.55 + Math.random() * 0.45, z.bugan);
+      if (Math.random() < 0.35) { const [x2, z2] = enAng(a, R_ARCOS - 0.3); flora.racimo(x2, 0.6 + H - 0.6 - Math.random() * 1.6, z2, 0.45 + Math.random() * 0.35, z.bugan); }
+    }
+    // cascada detrás del claustro (del lado contrario a la plaza)
+    if (z.cascada) {
+      const [x, zz] = enAng(base + Math.PI, R_MURO + 10.5);
+      const c = cascada({ x, z: zz, frente: Math.atan2(cx - x, cz - zz), matPiedra: gris, matAgua, matCaida, flora });
+      scene.add(c); obst.push({ c: [x, zz, 6.2] });
+      const atras = new THREE.Vector3(0, 0, -9).applyAxisAngle(new THREE.Vector3(0, 1, 0), c.rotation.y).add(c.position);
+      obst.push({ c: [atras.x, atras.z, 5] });
+    }
+  }
+  function claustro(mod, p, zona) {
     const base = Math.atan2(-mod.haciaPlaza.z, mod.haciaPlaza.x), gap = rad(17);
     const a1 = base + gap, largoA = Math.PI * 2 - 2 * gap;
     const g = new THREE.Group(); g.position.set(mod.centro.x, 0.6, mod.centro.z); scene.add(g);
@@ -572,7 +668,7 @@ export function crearEstacion(canvas, cfg) {
     const tM = texMuro.clone(); tM.needsUpdate = true; repetir(tM, Math.round((R_MURO * largoA) / 4), 1);
     const muro = new THREE.Mesh(new THREE.CylinderGeometry(R_MURO, R_MURO, H + 0.4, 96, 1, true, a1 + Math.PI / 2, largoA), new THREE.MeshStandardMaterial({ map: tM, side: THREE.DoubleSide, roughness: 0.9 }));
     muro.position.y = (H + 0.4) / 2; g.add(muro);
-    const techo = new THREE.Mesh(new THREE.RingGeometry(R_ARCOS - 0.4, R_MURO + 0.5, 96, 1, a1, largoA), new THREE.MeshStandardMaterial({ color: "#b4683f", roughness: 0.85, side: THREE.DoubleSide }));
+    const techo = new THREE.Mesh(new THREE.RingGeometry(R_ARCOS - 0.4, R_MURO + 0.5, 96, 1, a1, largoA), new THREE.MeshStandardMaterial({ color: "#d8ccb4", roughness: 0.95, side: THREE.DoubleSide }));
     techo.rotation.x = -Math.PI / 2; techo.position.y = H + 0.15; g.add(techo);
     const cornisa = new THREE.Mesh(new THREE.TorusGeometry(R_ARCOS - 0.35, 0.12, 6, 120, largoA), oro);
     cornisa.geometry.rotateX(-Math.PI / 2); cornisa.rotation.y = a1; cornisa.position.y = H + 0.12; g.add(cornisa);
@@ -588,6 +684,9 @@ export function crearEstacion(canvas, cfg) {
     const filo = new THREE.Mesh(new THREE.TorusGeometry(ancho - 0.1, 0.1, 6, 40, Math.PI), oro); filo.position.set(0, H - 0.6, 0.38); filo.scale.y = 0.45; ent.add(filo);
     const cartel = letreroPlano(`${p.icono} ${p.nombre.toUpperCase()}`, ORO, 8.4, "#2b2016"); cartel.position.set(0, H + 1.2, 0.45); ent.add(cartel);
     const cartel2 = cartel.clone(); cartel2.position.z = -0.45; cartel2.rotation.y = Math.PI; ent.add(cartel2);
+    if (zona) { const sub = letreroPlano(zona.nombre.toUpperCase(), "#fff4dc", 5.4, "#7a5a3e"); sub.position.set(0, H + 0.05, 0.47); sub.scale.multiplyScalar(0.62); ent.add(sub); }
+    // buganvilia sobre el portón
+    for (let i = 0; i < 16; i++) { const v = new THREE.Vector3((Math.random() - 0.5) * (ancho * 2 + 2.4), H + 2.6 + Math.random() * 0.6, (Math.random() - 0.5) * 2.4).applyAxisAngle(new THREE.Vector3(0, 1, 0), ent.rotation.y).add(ent.position).add(g.position); flora.racimo(v.x, v.y, v.z, 0.6 + Math.random() * 0.5, zona ? zona.bugan : PALETAS.buganvilia); }
     // palmas y faroles junto al portón, por fuera
     [-1, 1].forEach((s) => {
       const q = new THREE.Vector3(s * (ancho + 2.6), 0, 2.2).applyAxisAngle(new THREE.Vector3(0, 1, 0), ent.rotation.y).add(ent.position).add(g.position);
@@ -630,7 +729,7 @@ export function crearEstacion(canvas, cfg) {
     return s;
   }
   function robot(color, x, z, escala = 1) {
-    const r = new THREE.Group(); r.position.set(x, 0.3, z); r.scale.setScalar(escala);
+    const r = new THREE.Group(); r.position.set(x, 0.3, z); r.scale.setScalar(escala * 0.88);
     const tono = piel(PIELES[Math.floor(Math.random() * PIELES.length)]);
     [-1, 1].forEach((s) => { const p = new THREE.Mesh(geoH.pierna, matPantalon); p.position.set(s * 0.14, 0.45, 0); r.add(p); });
     const cuerpo = new THREE.Mesh(geoH.torso, tela); cuerpo.position.y = 1.28; r.add(cuerpo);
@@ -770,7 +869,7 @@ export function crearEstacion(canvas, cfg) {
     // Muro curvo de video detrás (mirando hacia la entrada)
     const RM = 10.5, ARCO = rad(150);
     // la casa: muro curvo de estuco pintado con el color de la marca (como las haciendas), con cornisa dorada
-    const muro = new THREE.Mesh(new THREE.CylinderGeometry(RM, RM, 8.4, 64, 1, true, Math.PI - ARCO / 2, ARCO), new THREE.MeshStandardMaterial({ map: (() => { const t = texMuro.clone(); t.needsUpdate = true; return repetir(t, 9, 1); })(), color: mezclar(m.color, 0.62, "#ffffff"), roughness: 0.9, side: THREE.DoubleSide }));
+    const muro = new THREE.Mesh(new THREE.CylinderGeometry(RM, RM, 8.4, 64, 1, true, Math.PI - ARCO / 2, ARCO), new THREE.MeshStandardMaterial({ map: (() => { const t = texMuro.clone(); t.needsUpdate = true; return repetir(t, 9, 1); })(), color: mezclar(m.color, 0.84, "#f3ece0"), roughness: 0.9, side: THREE.DoubleSide }));
     muro.position.y = 4.2; g.add(muro); muros.push(muro);
     const zoc = new THREE.Mesh(new THREE.CylinderGeometry(RM + 0.05, RM + 0.05, 0.9, 64, 1, true, Math.PI - ARCO / 2, ARCO), new THREE.MeshStandardMaterial({ color: "#e6d8bd", roughness: 0.9, side: THREE.DoubleSide }));
     zoc.position.y = 0.45; g.add(zoc);
@@ -1405,8 +1504,10 @@ export function crearEstacion(canvas, cfg) {
   // ----- construir según las marcas -----
   let lista = cfg.marcas;
   PABELLONES.forEach((p) => {
-    const mod = modulo(p.id, p.angulo, D_PAB, R_PAB, p.color, { radio: R_MURO + 0.8, tex: texMosaico(mezclar(p.color, 0.5, "#8a5233"), "#efe3cc", "#5e7a55"), rep: 24 });
-    claustro(mod, p);
+    const zona = ZONAS[p.id] || ZONAS.genetica;
+    const mod = modulo(p.id, p.angulo, D_PAB, R_PAB, p.color, { radio: R_MURO + 0.8, tex: texLosas("#ece3d1", zona.tinte), rep: 7 });
+    claustro(mod, p, zona);
+    decorarZona(mod, zona);
     // Medallón en el piso del centro (se puede caminar encima)
     const em = texCanvas(512, 512, 0.5);
     em.g.fillStyle = "#f3ead8"; em.g.beginPath(); em.g.arc(256, 256, 252, 0, Math.PI * 2); em.g.fill();
@@ -1444,11 +1545,13 @@ export function crearEstacion(canvas, cfg) {
       const a = rad(22.5 + k * 45), x = Math.cos(a) * 78, z = -Math.sin(a) * 78;
       jardines.push([x, z]);
       if (k % 2 === 0) {
-        const bordeE = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 4.8, 0.5, 40), gris); bordeE.position.set(x, 0.8, z); scene.add(bordeE);
-        const agua = new THREE.Mesh(new THREE.CircleGeometry(4.25, 40), matAgua); agua.rotation.x = -Math.PI / 2; agua.position.set(x, 1.03, z); scene.add(agua);
-        obst.push({ c: [x, z, 5] });
+        // cascada de terrazas que cae a un estanque con lotos, mirando a la plaza
+        const c = cascada({ x, z, frente: Math.atan2(-x, -z), matPiedra: gris, matAgua, matCaida, flora, pisos: 3 });
+        scene.add(c);
+        obst.push({ c: [x, z, 6.2] });
+        const atras = new THREE.Vector3(0, 0, -8.5).applyAxisAngle(new THREE.Vector3(0, 1, 0), c.rotation.y).add(c.position); obst.push({ c: [atras.x, atras.z, 5] });
         for (let i = 0; i < 4; i++) { const b = a + 0.4 + i * (Math.PI / 2); palma(x + Math.cos(b) * 6.6, z - Math.sin(b) * 6.6, 8 + Math.random() * 3); mata(x + Math.cos(b + 0.7) * 6, z - Math.sin(b + 0.7) * 6, 0.9); }
-        const lirio = spriteEmoji("🪷", 1.2); lirio.position.set(x + 1.2, 1.3, z - 0.8); scene.add(lirio);
+
       } else {
         const pg = new THREE.Group(); pg.position.set(x, 0.56, z); pg.rotation.y = Math.atan2(-x, -z); scene.add(pg);
         [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 3.2, 8), madera); p.position.set(sx * 2.6, 1.6, sz * 2.6); pg.add(p); });
@@ -1464,6 +1567,7 @@ export function crearEstacion(canvas, cfg) {
         vestir(pg, "palapa-camastro", { ancho: 6 });
         obst.push({ caja: pg, x0: -2.9, x1: 2.9, z0: -2.9, z1: 2.9 });
         [-1, 1].forEach((s) => palma(x + Math.cos(a + s * 0.12) * 7, z - Math.sin(a + s * 0.12) * 7, 9 + Math.random() * 2));
+        for (let i = 0; i < 22; i++) { const b = (i / 22) * Math.PI * 2; flora.flor(x + Math.cos(b) * 4.4, z + Math.sin(b) * 4.4, 1, i % 2 ? PALETAS.coral : PALETAS.rosa); }
       }
     }
   }
@@ -1491,7 +1595,9 @@ export function crearEstacion(canvas, cfg) {
       return true;
     };
     let n = 0, intentos = 0;
-    while (n < (ligero ? 34 : 60) && intentos++ < 3000) { const a = Math.random() * Math.PI * 2, r = 20 + Math.random() * 90, x = Math.cos(a) * r, z = Math.sin(a) * r; if (lejosDeTodo(x, z, 4)) { palma(x, z, 7 + Math.random() * 5); n++; } }
+    while (n < (ligero ? 34 : 60) && intentos++ < 3000) { const a = Math.random() * Math.PI * 2, r = 20 + Math.random() * 90, x = Math.cos(a) * r, z = Math.sin(a) * r; if (lejosDeTodo(x, z, 4)) { if (n % 2) { flora.cipres(x, z, 8 + Math.random() * 5); obst.push({ c: [x, z, 0.7] }); } else palma(x, z, 7 + Math.random() * 5); n++; } }
+    n = 0; intentos = 0;
+    while (n < (ligero ? 40 : 80) && intentos++ < 3000) { const a = Math.random() * Math.PI * 2, r = 20 + Math.random() * 90, x = Math.cos(a) * r, z = Math.sin(a) * r; if (lejosDeTodo(x, z, 2)) { const pal = [PALETAS.buganvilia, PALETAS.rosa, PALETAS.coral, PALETAS.blanco, PALETAS.amarillo][n % 5]; for (let i = 0; i < 5; i++) flora.flor(x + (Math.random() - 0.5) * 3, z + (Math.random() - 0.5) * 3, 1 + Math.random() * 0.6, pal); n++; } }
     n = 0; intentos = 0;
     while (n < (ligero ? 50 : 90) && intentos++ < 3000) { const a = Math.random() * Math.PI * 2, r = 20 + Math.random() * 90, x = Math.cos(a) * r, z = Math.sin(a) * r; if (lejosDeTodo(x, z, 2)) { mata(x, z, 0.7 + Math.random() * 0.6); n++; } }
   }
@@ -1513,14 +1619,14 @@ export function crearEstacion(canvas, cfg) {
     // silueta de selva y cerros a lo lejos (se pierde en la neblina dorada)
     const s = texCanvas(2048, 128);
     s.g.clearRect(0, 0, 2048, 128);
-    s.g.fillStyle = "#4d5a3c";
+    s.g.fillStyle = "#8a7a9a";
     s.g.beginPath(); s.g.moveTo(0, 128);
     for (let x = 0; x <= 2048; x += 8) s.g.lineTo(x, 70 - Math.sin(x * 0.004) * 18 - Math.sin(x * 0.021) * 8 - Math.random() * 10);
     s.g.lineTo(2048, 128); s.g.fill();
     const sil = new THREE.Mesh(new THREE.CylinderGeometry(430, 430, 60, 96, 1, true), new THREE.MeshBasicMaterial({ map: s.t, transparent: true, side: THREE.BackSide, depthWrite: false }));
     sil.position.y = 20; scene.add(sil);
   }
-  plantarPalmas(); plantarMatas(); encenderFaroles();
+  plantarPalmas(); plantarMatas(); encenderFaroles(); flora.plantar();
 
   // Pantallas grandes: cada cara muestra una marca distinta y rota cada 6 s (primero islas y premium)
   const destacadas = [...lista.filter((m) => m.nivel), ...lista.filter((m) => !m.nivel)];
