@@ -276,6 +276,18 @@ export function crearEstacion(canvas, cfg) {
 
   // ---------- texturas pintadas a mano (canvas) ----------
   function repetir(t, rx, ry) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); return t; }
+  // Pisos con foto (texturas/<nombre>.jpg, 1024², se repiten sin costura). Mientras carga se ve el respaldo
+  // dibujado en canvas; todas las copias comparten la misma imagen en la tarjeta de video.
+  const fotos = {};
+  function foto(nombre, respaldo) {
+    let f = fotos[nombre];
+    if (!f) {
+      f = fotos[nombre] = { base: respaldo, copias: [] };
+      new THREE.ImageLoader().load(`texturas/${nombre}.jpg`, (img) => { f.base.source.data = img; f.listo = true; f.copias.forEach((t) => { t.dispose(); t.needsUpdate = true; }); }); // dispose: la foto mide distinto que el canvas
+    }
+    const t = f.base.clone(); t.anisotropy = 8; f.copias.push(t); if (f.listo) t.needsUpdate = true;
+    return t;
+  }
   // mosaico de pasta yucateco: estrella de 8 puntas en terracota, crema y verde
   function texMosaico(c1 = "#b4683f", c2 = "#efe3cc", c3 = "#5e7a55") {
     const m = texCanvas(256, 256);
@@ -346,10 +358,10 @@ export function crearEstacion(canvas, cfg) {
     const hueco = new THREE.Path(); hueco.absarc(CENOTE.x, CENOTE.z, 10, 0, Math.PI * 2, true); forma.holes.push(hueco);
     const geo = new THREE.ShapeGeometry(forma, 96);
     geo.rotateX(Math.PI / 2); // (x, y) de la forma → (x, z) del mundo
-    const suelo = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: repetir(texPasto(), 1, 1), roughness: 0.95, side: THREE.DoubleSide }));
-    // UV en metros del mundo (cada 6 m se repite)
+    const suelo = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: repetir(foto("pasto", texPasto()), 1, 1), color: "#eef0e4", roughness: 0.95, side: THREE.DoubleSide }));
+    // UV en metros del mundo (cada 3.5 m se repite)
     const uv = geo.attributes.uv, p = geo.attributes.position;
-    for (let i = 0; i < uv.count; i++) uv.setXY(i, p.getX(i) / 6, p.getZ(i) / 6);
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, p.getX(i) / 3.5, p.getZ(i) / 3.5);
     suelo.position.y = 0.56; suelo.userData.suelo = true; suelos.push(suelo); scene.add(suelo);
   }
   // capa sobre el pasto (sendero, patio): plana, sin pelearse con el suelo
@@ -460,7 +472,8 @@ export function crearEstacion(canvas, cfg) {
     scene.add(po, li);
     plantilla("farol").then((p) => {
       if (!p) return;
-      scene.add(instancias(p, farolesLista.map(([x, z]) => new THREE.Matrix4().makeTranslation(x, 2.7, z)), { alto: 0.75 })); li.visible = false;
+      // farol de piedra completo (poste y linterna): la linterna queda a la altura del brillo
+      scene.add(instancias(p, farolesLista.map(([x, z]) => new THREE.Matrix4().makeTranslation(x, 0.56, z)), { alto: 3.15 })); li.visible = false; po.visible = false;
     });
   }
 
@@ -468,13 +481,14 @@ export function crearEstacion(canvas, cfg) {
   function patio(radio, alto, tex, rep) {
     const g = new THREE.Group();
     const lado = new THREE.MeshStandardMaterial({ map: repetir(texPiedra("#ddd1ba"), radio, 0.3), roughness: 0.9 });
-    const arriba = new THREE.MeshStandardMaterial({ map: repetir(tex, rep, rep), roughness: 0.75 });
+    // la misma imagen da el relieve: las juntas (más oscuras) se hunden
+    const arriba = new THREE.MeshStandardMaterial({ map: repetir(tex, rep, rep), bumpMap: tex, bumpScale: 2, roughness: 0.78 });
     const piso = new THREE.Mesh(new THREE.CylinderGeometry(radio, radio + 0.25, 0.5, 72), [lado, arriba, lado]);
     piso.position.y = alto - 0.25; g.add(piso);
     const filo = new THREE.Mesh(new THREE.TorusGeometry(radio - 0.6, 0.06, 6, 96), oro); filo.rotation.x = Math.PI / 2; filo.position.y = alto + 0.01; g.add(filo);
     return g;
   }
-  scene.add(patio(R_PLAZA, 0.7, texLosas("#efe7d6", "#f2b8c8"), 6));
+  scene.add(patio(R_PLAZA, 0.7, foto("patio", texLosas("#efe7d6", "#f2b8c8")), 7));
   {
     // fuente
     const fuenteG = new THREE.Group(); scene.add(fuenteG);
@@ -486,7 +500,7 @@ export function crearEstacion(canvas, cfg) {
     const aguaT = new THREE.Mesh(new THREE.CircleGeometry(1.3, 24), matAgua); aguaT.rotation.x = -Math.PI / 2; aguaT.position.y = 3.38; fuenteG.add(aguaT);
     const chorro = new THREE.Mesh(new THREE.ConeGeometry(0.16, 1.4, 10, 1, true), new THREE.MeshBasicMaterial({ color: "#e9fbff", transparent: true, opacity: 0.45, depthWrite: false }));
     chorro.position.y = 3.95; fuenteG.add(chorro);
-    vestir(fuenteG, "fuente", { ancho: 7.4, y: 0.7 });
+    vestir(fuenteG, "fuente", { ancho: 7.4, y: 0.7 }, [agua]).then((c) => { if (c) { agua.position.y = 0.7 + 0.115 * c.obj.userData.tam.y; agua.scale.setScalar(1.08); } });
     anim.push((t) => { if (!quieto) chorro.scale.y = 1 + Math.sin(t * 5) * 0.08; });
     obst.push({ c: [0, 0, 3.7] });
     for (let k = 0; k < 7; k++) { const a = k * 0.9 + Math.random() * 0.4, r = 1.8 + Math.random() * 0.9; flora.loto(Math.cos(a) * r, 1.3, Math.sin(a) * r); }
@@ -497,20 +511,16 @@ export function crearEstacion(canvas, cfg) {
     }
     // templete: 4 columnas que cargan la pantalla de 4 caras
     const W = 8.4, H = 4.7, C = 4.75;
+    const tG = new THREE.Group(); scene.add(tG); // piezas del templete hechas en código (se esconden si llega el modelo)
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => {
       const x = sx * C, z = sz * C;
-      const base = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 1.2), gris); base.position.set(x, 1.0, z); scene.add(base);
-      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 9.2, 20), blanco); col.position.set(x, 5.9, z); scene.add(col);
-      const cap = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.35, 1.15), oro); cap.position.set(x, 10.62, z); scene.add(cap);
+      const base = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 1.2), gris); base.position.set(x, 1.0, z); tG.add(base);
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 9.2, 20), blanco); col.position.set(x, 5.9, z); tG.add(col);
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.35, 1.15), oro); cap.position.set(x, 10.62, z); tG.add(cap);
       obst.push({ c: [x, z, 0.8] });
     });
-    const viga = new THREE.Mesh(new THREE.BoxGeometry(2 * C + 1.3, 0.55, 2 * C + 1.3), blanco); viga.position.y = 10.92; scene.add(viga);
-    // buganvilia que sube por las columnas y cuelga de la viga
-    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => {
-      for (let y = 2; y < 10.5; y += 0.9) { const a = Math.random() * 6.3; flora.racimo(sx * C + Math.cos(a) * 0.55, y, sz * C + Math.sin(a) * 0.55, 0.4 + Math.random() * 0.25); }
-    });
-    for (let i = 0; i < 40; i++) { const lado = i % 4, t = Math.random() * 2 - 1, d = C + 0.6; const x = lado < 2 ? t * d : (lado === 2 ? d : -d), z = lado < 2 ? (lado ? d : -d) : t * d; flora.racimo(x, 10.6 + Math.random() * 0.6, z, 0.5 + Math.random() * 0.4); }
-    const filoV = new THREE.Mesh(new THREE.BoxGeometry(2 * C + 1.4, 0.08, 2 * C + 1.4), oro); filoV.position.y = 11.2; scene.add(filoV);
+    const viga = new THREE.Mesh(new THREE.BoxGeometry(2 * C + 1.3, 0.55, 2 * C + 1.3), blanco); viga.position.y = 10.92; tG.add(viga);
+    const filoV = new THREE.Mesh(new THREE.BoxGeometry(2 * C + 1.4, 0.08, 2 * C + 1.4), oro); filoV.position.y = 11.2; tG.add(filoV);
     const caja = new THREE.Group(); caja.position.y = 13.55; scene.add(caja);
     for (let i = 0; i < 4; i++) {
       const tx = texCanvas(1024, 576, 0.75);
@@ -523,9 +533,9 @@ export function crearEstacion(canvas, cfg) {
     }
     caja.add(new THREE.Mesh(new THREE.BoxGeometry(W + 0.1, H + 0.3, W + 0.1), oscuro));
     [H / 2 + 0.25, -H / 2 - 0.25].forEach((y) => { const b = new THREE.Mesh(new THREE.BoxGeometry(W + 0.5, 0.22, W + 0.5), oro); b.position.y = y; caja.add(b); });
-    const cornisa = new THREE.Mesh(new THREE.BoxGeometry(W + 1.2, 0.5, W + 1.2), blanco); cornisa.position.y = 16.5; scene.add(cornisa);
-    const cupula = new THREE.Mesh(new THREE.SphereGeometry(2.6, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), oro); cupula.position.y = 16.75; scene.add(cupula);
-    const remate = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 8), oro); remate.position.y = 19.55; scene.add(remate);
+    const cornisa = new THREE.Mesh(new THREE.BoxGeometry(W + 1.2, 0.5, W + 1.2), blanco); cornisa.position.y = 16.5; tG.add(cornisa);
+    const cupula = new THREE.Mesh(new THREE.SphereGeometry(2.6, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), oro); cupula.position.y = 16.75; tG.add(cupula);
+    const remate = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 8), oro); remate.position.y = 19.55; tG.add(remate);
     // Letrero WEEDLAND dorado sobre el templete
     const lt = texCanvas(1024, 200);
     lt.g.textAlign = "center"; lt.g.textBaseline = "middle"; lt.g.font = `700 128px ${FUENTE}`;
@@ -536,6 +546,22 @@ export function crearEstacion(canvas, cfg) {
     const st = texCanvas(1024, 80); st.g.fillStyle = "#fff4dc"; st.g.textAlign = "center"; st.g.font = `600 46px ${FUENTE}`; st.g.shadowColor = "rgba(60,35,10,.6)"; st.g.shadowBlur = 8; st.g.fillText("HACIENDA  ·  WELLNESS  ·  EXPO", 512, 56);
     const sub = new THREE.Sprite(new THREE.SpriteMaterial({ map: st.t, transparent: true, depthWrite: false, fog: false }));
     sub.scale.set(11, 0.86, 1); sub.position.y = 20.8; scene.add(sub);
+    // Templete de Meshy (cúpula dorada con pantallas): la pantalla de 4 caras se acomoda en sus marcos negros
+    const templete = new THREE.Group(); templete.position.y = 0.7; scene.add(templete);
+    ponerModelo(templete, "templete", { alto: 22.6 }).then((r) => {
+      if (!r || !r.cfg.pantallas) return;
+      tG.visible = false;
+      const q = r.cfg.pantallas[0], d = q.z * r.k + 0.06, w = q.w * r.k * 0.96, h = q.h * r.k * 0.96;
+      caja.position.y = 0.7 + q.y * r.k;
+      caja.children.forEach((c) => {
+        if (c.userData.tipo !== "pantalla") { c.visible = false; return; }
+        const a = (c.userData.cara * Math.PI) / 2;
+        c.position.set(Math.sin(a) * d, 0, Math.cos(a) * d); c.scale.set(w / W, h / H, 1);
+      });
+      letrero.position.y = r.tam.y + 3.4; sub.position.y = r.tam.y + 1.6;
+      // la escalinata del templete se rodea (no se sube): un círculo del tamaño de su base
+      obst.push({ c: [0, 0, Math.min(r.tam.x, r.tam.z) * 0.47] }); libreCache.clear();
+    });
     // Urnas de piedra con agave y palmas en el borde del patio, entre los senderos
     [22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5].forEach((ga, k) => {
       if (ga === 157.5) return; // ahí está el globo
@@ -560,6 +586,9 @@ export function crearEstacion(canvas, cfg) {
 
   // ----- módulos: patios unidos al patio central por senderos blancos (sacbé) con faroles y palmas -----
   const modulos = {}; // id -> { centro, haciaPlaza, r, d }
+  // glorietas en las avenidas (el coloso): ahí no van faroles ni flores
+  const GLORIETAS = [[0, -40, 6.5]];
+  const enGlorieta = (x, z) => GLORIETAS.some(([gx, gz, r]) => Math.hypot(x - gx, z - gz) < r);
   const texSacbe = texPiedra("#f1e7d3", "rgba(150,120,85,.28)");
   function modulo(id, angulo, d, r, color, piso = {}) {
     const a = rad(angulo);
@@ -569,19 +598,21 @@ export function crearEstacion(canvas, cfg) {
     // sendero
     const ini = R_PLAZA - 0.5, fin = d - rp + 0.5, largo = fin - ini, medio = (ini + fin) / 2;
     const ax = Math.cos(a), az = -Math.sin(a);
-    const t = texSacbe.clone(); t.needsUpdate = true; repetir(t, largo / 4.4, 1);
+    const t = foto("camino", texSacbe); repetir(t, largo / 4.4, 1);
     const camino = capa(new THREE.PlaneGeometry(largo, 4.4), new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 }), 0.6);
     camino.position.set(ax * medio, 0.6, az * medio); camino.rotation.z = a; scene.add(camino);
     // faroles a los lados y, en los largos, una avenida de palmas
     const px = -az, pz = ax; // perpendicular
-    for (let k = ini + 3; k < fin - 1.5; k += 7) [-1, 1].forEach((s) => farol(ax * k + px * s * 3, az * k + pz * s * 3));
+    for (let k = ini + 3; k < fin - 1.5; k += 7) [-1, 1].forEach((s) => { const x = ax * k + px * s * 3, z = az * k + pz * s * 3; if (!enGlorieta(x, z)) farol(x, z); });
     if (largo > 30) for (let k = ini + 7; k < fin - 4; k += 10) [-1, 1].forEach((s) => {
       const x = ax * k + px * s * 5.2, z = az * k + pz * s * 5.2;
+      if (enGlorieta(x, z)) return;
       if (Math.round(k / 10) % 2) { flora.cipres(x, z, 9 + Math.random() * 3); obst.push({ c: [x, z, 0.7] }); } else palma(x, z, 8 + Math.random() * 3);
     });
     // lavanda y flores a la orilla del sendero
     for (let k = ini + 1.5; k < fin - 1; k += ligero ? 2.2 : 1.4) [-1, 1].forEach((s) => {
       const x = ax * k + px * s * 3.9, z = az * k + pz * s * 3.9;
+      if (enGlorieta(x, z)) return;
       if (Math.round(k / 7) % 2) flora.lavanda(x, z, 0.95); else flora.flor(x, z, 1, Math.random() < 0.5 ? PALETAS.rosa : PALETAS.blanco);
     });
     const haciaPlaza = centro.clone().negate().normalize();
@@ -614,10 +645,10 @@ export function crearEstacion(canvas, cfg) {
   })();
   // Cada claustro es un jardín distinto (al recorrer la hacienda cambia el ambiente)
   const ZONAS = {
-    genetica: { nombre: "Jardín botánico", tinte: "#b9a6e0", flores: PALETAS.lavanda, flores2: PALETAS.blanco, bugan: PALETAS.buganvilia, arbol: "cipres", lavanda: true },
-    accesorios: { nombre: "Patio de los limoneros", tinte: "#f2d98a", flores: PALETAS.amarillo, flores2: PALETAS.coral, bugan: PALETAS.coral, arbol: "limonero" },
-    canamo: { nombre: "Terrazas del spa", tinte: "#f2b8c8", flores: PALETAS.rosa, flores2: PALETAS.blanco, bugan: PALETAS.buganvilia, arbol: "cipres", cascada: true },
-    cultivo: { nombre: "Huerto de las cascadas", tinte: "#a9cf9a", flores: PALETAS.blanco, flores2: PALETAS.amarillo, bugan: PALETAS.rosa, arbol: "limonero", lavanda: true, cascada: true },
+    genetica: { nombre: "Jardín botánico", piso: "botanico", tinte: "#b9a6e0", flores: PALETAS.lavanda, flores2: PALETAS.blanco, bugan: PALETAS.buganvilia, arbol: "cipres", lavanda: true },
+    accesorios: { nombre: "Patio de los limoneros", piso: "limoneros", tinte: "#f2d98a", flores: PALETAS.amarillo, flores2: PALETAS.coral, bugan: PALETAS.coral, arbol: "limonero" },
+    canamo: { nombre: "Terrazas del spa", piso: "spa", tinte: "#f2b8c8", flores: PALETAS.rosa, flores2: PALETAS.blanco, bugan: PALETAS.buganvilia, arbol: "cipres", cascada: true },
+    cultivo: { nombre: "Huerto de las cascadas", piso: "huerto", tinte: "#a9cf9a", flores: PALETAS.blanco, flores2: PALETAS.amarillo, bugan: PALETAS.rosa, arbol: "limonero", lavanda: true, cascada: true },
   };
   // flores y árboles por fuera del claustro, y una cascada detrás en algunas zonas
   function decorarZona(mod, z) {
@@ -684,7 +715,8 @@ export function crearEstacion(canvas, cfg) {
     const filo = new THREE.Mesh(new THREE.TorusGeometry(ancho - 0.1, 0.1, 6, 40, Math.PI), oro); filo.position.set(0, H - 0.6, 0.38); filo.scale.y = 0.45; ent.add(filo);
     const cartel = letreroPlano(`${p.icono} ${p.nombre.toUpperCase()}`, ORO, 8.4, "#2b2016"); cartel.position.set(0, H + 1.2, 0.45); ent.add(cartel);
     const cartel2 = cartel.clone(); cartel2.position.z = -0.45; cartel2.rotation.y = Math.PI; ent.add(cartel2);
-    if (zona) { const sub = letreroPlano(zona.nombre.toUpperCase(), "#fff4dc", 5.4, "#7a5a3e"); sub.position.set(0, H + 0.05, 0.47); sub.scale.multiplyScalar(0.62); ent.add(sub); }
+    let subL = null;
+    if (zona) { subL = letreroPlano(zona.nombre.toUpperCase(), "#fff4dc", 5.4, "#7a5a3e"); subL.position.set(0, H + 0.05, 0.47); subL.scale.multiplyScalar(0.62); ent.add(subL); }
     // buganvilia sobre el portón
     for (let i = 0; i < 16; i++) { const v = new THREE.Vector3((Math.random() - 0.5) * (ancho * 2 + 2.4), H + 2.6 + Math.random() * 0.6, (Math.random() - 0.5) * 2.4).applyAxisAngle(new THREE.Vector3(0, 1, 0), ent.rotation.y).add(ent.position).add(g.position); flora.racimo(v.x, v.y, v.z, 0.6 + Math.random() * 0.5, zona ? zona.bugan : PALETAS.buganvilia); }
     // palmas y faroles junto al portón, por fuera
@@ -696,6 +728,32 @@ export function crearEstacion(canvas, cfg) {
     [-1, 1].forEach((s) => obst.push({ caja: ent, x0: s * (ancho + 0.3) - 1.0, x1: s * (ancho + 0.3) + 1.0, z0: -2.2, z1: 2.2 }));
     claustros.push({ x: mod.centro.x, z: mod.centro.z, a: base, gap: gap * 0.92, r0: R_ARCOS - 0.4, r1: R_MURO + 0.5 });
     muros.push(arcos, muro);
+    // Arquería de piedra de Meshy: tramos rectos (instanciados) que cierran el círculo, de frente al patio
+    plantilla("arcos").then((pa) => {
+      if (!pa || !pa.cfg.tam) return;
+      const t = pa.cfg.tam, alto = H + 0.2, kz = alto / t[1];
+      const n = Math.max(6, Math.round((R_ARCOS * largoA) / 9)), D = largoA / n;
+      const fondo = t[2] * kz, Rm = R_ARCOS + fondo / 2 - 0.15, w = 2 * Rm * Math.tan(D / 2);
+      const eje = new THREE.Vector3(0, 1, 0), ms = [];
+      for (let i = 0; i < n; i++) {
+        const f = a1 + (i + 0.5) * D;
+        ms.push(new THREE.Matrix4().compose(
+          new THREE.Vector3(mod.centro.x + Math.cos(f) * Rm, 0.6, mod.centro.z - Math.sin(f) * Rm),
+          new THREE.Quaternion().setFromAxisAngle(eje, Math.atan2(-Math.cos(f), Math.sin(f))),
+          new THREE.Vector3(w / (t[0] * kz), 1, 1)));
+      }
+      scene.add(instancias(pa, ms, { alto }));
+      arcos.visible = false; cornisa.visible = false;
+      const k = muros.indexOf(arcos); if (k >= 0) muros.splice(k, 1);
+    });
+    // Portón monumental de Meshy con el letrero del pabellón y el nombre del jardín
+    ponerModelo(ent, "porton", { ancho: 2 * (ancho + 0.9) }).then((r) => {
+      if (!r) return;
+      ent.children.forEach((h) => { if (![r.obj, cartel, cartel2, subL].includes(h)) h.visible = false; });
+      const y = r.tam.y * 0.8, z = r.tam.z / 2 + 0.1;
+      cartel.position.set(0, y, z); cartel2.position.set(0, y, -z);
+      if (subL) subL.position.set(0, y - 1.35, z + 0.02);
+    });
   }
 
   // ----- anfitrión: persona con guayabera de lino y sombrero de jipi (reutilizable) -----
@@ -720,6 +778,29 @@ export function crearEstacion(canvas, cfg) {
     g.add(c.obj);
     g.userData.ctl = c;
     return c;
+  }
+  // Pone un modelo de Meshy dentro de un grupo sin esconder nada. Devuelve { obj, k, cfg, tam } o null:
+  // k = metros por unidad del modelo (para pasar las medidas de modelos.json: "tam" y "pantallas"); tam = tamaño final en metros.
+  async function ponerModelo(padre, id, medidas = {}) {
+    const p = await plantilla(id);
+    if (!p) return null;
+    const c = copia(p, medidas);
+    padre.add(c.obj);
+    const tam = c.obj.userData.tam, t = p.cfg.tam;
+    return { obj: c.obj, k: t ? tam.x / t[0] : 1, cfg: p.cfg, tam };
+  }
+  // Esconde las piezas hechas en código de un grupo, menos las que se quedan (pantallas, letreros, anfitriones...)
+  function ocultarMenos(g, quedan, ademas = []) { g.children.forEach((h) => { if (!quedan.includes(h) && !ademas.includes(h)) h.visible = false; }); }
+  // Acomoda un plano (pantalla, tótem) sobre el rectángulo negro de un modelo. r: rectángulo de modelos.json, k: escala,
+  // o: dónde quedó el centro de la base del modelo dentro del grupo, aspecto: si se da, la imagen cabe sin deformarse.
+  function sobrePantalla(mesh, r, k, o, aspecto = 0) {
+    const pw = mesh.geometry.parameters.width, ph = mesh.geometry.parameters.height;
+    let w = r.w * k * 0.96, h = r.h * k * 0.96;
+    if (aspecto) { if (w / h > aspecto) w = h * aspecto; else h = w / aspecto; }
+    mesh.scale.set(w / pw, h / ph, 1);
+    mesh.rotation.set(0, 0, 0);
+    mesh.position.set(o.x + r.x * k, o.y + r.y * k, o.z + (r.z ?? 0) * k + 0.05);
+    mesh.visible = true;
   }
   function sombrero(color) {
     const s = new THREE.Group();
@@ -774,6 +855,12 @@ export function crearEstacion(canvas, cfg) {
     const luz = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.1, 0.32), oro); luz.position.y = 0.3 + alto; tot.add(luz);
     const pie = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.14, 0.4), oro); pie.position.y = 0.37; tot.add(pie);
     s.totems.push(tt);
+    // tótem de piedra de Meshy: la imagen de la marca va en su marco negro
+    ponerModelo(tot, "totem", { alto: alto + 0.6 }).then((r) => {
+      if (!r) return;
+      ocultarMenos(tot, [cara, r.obj]);
+      sobrePantalla(cara, r.cfg.pantallas[0], r.k, new THREE.Vector3(), 0.5);
+    });
     return tot;
   }
 
@@ -814,7 +901,7 @@ export function crearEstacion(canvas, cfg) {
         const v = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 1.3), conMapa(vt.t));
         v.position.set(sx * 4.35, 3.5 + sy * 0.95, zMuro + 0.25); g.add(v);
         const marco = new THREE.Mesh(new THREE.BoxGeometry(2.45, 1.45, 0.05), oro); marco.position.set(v.position.x, v.position.y, zMuro + 0.21); g.add(marco);
-        s.videos.push({ tx: vt, k: i, avance: Math.random() });
+        s.videos.push({ tx: vt, k: i, avance: Math.random(), mesh: v });
       });
       // Arco de luz en la parte alta
       const arco = new THREE.Mesh(new THREE.TorusGeometry(A / 2 - 0.3, 0.14, 8, 48, Math.PI), oro);
@@ -838,7 +925,8 @@ export function crearEstacion(canvas, cfg) {
     const holo = holograma(m, 0.6, 2.55, P / 2 - 2.2, premium ? 1.3 : 1); g.add(holo); s.anim.push(holo.userData.animar);
     const rob = robot(m.color, -(premium ? 2.6 : 1.9), P / 2 - 1.5); g.add(rob); s.anim.push(rob.userData.animar); s.rob = rob;
     s.saludar = rob.userData.saludar;
-    if (premium) { const rob2 = robot(m.color, 3.4, P / 2 - 1.5, 0.9); g.add(rob2); s.anim.push(rob2.userData.animar); }
+    let rob2 = null;
+    if (premium) { rob2 = robot(m.color, 3.4, P / 2 - 1.5, 0.9); g.add(rob2); s.anim.push(rob2.userData.animar); }
     // Macetas de barro con helecho
     [-(A / 2 - 1.1), A / 2 - 1.1].forEach((x) => {
       const mg = new THREE.Group(); mg.position.set(x, 0.3, zMuro + 1.4); g.add(mg);
@@ -852,12 +940,37 @@ export function crearEstacion(canvas, cfg) {
     s.puerta = pos.clone().addScaledVector(s.frente, P / 2 + 1.6);
     stands[m.id] = s;
     pintarStand(s);
+    // Stand de piedra de Meshy (normal: arco con pantalla y 2 tótems; premium: pabellón con 5 pantallas).
+    // Las pantallas, el letrero y los anfitriones de código se quedan, encima de los rectángulos negros del modelo.
+    ponerModelo(g, premium ? "stand-premium" : "stand", { ancho: A }).then((r) => {
+      if (!r || !r.cfg.pantallas) return;
+      const fondo = r.tam.z, zc = -P / 2 + fondo / 2;
+      r.obj.position.z = zc;
+      const o = new THREE.Vector3(0, 0, zc);
+      const [prin, ...resto] = r.cfg.pantallas;
+      sobrePantalla(pantalla, prin, r.k, o, 16 / 9);
+      const lados = resto.slice().sort((a, b) => a.x - b.x);
+      if (premium) s.videos.slice().sort((a, b) => a.mesh.position.x - b.mesh.position.x).forEach((v, i) => lados[i] && sobrePantalla(v.mesh, lados[i], r.k, o, 16 / 9));
+      else lados.forEach((q, i) => {
+        const tt = s.totems[i]; if (!tt) return;
+        const cara = new THREE.Mesh(new THREE.PlaneGeometry(1, 2), conMapa(tt.t)); g.add(cara);
+        sobrePantalla(cara, q, r.k, o, 0.5);
+      });
+      letrero.position.set(0, r.tam.y + 0.75, zc - fondo * 0.15);
+      // anfitriones y holograma enfrente del modelo
+      const frenteZ = zc + fondo / 2;
+      rob.position.z = Math.max(rob.position.z, frenteZ + 0.5);
+      if (rob2) rob2.position.z = Math.max(rob2.position.z, frenteZ + 0.5);
+      holo.position.z = frenteZ - 0.45; holo.position.y = 1.35 + 1.15 * (premium ? 1.3 : 1); // sobre el mostrador del modelo
+      ocultarMenos(g, [pantalla, letrero, rob, holo, r.obj, ...s.videos.map((v) => v.mesh)], rob2 ? [rob2] : []);
+      g.children.forEach((h) => { if (h.geometry && h.geometry.type === "PlaneGeometry" && h.material && h.material.map && s.totems.some((tt) => tt.t === h.material.map)) h.visible = true; });
+    });
     return s;
   }
 
   // Isla de marca: una plataforma completa para una sola marca
   function crearIsla(m) {
-    const mod = modulo(m.id, m.angulo, D_EXT, R_ISLA, m.color, { tex: texPiedra("#e9dcc3", "rgba(120,95,65,.3)"), rep: 7 });
+    const mod = modulo(m.id, m.angulo, D_EXT, R_ISLA, m.color, { tex: foto("spa", texPiedra("#e9dcc3", "rgba(120,95,65,.3)")), rep: 10 });
     const g = new THREE.Group(); g.position.set(mod.centro.x, 0.6, mod.centro.z);
     g.lookAt(0, 0.6, 0); // el frente mira a la plaza
     g.userData = { tipo: "stand", id: m.id };
@@ -877,13 +990,14 @@ export function crearEstacion(canvas, cfg) {
     for (let k = 0; k <= 10; k++) { const a = Math.PI - ARCO / 2 + (ARCO * k) / 10; obst.push({ caja: g, x0: Math.sin(a) * RM - 0.9, x1: Math.sin(a) * RM + 0.9, z0: Math.cos(a) * RM - 0.9, z1: Math.cos(a) * RM + 0.9 }); }
     // 3 pantallas grandes en el muro: la del centro es la principal
     s.pt = texCanvas(1024, 576, 0.75);
+    const pantIsla = [];
     [-1, 0, 1].forEach((i) => {
       const a = Math.PI + i * rad(42);
       const tx = i === 0 ? s.pt : texCanvas(1024, 576, 0.6);
       const w = i === 0 ? 7.2 : 5.6;
       const p = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 0.5625), conMapa(tx.t));
-      p.position.set(Math.sin(a) * (RM - 0.25), 4.2, Math.cos(a) * (RM - 0.25)); p.rotation.y = Math.atan2(-p.position.x, -p.position.z); g.add(p);
-      const mp = new THREE.Mesh(new THREE.BoxGeometry(w + 0.3, w * 0.5625 + 0.3, 0.06), oro); mp.position.copy(p.position).multiplyScalar((RM - 0.18) / (RM - 0.25)); mp.position.y = 4.2; mp.rotation.y = p.rotation.y; g.add(mp);
+      p.position.set(Math.sin(a) * (RM - 0.25), 4.2, Math.cos(a) * (RM - 0.25)); p.rotation.y = Math.atan2(-p.position.x, -p.position.z); g.add(p); pantIsla.push(p);
+      const mp = new THREE.Mesh(new THREE.BoxGeometry(w + 0.3, w * 0.5625 + 0.3, 0.06), oro); mp.position.copy(p.position).multiplyScalar((RM - 0.18) / (RM - 0.25)); mp.position.y = 4.2; mp.rotation.y = p.rotation.y; g.add(mp); p.userData.marco = mp;
       if (i !== 0) s.videos.push({ tx, k: i + 1, avance: Math.random() });
     });
     // Letrero gigante sobre el muro
@@ -896,7 +1010,8 @@ export function crearEstacion(canvas, cfg) {
     // medallón dorado alrededor del logo, girando despacio
     const aros = [0, 1].map((k) => { const a = new THREE.Mesh(new THREE.TorusGeometry(3.4 + k * 0.45, k ? 0.06 : 0.16, 8, 72), oro); a.position.copy(logo.position); g.add(a); return a; });
     halo.material.opacity = 0.25;
-    s.anim.push((t) => { logo.position.y = 13.5 + Math.sin(t * 0.8) * 0.25; aros[0].rotation.set(0, Math.sin(t * 0.3) * 0.5, 0); aros[1].rotation.set(0, -Math.sin(t * 0.3) * 0.5, 0); aros.forEach((a) => a.position.y = logo.position.y); });
+    s.logoY = 13.5;
+    s.anim.push((t) => { logo.position.y = s.logoY + Math.sin(t * 0.8) * 0.25; aros[0].rotation.set(0, Math.sin(t * 0.3) * 0.5, 0); aros[1].rotation.set(0, -Math.sin(t * 0.3) * 0.5, 0); aros.forEach((a) => a.position.y = logo.position.y); });
     // Mostrador central con holograma
     s.mt = texCanvas(512, 256, 0.5);
     const most = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.1, 1.2), [madera, madera, gris, madera, conMapa(s.mt.t), madera]); most.position.set(0, 0.55, -3); g.add(most);
@@ -904,17 +1019,19 @@ export function crearEstacion(canvas, cfg) {
     obst.push({ caja: g, x0: -2.3, x1: 2.3, z0: -3.8, z1: -2.2 });
     const holo = holograma(m, 0, 2.6, -3, 1.6); g.add(holo); s.anim.push(holo.userData.animar);
     // Vitrinas con productos que giran (tocarlas abre el catálogo)
-    const pedestales = [];
+    const pedestales = [], vitrinas = [];
     [-62, -36, 36, 62].forEach((gr, i) => {
       const a = rad(gr), x = Math.sin(a) * 6.5, z = -Math.cos(a) * 6.5 + 1;
-      const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 1.3, 24), gris); ped.position.set(x, 0.65, z); g.add(ped);
-      const aro = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.05, 6, 32), oro); aro.rotation.x = Math.PI / 2; aro.position.set(x, 1.32, z); g.add(aro);
-      const vidrio = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 1.5, 24, 1, true), matCristal); vidrio.position.set(x, 2.1, z); g.add(vidrio);
+      const vg = new THREE.Group(); vg.position.set(x, 0, z); g.add(vg); vitrinas.push(vg);
+      const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 1.3, 24), gris); ped.position.set(0, 0.65, 0); vg.add(ped);
+      const aro = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.05, 6, 32), oro); aro.rotation.x = Math.PI / 2; aro.position.set(0, 1.32, 0); vg.add(aro);
+      const vidrio = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 1.5, 24, 1, true), matCristal); vidrio.position.set(0, 2.1, 0); vg.add(vidrio);
       const prod = s.productos[(i * 3) % Math.max(1, s.productos.length)] || { icono: m.icono };
-      const sp = spriteEmoji(prod.icono, 1.1); sp.position.set(x, 2.1, z); g.add(sp); pedestales.push(sp);
-      obst.push({ caja: g, x0: x - 1.1, x1: x + 1.1, z0: z - 1.1, z1: z + 1.1 });
+      const sp = spriteEmoji(prod.icono, 1.1); sp.position.set(0, 2.1, 0); vg.add(sp); pedestales.push(sp);
+      vg.userData.obst = { caja: g, x0: x - 1.1, x1: x + 1.1, z0: z - 1.1, z1: z + 1.1 }; obst.push(vg.userData.obst);
     });
-    s.anim.push((t) => pedestales.forEach((p, i) => { p.position.y = 2.1 + Math.sin(t * 2 + i) * 0.12; p.material.rotation = Math.sin(t + i) * 0.2; }));
+    s.pedY = 2.1;
+    s.anim.push((t) => pedestales.forEach((p, i) => { p.position.y = s.pedY + Math.sin(t * 2 + i) * 0.12; p.material.rotation = Math.sin(t + i) * 0.2; }));
     // Tótems a los lados de la entrada
     [[-1, 0.3], [1, -0.3]].forEach(([sg, r]) => g.add(totem(m, s, sg * 5.5, 5, r, 3.4)));
     [[-5.5, 5], [5.5, 5]].forEach(([x, z]) => obst.push({ caja: g, x0: x - 0.9, x1: x + 0.9, z0: z - 0.5, z1: z + 0.5 }));
@@ -938,6 +1055,33 @@ export function crearEstacion(canvas, cfg) {
     stands[m.id] = s;
     pintarStand(s);
     etiquetas.push({ el: cfg.etiqueta({ id: m.id, icono: m.icono, nombre: m.nombre, color: m.color, isla: true }), pos: new THREE.Vector3(mod.centro.x, 17, mod.centro.z) });
+    // Casa de piedra de Meshy (pabellón con 3 pantallas) en lugar del muro curvo; vitrinas de cristal enfrente
+    ponerModelo(g, "casa-marca", { ancho: 20 }).then((r) => {
+      if (!r || !r.cfg.pantallas) return;
+      const zc = -RM + r.tam.z / 2, frenteZ = zc + r.tam.z / 2;
+      r.obj.position.z = zc;
+      const o = new THREE.Vector3(0, 0, zc);
+      [muro, zoc, tapa, most, cub, ...pantIsla.map((p) => p.userData.marco)].forEach((h) => (h.visible = false));
+      const k = muros.indexOf(muro); if (k >= 0) muros.splice(k, 1);
+      const [prin, ...resto] = r.cfg.pantallas;
+      const principal = pantIsla.find((p) => p.material.map === s.pt.t);
+      sobrePantalla(principal, prin, r.k, o, 16 / 9);
+      const lados = resto.slice().sort((a, b) => a.x - b.x);
+      pantIsla.filter((p) => p !== principal).sort((a, b) => a.position.x - b.position.x).forEach((p, i) => lados[i] && sobrePantalla(p, lados[i], r.k, o, 16 / 9));
+      letrero.position.set(0, r.tam.y + 1.3, zc);
+      s.logoY = r.tam.y + 5.2;
+      [logo, halo, ...aros].forEach((h) => (h.position.z = zc));
+      holo.position.set(0, 2.6, frenteZ + 2.2);
+      // vitrinas en fila delante de la casa
+      [-7.4, -4.4, 4.4, 7.4].forEach((x, i) => {
+        const vg = vitrinas[i]; vg.position.set(x, 0, frenteZ + 1.4); vg.rotation.y = 0;
+        const ob = vg.userData.obst; ob.x0 = x - 1.1; ob.x1 = x + 1.1; ob.z0 = frenteZ + 0.6; ob.z1 = frenteZ + 2.2;
+        ponerModelo(vg, "vitrina", { alto: 2.6 }).then((v) => { if (!v) return; vg.children.forEach((h) => { if (h !== v.obj && !h.isSprite) h.visible = false; }); });
+      });
+      s.pedY = 1.55;
+      obst.push({ caja: g, x0: -r.tam.x / 2, x1: r.tam.x / 2, z0: -RM, z1: frenteZ });
+      libreCache.clear();
+    });
     return s;
   }
 
@@ -1140,7 +1284,7 @@ export function crearEstacion(canvas, cfg) {
   // ----- Mercado: puestos para comprar semillas y aditamentos, y talleres para transformar la cosecha -----
   const puestos3d = {};
   function crearMercado() {
-    const mod = modulo("mercado", 90, D_EXT, R_ISLA, "#ffd76a", { tex: texMosaico("#b07a52", "#ecdcc0", "#6f8a74"), rep: 20 });
+    const mod = modulo("mercado", 90, D_EXT, R_ISLA, "#ffd76a", { tex: foto("limoneros", texMosaico("#b07a52", "#ecdcc0", "#6f8a74")), rep: 10 });
     const g = new THREE.Group(); g.position.set(mod.centro.x, 0.6, mod.centro.z); g.lookAt(0, 0.6, 0);
     scene.add(g); g.updateMatrixWorld(true);
     // letrero central flotante
@@ -1150,11 +1294,15 @@ export function crearEstacion(canvas, cfg) {
     const carrito = spriteEmoji("🧺", 1.6); carrito.position.y = 1.5; centro.add(carrito);
     const sign = new THREE.Group(); sign.position.y = 10; centro.add(sign);
     { const c1 = letreroPlano("MERCADO Y BOTICA", ORO, 6, CAFE); c1.material.side = THREE.FrontSide; c1.position.z = 0.02; const c2 = c1.clone(); c2.rotation.y = Math.PI; c2.position.z = -0.02; sign.add(c1, c2); }
-    anim.push((t) => { carrito.position.y = 1.5 + Math.sin(t * 1.4) * 0.15; sign.rotation.y = t * 0.2; });
+    let carritoY = 1.5;
+    anim.push((t) => { carrito.position.y = carritoY + Math.sin(t * 1.4) * 0.15; sign.rotation.y = t * 0.2; });
     arcoEntrada(g, "MERCADO", ORO, R_ISLA - 1.2);
     // pérgola de madera con lonas en el centro
-    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 4.6, 8), madera); p.position.set(sx * 2.4, 2.3, -1 + sz * 2.4); g.add(p); });
-    const lona = new THREE.Mesh(new THREE.ConeGeometry(3.9, 1.2, 4, 1, true), tela); lona.material = new THREE.MeshStandardMaterial({ color: "#f3e9d6", roughness: 0.95, side: THREE.DoubleSide }); lona.rotation.y = Math.PI / 4; lona.position.set(0, 5.2, -1); g.add(lona);
+    const pergola = [];
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 4.6, 8), madera); p.position.set(sx * 2.4, 2.3, -1 + sz * 2.4); g.add(p); pergola.push(p); });
+    const lona = new THREE.Mesh(new THREE.ConeGeometry(3.9, 1.2, 4, 1, true), tela); lona.material = new THREE.MeshStandardMaterial({ color: "#f3e9d6", roughness: 0.95, side: THREE.DoubleSide }); lona.rotation.y = Math.PI / 4; lona.position.set(0, 5.2, -1); g.add(lona); pergola.push(lona);
+    // en el centro, el jaguar de piedra de Meshy (la obra del Mercado) en lugar de la pérgola
+    ponerModelo(centro, "esc-jaguar").then((r) => { if (!r) return; pergola.forEach((h) => (h.visible = false)); base.visible = false; r.obj.rotation.y = 0; carritoY = r.tam.y + 1.2; });
     // 5 puestos en semicírculo mirando al centro
     PUESTOS.forEach((pu, i) => {
       const a = rad(-84 + i * 42), R = 10.5;
@@ -1182,6 +1330,14 @@ export function crearEstacion(canvas, cfg) {
       obst.push({ caja: pg, x0: -2.3, x1: 2.3, z0: -2.2, z1: 0.8 });
       lugar("puesto:" + pu.id, pg, new THREE.Vector3(0, 0, 2.6), new THREE.Vector3(0, 0, 0));
       puestos3d[pu.id] = { pg, rob };
+      // puesto de piedra con toldo de Meshy; se quedan el letrero, la mercancía y el anfitrión
+      ponerModelo(pg, "puesto", { ancho: 4.6 }).then((r) => {
+        if (!r) return;
+        r.obj.position.z = -0.45;
+        [mostrador, frente, tapa, filoT, toldo, borde].forEach((h) => (h.visible = false));
+        pg.children.forEach((h) => { if (h.geometry && h.geometry.type === "CylinderGeometry") h.visible = false; });
+        letrero.position.y = r.tam.y + 0.55;
+      });
     });
     etiquetas.push({ el: cfg.etiqueta({ id: "mercado", icono: "🛒", nombre: "Mercado", color: "#ffd76a" }), pos: new THREE.Vector3(mod.centro.x, 12, mod.centro.z) });
     lugar("mercado", g, new THREE.Vector3(0, 0, 4.5), new THREE.Vector3(0, 0, -1), false);
@@ -1191,7 +1347,7 @@ export function crearEstacion(canvas, cfg) {
   const parcelas3d = [];
   let tienda3d = null;
   function crearCultivo() {
-    const mod = modulo("micultivo", 270, D_EXT, R_ISLA, "#7dffb3", { tex: texPiedra("#d9cbb0", "rgba(120,95,65,.3)"), rep: 6 });
+    const mod = modulo("micultivo", 270, D_EXT, R_ISLA, "#7dffb3", { tex: foto("huerto", texPiedra("#d9cbb0", "rgba(120,95,65,.3)")), rep: 9 });
     const g = new THREE.Group(); g.position.set(mod.centro.x, 0.6, mod.centro.z); g.lookAt(0, 0.6, 0);
     scene.add(g);
     arcoEntrada(g, "MI CULTIVO", "#7a9a5a", R_ISLA - 1.2);
@@ -1203,6 +1359,14 @@ export function crearEstacion(canvas, cfg) {
     const cristal = new THREE.Mesh(new THREE.CylinderGeometry(10, 10, 10.8, 40, 1, true, -Math.PI / 2, Math.PI), matCristal);
     cristal.rotation.x = -Math.PI / 2; cristal.scale.set(1, 1, 0.62); cristal.position.set(0, 0, -2.8); g.add(cristal);
     const cumbrera = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 10.8), oro); cumbrera.position.set(0, 6.2, -2.8); g.add(cumbrera);
+    // Invernadero de cristal y dorado de Meshy en la esquina del fondo, mirando a las parcelas (que quedan al aire libre)
+    const inv = new THREE.Group(); inv.position.set(-12.3, 0, -9.6); inv.rotation.y = Math.atan2(12.3, 7.6); g.add(inv);
+    ponerModelo(inv, "invernadero", { ancho: 8.5 }).then((r) => {
+      if (!r) return;
+      g.children.forEach((h) => { if (h.isMesh && (h.material === hierro || h === cristal || h === cumbrera)) h.visible = false; });
+      obst.push({ caja: g, x0: -16.6, x1: -8.2, z0: -13.8, z1: -5.6 });
+      libreCache.clear();
+    });
     const tierra = new THREE.MeshStandardMaterial({ color: "#4a2f1c", roughness: 1 });
     for (let i = 0; i < 8; i++) {
       const x = [-6.9, -2.3, 2.3, 6.9][i % 4], z = i < 4 ? 1.2 : -4.6;
@@ -1505,7 +1669,7 @@ export function crearEstacion(canvas, cfg) {
   let lista = cfg.marcas;
   PABELLONES.forEach((p) => {
     const zona = ZONAS[p.id] || ZONAS.genetica;
-    const mod = modulo(p.id, p.angulo, D_PAB, R_PAB, p.color, { radio: R_MURO + 0.8, tex: texLosas("#ece3d1", zona.tinte), rep: 7 });
+    const mod = modulo(p.id, p.angulo, D_PAB, R_PAB, p.color, { radio: R_MURO + 0.8, tex: foto(zona.piso, texLosas("#ece3d1", zona.tinte)), rep: 12 });
     claustro(mod, p, zona);
     decorarZona(mod, zona);
     // Medallón en el piso del centro (se puede caminar encima)
@@ -1571,6 +1735,39 @@ export function crearEstacion(canvas, cfg) {
       }
     }
   }
+  // ----- obras de piedra de Meshy por el jardín: la escultura de cada zona junto a su avenida, el coloso en la glorieta
+  //       de la avenida del Mercado, y piezas grandes (cúpula, anfiteatro, acueducto, cascada) entre los claustros -----
+  {
+    const polar = (gr, r) => [Math.cos(rad(gr)) * r, -Math.sin(rad(gr)) * r];
+    // a un lado de una avenida: gr = ángulo de la avenida, r = distancia al centro, lado = metros a la derecha (+) o izquierda (−)
+    const junto = (gr, r, lado) => { const [x, z] = polar(gr, r), a = rad(gr); return [x + Math.sin(a) * lado, z + Math.cos(a) * lado, x, z]; };
+    const piezas = [];
+    const ZONA_OBRA = { genetica: "esc-semilla", accesorios: "esc-manos", canamo: "esc-loto", cultivo: "esc-hoja" };
+    PABELLONES.forEach((p) => {
+      if (ZONA_OBRA[p.id]) { const [x, z, mx, mz] = junto(p.angulo, 18.5, 8.5); piezas.push({ id: ZONA_OBRA[p.id], x, z, mirar: [mx, mz] }); }
+      if (!ligero) { const [x, z, mx, mz] = junto(p.angulo, 19, -7.6); piezas.push({ id: "banca", x, z, mirar: [mx, mz] }); }
+    });
+    piezas.push({ id: "coloso", x: GLORIETAS[0][0], z: GLORIETAS[0][1], mirar: [0, 0] });
+    { const [x, z, mx, mz] = junto(270, 70, -8); piezas.push({ id: "esc-regadera", x, z, mirar: [mx, mz] }); }
+    if (!ligero) {
+      [["cupula", 45, 88], ["cascada", 135, 88], ["anfiteatro", 240, 92], ["acueducto", 330, 92]].forEach(([id, gr, r]) => { const [x, z] = polar(gr, r); piezas.push({ id, x, z, mirar: [0, 0] }); });
+      // en el cenote (solo se ve desde el globo): la entrada a la gruta y un puente sobre el agua
+      piezas.push({ id: "cenote", x: CENOTE.x, z: CENOTE.z + 13, mirar: [0, 0], fuera: true });
+      piezas.push({ id: "puente", x: CENOTE.x, z: CENOTE.z, giro: 0, fuera: true });
+    }
+    piezas.forEach((d) => {
+      if (!d.fuera) jardines.push([d.x, d.z]); // que no les crezcan palmas encima
+      plantilla(d.id).then((p) => {
+        if (!p) return;
+        const k = copia(p);
+        k.obj.position.set(d.x, 0.56, d.z);
+        k.obj.rotation.y = d.mirar ? Math.atan2(d.mirar[0] - d.x, d.mirar[1] - d.z) : d.giro || 0;
+        scene.add(k.obj);
+        if (!d.fuera) { const tm = k.obj.userData.tam; obst.push({ c: [d.x, d.z, Math.max(tm.x, tm.z) * 0.46] }); libreCache.clear(); }
+      });
+    });
+  }
+
   // ----- modelos sueltos que se acomodan desde modelos.json ("colocar": [[x, z, giro], ...]), p. ej. bancas -----
   listaModelos().then((l) => Object.entries(l).forEach(([id, c]) => {
     if (!c || !Array.isArray(c.colocar) || !c.colocar.length) return;
