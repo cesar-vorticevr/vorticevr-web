@@ -421,7 +421,9 @@ export function crearEstacion(canvas, cfg) {
   })();
   const matAgave = new THREE.MeshStandardMaterial({ color: "#7aa08c", roughness: 0.6, flatShading: true });
   const matasLista = [];
-  function mata(x, z, k = 1) { matasLista.push([x, z, k]); }
+  // matas bajas: antes agaves de código; ahora una mata de flores con foto (blanca, coral o amarilla)
+  const PAL_MATA = [PALETAS.blanco, PALETAS.coral, PALETAS.amarillo, PALETAS.lavanda];
+  function mata(x, z, k = 1) { const pal = PAL_MATA[Math.floor(Math.random() * PAL_MATA.length)]; if (pal === PALETAS.lavanda) flora.lavanda(x, z, k * 1.3); else flora.flor(x, z, k * 1.5, pal); }
   const geoArbusto = new THREE.IcosahedronGeometry(1, 0);
   const matArbusto = new THREE.MeshStandardMaterial({ color: "#3f6331", roughness: 0.9, flatShading: true });
   const arbustosLista = [];
@@ -450,7 +452,7 @@ export function crearEstacion(canvas, cfg) {
   });
   anim.push((t) => (matAgua.uniforms.t.value = t));
   // flores, árboles y cascadas del jardín de fantasía (se plantan todas juntas al final)
-  const flora = crearFlora(scene, { ligero });
+  const flora = crearFlora(scene, { ligero, modelo: plantilla, instancias });
   const matCaida = matCascada();
   anim.push((t) => { if (!quieto) matCaida.uniforms.t.value = t; });
 
@@ -662,10 +664,12 @@ export function crearEstacion(canvas, cfg) {
       flora.flor(x2, z2, 1, z.flores2);
     }
     // árboles cada tanto (se esquivan al caminar)
+    let nA = 0;
     for (let a = base + gap + 0.15; a < base + Math.PI * 2 - gap; a += ligero ? 0.42 : 0.3) {
       if (Math.cos(a - base) > 0.2 && z.cascada) continue; // al fondo va la cascada
       const [x, zz] = enAng(a, R_MURO + 5.2);
-      if (z.arbol === "cipres") { flora.cipres(x, zz, 8 + Math.random() * 4); obst.push({ c: [x, zz, 0.7] }); }
+      if (nA++ % 3 === 1) { flora.arbolFlor(x, zz, 0.9 + Math.random() * 0.3); obst.push({ c: [x, zz, 0.8] }); }
+      else if (z.arbol === "cipres") { flora.cipres(x, zz, 8 + Math.random() * 4); obst.push({ c: [x, zz, 0.7] }); }
       else { flora.limonero(x, zz, 0.9 + Math.random() * 0.3); obst.push({ c: [x, zz, 0.6] }); }
     }
     // buganvilias encima de los portales, colgando sobre los arcos
@@ -781,13 +785,25 @@ export function crearEstacion(canvas, cfg) {
   }
   // Pone un modelo de Meshy dentro de un grupo sin esconder nada. Devuelve { obj, k, cfg, tam } o null:
   // k = metros por unidad del modelo (para pasar las medidas de modelos.json: "tam" y "pantallas"); tam = tamaño final en metros.
+  // Si el modelo trae "lejos" en modelos.json, de cerca se ve el detallado y de lejos el ligero (LOD); en celular solo el ligero.
   async function ponerModelo(padre, id, medidas = {}) {
-    const p = await plantilla(id);
+    let p = await plantilla(id);
     if (!p) return null;
+    const pl = p.cfg.lejos ? await plantilla(p.cfg.lejos) : null;
+    const cfgBase = p.cfg;
+    if (pl && ligero) p = pl;
     const c = copia(p, medidas);
-    padre.add(c.obj);
-    const tam = c.obj.userData.tam, t = p.cfg.tam;
-    return { obj: c.obj, k: t ? tam.x / t[0] : 1, cfg: p.cfg, tam };
+    let obj = c.obj;
+    if (pl && !ligero) {
+      const lod = new THREE.LOD();
+      lod.addLevel(c.obj, 0);
+      lod.addLevel(copia(pl, medidas).obj, cfgBase.distancia || 32);
+      lod.userData.tam = c.obj.userData.tam;
+      obj = lod;
+    }
+    padre.add(obj);
+    const tam = obj.userData.tam, t = cfgBase.tam;
+    return { obj, k: t ? tam.x / t[0] : 1, cfg: cfgBase, tam };
   }
   // Esconde las piezas hechas en código de un grupo, menos las que se quedan (pantallas, letreros, anfitriones...)
   function ocultarMenos(g, quedan, ademas = []) { g.children.forEach((h) => { if (!quedan.includes(h) && !ademas.includes(h)) h.visible = false; }); }

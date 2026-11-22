@@ -13,9 +13,19 @@ export const PALETAS = {
   rosa: ["#f08ab0", "#e86f9e", "#f6a6c1", "#d95c8c", "#5e8a45"],
 };
 const azar = (l) => l[Math.floor(Math.random() * l.length)];
+// Foto de cada tipo de flor (WebP con transparencia) en texturas/flores/: se ponen en paneles cruzados
+const FOTO = { rosa: "rosa", blanco: "blanca", coral: "coral", amarillo: "amarilla", lavanda: "lavanda", buganvilia: "buganvilia" };
+const tipoDe = (pal) => Object.keys(PALETAS).find((k) => PALETAS[k] === pal) || "rosa";
+const BASE_FLORES = new URL("../texturas/flores/", import.meta.url);
+// paneles cruzados (estrella de 3) de 1×1; base en y = 0 o centrados
+function geoCruz(centrado) {
+  const ps = [0, 1, 2].map((k) => { const g = new THREE.PlaneGeometry(1, 1); g.translate(0, centrado ? 0 : 0.5, 0); g.rotateY((k * Math.PI) / 3); return g; });
+  return mergeGeometries(ps);
+}
 
-export function crearFlora(scene, { ligero = false } = {}) {
-  const L = { racimo: [], lavanda: [], flor: [], cipres: [], limon: [], loto: [] };
+// modelo(id) → plantilla de Meshy (o null); instancias(p, matrices, medidas) → grupo instanciado. Si llegan, los árboles son de Meshy.
+export function crearFlora(scene, { ligero = false, modelo = null, instancias = null } = {}) {
+  const L = { racimo: [], lavanda: [], flor: [], cipres: [], limon: [], loto: [], arbolFlor: [] };
   const color = new THREE.Color(), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = new THREE.Vector3(), p = new THREE.Vector3();
 
   // racimo de buganvilia o mata florida: bola facetada que se pinta por instancia
@@ -50,12 +60,14 @@ export function crearFlora(scene, { ligero = false } = {}) {
 
   const api = {
     // racimo de buganvilia (en techos, arcos y columnas): x, y, z, tamaño, paleta
-    racimo(x, y, z, k = 1, paleta = PALETAS.buganvilia) { L.racimo.push([x, y, z, k, azar(paleta)]); },
-    // cama de flores (bolitas de color sobre el pasto)
-    flor(x, z, k = 1, paleta = PALETAS.rosa, y = 0.56) { L.flor.push([x, y, z, k, azar(paleta)]); },
-    lavanda(x, z, k = 1, paleta = PALETAS.lavanda, y = 0.56) { L.lavanda.push([x, y, z, k, azar(paleta)]); },
+    racimo(x, y, z, k = 1, paleta = PALETAS.buganvilia) { L.racimo.push([x, y, z, k, azar(paleta), tipoDe(paleta)]); },
+    // cama de flores
+    flor(x, z, k = 1, paleta = PALETAS.rosa, y = 0.56) { L.flor.push([x, y, z, k, azar(paleta), tipoDe(paleta)]); },
+    lavanda(x, z, k = 1, paleta = PALETAS.lavanda, y = 0.56) { L.lavanda.push([x, y, z, k, azar(paleta), "lavanda"]); },
     cipres(x, z, alto = 9, y = 0.56) { L.cipres.push([x, y, z, alto]); },
     limonero(x, z, k = 1, y = 0.56) { L.limon.push([x, y, z, k]); },
+    // árbol de buganvilia (solo con el modelo de Meshy; sin él, un racimo grande)
+    arbolFlor(x, z, k = 1, y = 0.56) { L.arbolFlor.push([x, y, z, k]); },
     loto(x, y, z) { L.loto.push([x, y, z]); },
     // fila de algo entre dos puntos (para orillas de senderos)
     fila(tipo, x0, z0, x1, z1, paso, ...args) {
@@ -71,16 +83,46 @@ export function crearFlora(scene, { ligero = false } = {}) {
         im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true;
         im.computeBoundingSphere(); scene.add(im); mallas.push(im); return im;
       };
-      inst(geoRacimo, matRacimo, L.racimo, ([x, y, z, k]) => m.compose(p.set(x, y, z), q.setFromEuler(e.set(Math.random(), Math.random() * 6, 0)), s.set(k * (0.9 + Math.random() * 0.3), k * (0.7 + Math.random() * 0.2), k * (0.9 + Math.random() * 0.3))), true);
-      inst(geoRacimo, matRacimo, L.flor, ([x, y, z, k]) => m.compose(p.set(x, y + 0.18 * k, z), q.setFromEuler(e.set(0, Math.random() * 6, 0)), s.set(0.55 * k, 0.32 * k, 0.55 * k)), true);
-      inst(geoEspigas, matEspiga, L.lavanda, ([x, y, z, k]) => m.compose(p.set(x, y, z), q.setFromEuler(e.set(0, Math.random() * 6, 0)), s.setScalar(k)), true);
-      inst(geoMataL, matMataL, L.lavanda, ([x, y, z, k]) => m.compose(p.set(x, y, z), q.setFromEuler(e.set(0, Math.random() * 6, 0)), s.setScalar(k)));
-      inst(geoCipres, matCipres, L.cipres, ([x, y, z, h]) => m.compose(p.set(x, y, z), q.identity(), s.set(h * 0.16, h, h * 0.16)));
-      inst(geoTronco, matTronco, L.limon, ([x, y, z, k]) => m.compose(p.set(x, y, z), q.identity(), s.setScalar(k)));
-      inst(geoCopa, matCopa, L.limon, ([x, y, z, k]) => m.compose(p.set(x, y, z), q.setFromEuler(e.set(0, Math.random() * 6, 0)), s.setScalar(k)));
+      const bolas = [
+        inst(geoRacimo, matRacimo, L.racimo, ([x, y, z, k]) => m.compose(p.set(x, y, z), q.setFromEuler(e.set(Math.random(), Math.random() * 6, 0)), s.set(k * (0.9 + Math.random() * 0.3), k * (0.7 + Math.random() * 0.2), k * (0.9 + Math.random() * 0.3))), true),
+        inst(geoRacimo, matRacimo, L.flor, ([x, y, z, k]) => m.compose(p.set(x, y + 0.18 * k, z), q.setFromEuler(e.set(0, Math.random() * 6, 0)), s.set(0.55 * k, 0.32 * k, 0.55 * k)), true),
+        inst(geoEspigas, matEspiga, L.lavanda, ([x, y, z, k]) => m.compose(p.set(x, y, z), q.setFromEuler(e.set(0, Math.random() * 6, 0)), s.setScalar(k)), true),
+        inst(geoMataL, matMataL, L.lavanda, ([x, y, z, k]) => m.compose(p.set(x, y, z), q.setFromEuler(e.set(0, Math.random() * 6, 0)), s.setScalar(k))),
+      ];
+      const cip = inst(geoCipres, matCipres, L.cipres, ([x, y, z, h]) => m.compose(p.set(x, y, z), q.identity(), s.set(h * 0.16, h, h * 0.16)));
+      const limon = [
+        inst(geoTronco, matTronco, L.limon, ([x, y, z, k]) => m.compose(p.set(x, y, z), q.identity(), s.setScalar(k))),
+        inst(geoCopa, matCopa, L.limon, ([x, y, z, k]) => m.compose(p.set(x, y, z), q.setFromEuler(e.set(0, Math.random() * 6, 0)), s.setScalar(k))),
+      ];
       const frutas = [];
       L.limon.forEach(([x, y, z, k]) => { for (let i = 0; i < 9; i++) { const a = Math.random() * 6.3, b = Math.random() * 1.2 - 0.2; frutas.push([x + Math.cos(a) * Math.cos(b) * 1.35 * k, y + (2.6 + Math.sin(b) * 1.3) * k, z + Math.sin(a) * Math.cos(b) * 1.35 * k]); } });
-      inst(geoFruta, matFruta, frutas, ([x, y, z]) => m.compose(p.set(x, y, z), q.identity(), s.setScalar(1)));
+      limon.push(inst(geoFruta, matFruta, frutas, ([x, y, z]) => m.compose(p.set(x, y, z), q.identity(), s.setScalar(1))));
+      // ---- flores con foto: paneles cruzados por tipo; cuando cargan, se esconden las bolitas ----
+      const cargador = new THREE.TextureLoader();
+      const tipos = [...new Set([...L.flor, ...L.lavanda, ...L.racimo].map((it) => it[5]))];
+      Promise.all(tipos.map((t) => cargador.loadAsync(new URL(`fl-${FOTO[t] || "rosa"}.webp`, BASE_FLORES).href).then((tx) => [t, tx]).catch(() => null))).then((res) => {
+        if (res.some((r) => !r)) return; // falta alguna foto: se quedan las de código
+        const geoPie = geoCruz(false), geoCentro = geoCruz(true);
+        res.forEach(([t, tx]) => {
+          tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4;
+          const mat = new THREE.MeshStandardMaterial({ map: tx, alphaTest: 0.42, side: THREE.DoubleSide, roughness: 0.9 });
+          const ancho = t === "lavanda" ? 1.0 : 1.1, alto = ancho; // la foto es cuadrada (la planta abajo)
+          inst(geoPie, mat, [...L.flor, ...L.lavanda].filter((it) => it[5] === t), ([x, y, z, k]) => m.compose(p.set(x, y, z), q.setFromEuler(e.set(0, Math.random() * 6, 0)), s.set(ancho * k * (0.85 + Math.random() * 0.4), alto * k * (0.85 + Math.random() * 0.35), ancho * k)));
+          inst(geoCentro, mat, L.racimo.filter((it) => it[5] === t), ([x, y, z, k]) => m.compose(p.set(x, y, z), q.setFromEuler(e.set(0, Math.random() * 6, (Math.random() - 0.5) * 0.4)), s.set(2.1 * k, 2.1 * k, 2.1 * k)));
+        });
+        bolas.forEach((b) => b && (b.visible = false));
+      });
+      // ---- árboles de Meshy (ciprés, limonero, buganvilia) en lugar de los de código ----
+      if (modelo && instancias) {
+        const poner = (id, lista, escala, alHacer) => lista.length && modelo(id).then((pl) => {
+          if (!pl) return;
+          const ms = lista.map(([x, y, z, k]) => new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.random() * 6.3, 0)), new THREE.Vector3().setScalar(escala(k))));
+          scene.add(instancias(pl, ms, { alto: 1 })); alHacer();
+        });
+        poner("cipres", L.cipres, (h) => h * 0.95, () => cip && (cip.visible = false));
+        poner("limonero", L.limon, (k) => 4.4 * k, () => limon.forEach((x) => x && (x.visible = false)));
+        poner("buganvilia", L.arbolFlor, (k) => 5 * k, () => {});
+      }
       inst(geoHojaLoto, matHojaLoto, L.loto, ([x, y, z]) => m.compose(p.set(x, y + 0.01, z), q.setFromEuler(e.set(0, Math.random() * 6, 0)), s.setScalar(0.8 + Math.random() * 0.6)));
       inst(geoFlorLoto, matFlorLoto, L.loto.filter((_, i) => i % 2 === 0), ([x, y, z]) => m.compose(p.set(x + 0.1, y + 0.02, z), q.identity(), s.setScalar(1)));
       return mallas;

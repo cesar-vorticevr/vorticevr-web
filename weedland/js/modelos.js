@@ -3,10 +3,13 @@
 // Si un id no está en la lista, la escena se queda con su versión de siempre (no se pide ningún archivo).
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { clone as clonarEsqueleto } from "three/addons/utils/SkeletonUtils.js";
 
 const BASE = new URL("../modelos/", import.meta.url);
-const cargador = new GLTFLoader();
+// los modelos de Meshy van comprimidos con Draco (la geometría pesa ~10 veces menos)
+const draco = new DRACOLoader().setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/");
+const cargador = new GLTFLoader().setDRACOLoader(draco);
 let lista = null;
 const plantillas = {};
 
@@ -21,7 +24,12 @@ export async function plantilla(id) {
   if (!cfg || !cfg.archivo) return null;
   if (!plantillas[id]) {
     plantillas[id] = cargador.loadAsync(new URL(cfg.archivo, BASE).href).then((r) => {
-      r.scene.traverse((o) => { if (o.isMesh) { o.frustumCulled = !o.isSkinnedMesh; o.castShadow = o.receiveShadow = false; } });
+      // texturas nítidas de lado (filtro anisotrópico) y mipmaps de calidad
+      r.scene.traverse((o) => {
+        if (!o.isMesh) return;
+        o.frustumCulled = !o.isSkinnedMesh; o.castShadow = o.receiveShadow = false;
+        for (const k of ["map", "normalMap", "roughnessMap", "metalnessMap"]) { const t = o.material[k]; if (t) { t.anisotropy = 8; t.needsUpdate = true; } }
+      });
       return { escena: r.scene, clips: r.animations || [], cfg };
     }).catch((e) => { console.warn("No se pudo cargar el modelo", id, e); return null; });
   }
