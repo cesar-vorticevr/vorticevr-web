@@ -8,6 +8,7 @@ import { PABELLONES, catalogo } from "./datos.js";
 import { PUESTOS } from "./cultivo.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { mediosDe, dibujarEn, tieneMedios } from "./medios.js";
+import { plantilla, copia, instancias, listaModelos } from "./modelos.js";
 
 const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const ligero = innerWidth < 760 || matchMedia("(pointer: coarse)").matches; // celular: menos selva y luces
@@ -365,6 +366,11 @@ export function crearEstacion(canvas, cfg) {
       m.compose(ps.set(x + dx, 0.56 + alto, z + dz), q, sc.setScalar(0.8 + alto / 22)); co.setMatrixAt(i, m);
     });
     scene.add(tr, co);
+    plantilla("palma").then((p) => {
+      if (!p) return;
+      const ms = palmasLista.map(([x, z, alto, giro]) => new THREE.Matrix4().compose(new THREE.Vector3(x, 0.56, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, giro, 0)), new THREE.Vector3(alto, alto, alto)));
+      scene.add(instancias(p, ms, { alto: 1 })); tr.visible = co.visible = false;
+    });
   }
   // matas bajas (agaves y helechos) instanciadas
   const geoAgave = (() => {
@@ -419,6 +425,10 @@ export function crearEstacion(canvas, cfg) {
       const b = spriteBrillo("#ffcf7a", 1.5); b.position.set(x, 2.95, z); b.material.opacity = 0.55; scene.add(b);
     });
     scene.add(po, li);
+    plantilla("farol").then((p) => {
+      if (!p) return;
+      scene.add(instancias(p, farolesLista.map(([x, z]) => new THREE.Matrix4().makeTranslation(x, 2.7, z)), { alto: 0.75 })); li.visible = false;
+    });
   }
 
   // ---------- patio central: piso de mosaico, fuente, templete con pantalla de 4 caras ----------
@@ -434,14 +444,16 @@ export function crearEstacion(canvas, cfg) {
   scene.add(patio(R_PLAZA, 0.7, texMosaico("#c08a62", "#efe4cf", "#8a9c78"), 21));
   {
     // fuente
-    const borde = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.6, 0.7, 40), gris); borde.position.y = 1.0; scene.add(borde);
-    const agua = new THREE.Mesh(new THREE.CircleGeometry(3.05, 40), matAgua); agua.rotation.x = -Math.PI / 2; agua.position.y = 1.3; scene.add(agua);
-    const pie = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.55, 1.8, 16), gris); pie.position.y = 2.1; scene.add(pie);
+    const fuenteG = new THREE.Group(); scene.add(fuenteG);
+    const borde = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.6, 0.7, 40), gris); borde.position.y = 1.0; fuenteG.add(borde);
+    const agua = new THREE.Mesh(new THREE.CircleGeometry(3.05, 40), matAgua); agua.rotation.x = -Math.PI / 2; agua.position.y = 1.3; fuenteG.add(agua);
+    const pie = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.55, 1.8, 16), gris); pie.position.y = 2.1; fuenteG.add(pie);
     const taza = new THREE.Mesh(new THREE.LatheGeometry([new THREE.Vector2(0.2, 0), new THREE.Vector2(1.3, 0.25), new THREE.Vector2(1.45, 0.45), new THREE.Vector2(1.35, 0.5)], 24), gris);
-    taza.position.y = 2.95; scene.add(taza);
-    const aguaT = new THREE.Mesh(new THREE.CircleGeometry(1.3, 24), matAgua); aguaT.rotation.x = -Math.PI / 2; aguaT.position.y = 3.38; scene.add(aguaT);
+    taza.position.y = 2.95; fuenteG.add(taza);
+    const aguaT = new THREE.Mesh(new THREE.CircleGeometry(1.3, 24), matAgua); aguaT.rotation.x = -Math.PI / 2; aguaT.position.y = 3.38; fuenteG.add(aguaT);
     const chorro = new THREE.Mesh(new THREE.ConeGeometry(0.16, 1.4, 10, 1, true), new THREE.MeshBasicMaterial({ color: "#e9fbff", transparent: true, opacity: 0.45, depthWrite: false }));
-    chorro.position.y = 3.95; scene.add(chorro);
+    chorro.position.y = 3.95; fuenteG.add(chorro);
+    vestir(fuenteG, "fuente", { ancho: 7.4, y: 0.7 });
     anim.push((t) => { if (!quieto) chorro.scale.y = 1 + Math.sin(t * 5) * 0.08; });
     obst.push({ c: [0, 0, 3.7] });
     // templete: 4 columnas que cargan la pantalla de 4 caras
@@ -597,6 +609,18 @@ export function crearEstacion(canvas, cfg) {
   const matPantalon = new THREE.MeshStandardMaterial({ color: "#d8c8ab", roughness: 0.9 });
   const matPiel = {};
   const piel = (c) => matPiel[c] || (matPiel[c] = new THREE.MeshStandardMaterial({ color: c, roughness: 0.7 }));
+  // Cambia las figuras de un grupo por un modelo GLB de Meshy, si ya está en modelos/modelos.json.
+  // conservar: hijos que se quedan (sombra, globo de emoji...). Devuelve el control de animación o null.
+  async function vestir(g, id, medidas = {}, conservar = []) {
+    const p = await plantilla(id);
+    if (!p) return null;
+    const c = copia(p, medidas);
+    g.children.forEach((h) => { if (!conservar.includes(h)) h.visible = false; });
+    if (medidas.y) c.obj.position.y = medidas.y;
+    g.add(c.obj);
+    g.userData.ctl = c;
+    return c;
+  }
   function sombrero(color) {
     const s = new THREE.Group();
     s.add(new THREE.Mesh(geoH.ala, matJipi));
@@ -621,7 +645,9 @@ export function crearEstacion(canvas, cfg) {
     const fase = Math.random() * 6;
     let saludando = 0;
     r.userData.saludar = () => (saludando = 2.4);
+    vestir(r, "anfitrion", { alto: 1.85 });
     r.userData.animar = (t, dt) => {
+      if (r.userData.ctl) r.userData.ctl.update(dt, saludando > 0 && r.userData.ctl.tiene("saludar") ? "saludar" : "quieto");
       cuerpo.scale.set(1, 1 + Math.sin(t * 1.6 + fase) * 0.015, 1);
       cabeza.rotation.y = Math.sin(t * 0.5 + fase) * 0.45;
       if (saludando > 0) { saludando -= dt; brazos[1].rotation.z = 2.5 + Math.sin(t * 12) * 0.25; } else brazos[1].rotation.z = 0.12;
@@ -715,8 +741,10 @@ export function crearEstacion(canvas, cfg) {
     if (premium) { const rob2 = robot(m.color, 3.4, P / 2 - 1.5, 0.9); g.add(rob2); s.anim.push(rob2.userData.animar); }
     // Macetas de barro con helecho
     [-(A / 2 - 1.1), A / 2 - 1.1].forEach((x) => {
-      const mac = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.26, 0.6, 14), barro); mac.position.set(x, 0.6, zMuro + 1.4); g.add(mac);
-      const pl = new THREE.Mesh(geoAgave, matAgave); pl.position.set(x, 0.85, zMuro + 1.4); pl.scale.setScalar(0.7); g.add(pl);
+      const mg = new THREE.Group(); mg.position.set(x, 0.3, zMuro + 1.4); g.add(mg);
+      const mac = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.26, 0.6, 14), barro); mac.position.y = 0.3; mg.add(mac);
+      const pl = new THREE.Mesh(geoAgave, matAgave); pl.position.y = 0.55; pl.scale.setScalar(0.7); mg.add(pl);
+      vestir(mg, "maceta-agave", { alto: 1.5 });
     });
     s.frente = g.getWorldDirection(new THREE.Vector3());
     g.updateMatrixWorld(true);
@@ -1181,6 +1209,13 @@ export function crearEstacion(canvas, cfg) {
     nave.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(cuerdas), new THREE.LineBasicMaterial({ color: "#5a3b22" })));
     const fuego = spriteBrillo("#ffb45a", 1.6); fuego.position.y = 2.6; nave.add(fuego);
     anim.push((t) => { if (!tour) { envoltura.rotation.z = Math.sin(t * 0.7) * 0.025; envoltura.rotation.x = Math.sin(t * 0.5) * 0.02; } fuego.material.opacity = 0.5 + Math.sin(t * 9) * 0.2; });
+    // con el globo de Meshy: se esconden canasta, cuerdas y tela, y el modelo va en la envoltura (se mece igual)
+    plantilla("globo").then((p) => {
+      if (!p) return;
+      const c = copia(p, { alto: 10.3 });
+      nave.children.forEach((h) => { if (h !== envoltura && h !== fuego) h.visible = false; });
+      tela3d.visible = false; envoltura.add(c.obj);
+    });
     obst.push({ c: [NAVE_BASE.x, NAVE_BASE.z, 1.3] });
     etiquetas.push({ el: cfg.etiqueta({ id: "nave", icono: "🎈", nombre: "Paseo en globo", color: ORO }), pos: new THREE.Vector3(NAVE_BASE.x, 11.8, NAVE_BASE.z) });
     lugares.nave = { p: new THREE.Vector3(-6.0, 0, 6.6), mirar: NAVE_BASE.clone(), entrar: true };
@@ -1356,6 +1391,7 @@ export function crearEstacion(canvas, cfg) {
     g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.4, -0.2, 0), new THREE.Vector3(-2.4, -1.15, 0), new THREE.Vector3(0.4, -0.2, 0), new THREE.Vector3(2.4, -1.15, 0)]), new THREE.LineBasicMaterial({ color: ORO })));
     const R = 22 + (i % 4) * 18, h = 14 + (i % 3) * 4, w = (0.035 + (i % 2) * 0.015) * (i % 2 ? 1 : -1), fase = (i / total) * Math.PI * 2;
     drones.push({ m, g, bt });
+    vestir(g, "dron", { ancho: 2.4, y: -0.3 }).then((c) => { if (c) g.children.forEach((h) => { if (h === banner || h.isLineSegments) h.visible = true; }); });
     anim.push((t) => {
       const a = fase + t * (quieto ? 0.004 : w);
       g.position.set(Math.cos(a) * R, h + Math.sin(t * 0.8 + fase) * 1.0, Math.sin(a) * R);
@@ -1424,11 +1460,26 @@ export function crearEstacion(canvas, cfg) {
         const mesita = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.3, 0.5, 12), gris); mesita.position.set(0, 0.25, 0.9); pg.add(mesita);
         const vela = spriteBrillo("#ffcf7a", 1.4); vela.position.set(0, 0.7, 0.9); vela.material.opacity = 0.8; pg.add(vela);
         pg.updateMatrixWorld(true);
+        vestir(pg, "palapa-camastro", { ancho: 6 });
         obst.push({ caja: pg, x0: -2.9, x1: 2.9, z0: -2.9, z1: 2.9 });
         [-1, 1].forEach((s) => palma(x + Math.cos(a + s * 0.12) * 7, z - Math.sin(a + s * 0.12) * 7, 9 + Math.random() * 2));
       }
     }
   }
+  // ----- modelos sueltos que se acomodan desde modelos.json ("colocar": [[x, z, giro], ...]), p. ej. bancas -----
+  listaModelos().then((l) => Object.entries(l).forEach(([id, c]) => {
+    if (!c || !Array.isArray(c.colocar) || !c.colocar.length) return;
+    plantilla(id).then((p) => {
+      if (!p) return;
+      c.colocar.forEach(([x, z, gr = 0]) => {
+        const k = copia(p, { giro: gr }); k.obj.position.set(x, altura(x, z), z); scene.add(k.obj);
+        if (k.mixer) anim.push((t, dt) => { if (!quieto) k.update(dt); });
+        const tm = k.obj.userData.tam; obst.push({ c: [x, z, Math.max(tm.x, tm.z) * 0.45] });
+      });
+      libreCache.clear(); // las rutas ya cuentan los nuevos obstáculos
+    });
+  }));
+
   // ----- palmas sueltas en el pasto (lejos de patios, senderos y jardines) -----
   {
     const lejosDeTodo = (x, z, m) => {
@@ -1508,6 +1559,11 @@ export function crearEstacion(canvas, cfg) {
   const somYo = sombrero("#2b2016"); somYo.position.y = 0.17; somYo.scale.setScalar(1.05); casco.add(somYo);
   const sombraYo = new THREE.Mesh(new THREE.CircleGeometry(0.55, 24), new THREE.MeshBasicMaterial({ color: "#000", transparent: true, opacity: 0.22, depthWrite: false }));
   sombraYo.rotation.x = -Math.PI / 2; sombraYo.position.y = 0.02; yo.add(sombraYo);
+  // con el avatar de Meshy (ws-avatar: "mujer" o "hombre"); si solo hay uno, ese
+  {
+    let cual = "hombre"; try { cual = localStorage.getItem("ws-avatar") || cual; } catch (e) {}
+    listaModelos().then((l) => { const id = l["avatar-" + cual] ? "avatar-" + cual : l["avatar-hombre"] ? "avatar-hombre" : "avatar-mujer"; vestir(yo, id, { alto: 1.8 }, [sombraYo]); });
+  }
   const aro = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.62, 32), new THREE.MeshBasicMaterial({ color: "#f3d48c", transparent: true, opacity: 0.9, depthWrite: false }));
   aro.rotation.x = -Math.PI / 2; aro.visible = false; scene.add(aro);
 
@@ -1734,7 +1790,12 @@ export function crearEstacion(canvas, cfg) {
     else { const pe = new THREE.Mesh(geoBot.pelo, matPelo[k % matPelo.length]); pe.rotation.x = -0.2; cab.add(pe); }
     const so = new THREE.Mesh(geoBot.sombra, matSombra); so.rotation.x = -Math.PI / 2; so.position.y = 0.02; g.add(so);
     const globo = spriteEmoji("⭐", 0.7); globo.position.y = 2.75; globo.visible = false; g.add(globo);
-    return { g, pies, cab, globo, nombre: NOMBRES_BOT[k % NOMBRES_BOT.length], ruta: [], espera: 1 + Math.random() * 4, paso: Math.random() * 6, vel: 3.2 + Math.random() * 1.6, globoT: 0, mira: null };
+    // los 4 personajes de Meshy (si están en modelos.json); si no, el avatar de Meshy o la figura de siempre
+    listaModelos().then((l) => {
+      const id = ["personaje1", "personaje2", "personaje3", "personaje4"][k % 4];
+      vestir(g, l[id] ? id : k % 2 ? "avatar-mujer" : "avatar-hombre", { alto: (l[id] && l[id].alto) || 1.8 }, [so, globo]).then((c) => { if (c) g.scale.setScalar(0.96 + Math.random() * 0.06); });
+    });
+    return { g, pies, cab, globo, nombre: NOMBRES_BOT[k % NOMBRES_BOT.length], ruta: [], espera: 1 + Math.random() * 4, paso: Math.random() * 6, vel: 1.5 + Math.random() * 0.5, globoT: 0, mira: null, accion: "quieto", lejosT: 0 };
   }
   // destinos: frente a los stands (lo más visitado), los puestos del Mercado, la plaza y las islas
   function destinoBot(cerca) {
@@ -1748,45 +1809,109 @@ export function crearEstacion(canvas, cfg) {
     return { p: new THREE.Vector3(Math.cos(a) * d, 0, Math.sin(a) * d), mira: new THREE.Vector3(0, 0, 0) };
   }
 
+  // Pista de baile en el patio: los bailarines se acomodan en círculo mirando al centro
+  const PISTA = (() => {
+    for (const [x, z] of [[0, 10.5], [10.5, 0], [0, -10.5], [-10.5, 0], [7.5, 7.5]]) {
+      let ok = true;
+      for (let a = 0; a < 6 && ok; a++) ok = libre(x + Math.cos(a) * 2.2, z + Math.sin(a) * 2.2);
+      if (ok) return new THREE.Vector3(x, 0, z);
+    }
+    return new THREE.Vector3(0, 0, 10.5);
+  })();
+  const lugarBaile = (b) => { const a = (b.lugarBaile || 0) + (Math.random() - 0.5) * 0.3, r = 1.8 + Math.random() * 0.6; return { p: new THREE.Vector3(PISTA.x + Math.cos(a) * r, 0, PISTA.z + Math.sin(a) * r), mira: PISTA }; };
+  const girarHacia = (b, p, dt, k = 4) => { const dA = Math.atan2(p.x - b.g.position.x, p.z - b.g.position.z) - b.g.rotation.y; b.g.rotation.y += Math.atan2(Math.sin(dA), Math.cos(dA)) * Math.min(1, dt * k); };
+  const ir = (b, d) => {
+    if (!libre(d.p.x, d.p.z)) { const c = celdaCercana(d.p); if (!c) return false; d.p.set(c[0] * CELDA, 0, c[1] * CELDA); }
+    const desde = b.g.position.clone(); desde.y = 0;
+    b.ruta = planear(desde, d.p, 4000); b.mira = d.mira; b.accion = "caminar";
+    return b.ruta.length > 0;
+  };
+  const avisar = (b, e) => { b.globo.material = matGlobo[e] || (matGlobo[e] = spriteEmoji(e, 0.7).material); b.globo.visible = true; b.globoT = 2.4; };
+
+  // Qué hace cada visitante cuando se queda sin ruta:
+  // - baile: baila un rato en la pista; a veces da una vuelta por un stand cercano y regresa
+  // - guia + sigue (pareja): el guía escoge a dónde van, el otro camina a su lado; al llegar se miran y platican
+  // - solo: va a stands y puestos; a veces platica con el anfitrión
+  function pensarBot(b) {
+    if (b.rol === "baile") {
+      if (b.accion === "bailar" && Math.random() < 0.3) { ir(b, destinoBot(PISTA)); b.espera = 5 + Math.random() * 5; return; }
+      ir(b, lugarBaile(b)); b.espera = 2; return;
+    }
+    const d = destinoBot(b.g.position);
+    if (!ir(b, d)) { b.espera = 1 + Math.random() * 2; return; }
+    b.espera = 8 + Math.random() * 10;
+    if (b.pareja) {
+      // el acompañante va al mismo lugar, un paso al lado
+      const o = b.pareja, lado = new THREE.Vector3(d.p.z - b.g.position.z, 0, b.g.position.x - d.p.x).normalize().multiplyScalar(1.25);
+      ir(o, { p: d.p.clone().add(lado), mira: d.mira }); o.vel = b.vel;
+    }
+  }
+
   function moverBots(dt) {
-    let planesEsteCuadro = 0;
+    let planes = 0;
     for (const b of bots) {
+      const ctl = b.g.userData.ctl, o = b.pareja;
       if (!b.ruta.length) {
-        b.espera -= dt;
-        // de pie: mira lo que fue a ver y a veces "reacciona"
-        if (b.mira) { const dA = Math.atan2(b.mira.x - b.g.position.x, b.mira.z - b.g.position.z) - b.g.rotation.y; b.g.rotation.y += Math.atan2(Math.sin(dA), Math.cos(dA)) * Math.min(1, dt * 4); }
+        if (b.accion === "caminar") {
+          // acaba de llegar
+          const enPista = b.g.position.distanceTo(PISTA) < 3.5;
+          b.accion = b.rol === "baile" && enPista ? "bailar" : "quieto";
+          if (b.accion === "bailar") { b.espera = 18 + Math.random() * 25; if (Math.random() < 0.3) avisar(b, "🎶"); }
+          else if (b.rol === "baile") b.espera = 4 + Math.random() * 4; // se asomó a un stand y regresa
+          else if (b.rol === "guia") b.espera = Math.max(b.espera, 9 + Math.random() * 8);
+          else if (b.rol === "solo" && Math.random() < 0.45) { b.accion = "platicar"; b.espera = 6 + Math.random() * 6; if (Math.random() < 0.5) avisar(b, "💬"); }
+          else if (b.rol === "solo" && Math.random() < 0.5) avisar(b, AVISOS_BOT[Math.floor(Math.random() * AVISOS_BOT.length)]);
+        }
+        if (o && !o.ruta.length && b.g.position.distanceTo(o.g.position) < 3) {
+          // la pareja ya llegó junta: se miran y platican
+          b.accion = "platicar"; girarHacia(b, o.g.position, dt);
+          if (b.rol === "guia" && b.globoT <= 0 && Math.random() < dt * 0.12) avisar(b, ["💬", "😄", "👍", "🌿"][Math.floor(Math.random() * 4)]);
+        } else if (b.mira) girarHacia(b, b.mira, dt);
         b.pies.forEach((p) => (p.rotation.x *= 0.8));
-        if (b.espera <= 0 && planesEsteCuadro < 1) { // un plan por cuadro para no trabar la animación
-          planesEsteCuadro++;
-          const d = destinoBot(b.g.position);
-          if (libre(d.p.x, d.p.z)) {
-            const desde = b.g.position.clone(); desde.y = 0;
-            b.ruta = planear(desde, d.p, 4000); b.mira = d.mira;
-          }
-          b.espera = 4 + Math.random() * 9;
+        if (b.rol !== "sigue") {
+          b.espera -= dt;
+          // un plan por cuadro para no trabar la animación; el guía espera a que su acompañante llegue
+          if (b.espera <= 0 && planes < 1 && !(o && o.ruta.length)) { planes++; pensarBot(b); }
         }
       } else {
         const q = b.ruta[0], dx = q.x - b.g.position.x, dz = q.z - b.g.position.z, d = Math.hypot(dx, dz), st = b.vel * dt;
-        if (d <= st) { b.g.position.x = q.x; b.g.position.z = q.z; b.ruta.shift(); if (!b.ruta.length && Math.random() < 0.6) { const e = AVISOS_BOT[Math.floor(Math.random() * AVISOS_BOT.length)]; b.globo.material = matGlobo[e] || (matGlobo[e] = spriteEmoji(e, 0.7).material); b.globo.visible = true; b.globoT = 2.4; } }
+        if (d <= st) { b.g.position.x = q.x; b.g.position.z = q.z; b.ruta.shift(); }
         else {
           b.g.position.x += (dx / d) * st; b.g.position.z += (dz / d) * st;
           const dA = Math.atan2(dx, dz) - b.g.rotation.y; b.g.rotation.y += Math.atan2(Math.sin(dA), Math.cos(dA)) * Math.min(1, dt * 8);
         }
-        b.paso += dt * 9;
+        b.paso += dt * 9 * (b.vel / 3.5);
         const sw = Math.sin(b.paso);
         b.pies[0].rotation.x = sw * 0.6; b.pies[1].rotation.x = -sw * 0.6;
       }
-      b.g.position.y = altura(b.g.position.x, b.g.position.z) + Math.abs(Math.sin(b.paso)) * (b.ruta.length ? 0.05 : 0);
+      if (ctl) {
+        // los que están lejos de la cámara se animan con menos frecuencia
+        b.lejosT += dt;
+        if (b.lejosT > 0.12 || b.g.position.distanceToSquared(camera.position) < 70 * 70) {
+          const estado = b.ruta.length ? "caminar" : ctl.tiene(b.accion) ? b.accion : "quieto";
+          ctl.update(quieto ? 0 : b.lejosT, estado);
+          ctl.ritmo(estado === "caminar" ? b.vel / 1.45 : 1);
+          b.lejosT = 0;
+        }
+      }
+      b.g.position.y = altura(b.g.position.x, b.g.position.z) + (ctl ? 0 : Math.abs(Math.sin(b.paso)) * (b.ruta.length ? 0.05 : 0));
       if (b.globoT > 0) { b.globoT -= dt; b.globo.position.y = 2.75 + (2.4 - b.globoT) * 0.25; if (b.globoT <= 0) b.globo.visible = false; }
     }
   }
   function crearBots() {
-    const n = innerWidth < 760 ? 8 : 16;
+    const n = innerWidth < 760 ? 8 : 16, nBaile = innerWidth < 760 ? 3 : 5, nParejas = innerWidth < 760 ? 1 : 3;
     for (let k = 0; k < n; k++) {
-      const b = crearBot(k), d = destinoBot();
-      const c = celdaCercana(d.p); // aparecen ya repartidos por la estación
+      const b = crearBot(k);
+      // papeles: primero los que bailan, luego parejas (guía + acompañante), el resto va solo
+      if (k < nBaile) { b.rol = "baile"; b.lugarBaile = (k / nBaile) * Math.PI * 2; }
+      else if (k < nBaile + nParejas * 2) b.rol = (k - nBaile) % 2 ? "sigue" : "guia";
+      else b.rol = "solo";
+      if (b.rol === "sigue") { const g = bots[k - 1]; b.pareja = g; g.pareja = b; }
+      const d = b.rol === "baile" ? lugarBaile(b) : b.rol === "sigue" ? { p: b.pareja.g.position.clone().add(new THREE.Vector3(1.2, 0, 0)), mira: b.pareja.mira } : destinoBot();
+      const c = celdaCercana(d.p); // aparecen ya repartidos por la hacienda
       if (c) b.g.position.set(c[0] * CELDA, 0, c[1] * CELDA);
       b.mira = d.mira; b.g.rotation.y = Math.random() * Math.PI * 2;
+      if (b.rol === "baile") { b.accion = "bailar"; b.espera = 10 + Math.random() * 20; }
       bots.push(b);
     }
   }
@@ -1962,6 +2087,7 @@ export function crearEstacion(canvas, cfg) {
     const sw = andando ? Math.sin(paso) : 0;
     piernas[0].rotation.x = sw * 0.7; piernas[1].rotation.x = -sw * 0.7;
     brazosYo[0].rotation.x = -sw * 0.6; brazosYo[1].rotation.x = sw * 0.6;
+    if (yo.userData.ctl) yo.userData.ctl.update(quieto ? 0 : dt, andando ? "caminar" : "quieto");
     torso.position.y = 1.3 + Math.abs(Math.sin(paso)) * (andando ? 0.05 : 0);
     casco.position.y = 2.0 + Math.abs(Math.sin(paso)) * (andando ? 0.05 : 0) + (andando ? 0 : Math.sin(performance.now() / 600) * 0.015);
     // la cámara acompaña al avatar

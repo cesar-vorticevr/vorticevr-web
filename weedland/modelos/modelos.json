@@ -1,0 +1,6 @@
+{
+  "personaje1": { "archivo": "personaje1.glb", "alto": 1.75 },
+  "personaje2": { "archivo": "personaje2.glb", "alto": 1.8 },
+  "personaje3": { "archivo": "personaje3.glb", "alto": 1.78 },
+  "personaje4": { "archivo": "personaje4.glb", "alto": 1.8 }
+}
