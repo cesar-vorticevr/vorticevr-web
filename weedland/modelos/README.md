@@ -17,7 +17,7 @@ Opciones de cada modelo: `alto` (metros), `ancho` (metros; se usa en lugar de `a
 
 | id | Qué reemplaza | Medida que usa | Animaciones |
 |---|---|---|---|
-| `personaje1` … `personaje4` | Los visitantes (bots): bailan en el patio, caminan en pareja y platican, o van solos a los stands | alto del json (~1.8) | quieto (Idle), caminar (Walk), platicar (Talk), bailar (Dance) |
+| `personaje1` … `personaje6` | Los que eliges en la entrada y la gente de la hacienda (sin repetir el tuyo). `genero` (mujer/hombre) y `foto` (en `fotos/`, 360×480) en el json | alto del json (~2.05, a escala de los stands) | quieto (Idle), caminar (Walk), platicar (Talk), bailar (Dance) |
 | `avatar-hombre` | Tu avatar (y los bots si faltan los personajes) | alto 1.8 | caminar, quieto |
 | `avatar-mujer` | Tu avatar si `ws-avatar` = `mujer` (y la otra mitad de los bots) | alto 1.8 | caminar, quieto |
 | `anfitrion` | Anfitriones de stands, casas, mercado y tienda | alto 1.85 | quieto, saludar |
@@ -36,4 +36,4 @@ Pendiente (las pantallas están medidas en código): stands, stand premium, casa
 
 Peso recomendado: personajes ≤ 15k triángulos, objetos ≤ 3k, y GLB de menos de 5 MB (mejor < 2 MB para celular).
 
-Los 4 personajes vienen de Meshy a ~100k triángulos y texturas de hasta 8192 px (30 MB en total). Se aligeraron a 18k–42k triángulos, texturas de 1024 px y animación a 15 cuadros por segundo (12 MB en total). Si mandas nuevos, hay que aligerarlos igual antes de ponerlos aquí.
+Los personajes vienen de Meshy a ~100k triángulos y texturas de hasta 8192 px (30 MB en total). Se aligeraron a 18k–42k triángulos, texturas de 1024 px y animación a 15 cuadros por segundo (12 MB en total). Si mandas nuevos, hay que aligerarlos igual antes de ponerlos aquí.

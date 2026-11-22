@@ -2,6 +2,7 @@
 import { PAISES, PABELLONES, PREMIO_DIA, catalogo, preguntasMarca, nombrePais, videosDe, NIVELES } from "./datos.js";
 import { leerPerfil, guardarPerfil, leerJuego, guardarJuego, marcas, sumar, codigo, CLAVES, registrarVista } from "./estado.js";
 import { urlDe } from "./medios.js";
+import { platica, habla, decirComo, callar } from "./gente.js";
 import { sonido, volar, cartel, confeti, flotante, contar, alternarSonido, estaMudo } from "./efectos.js";
 import { semillasRegistradas, ADITAMENTOS, aditamento, OBJETOS, PUESTOS, puesto, claseDe, progreso, faltan, rinde, factorVel, tiempoTexto, MAX_VIDEOS, COMPRADORES, MAX_TIENDA, PRECIO_MAX, precioJusto, esperaVenta, TIPOS_SEMILLA } from "./cultivo.js";
 
@@ -23,35 +24,85 @@ const pab = (id) => PABELLONES.find((p) => p.id === id);
 const guardar = () => { guardarJuego(J); contadores(); };
 const vars = (m) => `--c:${m.color};--c2:${m.color2}`;
 
-// ---------- entrada (edad según país) ----------
+// ---------- entrada: país, apodo y año de nacimiento (edad mínima según el país), luego eliges tu personaje ----------
+// Todo se queda en este navegador (localStorage); no se manda a ningún servidor.
 function entrada() {
-  const caja = $("#entrada");
+  const caja = $("#entrada"), previo = leerPerfil() || {};
   caja.hidden = false;
+  const ano = new Date().getFullYear();
   caja.innerHTML = `
     <div class="entrada-caja">
       <div class="planeta-entrada">🌴</div>
       <div class="entrada-logo">Weedland</div>
       <div class="entrada-sub">HACIENDA</div>
       <p>Una hacienda wellness para el sector cannábico legal. Recorre los claustros de las marcas, mira sus catálogos, juega y gana premios reales.</p>
-      <label for="pais" class="suave chico-t">¿Desde qué país nos visitas?</label>
-      <select id="pais">${PAISES.map((p) => `<option value="${p.id}">${p.nombre}</option>`).join("")}</select>
-      <button id="soy-mayor" class="btn ancho"></button>
-      <button id="no-mayor" class="btn sec ancho" style="margin-top:8px">No, soy menor</button>
+      <form id="form-entrada" class="form-entrada" novalidate>
+        <label>¿Desde qué país nos visitas?<select id="pais">${PAISES.map((p) => `<option value="${p.id}">${p.nombre}</option>`).join("")}</select></label>
+        <label>Tu nombre o apodo<input id="apodo" maxlength="20" autocomplete="nickname" placeholder="Así te saludará la gente" value="${esc(previo.apodo || "")}"></label>
+        <label>Año en que naciste<input id="nacio" type="number" inputmode="numeric" min="${ano - 110}" max="${ano}" placeholder="Ej. 1995" value="${previo.nacimiento || ""}"></label>
+        <label id="fila-cumple" class="check" hidden><input type="checkbox" id="cumple"> <span id="txt-cumple"></span></label>
+        <p id="error-entrada" class="error" hidden></p>
+        <button id="seguir-entrada" class="btn ancho">Seguir ▶</button>
+      </form>
       <p class="legal">Solo para mayores de edad. Aquí no se vende nada: cada marca vende en su propia tienda y según la ley de tu país. Demo con marcas de ejemplo.</p>
     </div>`;
-  const sel = $("#pais"), btn = $("#soy-mayor");
+  const sel = $("#pais"), nacio = $("#nacio"), err = $("#error-entrada");
   const idioma = (navigator.language || "").toUpperCase();
   const sug = PAISES.find((p) => idioma.endsWith(p.id));
-  if (sug) sel.value = sug.id;
-  const pintar = () => { const p = PAISES.find((x) => x.id === sel.value); btn.textContent = `Tengo ${p.edad} años o más · Entrar`; };
-  sel.onchange = pintar; pintar();
-  btn.onclick = () => {
-    sonido.pop();
-    guardarPerfil({ pais: sel.value, fecha: hoy() });
-    caja.hidden = true;
-    iniciar();
+  sel.value = previo.pais || (sug ? sug.id : "MX");
+  const minimo = () => PAISES.find((x) => x.id === sel.value).edad;
+  // con solo el año no se sabe si ya cumplió: si le toca justo la edad mínima, que lo confirme
+  const revisar = () => {
+    const y = +nacio.value, justo = y && ano - y === minimo();
+    $("#fila-cumple").hidden = !justo;
+    $("#txt-cumple").textContent = `Ya cumplí ${minimo()} años`;
+    err.hidden = true;
   };
-  $("#no-mayor").onclick = () => { caja.innerHTML = `<div class="entrada-caja"><div class="planeta-entrada">👋</div><h2>¡Nos vemos más adelante!</h2><p class="suave">Weedland es solo para personas adultas.</p></div>`; };
+  sel.onchange = revisar; nacio.oninput = revisar; revisar();
+  $("#form-entrada").onsubmit = (e) => {
+    e.preventDefault();
+    const apodo = $("#apodo").value.replace(/[<>]/g, "").trim(), y = +nacio.value, edad = ano - y, min = minimo();
+    const mal = (t) => { err.textContent = t; err.hidden = false; sonido.tap(); };
+    if (apodo.length < 2) return mal("Escribe tu nombre o un apodo (mínimo 2 letras).");
+    if (!y || y < ano - 110 || y > ano) return mal("Escribe el año en que naciste (4 dígitos).");
+    if (edad < min || (edad === min && !$("#cumple").checked)) {
+      caja.innerHTML = `<div class="entrada-caja"><div class="planeta-entrada">👋</div><h2>¡Nos vemos más adelante!</h2><p class="suave">En ${esc(nombrePais(sel.value))} Weedland es solo para personas de ${min} años o más.</p></div>`;
+      return;
+    }
+    sonido.pop();
+    elegirPersonaje({ ...previo, pais: sel.value, apodo, nacimiento: y, fecha: hoy() });
+  };
+}
+
+// Elegir con qué personaje entras (los de modelos/modelos.json). Ese ya no sale entre la gente de la hacienda.
+async function elegirPersonaje(perfil) {
+  const caja = $("#entrada");
+  caja.hidden = false;
+  let lista = {};
+  try { lista = await (await fetch("modelos/modelos.json")).json(); } catch {}
+  const ids = Object.keys(lista).filter((id) => /^personaje\d+$/.test(id));
+  if (!ids.length) return entrar({ ...perfil, personaje: null });
+  let elegido = ids.includes(perfil.personaje) ? perfil.personaje : null;
+  caja.innerHTML = `
+    <div class="entrada-caja ancha">
+      <div class="entrada-sub" style="margin:0 0 4px">HOLA, ${esc(perfil.apodo.toUpperCase())}</div>
+      <h2>Elige tu personaje</h2>
+      <p class="suave chico-t">Así te verán en la hacienda. Nadie más andará con el mismo.</p>
+      <div class="personajes">${ids.map((id) => `<button class="personaje" data-id="${id}" aria-pressed="false">
+        <img src="modelos/${esc(lista[id].foto || "")}" alt="" loading="lazy"><span>${lista[id].genero === "hombre" ? "Él" : "Ella"}</span></button>`).join("")}</div>
+      <button id="entrar-hacienda" class="btn ancho" disabled>Entrar a la hacienda ▶</button>
+      <button id="volver-entrada" class="btn sec chico" style="margin-top:10px">◀ Cambiar mis datos</button>
+    </div>`;
+  const pintar = () => { $$(".personaje", caja).forEach((b) => { const si = b.dataset.id === elegido; b.classList.toggle("sel", si); b.setAttribute("aria-pressed", si); }); $("#entrar-hacienda").disabled = !elegido; };
+  $$(".personaje", caja).forEach((b) => (b.onclick = () => { sonido.tap(); elegido = b.dataset.id; pintar(); }));
+  pintar();
+  $("#entrar-hacienda").onclick = () => { sonido.pop(); entrar({ ...perfil, personaje: elegido }); };
+  $("#volver-entrada").onclick = () => { guardarPerfil(null); entrada(); };
+}
+function entrar(perfil) {
+  guardarPerfil(perfil);
+  $("#entrada").hidden = true;
+  iniciar();
 }
 
 // ---------- arranque ----------
@@ -64,11 +115,15 @@ async function iniciar() {
     est = crearEstacion($("#escena"), {
       marcas: MARCAS,
       replica: REPLICA,
+      personaje: REPLICA ? null : (leerPerfil() || {}).personaje,
       etiqueta: crearEtiqueta,
       alTocar: REPLICA ? () => {} : alTocar,
       alCerca: REPLICA ? () => {} : alCerca,
       alSoltar: () => { if (actual && actual.tipo === "stand") cerrarPanel(); },
       alPaso: () => { if (!REPLICA) sonido.paso(); },
+      alBaile: (si) => { $("#btn-baile").classList.toggle("activo", si); $("#btn-baile").setAttribute("aria-pressed", si); if (si) { cerrarCharla(); sonido.tap(); } },
+      alFinCharla: () => cerrarCharla(),
+      puedeBailar: () => !actual,
     });
   } catch (e) {
     console.error(e);
@@ -89,6 +144,8 @@ async function iniciar() {
   refrescarCultivo();
   setInterval(relojGranja, 1000);
   $("#saltar-tour").onclick = () => est.saltarTour();
+  $("#btn-baile").hidden = false;
+  $("#btn-baile").onclick = () => { if (actual) return; est.bailar(!est.bailando()); };
   setTimeout(() => { if (!regaloDiario() && !J.guia) guia(0); }, 900);
 }
 
@@ -152,6 +209,15 @@ function alCerca(id) {
   cercaDe = id;
   const b = $("#entrar");
   if (!id) { b.hidden = true; return; }
+  if (id.startsWith("persona:")) {
+    if (charla) { b.hidden = true; return; }
+    const p = est && est.perfilDe(+id.slice(8));
+    if (!p) { b.hidden = true; return; }
+    b.innerHTML = `<span class="logo-mini" style="--c:#f3ead8;--c2:#e3c27a">${esc(p.nombre[0])}</span> 💬 Platicar con ${esc(p.nombre)} ▶`;
+    b.style.cssText = "--c:#e3c27a";
+    b.hidden = !!actual || document.body.classList.contains("en-tour");
+    return;
+  }
   const m = marca(id);
   const pu = id.startsWith("puesto:") ? puesto(id.slice(7)) : null;
   b.innerHTML = m ? `<span class="logo-mini" style="${vars(m)}">${m.icono}</span> Entrar a ${esc(m.nombre)} ▶`
@@ -181,11 +247,52 @@ function conectarStick() {
   $("#entrar").onclick = () => {
     sonido.tap();
     if (!cercaDe) return;
-    if (cercaDe.startsWith("puesto:")) abrirPuesto(cercaDe.slice(7));
+    if (cercaDe.startsWith("persona:")) abrirCharla(+cercaDe.slice(8));
+    else if (cercaDe.startsWith("puesto:")) abrirPuesto(cercaDe.slice(7));
     else if (cercaDe === "tienda") abrirTienda();
     else if (cercaDe === "nave") abrirNave();
     else abrirStand(cercaDe);
   };
+}
+
+// ---------- platicar con la gente ----------
+// Cada visitante tiene su país, su idioma y a qué vino. Habla con una voz del navegador (de su país si la hay).
+// Si habla inglés, abajo sale lo que dice en español.
+let charla = null;
+function abrirCharla(k) {
+  const r = est && est.platicarCon(k);
+  if (!r) return;
+  const { perfil: p, rol } = r;
+  charla = { p, lineas: platica(p, rol, MARCAS.map((m) => m.nombre), (leerPerfil() || {}).apodo), i: 0 };
+  $("#entrar").hidden = true;
+  cerrarGuia(true);
+  pintarCharla();
+}
+function pintarCharla() {
+  const c = $("#charla");
+  if (!charla) { c.hidden = true; return; }
+  const { p, lineas, i } = charla, l = lineas[i], ultima = i >= lineas.length - 1, en = habla(p) === "en";
+  c.hidden = false;
+  c.innerHTML = `<div class="cara">${esc(p.nombre[0])}</div>
+    <h4>${esc(p.nombre)} <small>${p.bandera} ${esc(p.pais)} · ${en ? "English" : "Español"}</small></h4>
+    <p class="dice">${esc(l.dice)}</p>
+    ${en ? `<p class="trad">${esc(l.es)}</p>` : ""}
+    <div class="fila">
+      ${ultima ? `<button class="btn chico" data-adios>Adiós 👋</button>` : `<button class="btn chico" data-mas>${en ? "Sigue platicando ▶" : "Sigue platicando ▶"}</button><button class="btn sec chico" data-adios>Adiós</button>`}
+      <button class="btn sec chico" data-voz title="Repetir">🔊</button>
+    </div>`;
+  const mas = $("[data-mas]", c);
+  if (mas) mas.onclick = () => { sonido.tap(); charla.i++; pintarCharla(); };
+  $("[data-adios]", c).onclick = () => { sonido.tap(); cerrarCharla(); };
+  $("[data-voz]", c).onclick = () => decirComo(p, l.dice, null, l.es);
+  if (!estaMudo()) decirComo(p, l.dice, null, l.es);
+}
+function cerrarCharla() {
+  if (!charla) return;
+  charla = null; callar();
+  $("#charla").hidden = true;
+  est && est.terminarCharla();
+  alCerca(cercaDe);
 }
 
 function marcarNav(ir) { $$(".nav button").forEach((b) => b.classList.toggle("activo", b.dataset.ir === ir)); }
@@ -198,6 +305,7 @@ function abrirPanel(html, { tipo, id, alto = false, c = null, nav = null } = {})
   $("#panel-cuerpo").innerHTML = html;
   $("#panel-cuerpo").scrollTop = 0;
   actual = { tipo, id };
+  cerrarCharla(); est && est.bailar(false);
   marcarNav(nav);
   $("#entrar").hidden = true;
   document.body.classList.add("con-panel");
@@ -1215,4 +1323,9 @@ document.addEventListener("touchend", (e) => {
 }, { passive: false });
 
 // ---------- inicio ----------
-if (leerPerfil() || REPLICA) iniciar(); else entrada();
+{
+  const p = leerPerfil();
+  if (REPLICA || (p && p.personaje && p.apodo && p.nacimiento)) iniciar();
+  else if (p && p.apodo && p.nacimiento) elegirPersonaje(p);
+  else entrada();
+}

@@ -8,6 +8,12 @@ export const PAISES = [
   { id: "US", nombre: "Estados Unidos", edad: 21 },
   { id: "MX", nombre: "México", edad: 18 },
   { id: "UY", nombre: "Uruguay", edad: 18 },
+  { id: "BR", nombre: "Brasil", edad: 18 },
+  { id: "CA", nombre: "Canadá", edad: 19 },
+  { id: "CR", nombre: "Costa Rica", edad: 18 },
+  { id: "DE", nombre: "Alemania", edad: 18 },
+  { id: "PE", nombre: "Perú", edad: 18 },
+  { id: "GB", nombre: "Reino Unido", edad: 18 },
   { id: "XX", nombre: "Otro país", edad: 21 },
 ];
 export const nombrePais = (id) => (PAISES.find((p) => p.id === id) || {}).nombre || id;

@@ -1,6 +1,8 @@
 {
-  "personaje1": { "archivo": "personaje1.glb", "alto": 1.75 },
-  "personaje2": { "archivo": "personaje2.glb", "alto": 1.8 },
-  "personaje3": { "archivo": "personaje3.glb", "alto": 1.78 },
-  "personaje4": { "archivo": "personaje4.glb", "alto": 1.8 }
+  "personaje1": { "archivo": "personaje1.glb", "alto": 2.0, "genero": "mujer", "foto": "fotos/personaje1.png" },
+  "personaje2": { "archivo": "personaje2.glb", "alto": 2.05, "genero": "mujer", "foto": "fotos/personaje2.png" },
+  "personaje3": { "archivo": "personaje3.glb", "alto": 2.03, "genero": "mujer", "foto": "fotos/personaje3.png" },
+  "personaje4": { "archivo": "personaje4.glb", "alto": 2.05, "genero": "mujer", "foto": "fotos/personaje4.png" },
+  "personaje5": { "archivo": "personaje5.glb", "alto": 2.12, "genero": "hombre", "foto": "fotos/personaje5.png" },
+  "personaje6": { "archivo": "personaje6.glb", "alto": 2.12, "genero": "hombre", "foto": "fotos/personaje6.png" }
 }

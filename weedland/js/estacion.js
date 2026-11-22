@@ -9,6 +9,7 @@ import { PUESTOS } from "./cultivo.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { mediosDe, dibujarEn, tieneMedios } from "./medios.js";
 import { plantilla, copia, instancias, listaModelos } from "./modelos.js";
+import { perfilDe } from "./gente.js";
 
 const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const ligero = innerWidth < 760 || matchMedia("(pointer: coarse)").matches; // celular: menos selva y luces
@@ -1537,24 +1538,26 @@ export function crearEstacion(canvas, cfg) {
 
   // ---------- avatar ----------
   const yo = new THREE.Group(); scene.add(yo);
+  // la figura de siempre medía 2.25 m con sombrero: se ajusta al alto de los personajes (~2.05 m, a escala de los stands)
+  const figYo = new THREE.Group(); figYo.scale.setScalar(0.92); yo.add(figYo);
   const traje = new THREE.MeshStandardMaterial({ color: "#f6efe2", roughness: 0.9 });
   const acento = new THREE.MeshStandardMaterial({ color: "#7a8f6a", roughness: 0.85 });
   const tonoYo = piel("#b98a63");
   const piernas = [-1, 1].map((s) => {
-    const p = new THREE.Group(); p.position.set(s * 0.15, 0.9, 0); yo.add(p);
+    const p = new THREE.Group(); p.position.set(s * 0.15, 0.9, 0); figYo.add(p);
     const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.62, 4, 10), matPantalon); m.position.y = -0.44; p.add(m);
     return p;
   });
-  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.31, 0.5, 6, 16), traje); torso.position.y = 1.3; yo.add(torso);
-  const cinto = new THREE.Mesh(new THREE.TorusGeometry(0.315, 0.035, 6, 24), oro); cinto.rotation.x = Math.PI / 2; cinto.position.y = 1.0; yo.add(cinto);
-  const mochila = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.46, 0.14), acento); mochila.position.set(0.18, 1.08, -0.3); mochila.rotation.z = -0.2; yo.add(mochila);
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.31, 0.5, 6, 16), traje); torso.position.y = 1.3; figYo.add(torso);
+  const cinto = new THREE.Mesh(new THREE.TorusGeometry(0.315, 0.035, 6, 24), oro); cinto.rotation.x = Math.PI / 2; cinto.position.y = 1.0; figYo.add(cinto);
+  const mochila = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.46, 0.14), acento); mochila.position.set(0.18, 1.08, -0.3); mochila.rotation.z = -0.2; figYo.add(mochila);
   const brazosYo = [-1, 1].map((s) => {
-    const b = new THREE.Group(); b.position.set(s * 0.4, 1.62, 0); yo.add(b);
+    const b = new THREE.Group(); b.position.set(s * 0.4, 1.62, 0); figYo.add(b);
     const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.5, 4, 8), traje); m.position.y = -0.3; b.add(m);
     const mano = new THREE.Mesh(geoH.mano, tonoYo); mano.position.y = -0.63; b.add(mano);
     return b;
   });
-  const casco = new THREE.Group(); casco.position.y = 2.0; yo.add(casco);
+  const casco = new THREE.Group(); casco.position.y = 2.0; figYo.add(casco);
   casco.add(new THREE.Mesh(new THREE.SphereGeometry(0.25, 20, 14), tonoYo));
   const somYo = sombrero("#2b2016"); somYo.position.y = 0.17; somYo.scale.setScalar(1.05); casco.add(somYo);
   const sombraYo = new THREE.Mesh(new THREE.CircleGeometry(0.55, 24), new THREE.MeshBasicMaterial({ color: "#000", transparent: true, opacity: 0.22, depthWrite: false }));
@@ -1562,7 +1565,10 @@ export function crearEstacion(canvas, cfg) {
   // con el avatar de Meshy (ws-avatar: "mujer" o "hombre"); si solo hay uno, ese
   {
     let cual = "hombre"; try { cual = localStorage.getItem("ws-avatar") || cual; } catch (e) {}
-    listaModelos().then((l) => { const id = l["avatar-" + cual] ? "avatar-" + cual : l["avatar-hombre"] ? "avatar-hombre" : "avatar-mujer"; vestir(yo, id, { alto: 1.8 }, [sombraYo]); });
+    listaModelos().then((l) => {
+      const id = cfg.personaje && l[cfg.personaje] ? cfg.personaje : l["avatar-" + cual] ? "avatar-" + cual : l["avatar-hombre"] ? "avatar-hombre" : "avatar-mujer";
+      vestir(yo, id, { alto: (l[id] && l[id].alto) || 2.05 }, [sombraYo]);
+    });
   }
   const aro = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.62, 32), new THREE.MeshBasicMaterial({ color: "#f3d48c", transparent: true, opacity: 0.9, depthWrite: false }));
   aro.rotation.x = -Math.PI / 2; aro.visible = false; scene.add(aro);
@@ -1778,7 +1784,7 @@ export function crearEstacion(canvas, cfg) {
   const matPelo = ["#2a1c14", "#4a3020", "#15100c", "#7a5534"].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 }));
   const matSombra = new THREE.MeshBasicMaterial({ color: "#000", transparent: true, opacity: 0.2, depthWrite: false });
   const bots = [], matGlobo = {};
-  function crearBot(k) {
+  function crearBot(k, id, cfgM) {
     const color = COLORES_BOT[k % COLORES_BOT.length];
     const traj = new THREE.MeshStandardMaterial({ color: k % 2 ? "#f6efe2" : "#efe3cf", roughness: 0.9 }), acc = new THREE.MeshStandardMaterial({ color, roughness: 0.85 });
     const g = new THREE.Group(); g.scale.setScalar(0.92 + Math.random() * 0.12); scene.add(g);
@@ -1791,11 +1797,10 @@ export function crearEstacion(canvas, cfg) {
     const so = new THREE.Mesh(geoBot.sombra, matSombra); so.rotation.x = -Math.PI / 2; so.position.y = 0.02; g.add(so);
     const globo = spriteEmoji("⭐", 0.7); globo.position.y = 2.75; globo.visible = false; g.add(globo);
     // los 4 personajes de Meshy (si están en modelos.json); si no, el avatar de Meshy o la figura de siempre
-    listaModelos().then((l) => {
-      const id = ["personaje1", "personaje2", "personaje3", "personaje4"][k % 4];
-      vestir(g, l[id] ? id : k % 2 ? "avatar-mujer" : "avatar-hombre", { alto: (l[id] && l[id].alto) || 1.8 }, [so, globo]).then((c) => { if (c) g.scale.setScalar(0.96 + Math.random() * 0.06); });
-    });
-    return { g, pies, cab, globo, nombre: NOMBRES_BOT[k % NOMBRES_BOT.length], ruta: [], espera: 1 + Math.random() * 4, paso: Math.random() * 6, vel: 1.5 + Math.random() * 0.5, globoT: 0, mira: null, accion: "quieto", lejosT: 0 };
+    const alto = (cfgM && cfgM.alto) || 2.05, genero = (cfgM && cfgM.genero) || (k % 2 ? "mujer" : "hombre");
+    vestir(g, id || (genero === "mujer" ? "avatar-mujer" : "avatar-hombre"), { alto }, [so, globo]).then((c) => { if (c) g.scale.setScalar(0.96 + Math.random() * 0.06); });
+    const perfil = perfilDe(genero, cuentaGenero[genero] = (cuentaGenero[genero] ?? -1) + 1);
+    return { g, pies, cab, globo, k, perfil, alto, nombre: perfil.nombre, ruta: [], espera: 1 + Math.random() * 4, paso: Math.random() * 6, vel: 1.5 + Math.random() * 0.5, globoT: 0, mira: null, accion: "quieto", lejosT: 0 };
   }
   // destinos: frente a los stands (lo más visitado), los puestos del Mercado, la plaza y las islas
   function destinoBot(cerca) {
@@ -1833,6 +1838,7 @@ export function crearEstacion(canvas, cfg) {
   // - guia + sigue (pareja): el guía escoge a dónde van, el otro camina a su lado; al llegar se miran y platican
   // - solo: va a stands y puestos; a veces platica con el anfitrión
   function pensarBot(b) {
+    if (b.conYo || b.charla) return;
     if (b.rol === "baile") {
       if (b.accion === "bailar" && Math.random() < 0.3) { ir(b, destinoBot(PISTA)); b.espera = 5 + Math.random() * 5; return; }
       ir(b, lugarBaile(b)); b.espera = 2; return;
@@ -1840,18 +1846,63 @@ export function crearEstacion(canvas, cfg) {
     const d = destinoBot(b.g.position);
     if (!ir(b, d)) { b.espera = 1 + Math.random() * 2; return; }
     b.espera = 8 + Math.random() * 10;
-    if (b.pareja) {
+    if (b.pareja && !b.pareja.conYo && !b.pareja.charla) {
       // el acompañante va al mismo lugar, un paso al lado
       const o = b.pareja, lado = new THREE.Vector3(d.p.z - b.g.position.z, 0, b.g.position.x - d.p.x).normalize().multiplyScalar(1.25);
       ir(o, { p: d.p.clone().add(lado), mira: d.mira }); o.vel = b.vel;
     }
   }
 
+  // Cuando bailas, la gente cercana llega a bailar contigo en círculo. Cuando paras, unas se quedan platicando entre ellas y otras se van.
+  let bailabas = false;
+  function gentePorBaile() {
+    if (bailoYo && !bailabas) bailabas = true;
+    if (!bailoYo && bailabas) {
+      bailabas = false;
+      const salen = bots.filter((b) => b.conYo);
+      salen.forEach((b) => (b.conYo = false));
+      const quedan = salen.filter(() => Math.random() < 0.6);
+      // se juntan de dos en dos (o tres) a platicar; las demás se van a caminar
+      for (let i = 0; i < quedan.length; i += 2) {
+        const a = quedan[i], c = quedan[i + 1] || quedan[i - 1];
+        if (!c || c === a) { a.espera = 0; continue; }
+        const t = 8 + Math.random() * 10;
+        [[a, c], [c, a]].forEach(([x, y]) => { x.ruta = []; x.accion = "platicar"; x.mira = y.g.position; x.espera = Math.max(x.espera, t); });
+        if (Math.random() < 0.6) avisar(a, ["💬", "😄", "😂", "💃"][Math.floor(Math.random() * 4)]);
+      }
+      salen.filter((b) => !quedan.includes(b)).forEach((b) => { b.espera = Math.random() * 1.5; b.accion = "quieto"; });
+    }
+    if (!bailoYo) return 0;
+    // se unen las que están a menos de 12 m (hasta 7), de una por cuadro
+    const ya = bots.filter((b) => b.conYo).length;
+    if (ya >= 7) return 0;
+    let mejor = null, dmin = 12;
+    for (const b of bots) {
+      if (b.conYo || b.charla) continue;
+      const d = b.g.position.distanceTo(yo.position);
+      if (d < dmin) { dmin = d; mejor = b; }
+    }
+    if (!mejor) return 0;
+    const ang = Math.atan2(mejor.g.position.z - yo.position.z, mejor.g.position.x - yo.position.x) + (Math.random() - 0.5) * 0.5, r = 2 + Math.random() * 0.7;
+    mejor.conYo = true;
+    ir(mejor, { p: new THREE.Vector3(yo.position.x + Math.cos(ang) * r, 0, yo.position.z + Math.sin(ang) * r), mira: yo.position });
+    mejor.vel = Math.max(mejor.vel, 2);
+    if (Math.random() < 0.5) avisar(mejor, ["💃", "🎶", "🙌"][Math.floor(Math.random() * 3)]);
+    return 1;
+  }
+
   function moverBots(dt) {
-    let planes = 0;
+    let planes = gentePorBaile();
     for (const b of bots) {
       const ctl = b.g.userData.ctl, o = b.pareja;
-      if (!b.ruta.length) {
+      if (b.charla) {
+        // platicando contigo: se para y te mira
+        b.ruta = []; b.accion = "platicar"; b.mira = yo.position; girarHacia(b, yo.position, dt, 6);
+      } else if (b.conYo && !b.ruta.length) {
+        // bailando contigo
+        if (b.accion !== "bailar") b.accion = "bailar";
+        girarHacia(b, yo.position, dt, 3);
+      } else if (!b.ruta.length) {
         if (b.accion === "caminar") {
           // acaba de llegar
           const enPista = b.g.position.distanceTo(PISTA) < 3.5;
@@ -1890,7 +1941,7 @@ export function crearEstacion(canvas, cfg) {
         if (b.lejosT > 0.12 || b.g.position.distanceToSquared(camera.position) < 70 * 70) {
           const estado = b.ruta.length ? "caminar" : ctl.tiene(b.accion) ? b.accion : "quieto";
           ctl.update(quieto ? 0 : b.lejosT, estado);
-          ctl.ritmo(estado === "caminar" ? b.vel / 1.45 : 1);
+          ctl.ritmo(estado === "caminar" ? b.vel / (1.45 * b.alto / 1.78) : 1);
           b.lejosT = 0;
         }
       }
@@ -1898,10 +1949,14 @@ export function crearEstacion(canvas, cfg) {
       if (b.globoT > 0) { b.globoT -= dt; b.globo.position.y = 2.75 + (2.4 - b.globoT) * 0.25; if (b.globoT <= 0) b.globo.visible = false; }
     }
   }
-  function crearBots() {
+  const cuentaGenero = {};
+  // Los personajes de modelos.json ("personaje1", "personaje2"...) menos el que tú elegiste: nadie se ve igual que tú
+  function crearBots(l) {
     const n = innerWidth < 760 ? 8 : 16, nBaile = innerWidth < 760 ? 3 : 5, nParejas = innerWidth < 760 ? 1 : 3;
+    const pool = Object.keys(l).filter((id) => /^personaje\d+$/.test(id) && id !== cfg.personaje);
     for (let k = 0; k < n; k++) {
-      const b = crearBot(k);
+      const id = pool.length ? pool[k % pool.length] : null;
+      const b = crearBot(k, id, id ? l[id] : null);
       // papeles: primero los que bailan, luego parejas (guía + acompañante), el resto va solo
       if (k < nBaile) { b.rol = "baile"; b.lugarBaile = (k / nBaile) * Math.PI * 2; }
       else if (k < nBaile + nParejas * 2) b.rol = (k - nBaile) % 2 ? "sigue" : "guia";
@@ -1915,11 +1970,15 @@ export function crearEstacion(canvas, cfg) {
       bots.push(b);
     }
   }
-  if (!cfg.replica) setTimeout(crearBots, 600);
+  if (!cfg.replica) setTimeout(() => listaModelos().then(crearBots), 600);
 
   // Entrada: teclado y joystick
   const teclas = {};
-  addEventListener("keydown", (e) => { if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; teclas[e.key.toLowerCase()] = true; });
+  addEventListener("keydown", (e) => {
+    if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    teclas[e.key.toLowerCase()] = true;
+    if (e.key.toLowerCase() === "b" && !e.repeat && !cfg.replica && !tour && (!cfg.puedeBailar || cfg.puedeBailar())) bailar(!bailoYo);
+  });
   addEventListener("keyup", (e) => { teclas[e.key.toLowerCase()] = false; });
   addEventListener("blur", () => { for (const k in teclas) teclas[k] = false; });
   const stick = { x: 0, y: 0 };
@@ -2025,7 +2084,19 @@ export function crearEstacion(canvas, cfg) {
   medir();
 
   const fwd = new THREE.Vector3(), der = new THREE.Vector3(), mover = new THREE.Vector3(), antes = new THREE.Vector3();
-  let paso = 0, cercaId = null, pasoSon = 0;
+  let paso = 0, cercaId = null, pasoSon = 0, bailoYo = false, charlaCon = null, tBaile = 0;
+  // bailar: con la tecla B o el botón; caminar lo detiene
+  function bailar(si) {
+    si = !!si;
+    if (si === bailoYo) return;
+    bailoYo = si;
+    if (si) { if (ruta.length) { ruta = []; alLlegar = null; aro.visible = false; } terminarCharla(); }
+    cfg.alBaile && cfg.alBaile(si);
+  }
+  function terminarCharla() {
+    if (!charlaCon) return;
+    const b = charlaCon; charlaCon = null; b.charla = false; b.accion = "quieto"; b.espera = 1 + Math.random() * 3;
+  }
   function moverYo(dt) {
     antes.copy(yo.position);
     // dirección desde teclado o joystick, relativa a la cámara
@@ -2038,6 +2109,7 @@ export function crearEstacion(canvas, cfg) {
     mover.set(0, 0, 0);
     let vel = VEL;
     if (mag > 0.12) {
+      if (bailoYo) bailar(false);
       if (ruta.length) { ruta = []; alLlegar = null; aro.visible = false; }
       if (enfocado) { cfg.alSoltar && cfg.alSoltar(); }
       camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
@@ -2087,9 +2159,22 @@ export function crearEstacion(canvas, cfg) {
     const sw = andando ? Math.sin(paso) : 0;
     piernas[0].rotation.x = sw * 0.7; piernas[1].rotation.x = -sw * 0.7;
     brazosYo[0].rotation.x = -sw * 0.6; brazosYo[1].rotation.x = sw * 0.6;
-    if (yo.userData.ctl) yo.userData.ctl.update(quieto ? 0 : dt, andando ? "caminar" : "quieto");
+    if (andando && bailoYo && ruta.length) bailar(false);
+    if (charlaCon) { const p = charlaCon.g.position, dA = Math.atan2(p.x - yo.position.x, p.z - yo.position.z) - yo.rotation.y; yo.rotation.y += Math.atan2(Math.sin(dA), Math.cos(dA)) * Math.min(1, dt * 6); if (andando || p.distanceTo(yo.position) > 4.5) { terminarCharla(); cfg.alFinCharla && cfg.alFinCharla(); } }
+    const estadoYo = andando ? "caminar" : bailoYo ? "bailar" : charlaCon ? "platicar" : "quieto";
+    if (yo.userData.ctl) yo.userData.ctl.update(quieto ? 0 : dt, yo.userData.ctl.tiene(estadoYo) ? estadoYo : "quieto");
     torso.position.y = 1.3 + Math.abs(Math.sin(paso)) * (andando ? 0.05 : 0);
     casco.position.y = 2.0 + Math.abs(Math.sin(paso)) * (andando ? 0.05 : 0) + (andando ? 0 : Math.sin(performance.now() / 600) * 0.015);
+    // la figura de siempre (sin modelo) también baila: brazos arriba, rebote y vaivén
+    if (bailoYo && !andando && !yo.userData.ctl) {
+      tBaile += quieto ? 0 : dt;
+      const t = tBaile * 7.5;
+      brazosYo[0].rotation.z = -2.4 - Math.sin(t) * 0.35; brazosYo[1].rotation.z = 2.4 - Math.sin(t + 1.5) * 0.35;
+      piernas[0].rotation.x = Math.max(0, Math.sin(t)) * 0.5; piernas[1].rotation.x = Math.max(0, -Math.sin(t)) * 0.5;
+      figYo.position.y = Math.abs(Math.sin(t)) * 0.12; figYo.rotation.y = Math.sin(t * 0.5) * 0.45; figYo.rotation.z = Math.sin(t) * 0.06;
+    } else if (figYo.position.y || figYo.rotation.y) {
+      brazosYo[0].rotation.z = brazosYo[1].rotation.z = 0; figYo.position.y = figYo.rotation.y = figYo.rotation.z = 0;
+    }
     // la cámara acompaña al avatar
     if (!enfocado && !vuelo) {
       const dx = yo.position.x - antes.x, dz = yo.position.z - antes.z;
@@ -2100,6 +2185,10 @@ export function crearEstacion(canvas, cfg) {
     let cerca = null, dmin = 3.6;
     for (const id in stands) { const p = stands[id].puerta, d = Math.hypot(yo.position.x - p.x, yo.position.z - p.z); if (d < dmin) { dmin = d; cerca = id; } }
     if (!cerca) for (const k in lugares) { const L = lugares[k]; if (L.entrar && Math.hypot(yo.position.x - L.p.x, yo.position.z - L.p.z) < 3.4) { cerca = k; break; } }
+    if (!cerca && !bailoYo && !charlaCon) {
+      let dp = 2.6;
+      for (const b of bots) { if (b.conYo) continue; const d = Math.hypot(yo.position.x - b.g.position.x, yo.position.z - b.g.position.z); if (d < dp) { dp = d; cerca = "persona:" + b.k; } }
+    }
     if (cerca !== cercaId) { cercaId = cerca; cfg.alCerca && cfg.alCerca(cerca); }
   }
 
@@ -2192,7 +2281,18 @@ export function crearEstacion(canvas, cfg) {
   return {
     irA, enfocarStand, seguir, setParcelas, setTienda, venta, iniciarTour,
     enTour: () => !!tour,
-    _prueba: { camera, controls, libre, trazar, yo, lugares, stands, modulos, ruta: () => ruta, mover: (dt) => moverYo(dt), bots, moverBots, precalentar },
+    bailar, bailando: () => bailoYo,
+    perfilDe: (k) => { const b = bots.find((x) => x.k === k); return b ? b.perfil : null; },
+    // platicar con un visitante: se detiene y te mira; devuelve su perfil y su papel en la hacienda
+    platicarCon(k) {
+      const b = bots.find((x) => x.k === k);
+      if (!b) return null;
+      terminarCharla(); bailar(false);
+      charlaCon = b; b.charla = true; b.ruta = [];
+      return { perfil: b.perfil, rol: b.rol };
+    },
+    terminarCharla,
+    _prueba: { camera, controls, libre, trazar, yo, lugares, stands, modulos, ruta: () => ruta, mover: (dt) => moverYo(dt), bots, bailar, moverBots, precalentar },
     saltarTour: () => terminarTour(),
     setStick(x, y) { stick.x = x; stick.y = y; },
     setDesplazamiento(x, y) { despObj.x = x; despObj.y = y; },
