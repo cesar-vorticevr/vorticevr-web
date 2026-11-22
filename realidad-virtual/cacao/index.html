@@ -53,8 +53,12 @@
 </div></div>
 <div id="hint">Mueve el ratón para mover tu mano · Mantén clic = pellizco</div>
 
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 /* ============================================================
    UTILIDADES
@@ -123,8 +127,60 @@ addEventListener('resize',()=>{ if(renderer.xr.isPresenting) return; camera.aspe
 scene.add(new THREE.HemisphereLight(0xffffff,0x6b5540,2.4));
 const sunLight = new THREE.DirectionalLight(0xfff1dd,2.6); sunLight.position.set(.6,2,1); scene.add(sunLight);
 
+/* ---------- modelos 3D (Meshy, comprimidos con Meshopt y texturas WebP en modelos/) ----------
+   Si uno no carga, cada fase usa su figura hecha con código, así el juego nunca se queda trabado. */
+const FILES={arbol:'cacao-tree',mazorca:'cacao-pod',abierta:'open-cacao-pod',cascara:'golden-cacao-husk',baba:'chicken-breast',
+  grano:'cocoa-bean',semilla:'cacao-bean',flor:'tropical-blossom-macr',canasta:'woven-basket',pala:'wooden-paddle',
+  cajon:'rustic-fermentation-v',escurridor:'rustic-timber-tray-ta',rastrillo:'rustic-wooden-rake',comal:'earthen-platter',
+  fogon:'emberstone-hearth',cuchara:'rustic-wooden-spoon',metate:'rustic-stone-seat',mano:'rusted-relic',mesa:'rustic-wooden-workben',
+  molinillo:'wooden-back-scratcher',jarra:'terracotta-pitcher',jicara:'carved-earthen-vessel',titulo:'del-cacao-al-chocolat'};
+const MOD={};
+const envTex=new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment()).texture;
+function loadModels(onProgress){
+  const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder), keys=Object.keys(FILES); let n=0;
+  return Promise.all(keys.map(k=>loader.loadAsync('modelos/'+FILES[k]+'.glb').then(g=>{
+    g.scene.traverse(o=>{ if(o.isMesh){ o.material.envMap=envTex; o.material.envMapIntensity=.7; } });
+    MOD[k]=g.scene; }).catch(e=>console.warn('modelo',k,e)).finally(()=>onProgress(++n/keys.length))));
+}
+const _box=new THREE.Box3(), _sz=new THREE.Vector3(), _ct=new THREE.Vector3();
+/* copia del modelo con su lado mayor (o el eje pedido: 'x' | 'y' | 'z') igual a size, apoyada en y=0 y centrada en x/z */
+function model(k,size,axis){
+  if(!MOD[k]) return null;
+  const mid=new THREE.Group(), g=new THREE.Group(); mid.add(MOD[k].clone(true)); g.add(mid);
+  mid.updateMatrixWorld(true); _box.setFromObject(mid); _box.getSize(_sz); _box.getCenter(_ct);
+  const d=axis?_sz[axis]:Math.max(_sz.x,_sz.y,_sz.z), s=size/(d||1);
+  mid.scale.setScalar(s); mid.position.set(-_ct.x*s,-_box.min.y*s,-_ct.z*s);
+  g.userData.size=_sz.clone().multiplyScalar(s); return g;
+}
+/* altura (local de parent) del primer punto de obj bajo (x,z) mirando hacia abajo: el fondo de un cajón, un comal o una jícara */
+const _ray=new THREE.Raycaster();
+function floorAt(obj,parent,x,z,top=1){
+  parent.updateMatrixWorld(true);
+  const o=parent.localToWorld(V(x,top,z)), d=parent.localToWorld(V(x,top-1,z)).sub(o).normalize();
+  _ray.set(o,d); const hit=_ray.intersectObject(obj,true)[0];
+  return hit?parent.worldToLocal(hit.point.clone()).y:null;
+}
+/* geometría y material de un grano para InstancedMesh: el lado mayor mide size, centrada */
+function beanGeo(k,size){
+  if(!MOD[k]) return null; let mesh=null; MOD[k].traverse(o=>{ if(o.isMesh&&!mesh) mesh=o; }); if(!mesh) return null;
+  MOD[k].updateMatrixWorld(true);
+  const geo=mesh.geometry.clone().applyMatrix4(mesh.matrixWorld); geo.computeBoundingBox(); geo.boundingBox.getSize(_sz); geo.boundingBox.getCenter(_ct);
+  geo.translate(-_ct.x,-_ct.y,-_ct.z); geo.scale(...Array(3).fill(size/Math.max(_sz.x,_sz.y,_sz.z)));
+  const mat=mesh.material.clone(); return {geo,mat};
+}
+/* herramienta que sigue a la mano (pala, rastrillo, cuchara, molinillo): la punta va donde está la mano y se inclina al moverla */
+function tool(obj,rest,restRot=V(0,0,0),off=V(0,0,0)){
+  const t={obj,update(h,dt){
+    if(h){ obj.position.lerp(h.pos.clone().add(off),.5);
+      obj.rotation.x=lerp(obj.rotation.x,restRot.x+clamp(h.vel.z*.8,-.5,.5),.2); obj.rotation.z=lerp(obj.rotation.z,restRot.z-clamp(h.vel.x*.8,-.5,.5),.2); obj.rotation.y=lerp(obj.rotation.y,restRot.y,.2); }
+    else { obj.position.lerp(rest,.12); obj.rotation.x=lerp(obj.rotation.x,restRot.x,.12); obj.rotation.y=lerp(obj.rotation.y,restRot.y,.12); obj.rotation.z=lerp(obj.rotation.z,restRot.z,.12); }
+  }};
+  obj.position.copy(rest); obj.rotation.set(restRot.x,restRot.y,restRot.z); return t;
+}
+
 /* ---------- entorno (solo VR / pantalla) ---------- */
 const env = new THREE.Group(); env.visible=false; scene.add(env);
+const envTrees = new THREE.Group(); env.add(envTrees);   // los árboles hechos con código; si carga el modelo del árbol, se cambian por él
 {
   const c=document.createElement('canvas'); c.width=8; c.height=256; const x=c.getContext('2d');
   const g=x.createLinearGradient(0,0,0,256); g.addColorStop(0,'#1b0f3a'); g.addColorStop(.45,'#7c3a1d'); g.addColorStop(.62,'#f59e0b'); g.addColorStop(.7,'#14532d'); g.addColorStop(1,'#052e16');
@@ -134,9 +190,9 @@ const env = new THREE.Group(); env.visible=false; scene.add(env);
   const gr=M(new THREE.CircleGeometry(14,40),std(0x1f3d1a,{roughness:1}),0,0,0,env); gr.rotation.x=-Math.PI/2;
   for(let i=0;i<16;i++){
     const a=i/16*6.283+rnd(-.15,.15), r=rnd(2.4,6), tx=Math.cos(a)*r, tz=Math.sin(a)*r, h=rnd(1.6,2.6);
-    M(new THREE.CylinderGeometry(.06,.09,h,8),std(0x4a2f1b),tx,h/2,tz,env);
-    for(let k=0;k<5;k++){ const l=M(new THREE.SphereGeometry(.55,8,6),std(k%2?0x2f7d32:0x256428,{roughness:1}),tx+rnd(-.5,.5),h+rnd(-.2,.4),tz+rnd(-.5,.5),env); l.scale.set(1,.45,1); }
-    for(let k=0;k<3;k++){ const p=M(new THREE.SphereGeometry(.06,8,6),std([0xf2b632,0xe4572e,0xb5d334][k]),tx+rnd(-.09,.09),rnd(.6,h-.3),tz+rnd(-.09,.09),env); p.scale.set(1,2,1); }
+    M(new THREE.CylinderGeometry(.06,.09,h,8),std(0x4a2f1b),tx,h/2,tz,envTrees);
+    for(let k=0;k<5;k++){ const l=M(new THREE.SphereGeometry(.55,8,6),std(k%2?0x2f7d32:0x256428,{roughness:1}),tx+rnd(-.5,.5),h+rnd(-.2,.4),tz+rnd(-.5,.5),envTrees); l.scale.set(1,.45,1); }
+    for(let k=0;k<3;k++){ const p=M(new THREE.SphereGeometry(.06,8,6),std([0xf2b632,0xe4572e,0xb5d334][k]),tx+rnd(-.09,.09),rnd(.6,h-.3),tz+rnd(-.09,.09),envTrees); p.scale.set(1,2,1); }
   }
 }
 
@@ -254,7 +310,7 @@ function updateHands(dt){
     let active=false, pin=h.pinch;
     if(MODE==='desk'){
       if(h.i===0&&mouse.on){
-        const d=PHASES[cur]?PHASES[cur].desk:['h',.06];
+        const d=(phase&&phase.desk)||(PHASES[cur]?PHASES[cur].desk:['h',.06]);
         if(d[0]==='h'){ _n.set(0,1,0); _c.set(0,d[1],0); } else { _n.set(0,0,1); _c.set(0,0,d[1]); }
         stage.localToWorld(_c); plane.setFromNormalAndCoplanarPoint(_n,_c);
         ray.setFromCamera(mouse.ndc,camera);
@@ -286,17 +342,22 @@ const speedXZ=h=>Math.hypot(h.vel.x,h.vel.z);
 /* ============================================================
    PIEZAS REUTILIZABLES
    ============================================================ */
+/* un modelo con su centro en el origen (para lo que se toma con la mano) */
+function centered(k,size,axis){ const g=model(k,size,axis); if(g) g.children[0].position.y-=g.userData.size.y/2; return g; }
 function mkPod(color,s=1){
+  const pm=centered('mazorca',.095*s,'y'); if(pm){ pm.traverse(o=>{ if(o.isMesh){ o.material=o.material.clone(); o.material.color.lerp(C(color),.35); } }); return pm; }
   const g=new THREE.SphereGeometry(.04,18,14), p=g.attributes.position;
   for(let i=0;i<p.count;i++){ const x=p.getX(i),y=p.getY(i),z=p.getZ(i), a=Math.atan2(z,x);
     const r=(1+.07*Math.cos(a*10))*(1-.32*Math.pow(Math.max(0,-y/.04),2)); p.setXYZ(i,x*r,y*2.1,z*r); }
   g.computeVertexNormals(); const m=new THREE.Mesh(g,std(color,{roughness:.55})); m.scale.setScalar(s); return m;
 }
-function mkBeans(n,color,parent){
-  const g=new THREE.SphereGeometry(.011,8,6); g.scale(1,.6,.72);
-  const mat=std(color,{roughness:.55}), im=new THREE.InstancedMesh(g,mat,n);
+function mkBeans(n,color,parent,key,size=.024){
+  const bm=key&&beanGeo(key,size);
+  let g, mat;
+  if(bm){ g=bm.geo; mat=bm.mat; } else { g=new THREE.SphereGeometry(.011,8,6); g.scale(1,.6,.72); mat=std(color,{roughness:.55}); }
+  const im=new THREE.InstancedMesh(g,mat,n);
   im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.frustumCulled=false; parent.add(im);
-  const o=new THREE.Object3D(), B={im,mat,n,p:[],r:[],s:1,
+  const o=new THREE.Object3D(), B={im,mat,n,p:[],r:[],s:1,tex:!!bm,
     sync(){ for(let i=0;i<n;i++){ o.position.copy(B.p[i]); o.rotation.set(B.r[i].x,B.r[i].y,B.r[i].z); o.scale.setScalar(B.s); o.updateMatrix(); im.setMatrixAt(i,o.matrix); } im.instanceMatrix.needsUpdate=true; }};
   for(let i=0;i<n;i++){ B.p.push(V()); B.r.push(V(rnd(0,6),rnd(0,6),rnd(0,6))); }
   return B;
@@ -323,17 +384,33 @@ function finish(){ if(ui.done) return; ui.done=true; ui.progress=1; doneT=0;
 
 /* ---- 1 · COSECHA ---- */
 function mkCosecha(g){
-  M(new THREE.CylinderGeometry(.045,.062,.78,12),std(0x5b3a22,{roughness:1}),.03,.39,-.25,g);
-  for(let i=0;i<10;i++){ const l=M(new THREE.SphereGeometry(.1,10,8),std(i%2?0x2f7d32:0x3a9440,{roughness:.9}),.03+rnd(-.2,.22),.7+rnd(-.05,.1),-.25+rnd(-.12,.1),g); l.scale.set(1.35,.22,.65); l.rotation.set(rnd(-.4,.4),rnd(0,3),rnd(-.4,.4)); }
-  const bx=.25,bz=.15;
-  M(new THREE.CylinderGeometry(.115,.088,.1,22,1,true),std(0xb8864b,{side:THREE.DoubleSide,roughness:1}),bx,.05,bz,g);
-  M(new THREE.CylinderGeometry(.088,.088,.008,22),std(0x9a6f3c),bx,.004,bz,g);
-  const tor=M(new THREE.TorusGeometry(.115,.008,8,28),std(0x8a5f30),bx,.1,bz,g); tor.rotation.x=Math.PI/2;
-  label('Canasta',g,bx,.19,bz,.13);
-  const spots=[[-.07,.3,-.19,0xf2b632],[.11,.42,-.2,0xe4572e],[.0,.17,-.185,0xf6d04d],[-.04,.54,-.2,0xd97706]];
-  const pods=spots.map((s,i)=>{ const m=mkPod(s[3]); m.position.set(s[0],s[1],s[2]); m.rotation.z=rnd(-.3,.3); g.add(m); return {m,home:m.position.clone(),state:'tree',pulled:false,i}; });
+  let tx=.03, tz=-.25, podZ=-.19, trunkX=.03;
+  const tree=model('arbol',1.0,'x');
+  if(tree){
+    tree.position.set(.02,0,-.33); g.add(tree);
+    // el tronco: rayos de frente a la altura de las mazorcas; el punto más cercano es su cara frontal
+    g.updateMatrixWorld(true); let xs=[], zf=-1;
+    for(let x=-.2;x<=.24;x+=.01){ _ray.set(g.localToWorld(V(x,.14,.6)),g.localToWorld(V(x,.14,-.6)).sub(g.localToWorld(V(x,.14,.6))).normalize());
+      const hit=_ray.intersectObject(tree,true)[0]; if(hit){ const p=g.worldToLocal(hit.point.clone()); if(p.z>-.45){ xs.push(p.x); zf=Math.max(zf,p.z); } } }
+    if(xs.length){ trunkX=xs.reduce((a,b)=>a+b,0)/xs.length; podZ=zf+.03; tx=trunkX; }
+    // flores de cacao: brotan del mismo tronco
+    for(const f of [[-.03,.08,.0],[.035,.25,.4],[-.025,.33,-.5],[.03,.06,1.2]]){ const fl=model('flor',.035); if(!fl) break; fl.position.set(trunkX+f[0],f[1],podZ-.02); fl.rotation.set(-.4,f[2],0); g.add(fl); }
+  } else {
+    M(new THREE.CylinderGeometry(.045,.062,.78,12),std(0x5b3a22,{roughness:1}),tx,.39,tz,g);
+    for(let i=0;i<10;i++){ const l=M(new THREE.SphereGeometry(.1,10,8),std(i%2?0x2f7d32:0x3a9440,{roughness:.9}),tx+rnd(-.2,.22),.7+rnd(-.05,.1),tz+rnd(-.12,.1),g); l.scale.set(1.35,.22,.65); l.rotation.set(rnd(-.4,.4),rnd(0,3),rnd(-.4,.4)); }
+  }
+  const bx=.27,bz=.15;
+  const basket=model('canasta',.22);
+  if(basket){ basket.position.set(bx,0,bz); g.add(basket); }
+  else { M(new THREE.CylinderGeometry(.115,.088,.1,22,1,true),std(0xb8864b,{side:THREE.DoubleSide,roughness:1}),bx,.05,bz,g);
+    M(new THREE.CylinderGeometry(.088,.088,.008,22),std(0x9a6f3c),bx,.004,bz,g);
+    const tor=M(new THREE.TorusGeometry(.115,.008,8,28),std(0x8a5f30),bx,.1,bz,g); tor.rotation.x=Math.PI/2; }
+  const bTop=basket?basket.userData.size.y:.1;
+  label('Canasta',g,bx,bTop+.08,bz,.13);
+  const spots=[[-.05,.12,0xf2b632],[.05,.2,0xe4572e],[-.04,.27,0xf6d04d],[.045,.34,0xd97706]];
+  const pods=spots.map((s,i)=>{ const m=mkPod(s[2]); m.position.set(tx+s[0],s[1],podZ); m.rotation.z=rnd(-.3,.3); g.add(m); return {m,home:m.position.clone(),state:'tree',pulled:false,i}; });
   const held=[null,null]; let count=0;
-  return {update(dt,t){
+  return {desk:['v',podZ],pods,update(dt,t){
     for(const h of H){
       if(!h.active){ if(held[h.i]){ release(h); } continue; }
       if(h.start&&!held[h.i]){ let best=null,bd=.1; for(const p of pods){ if(p.state!=='tree') continue; const d=p.m.position.distanceTo(h.pos); if(d<bd){bd=d;best=p;} }
@@ -344,7 +421,7 @@ function mkCosecha(g){
         if(!h.pinch) release(h); }
     }
     function release(h){ const p=held[h.i]; held[h.i]=null; if(!p) return;
-      if(p.pulled){ p.state='fly'; const to=V(bx+rnd(-.04,.04),.06+count*.012,bz+rnd(-.04,.04));
+      if(p.pulled){ p.state='fly'; const to=V(bx+rnd(-.04,.04),Math.min(bTop*.45,.03)+.03+count*.012,bz+rnd(-.04,.04));
         fly(p.m,to,.55,.14,()=>{ p.state='in'; p.m.rotation.z=1.3; count++; sfx.good(count); burst(to,0xfbbf24,10); if(count===pods.length) finish(); });
       } else { p.state='back'; fly(p.m,p.home,.25,0,()=>p.state='tree'); } }
     for(const p of pods) if(p.state==='tree'){ let near=false; for(const h of H) if(h.active&&h.pos.distanceTo(p.m.position)<.1) near=true;
@@ -357,18 +434,23 @@ function mkCosecha(g){
 function mkDesgrane(g){
   M(new THREE.BoxGeometry(.32,.02,.22),std(0x9a6b3e),-.05,.01,.05,g);
   const pc0=V(-.05,.085,.05);
-  const pod=mkPod(0xf2b632,1.55); pod.rotation.z=Math.PI/2; pod.position.copy(pc0); g.add(pod);
-  const half=()=>{ const m=new THREE.Mesh(new THREE.SphereGeometry(.062,18,10,0,Math.PI*2,Math.PI/2,Math.PI/2),std(0xf2b632,{side:THREE.DoubleSide})); m.scale.set(2,1,1); return m; };
-  const hA=half(), hB=half(); hA.position.set(-.11,.082,.04); hB.position.set(.09,.082,.11); hB.rotation.y=.5; hA.visible=hB.visible=false; g.add(hA,hB);
-  const seeds=[]; const sg=new THREE.SphereGeometry(.013,8,6); sg.scale(1,.7,.8); const sm=std(0xf7f1e3,{roughness:.35});
-  for(let i=0;i<15;i++){ const s=M(sg,sm,-.11+rnd(-.085,.085),.045+rnd(0,.03),.04+rnd(-.03,.03),g); s.rotation.set(rnd(0,3),rnd(0,3),0); s.visible=false; seeds.push(s); }
-  mkCrate(.17,.07,.15,0xa9793f,g,.28,.02); label('Cajón',g,.28,.16,.02,.12);
-  const boxC=V(.28,.04,.02), seedC=V(-.11,.07,.04);
+  const pod=mkPod(0xf2b632,1.6), ps=pod.isGroup?1:1.55; pod.rotation.z=Math.PI/2; pod.position.copy(pc0); g.add(pod);
+  // al partirla: las dos mitades con su pulpa blanca
+  const half=()=>{ const m=model('cascara',.16,'z'); if(m) return m; const s=new THREE.Mesh(new THREE.SphereGeometry(.062,18,10,0,Math.PI*2,Math.PI/2,Math.PI/2),std(0xf2b632,{side:THREE.DoubleSide})); s.scale.set(2,1,1); return s; };
+  const hA=half(), hB=half(); hA.position.set(-.13,.02,.03); hA.rotation.y=Math.PI/2+.2; hB.position.set(.07,.02,.11); hB.rotation.y=Math.PI/2-.4; hA.visible=hB.visible=false; g.add(hA,hB);
+  const bb=beanGeo('baba',.03), sg=bb?bb.geo:new THREE.SphereGeometry(.013,8,6), sm=bb?bb.mat:std(0xf7f1e3,{roughness:.35}); if(!bb) sg.scale(1,.7,.8);
+  const seeds=[];
+  for(let i=0;i<15;i++){ const s=M(sg,sm,-.13+rnd(-.05,.05),.05+rnd(0,.02),.03+rnd(-.025,.025),g); s.rotation.set(rnd(0,3),rnd(0,3),0); s.visible=false; seeds.push(s); }
+  const crate=model('cajon',.22,'x'); let boxY=.03;
+  if(crate){ crate.position.set(.28,0,.02); g.add(crate); boxY=(floorAt(crate,g,.28,.02,.5)??.06)+.012; }
+  else mkCrate(.17,.07,.15,0xa9793f,g,.28,.02);
+  label('Cajón',g,.28,(crate?crate.userData.size.y:.07)+.09,.02,.12);
+  const boxC=V(.28,boxY,.02), seedC=V(-.13,.07,.03);
   let hits=0,cool=0,open=false,got=0,left=5,squash=0; const held=[null,null];
   return {update(dt){
     cool-=dt; squash=Math.max(0,squash-dt*5);
     if(!open){
-      pod.scale.set(1.55*(1+squash*.15),1.55*(1-squash*.25),1.55);
+      pod.scale.set(ps*(1+squash*.25),ps*(1-squash*.15),ps);
       for(const h of H){ if(!h.active||cool>0) continue;
         if(h.pos.distanceTo(pc0)<.13&&(h.vel.y<-.45||(MODE==='desk'&&h.start))){
           hits++; cool=.35; squash=1; sfx.thud(); burst(pc0,[0xf2b632,0xfde68a],10,{spd:.6});
@@ -377,13 +459,13 @@ function mkDesgrane(g){
       ui.instr=(MODE==='desk'?'Haz clic sobre la mazorca para partirla':'Golpea la mazorca con tu mano, de arriba hacia abajo')+' ('+hits+'/3)';
     } else {
       for(const h of H){
-        if(h.active&&h.start&&!held[h.i]&&left>0&&h.pos.distanceTo(seedC)<.12){
+        if(h.active&&h.start&&!held[h.i]&&left>0&&h.pos.distanceTo(seedC)<.13){
           left--; for(let k=0;k<3;k++){ const s=seeds.find(s=>s.visible); if(s) s.visible=false; }
-          const c=new THREE.Group(); for(let k=0;k<3;k++) M(sg,sm,rnd(-.012,.012),rnd(-.01,.01),rnd(-.012,.012),c); c.position.copy(h.pos); g.add(c); held[h.i]=c; sfx.pick();
+          const c=new THREE.Group(); for(let k=0;k<3;k++){ const s=M(sg,sm,rnd(-.012,.012),rnd(-.01,.01),rnd(-.012,.012),c); s.rotation.set(rnd(0,3),rnd(0,3),0); } c.position.copy(h.pos); g.add(c); held[h.i]=c; sfx.pick();
         }
         const c=held[h.i];
         if(c){ if(h.active) c.position.lerp(h.pos,.6);
-          if(!h.active||!h.pinch){ held[h.i]=null; const to=V(boxC.x+rnd(-.05,.05),.03+got*.006,boxC.z+rnd(-.04,.04));
+          if(!h.active||!h.pinch){ held[h.i]=null; const to=V(boxC.x+rnd(-.05,.05),boxC.y+got*.004,boxC.z+rnd(-.04,.04));
             fly(c,to,.5,.12,()=>{ got++; sfx.good(got); burst(to,0xffffff,8,{spd:.4}); if(got>=5) finish(); }); } }
       }
       ui.instr='Pellizca las semillas con su pulpa blanca y échalas al cajón ('+got+'/5)';
@@ -394,112 +476,152 @@ function mkDesgrane(g){
 
 /* ---- 3 · FERMENTADO ---- */
 function mkFermentado(g){
-  const W=.36,D=.26,cz=.03; mkCrate(W,.09,D,0x8a5a2e,g,0,cz);
-  for(let i=0;i<2;i++){ const l=M(new THREE.CircleGeometry(.12,20),std(0x2f8f3a,{side:THREE.DoubleSide,roughness:.7}),-.1+i*.22,.1,cz-D/2-.03,g); l.scale.set(1,2.1,1); l.rotation.set(-1.15,0,i?-.3:.3); }
-  const B=mkBeans(84,0xf3ead8,g); for(const p of B.p) p.set(rnd(-W/2+.025,W/2-.025),rnd(.022,.05),cz+rnd(-D/2+.025,D/2-.025)); B.sync();
-  const c0=C(0xf3ead8), c1=C(0x7a4526); let path=0, st=0;
-  return {update(dt){
-    let moved=false;
+  const W=.36,D=.26,cz=.03;
+  const crate=model('cajon',.42,'x'); let fy=0;
+  if(crate){ crate.position.set(0,0,cz); g.add(crate); fy=(floorAt(crate,g,0,cz,.6)??.08)-.012; }
+  else mkCrate(W,.09,D,0x8a5a2e,g,0,cz);
+  for(let i=0;i<2;i++){ const l=M(new THREE.CircleGeometry(.12,20),std(0x2f8f3a,{side:THREE.DoubleSide,roughness:.7}),-.12+i*.24,.02,cz+(crate?-.24:-D/2-.03),g); l.scale.set(1,2.1,1); l.rotation.set(-1.45,0,i?-.5:.5); }
+  const B=mkBeans(84,0xf3ead8,g,'baba',.026); for(const p of B.p) p.set(rnd(-W/2+.025,W/2-.025),fy+rnd(.022,.05),cz+rnd(-D/2+.025,D/2-.025)); B.sync();
+  // la pala: va donde está tu mano mientras remueves, y si no, descansa recargada en el cajón
+  const pm=model('pala',.34,'y'); const pala=pm&&tool(pm,V(W/2+.1,0,cz+.15),V(0,-.4,.22),V(0,-.24,0));
+  if(pm) g.add(pm);
+  const c0=C(0xf3ead8), c1=C(B.tex?0x9a6a48:0x7a4526); let path=0, st=0;
+  return {desk:['h',fy+.06],update(dt){
+    let moved=false, inH=null;
     for(const h of H){ if(!h.active) continue;
-      if(Math.abs(h.pos.x)<W/2+.02&&Math.abs(h.pos.z-cz)<D/2+.02&&h.pos.y<.24&&h.pos.y>-.05){
-        const sp=speedXZ(h); path+=Math.min(.05,sp*dt);
-        if(sp>.05) for(const p of B.p){ const d=xzDist(p,h.pos.x,h.pos.z); if(d<.07){ const k=(1-d/.07);
-          p.x=clamp(p.x+h.vel.x*dt*k+rnd(-.004,.004),-W/2+.025,W/2-.025); p.z=clamp(p.z+h.vel.z*dt*k+rnd(-.004,.004),cz-D/2+.025,cz+D/2-.025); p.y=rnd(.022,.055); moved=true; } }
+      if(Math.abs(h.pos.x)<W/2+.03&&Math.abs(h.pos.z-cz)<D/2+.03&&h.pos.y<fy+.3&&h.pos.y>fy-.05){
+        inH=h; const sp=speedXZ(h); path+=Math.min(.05,sp*dt);
+        if(sp>.05) for(const p of B.p){ const d=xzDist(p,h.pos.x,h.pos.z); if(d<.08){ const k=(1-d/.08);
+          p.x=clamp(p.x+h.vel.x*dt*k+rnd(-.004,.004),-W/2+.025,W/2-.025); p.z=clamp(p.z+h.vel.z*dt*k+rnd(-.004,.004),cz-D/2+.025,cz+D/2-.025); p.y=fy+rnd(.022,.055); moved=true; } }
       } }
+    if(pala){ pala.update(inH,dt); if(inH) pm.position.y=Math.max(pm.position.y,fy+.01); }
     if(moved){ B.sync(); if(Math.random()<dt*9) noise(.05,rnd(500,900),.06,1.5); }
     const pr=Math.min(1,path/2.6); B.mat.color.copy(c0).lerp(c1,pr);
-    st-=dt; if(pr>.15&&st<=0){ st=.22; burst(V(rnd(-.12,.12),.09,cz+rnd(-.08,.08)),0xfff3d6,1,{spd:.08,g:.25,up:1,life:1.4,size:1.8}); }
+    st-=dt; if(pr>.15&&st<=0){ st=.22; burst(V(rnd(-.12,.12),fy+.09,cz+rnd(-.08,.08)),0xfff3d6,1,{spd:.08,g:.25,up:1,life:1.4,size:1.8}); }
     const day=Math.min(6,1+Math.floor(pr*6));
-    ui.progress=pr; ui.instr='Mete tu mano al cajón y remueve los granos · Día '+day+' de 6';
+    ui.progress=pr; ui.instr='Toma la pala: mete tu mano al cajón y remueve los granos · Día '+day+' de 6';
     if(pr>=1) finish();
   }};
 }
 
-/* ---- 4 · SECADO ---- */
+/* ---- 4 · SECADO ----
+   Basta con pasar el rastrillo un rato sobre el escurridor: los granos se van extendiendo solos y luego los seca el sol. */
 function mkSecado(g){
-  const W=.6,D=.36; M(new THREE.BoxGeometry(W+.04,.018,D+.04),std(0x7d5630),0,.009,0,g); M(new THREE.BoxGeometry(W,.006,D),std(0xd4b27a,{roughness:1}),0,.021,0,g);
-  for(let i=0;i<9;i++) M(new THREE.BoxGeometry(.004,.002,D),std(0xb89358),-W/2+W*(i+.5)/9,.025,0,g);
-  const sun=new THREE.Group(); sun.position.set(.33,.5,-.3); g.add(sun);
+  const W=.56,D=.3;
+  const tray=model('escurridor',.66,'x'); let top=.024;
+  if(tray){ tray.position.set(0,0,0); g.add(tray); top=floorAt(tray,g,0,0,.8)??.2; }
+  else { M(new THREE.BoxGeometry(W+.08,.018,D+.06),std(0x7d5630),0,.009,0,g); M(new THREE.BoxGeometry(W+.04,.006,D+.02),std(0xd4b27a,{roughness:1}),0,.021,0,g); }
+  const sun=new THREE.Group(); sun.position.set(.36,top+.45,-.32); g.add(sun);
   M(new THREE.SphereGeometry(.05,20,14),basic(0xffd54a),0,0,0,sun);
   for(let i=0;i<10;i++){ const r=M(new THREE.BoxGeometry(.012,.05,.004),basic(0xffb300),0,0,0,sun); const a=i/10*6.283; r.position.set(Math.cos(a)*.085,Math.sin(a)*.085,0); r.rotation.z=a-Math.PI/2; }
-  const B=mkBeans(76,0x7a4526,g); for(const p of B.p){ const a=rnd(0,6.283), r=rnd(0,.05); p.set(Math.cos(a)*r,.03+rnd(0,.045)*(1-r/.05),Math.sin(a)*r); } B.sync();
-  const c0=C(0x7a4526), c1=C(0x4d2a1a); let cov=0, dry=0, goal=false;
-  return {update(dt,t){
-    sun.rotation.z=t*.5; sun.scale.setScalar(1+cov*.5+Math.sin(t*4)*.04+dry*.3);
-    let moved=false;
-    for(const h of H){ if(!h.active||h.pos.y>.16||h.pos.y<-.06) continue;
-      for(const p of B.p){ const dx=p.x-h.pos.x, dz=p.z-h.pos.z, d=Math.hypot(dx,dz); if(d<.075){ const k=(.075-d)*.7, n=d||1;
-        p.x=clamp(p.x+dx/n*k+h.vel.x*dt*.6+rnd(-.003,.003),-W/2+.02,W/2-.02); p.z=clamp(p.z+dz/n*k+h.vel.z*dt*.6+rnd(-.003,.003),-D/2+.02,D/2-.02); p.y=lerp(p.y,.031,.5); moved=true; } } }
-    if(moved){ B.sync(); if(Math.random()<dt*10) noise(.04,rnd(900,1500),.05,2); }
-    const cells=new Set(); for(const p of B.p) cells.add(Math.floor((p.x+W/2)/(W/6))+6*Math.floor((p.z+D/2)/(D/4)));
-    cov=cells.size/24;
-    if(!goal&&cov>=.7){ goal=true; sfx.good(4); }
-    if(goal){ dry=Math.min(1,dry+dt/2.2); B.mat.color.copy(c0).lerp(c1,dry); if(Math.random()<dt*14) burst(V(rnd(-.28,.28),.05,rnd(-.16,.16)),0xffe082,1,{spd:.05,g:.3,up:1,life:1,size:1.2}); if(dry>=1) finish(); }
-    ui.progress=Math.min(1,cov/.7)*.8+dry*.2;
-    ui.instr=goal?'¡Bien extendidos! El sol los está secando…':'Pasa tu mano sobre el montón y extiende los granos por todo el petate';
+  const n=76, B=mkBeans(n,0x7a4526,g,'grano',.022);
+  // de dónde sale cada grano (el montón) y a dónde va (repartido parejo, con un poco de azar)
+  const from=[], to=[], th=[]; const cols=12, rows=Math.ceil(n/cols);
+  for(let i=0;i<n;i++){ const a=rnd(0,6.283), r=Math.sqrt(Math.random())*.05; from.push(V(Math.cos(a)*r,top+.012+rnd(0,.04)*(1-r/.05),Math.sin(a)*r));
+    const c=i%cols, w=Math.floor(i/cols); to.push(V(-W/2+.03+(c+.5)*(W-.06)/cols+rnd(-.012,.012),top+.012,-D/2+.03+(w+.5)*(D-.06)/rows+rnd(-.012,.012)));
+    th.push(Math.random()*.8); }
+  // los de más afuera salen al final
+  const ord=to.map((p,i)=>[Math.hypot(p.x/W,p.z/D),i]).sort((a,b)=>a[0]-b[0]); ord.forEach(([,i],k)=>th[i]=k/n*.8);
+  B.p.forEach((p,i)=>p.copy(from[i])); B.sync();
+  const rm=model('rastrillo',.3,'x'); const rake=rm&&tool(rm,V(W/2+.04,top+.01,.12),V(0,Math.PI/2,0),V(0,-.01,.13));
+  if(rm) g.add(rm);
+  const c0=C(B.tex?0xffffff:0x7a4526), c1=C(B.tex?0x8a7468:0x4d2a1a); let spread=0, dry=0, goal=false, scr=0;
+  return {desk:['h',top+.03],update(dt,t){
+    sun.rotation.z=t*.5; sun.scale.setScalar(1+spread*.4+Math.sin(t*4)*.04+dry*.3);
+    let mover=null; scr-=dt;
+    for(const h of H){ if(!h.active) continue;
+      if(Math.abs(h.pos.x)<W/2+.1&&Math.abs(h.pos.z)<D/2+.1&&h.pos.y<top+.32&&h.pos.y>top-.08){ mover=h; } }
+    if(rake) rake.update(mover,dt);
+    if(mover&&speedXZ(mover)>.03&&!goal){ spread=Math.min(1,spread+dt/4.5); if(scr<=0){ scr=.12; noise(.05,rnd(900,1500),.05,2); } }
+    for(let i=0;i<n;i++){ const k=clamp((spread-th[i])/.2,0,1), e=k*k*(3-2*k); B.p[i].lerpVectors(from[i],to[i],e); B.p[i].y+=Math.sin(e*Math.PI)*.025; }
+    B.sync();
+    if(!goal&&spread>=1){ goal=true; sfx.good(4); }
+    if(goal){ dry=Math.min(1,dry+dt/2.2); B.mat.color.copy(c0).lerp(c1,dry); if(Math.random()<dt*14) burst(V(rnd(-.26,.26),top+.03,rnd(-.13,.13)),0xffe082,1,{spd:.05,g:.3,up:1,life:1,size:1.2}); if(dry>=1) finish(); }
+    ui.progress=spread*.8+dry*.2;
+    ui.instr=goal?'¡Bien extendidos! El sol los está secando…':(spread>0?'¡Así! Sigue pasando el rastrillo: los granos se van acomodando solos ('+Math.round(spread*100)+' %)':'Pasa el rastrillo de un lado a otro sobre el escurridor');
   }};
 }
 
 /* ---- 5 · TOSTADO ---- */
 function mkTostado(g){
-  for(let i=0;i<3;i++){ const l=M(new THREE.CylinderGeometry(.02,.022,.34,8),std(0x4a2f1b,{roughness:1}),0,.025,0,g); l.rotation.set(Math.PI/2,0,i*Math.PI/3); l.rotation.order='YXZ'; l.rotation.y=i*Math.PI/3; }
-  const flames=[]; for(let i=0;i<7;i++){ const a=i/7*6.283; const f=M(new THREE.ConeGeometry(.028,.09,8),basic(i%2?0xff7a18:0xffc53d,{transparent:true,opacity:.85}),Math.cos(a)*.1,.07,Math.sin(a)*.1,g); flames.push(f); }
-  for(let i=0;i<3;i++){ const a=i/3*6.283+.5; M(new THREE.DodecahedronGeometry(.05),std(0x6b6763,{roughness:1}),Math.cos(a)*.2,.05,Math.sin(a)*.2,g); }
-  const fl=new THREE.PointLight(0xff8a2a,.6,1.2); fl.position.set(0,.1,0); g.add(fl);
-  const cy=.125; M(new THREE.CylinderGeometry(.215,.2,.018,40),std(0x4b2e25,{roughness:.95}),0,cy,0,g);
-  const rim=M(new THREE.TorusGeometry(.212,.008,8,40),std(0x3a231c),0,cy+.009,0,g); rim.rotation.x=Math.PI/2;
-  label('Comal',g,-.26,.2,.12,.11);
-  const B=mkBeans(64,0x4d2a1a,g), vy=new Float32Array(64), by=cy+.017;
-  for(const p of B.p){ const a=rnd(0,6.283), r=Math.sqrt(Math.random())*.17; p.set(Math.cos(a)*r,by,Math.sin(a)*r); } B.sync();
-  const c0=C(0x4d2a1a), c1=C(0x2a140c), cb=C(0x050505); let toast=0, burn=0, idle=0, started=false, sm=0;
-  return {update(dt,t){
-    flames.forEach((f,i)=>{ const s=.75+.35*Math.sin(t*13+i*2)+rnd(0,.2); f.scale.set(1,s,1); f.position.y=.045+.045*s; }); fl.intensity=.5+Math.random()*.3;
-    let stir=false;
+  const hearth=model('fogon',.5,'x'); let cy=.125;
+  if(hearth){ g.add(hearth); cy=hearth.userData.size.y*.92; }
+  else { for(let i=0;i<3;i++){ const l=M(new THREE.CylinderGeometry(.02,.022,.34,8),std(0x4a2f1b,{roughness:1}),0,.025,0,g); l.rotation.set(Math.PI/2,0,i*Math.PI/3); l.rotation.order='YXZ'; l.rotation.y=i*Math.PI/3; }
+    for(let i=0;i<3;i++){ const a=i/3*6.283+.5; M(new THREE.DodecahedronGeometry(.05),std(0x6b6763,{roughness:1}),Math.cos(a)*.2,.05,Math.sin(a)*.2,g); } }
+  const fy=hearth?cy*.35:0;
+  const flames=[]; for(let i=0;i<7;i++){ const a=i/7*6.283; const f=M(new THREE.ConeGeometry(.028,.09,8),basic(i%2?0xff7a18:0xffc53d,{transparent:true,opacity:.85}),Math.cos(a)*.1,fy+.07,Math.sin(a)*.1,g); flames.push(f); }
+  const fl=new THREE.PointLight(0xff8a2a,.6,1.2); fl.position.set(0,cy-.02,0); g.add(fl);
+  const comal=model('comal',.46,'x'); let by=cy+.017;
+  if(comal){ comal.position.set(0,cy-.01,0); g.add(comal); by=(floorAt(comal,g,0,0,cy+.3)??cy+.01)+.008; }
+  else { M(new THREE.CylinderGeometry(.215,.2,.018,40),std(0x4b2e25,{roughness:.95}),0,cy,0,g);
+    const rim=M(new THREE.TorusGeometry(.212,.008,8,40),std(0x3a231c),0,cy+.009,0,g); rim.rotation.x=Math.PI/2; }
+  label('Comal',g,-.28,cy+.1,.14,.11);
+  const B=mkBeans(64,0x4d2a1a,g,'grano',.022), vy=new Float32Array(64);
+  for(const p of B.p){ const a=rnd(0,6.283), r=Math.sqrt(Math.random())*.15; p.set(Math.cos(a)*r,by,Math.sin(a)*r); } B.sync();
+  // la cuchara de madera sigue a tu mano mientras mueves los granos
+  const cm=model('cuchara',.24,'x'); const spoon=cm&&tool(cm,V(.3,cy-.04,.12),V(0,0,-.5),V(.1,-.03,0));
+  if(cm) g.add(cm);
+  const c0=C(B.tex?0xffffff:0x4d2a1a), c1=C(B.tex?0x7a5a4c:0x2a140c), cb=C(0x050505); let toast=0, burn=0, idle=0, started=false, sm=0;
+  return {desk:['h',by+.045],update(dt,t){
+    flames.forEach((f,i)=>{ const s=.75+.35*Math.sin(t*13+i*2)+rnd(0,.2); f.scale.set(1,s,1); f.position.y=fy+.045+.045*s; }); fl.intensity=.5+Math.random()*.3;
+    let stir=false, sh=null;
     for(const h of H){ if(!h.active) continue;
-      if(xzDist(h.pos,0,0)<.23&&h.pos.y>cy-.04&&h.pos.y<cy+.24&&speedXZ(h)>.12){ stir=true;
-        for(let i=0;i<B.n;i++){ const p=B.p[i], d=xzDist(p,h.pos.x,h.pos.z); if(d<.085){ p.x+=h.vel.x*dt*.7+rnd(-.006,.006); p.z+=h.vel.z*dt*.7+rnd(-.006,.006);
-          const r=Math.hypot(p.x,p.z); if(r>.17){ p.x*=.17/r; p.z*=.17/r; } if(p.y<=by+.001) vy[i]=rnd(.25,.6); } } } }
+      if(xzDist(h.pos,0,0)<.25&&h.pos.y>by-.05&&h.pos.y<by+.26){ sh=h;
+        if(speedXZ(h)>.12){ stir=true;
+          for(let i=0;i<B.n;i++){ const p=B.p[i], d=xzDist(p,h.pos.x,h.pos.z); if(d<.085){ p.x+=h.vel.x*dt*.7+rnd(-.006,.006); p.z+=h.vel.z*dt*.7+rnd(-.006,.006);
+            const r=Math.hypot(p.x,p.z); if(r>.16){ p.x*=.16/r; p.z*=.16/r; } if(p.y<=by+.001) vy[i]=rnd(.25,.6); } } } } }
+    if(spoon){ spoon.update(sh,dt); if(sh) cm.position.y=Math.max(cm.position.y,by-.005); }
     for(let i=0;i<B.n;i++){ const p=B.p[i]; if(vy[i]!==0||p.y>by){ vy[i]-=3.2*dt; p.y+=vy[i]*dt; B.r[i].x+=dt*9; if(p.y<=by){ p.y=by; vy[i]=0; } } }
     B.sync();
     if(stir){ started=true; idle=0; toast=Math.min(1,toast+dt/10); burn=Math.max(0,burn-dt*.8); if(Math.random()<dt*10) sfx.crackle(); }
-    else if(started&&!ui.done){ idle+=dt; if(idle>2){ burn+=dt/3.5; if(burn>=1){ burn=0; idle=1; toast=Math.max(0,toast-.12); sfx.sizzle(); sfx.bad(); burst(V(0,cy+.04,0),0x222222,18,{spd:.3,g:.4,up:1,life:1.2,size:2}); } } }
-    sm-=dt; if(sm<=0){ sm=burn>.2?.08:.3; burst(V(rnd(-.12,.12),cy+.03,rnd(-.12,.12)),burn>.2?0x333333:0xdddddd,1,{spd:.06,g:.3,up:1,life:1.3,size:burn>.2?2.4:1.5}); }
+    else if(started&&!ui.done){ idle+=dt; if(idle>2){ burn+=dt/3.5; if(burn>=1){ burn=0; idle=1; toast=Math.max(0,toast-.12); sfx.sizzle(); sfx.bad(); burst(V(0,by+.03,0),0x222222,18,{spd:.3,g:.4,up:1,life:1.2,size:2}); } } }
+    sm-=dt; if(sm<=0){ sm=burn>.2?.08:.3; burst(V(rnd(-.12,.12),by+.02,rnd(-.12,.12)),burn>.2?0x333333:0xdddddd,1,{spd:.06,g:.3,up:1,life:1.3,size:burn>.2?2.4:1.5}); }
     B.mat.color.copy(c0).lerp(c1,toast).lerp(cb,burn*.6);
     ui.warn=burn>.15&&!ui.done; ui.progress=toast;
-    ui.instr=ui.warn?'¡Muévelos, que se queman!':'Mueve los granos sobre el comal sin parar para que se tuesten parejo';
+    ui.instr=ui.warn?'¡Muévelos, que se queman!':'Con la cuchara, mueve los granos sobre el comal sin parar para que se tuesten parejo';
     if(toast>=1) finish();
   }};
 }
 
 /* ---- 6 · MOLIDO EN METATE ---- */
 function mkMolido(g){
-  const mx=-.08, my=.105; const stone=std(0x77716b,{roughness:1});
-  const slab=M(new THREE.BoxGeometry(.25,.032,.38),stone,mx,my,0,g); slab.rotation.x=-.1;
-  M(new THREE.CylinderGeometry(.022,.016,.11,8),stone,mx-.08,.055,.15,g); M(new THREE.CylinderGeometry(.022,.016,.11,8),stone,mx+.08,.055,.15,g); M(new THREE.CylinderGeometry(.024,.018,.075,8),stone,mx,.037,-.15,g);
-  const mano=M(new THREE.CylinderGeometry(.025,.025,.23,14),std(0x9a938b,{roughness:.9}),mx,my+.045,.1,g); mano.rotation.z=Math.PI/2;
-  label('Metate',g,mx,.3,-.2,.12);
-  const B=mkBeans(30,0x2a140c,g); const base=B.p.map(()=>V(mx+rnd(-.09,.09),0,rnd(-.13,.13))); B.p.forEach((p,i)=>p.set(base[i].x,my+.024+base[i].z*.1,base[i].z)); B.sync();
-  const paste=M(new THREE.SphereGeometry(1,20,12),std(0x3b1d10,{roughness:.25}),mx,my+.019,0,g); paste.scale.set(.02,.004,.03); paste.rotation.x=-.1;
+  const mx=-.08; let my=.105;
+  const met=model('metate',.4,'x');   // largo del metate a lo largo de z (hacia ti)
+  if(met){ met.position.set(mx,0,0); met.rotation.y=Math.PI/2; g.add(met); my=(floorAt(met,g,mx,0,.6)??.12)+.004; }
+  else { const stone=std(0x77716b,{roughness:1});
+    const slab=M(new THREE.BoxGeometry(.25,.032,.38),stone,mx,my,0,g); slab.rotation.x=-.1;
+    M(new THREE.CylinderGeometry(.022,.016,.11,8),stone,mx-.08,.055,.15,g); M(new THREE.CylinderGeometry(.022,.016,.11,8),stone,mx+.08,.055,.15,g); M(new THREE.CylinderGeometry(.024,.018,.075,8),stone,mx,.037,-.15,g); }
+  const slope=met?0:.1;
+  // altura de la piedra en cada punto (la losa del metate va inclinada)
+  const sy=(x,z)=>met?(floorAt(met,g,x,z,.6)??my):my+z*slope;
+  const mm=centered('mano',.24,'x'), mr=mm?mm.userData.size.y/2:.025;
+  const mano=mm||M(new THREE.CylinderGeometry(.025,.025,.23,14),std(0x9a938b,{roughness:.9}),0,0,0); if(!mm) mano.rotation.z=Math.PI/2;
+  mano.position.set(mx,sy(mx,.1)+mr+.004,.1); g.add(mano);
+  label('Metate',g,mx,my+.2,-.22,.12);
+  const B=mkBeans(30,0x2a140c,g,'semilla',.022); const base=B.p.map(()=>V(mx+rnd(-.08,.08),0,rnd(-.13,.13))); B.p.forEach((p,i)=>p.set(base[i].x,sy(base[i].x,base[i].z)+.008,base[i].z)); B.sync();
+  const paste=M(new THREE.SphereGeometry(1,20,12),std(0x3b1d10,{roughness:.25}),mx,sy(mx,0)+.002,0,g); paste.scale.set(.02,.004,.03); paste.rotation.x=-slope;
   const sp=[{n:'Canela',c:0x9a5b2b,z:-.15},{n:'Azúcar',c:0xf4e6c8,z:0},{n:'Pimienta',c:0x2f2420,z:.15}];
-  sp.forEach(s=>{ s.pos=V(.28,.06,s.z); mkBowl(.052,0xa0522d,g,.28,0,s.z); s.fill=M(new THREE.SphereGeometry(.042,14,8),std(s.c,{roughness:.9}),.28,.04,s.z,g); s.fill.scale.set(1,.4,1); label(s.n,g,.28,.135,s.z,.115); s.added=false; s.busy=false; });
+  sp.forEach(s=>{ s.pos=V(.28,.06,s.z);
+    const pl=model('comal',.12,'x'); if(pl){ pl.position.set(.28,0,s.z); g.add(pl); } else mkBowl(.052,0xa0522d,g,.28,0,s.z);
+    s.fill=M(new THREE.SphereGeometry(.042,14,8),std(s.c,{roughness:.9}),.28,pl?.012:.04,s.z,g); s.fill.scale.set(pl?.9:1,.3,pl?.9:1); label(s.n,g,.28,.12,s.z,.115); s.added=false; s.busy=false; });
   const held=[null,null]; let travel=0, nAdd=0, scr=0;
-  return {update(dt){
+  return {desk:['h',my+.04],update(dt){
     scr-=dt;
     for(const h of H){
       if(h.active&&h.start&&!held[h.i]){ for(const s of sp){ if(!s.added&&!s.busy&&h.pos.distanceTo(s.pos)<.1){ s.busy=true; const o=M(new THREE.SphereGeometry(.015,10,8),std(s.c),0,0,0,g); o.position.copy(h.pos); held[h.i]={o,s}; sfx.pick(); break; } } }
       const c=held[h.i];
       if(c){ if(h.active) c.o.position.lerp(h.pos,.6);
-        if(!h.active||!h.pinch){ held[h.i]=null; const to=V(mx+rnd(-.05,.05),my+.03,rnd(-.06,.06));
-          fly(c.o,to,.5,.14,()=>{ c.s.added=true; c.s.fill.scale.set(.8,.25,.8); nAdd++; sfx.good(nAdd); burst(to,c.s.c,14,{spd:.4}); g.remove(c.o); }); }
+        if(!h.active||!h.pinch){ held[h.i]=null; const to=V(mx+rnd(-.05,.05),my+.02,rnd(-.06,.06));
+          fly(c.o,to,.5,.14,()=>{ c.s.added=true; c.s.fill.scale.multiplyScalar(.6); nAdd++; sfx.good(nAdd); burst(to,c.s.c,14,{spd:.4}); g.remove(c.o); }); }
         continue; }
-      if(h.active&&Math.abs(h.pos.x-mx)<.17&&Math.abs(h.pos.z)<.22&&h.pos.y>my-.04&&h.pos.y<my+.24){
+      if(h.active&&Math.abs(h.pos.x-mx)<.17&&Math.abs(h.pos.z)<.24&&h.pos.y>my-.04&&h.pos.y<my+.24){
         const tz=clamp(h.pos.z,-.14,.14), dz=Math.min(.06,Math.abs(tz-mano.position.z));
-        mano.position.z=lerp(mano.position.z,tz,.7); mano.position.y=my+.045+mano.position.z*.1; mano.rotation.x+=dz*18; travel+=dz;
-        if(dz>.004&&scr<=0){ scr=.07; sfx.scrape(); if(Math.random()<.4) burst(V(mx+rnd(-.08,.08),my+.03,mano.position.z),0x5a3a2a,1,{spd:.2,life:.4}); }
+        mano.position.z=lerp(mano.position.z,tz,.7); mano.position.y=lerp(mano.position.y,sy(mx,mano.position.z)+mr+.004,.5); mano.rotation.x+=dz*18; travel+=dz;
+        if(dz>.004&&scr<=0){ scr=.07; sfx.scrape(); if(Math.random()<.4) burst(V(mx+rnd(-.08,.08),my+.02,mano.position.z),0x5a3a2a,1,{spd:.2,life:.4}); }
       }
     }
     const gr=Math.min(1,travel/3.2);
-    B.s=1-gr*.9; B.sync(); paste.scale.set(.02+gr*.085,.004+gr*.008,.03+gr*.12);
+    B.s=1-gr*.9; B.sync(); paste.scale.set(.02+gr*.075,.004+gr*.008,.03+gr*.12);
     ui.progress=nAdd/3*.25+gr*.75;
     const miss=sp.filter(s=>!s.added).map(s=>s.n.toLowerCase());
     ui.instr=gr>=1&&miss.length?'Ya casi: falta agregar '+miss.join(' y ')+' con un pellizco':(miss.length?'Agrega '+miss.join(', ')+' con un pellizco. ':'')+'Empuja la piedra del metate adelante y atrás para moler';
@@ -507,57 +629,97 @@ function mkMolido(g){
   }};
 }
 
-/* ---- 7 · CHOCOLATE ---- */
+/* ---- 7 · CHOCOLATE: la pasta va a la jarra, se bate con el molinillo y se sirve en la jícara ---- */
 function mkChocolate(g){
   const choc=std(0x3b1d10,{roughness:.3});
-  M(new THREE.CylinderGeometry(.095,.08,.014,28),std(0xa0522d),0,.007,.12,g);
-  const mound=M(new THREE.SphereGeometry(.07,18,12),choc,0,.02,.12,g); mound.scale.set(1,.55,1); const mC=V(0,.05,.12);
-  label('Pasta de cacao',g,0,.15,.12,.17);
-  // molde
-  const ox=-.27, oz=-.02; M(new THREE.BoxGeometry(.21,.026,.21),std(0x8a5a2e),ox,.013,oz,g); label('Tablillas',g,ox,.13,oz,.13);
-  const cav=[[-.05,-.05],[.05,-.05],[-.05,.05],[.05,.05]].map(c=>{ const p=V(ox+c[0],.027,oz+c[1]); M(new THREE.CylinderGeometry(.04,.04,.004,20),std(0x4a2f1b),p.x,p.y,p.z,g);
-    const t=M(new THREE.CylinderGeometry(.037,.037,.016,22),choc,p.x,.037,p.z,g); t.visible=false; return {p,t,pop:0}; });
-  // jícara
-  const jx=.27, jz=-.02, jR=.09; mkBowl(jR,0x6b2f1a,g,jx,0,jz); label('Bebida',g,jx,.29,jz,.12);
-  const liq=M(new THREE.CircleGeometry(1,24),std(0x4a2414,{roughness:.2}),jx,.03,jz,g); liq.rotation.x=-Math.PI/2; liq.visible=false;
-  const foam=M(new THREE.CircleGeometry(1,24),std(0xb98a63,{roughness:.6}),jx,.031,jz,g); foam.rotation.x=-Math.PI/2; foam.visible=false;
-  const mol=new THREE.Group(); mol.position.set(jx,.05,jz); mol.visible=false; g.add(mol);
-  M(new THREE.CylinderGeometry(.006,.006,.26,8),std(0xc8a06a),0,.13,0,mol); M(new THREE.CylinderGeometry(.024,.018,.04,10),std(0xb98952),0,.02,0,mol);
-  const r1=M(new THREE.TorusGeometry(.022,.005,6,14),std(0xa87a45),0,.055,0,mol); r1.rotation.x=Math.PI/2;
-  const jC=V(jx,.08,jz), oC=V(ox,.04,oz);
-  const held=[null,null]; let tabs=0, balls=0, froth=0, st=0, taken=0;
-  return {update(dt,t){
-    for(const c of cav) if(c.t.visible&&c.pop<1){ c.pop=Math.min(1,c.pop+dt*3); c.t.scale.setScalar(backOut(c.pop)); }
+  const px=-.26, pz=.1;
+  const pl=model('comal',.2,'x'); if(pl){ pl.position.set(px,0,pz); g.add(pl); } else M(new THREE.CylinderGeometry(.095,.08,.014,28),std(0xa0522d),px,.007,pz,g);
+  const mound=M(new THREE.SphereGeometry(.065,18,12),choc,px,pl?.016:.02,pz,g); mound.scale.set(1,.5,1); const mC=V(px,.05,pz);
+  label('Pasta de cacao',g,px,.15,pz,.17);
+  // la jarra con agua caliente
+  const jx=-.02, jz=-.08, home=V(jx,0,jz);
+  const jarra=model('jarra',.21,'y')||(()=>{ const j=new THREE.Group(); M(new THREE.CylinderGeometry(.06,.075,.2,20),std(0xa0522d),0,.1,0,j); j.userData.size=V(.15,.2,.15); return j; })();
+  if(MOD.jarra) jarra.rotation.y=Math.PI;   // el pico hacia la jícara
+  const jug=new THREE.Group(); jug.position.copy(home); jug.add(jarra); g.add(jug);
+  const jH=jarra.userData.size.y, jTop=V(jx,jH,jz);
+  label('Jarra',g,jx,jH+.07,jz,.1);
+  const steam=()=>burst(V(jug.position.x+rnd(-.02,.02),jug.position.y+jH,jug.position.z+rnd(-.02,.02)),0xffffff,1,{spd:.05,g:.25,up:1,life:1.5,size:1.6});
+  // el molinillo (batidor de madera): aparece en la jarra cuando ya tiene la pasta
+  const mol=centered('molinillo',.3,'y')||(()=>{ const m=new THREE.Group(); M(new THREE.CylinderGeometry(.006,.006,.26,8),std(0xc8a06a),0,0,0,m); M(new THREE.CylinderGeometry(.024,.018,.04,10),std(0xb98952),0,-.12,0,m); return m; })();
+  if(MOD.molinillo) mol.rotation.x=Math.PI;   // los dedos van abajo, dentro de la jarra
+  const molG=new THREE.Group(); molG.add(mol); molG.position.set(jx,jH+.1,jz); molG.visible=false; g.add(molG);
+  // la jícara
+  const kx=.27, kz=.08;
+  const jic=model('jicara',.16,'x'); let kBot=.012, kTop=.08, kR=.075;
+  if(jic){ jic.position.set(kx,0,kz); g.add(jic); kTop=jic.userData.size.y*.9; kBot=(floorAt(jic,g,kx,kz,.5)??.02)+.004; kR=jic.userData.size.x*.42; }
+  else mkBowl(.09,0x6b2f1a,g,kx,0,kz);
+  label('Jícara',g,kx,kTop+.1,kz,.11);
+  const liq=M(new THREE.CircleGeometry(1,28),std(0x4a2414,{roughness:.2}),kx,kBot,kz,g); liq.rotation.x=-Math.PI/2; liq.visible=false;
+  const foam=M(new THREE.CircleGeometry(1,28),std(0xb98a63,{roughness:.6}),kx,kBot+.0015,kz,g); foam.rotation.x=-Math.PI/2; foam.visible=false;
+  const stream=M(new THREE.CylinderGeometry(.006,.004,1,8),std(0x4a2414,{roughness:.2}),0,0,0,g); stream.visible=false;
+  const held=[null,null]; let balls=0, taken=0, froth=0, fill=0, st=0, jugHand=null, pour=0;
+  return {desk:['h',.12],update(dt,t){
+    const stage1=balls<3, stage2=!stage1&&froth<1, stage3=!stage1&&!stage2;
     for(const h of H){
-      if(h.active&&h.start&&!held[h.i]&&h.pos.distanceTo(mC)<.11&&taken<6){ const o=M(new THREE.SphereGeometry(.023,14,10),choc,0,0,0,g); o.position.copy(h.pos); held[h.i]=o; taken++; sfx.pick(); }
+      // 1) la pasta a la jarra
+      if(stage1&&h.active&&h.start&&!held[h.i]&&h.pos.distanceTo(mC)<.11&&taken<3){ const o=M(new THREE.SphereGeometry(.022,14,10),choc,0,0,0,g); o.position.copy(h.pos); held[h.i]=o; taken++; sfx.pick(); }
       const o=held[h.i];
       if(o){ if(h.active) o.position.lerp(h.pos,.6);
-        if(!h.active||!h.pinch){ held[h.i]=null; const dM=xzDist(o.position,ox,oz), dJ=xzDist(o.position,jx,jz);
-          if(dM<.18&&dM<=dJ&&tabs<4){ const c=cav[tabs++]; fly(o,c.p,.35,.08,()=>{ g.remove(o); c.t.visible=true; c.t.scale.setScalar(.01); sfx.good(tabs+2); burst(c.p,[0xfbbf24,0xffffff],14,{spd:.5}); });
-          } else if(dJ<.18&&balls<2){ balls++; const b=balls; fly(o,V(jx,.05,jz),.35,.1,()=>{ g.remove(o); sfx.plop(); liq.visible=true; burst(jC,0x6b3a22,12,{spd:.5}); if(b===2){ mol.visible=true; foam.visible=true; sfx.good(5); } });
-          } else { taken--; fly(o,mC,.3,.08,()=>g.remove(o)); } }
+        if(!h.active||!h.pinch){ held[h.i]=null;
+          if(xzDist(o.position,jx,jz)<.14){ fly(o,V(jx,jH-.02,jz),.35,.1,()=>{ g.remove(o); balls++; sfx.plop(); burst(jTop,0x6b3a22,12,{spd:.5}); if(balls===3){ molG.visible=true; sfx.good(5); } }); }
+          else { taken--; fly(o,mC,.3,.08,()=>g.remove(o)); } }
         continue; }
-      if(balls>=2&&h.active&&xzDist(h.pos,jx,jz)<.15&&h.pos.y<.36&&h.pos.y>-.02){ const s=speedXZ(h); if(s>.15){ froth=Math.min(1,froth+s*dt/1.3); mol.rotation.y+=s*dt*40; if(Math.random()<dt*8) noise(.05,rnd(700,1200),.07,1.5); } }
+      // 2) batir con el molinillo
+      if(stage2&&h.active&&xzDist(h.pos,jx,jz)<.16&&h.pos.y<jH+.3&&h.pos.y>-.02){ const s=speedXZ(h);
+        molG.position.x=lerp(molG.position.x,jx+clamp(h.pos.x-jx,-.015,.015),.3); molG.position.z=lerp(molG.position.z,jz+clamp(h.pos.z-jz,-.015,.015),.3);
+        if(s>.12){ froth=Math.min(1,froth+s*dt/1.4); mol.rotation.y+=s*dt*60; if(Math.random()<dt*8) noise(.05,rnd(700,1200),.07,1.5); if(Math.random()<dt*10) burst(V(jx,jH,jz),0xd9b38c,2,{spd:.25,life:.6}); } }
+      // 3) tomar la jarra y servir en la jícara
+      if(stage3){
+        if(h.active&&h.start&&!jugHand&&h.pos.distanceTo(V(jug.position.x,jug.position.y+jH*.55,jug.position.z))<.16){ jugHand=h; sfx.pick(); }
+        if(jugHand===h&&(!h.active||!h.pinch)){ jugHand=null; if(fill<1){ fly(jug,home,.45,.06); } }
+      }
     }
-    mound.scale.set(1-taken*.09,.55-taken*.06,1-taken*.09);
-    if(liq.visible){ const lv=balls/2, y=.025+lv*.045, r=Math.sqrt(Math.max(.0004,jR*jR-(jR-y)*(jR-y)))*.97; liq.position.y=lerp(liq.position.y,y,.1); liq.scale.setScalar(r); foam.position.y=liq.position.y+.0015; foam.scale.setScalar(Math.max(.001,r*froth)); }
-    st-=dt; if(balls>0&&st<=0){ st=.25; burst(V(jx+rnd(-.04,.04),.1,jz+rnd(-.04,.04)),0xffffff,1,{spd:.05,g:.25,up:1,life:1.5,size:1.6}); }
-    mol.rotation.z=Math.sin(t*3)*.03;
-    ui.progress=Math.max(tabs/4,balls/2*.5+froth*.5);
-    ui.instr=balls>=2&&froth<1&&tabs<4?'Bate el chocolate: mueve tu mano en círculos junto al molinillo. O sigue llenando el molde.':'Pellizca la pasta y llévala al molde (tablillas para comer) o a la jícara (bebida)';
-    if(tabs>=4||(balls>=2&&froth>=1)) finish();
+    if(stage3&&molG.visible){ molG.visible=false; burst(V(jx,jH+.05,jz),[0xfbbf24,0xffffff],16,{spd:.5}); sfx.good(6); }
+    // sirve sola cuando la jarra está junto a la jícara: se levanta un poco y se inclina
+    const over=stage3&&xzDist(jug.position,kx-.07,kz)<.11&&fill<1;
+    if(jugHand){ jug.position.lerp(V(jugHand.pos.x,Math.max(kTop+.02,jugHand.pos.y-jH*.55)+pour*.06,jugHand.pos.z),.5); }
+    pour=lerp(pour,over?1:0,Math.min(1,dt*5)); jug.rotation.z=-pour*1.05; jug.rotation.y=0;
+    stream.visible=pour>.6&&fill<1;
+    if(stream.visible){ g.updateMatrixWorld(true);
+      const a=g.worldToLocal(jug.localToWorld(V(jarra.userData.size.x*.45,jH*.85,0))), b=V(kx,kBot+fill*(kTop-kBot)*.8,kz);
+      // el chorro: un cilindro de la boca de la jarra a la jícara (su eje y apunta de a a b)
+      stream.position.lerpVectors(a,b,.5); stream.scale.set(1,Math.max(.01,a.distanceTo(b)),1);
+      stream.quaternion.setFromUnitVectors(V(0,1,0),b.clone().sub(a).normalize());
+      fill=Math.min(1,fill+dt/3.5); liq.visible=foam.visible=true; if(Math.random()<dt*14) noise(.06,rnd(300,600),.05,1.2);
+      if(fill>=1){ finish(); fly(jug,home,.6,.1); jugHand=null; } }
+    if(liq.visible){ const y=kBot+fill*(kTop-kBot)*.8, r=kR*(.45+.55*Math.min(1,fill*1.3)); liq.position.y=y; liq.scale.setScalar(r); foam.position.y=y+.0015; foam.scale.setScalar(r*.85); }
+    st-=dt; if(balls>0&&st<=0){ st=.25; steam(); }
+    molG.rotation.z=Math.sin(t*3)*.03;
+    ui.progress=balls/3*.3+froth*.35+fill*.35;
+    ui.instr=stage1?'Pellizca la pasta de cacao y échala a la jarra con agua caliente ('+balls+'/3)'
+      :stage2?'Bate con el molinillo: mueve tu mano en círculos sobre la jarra hasta que haga espuma ('+Math.round(froth*100)+' %)'
+      :fill<1?'Toma la jarra con un pellizco y llévala sobre la jícara para servir el chocolate':'¡A tomar chocolate!';
   }};
 }
 
 const PHASES=[
  {t:'La cosecha',desk:['v',-.19],make:mkCosecha,info:'La mazorca del cacao crece pegada al tronco del árbol. Cuando madura cambia de color y se corta a mano, con cuidado de no lastimar el árbol.'},
  {t:'El desgrane',desk:['h',.08],make:mkDesgrane,info:'Se parte la mazorca y se sacan sus semillas, de 30 a 40 por fruto, envueltas en una pulpa blanca y dulce llamada mucílago.'},
- {t:'El fermentado',desk:['h',.05],make:mkFermentado,info:'Las semillas reposan varios días en cajones de madera, tapadas con hojas de plátano. Se remueven para que fermenten parejo: aquí nace el sabor a chocolate.'},
- {t:'El secado',desk:['h',.04],make:mkSecado,info:'Los granos fermentados se extienden al sol sobre petates o planchas durante varios días, hasta perder casi toda su humedad.'},
+ {t:'El fermentado',desk:['h',.05],make:mkFermentado,info:'Las semillas reposan varios días en cajones de madera, tapadas con hojas de plátano. Se remueven con una pala para que fermenten parejo: aquí nace el sabor a chocolate.'},
+ {t:'El secado',desk:['h',.04],make:mkSecado,info:'Los granos fermentados se extienden al sol en escurridores o petates y se mueven con el rastrillo durante varios días, hasta perder casi toda su humedad.'},
  {t:'El tostado',desk:['h',.17],make:mkTostado,info:'Sobre un comal de barro al fuego de leña, los granos se mueven sin descanso. El tostado despierta el aroma y afloja la cascarilla.'},
  {t:'El molido en metate',desk:['h',.14],make:mkMolido,info:'El cacao se muele en metate de piedra con canela, azúcar y pimienta. La fricción y el calor derriten su manteca y lo vuelven una pasta.'},
- {t:'¡Chocolate!',desk:['h',.06],make:mkChocolate,info:'La pasta se moldea en tablillas para comer, o se disuelve y se bate con molinillo en una jícara para beberlo espumoso.'}
+ {t:'¡Chocolate!',desk:['h',.12],make:mkChocolate,info:'La pasta se disuelve en agua caliente y se bate con el molinillo hasta que hace espuma. Se sirve en jícara, como es tradición en Tabasco.'}
 ];
+
+/* decoración que depende de los modelos: el título del juego y, en VR y en pantalla, un cacaotal de verdad */
+let titulo=null;
+function buildDecor(){
+  titulo=model('titulo',.42,'x');
+  if(titulo){ titulo.position.set(.42,.4,-.36); titulo.rotation.y=-.5; stage.add(titulo); }
+  if(MOD.arbol){ envTrees.visible=false;
+    for(let i=0;i<9;i++){ const a=i/9*6.283+rnd(-.2,.2), r=rnd(2.6,5), t=model('arbol',rnd(2.2,3.2),'x'); t.position.set(Math.cos(a)*r,0,Math.sin(a)*r); t.rotation.y=rnd(0,6.28); env.add(t); } }
+}
 
 function gotoPhase(i){
   if(pg) stage.remove(pg);
@@ -591,6 +753,7 @@ renderer.setAnimationLoop(ms=>{
           if(d<.07||(h.start&&d<.13)){ btnCool=1; burst(btn.position,[0xa855f7,0xffffff],16); tone(700,1100,.12,'triangle',.15); gotoPhase((cur+1)%PHASES.length); break; } } }
       if(finaleT>0){ finaleT-=dt; if(Math.random()<dt*7) burst(V(rnd(-.3,.3),.45,rnd(-.25,.2)),[0xfbbf24,0xf97316,0xa855f7,0x22d3ee,0xf472b6],10,{spd:.5,g:-.6,up:0,life:1.6,size:1.5}); }
     }
+    if(titulo) titulo.position.y=.4+Math.sin(t*1.2)*.012;
     ring.material.color.setHSL(.76+Math.sin(t)*.04,.9,.55+Math.sin(t*2)*.1);
     drawPanel();
   }
@@ -616,13 +779,16 @@ function enterDesk(){
 }
 $('bAR').onclick=()=>enterXR('ar'); $('bVR').onclick=()=>enterXR('vr'); $('bDesk').onclick=enterDesk;
 (async()=>{
+  $('bDesk').disabled=true;
+  await Promise.race([loadModels(p=>{ $('msg').textContent='Cargando el cacaotal… '+Math.round(p*100)+' %'; }),new Promise(r=>setTimeout(r,60000))]);
+  buildDecor(); $('bDesk').disabled=false;
   let ar=false,vr=false;
   if(navigator.xr){ try{ ar=await navigator.xr.isSessionSupported('immersive-ar'); }catch(e){} try{ vr=await navigator.xr.isSessionSupported('immersive-vr'); }catch(e){} }
   $('bAR').disabled=!ar; $('bVR').disabled=!vr;
   $('msg').textContent=ar||vr?'Activa el seguimiento de manos en tu visor y deja los controles a un lado.'
     :(isSecureContext?'Este dispositivo no tiene modo inmersivo: ábrelo en el navegador del visor, o pruébalo aquí con ratón.':'WebXR necesita HTTPS: sube este archivo a tu sitio y ábrelo desde el navegador del visor.');
 })();
-window.__cacao={gotoPhase,H,get ui(){return ui;},get cur(){return cur;},finish};
+window.__cacao={gotoPhase,H,MOD,get ui(){return ui;},get cur(){return cur;},get phase(){return phase;},finish};
 </script>
 </body>
 </html>
