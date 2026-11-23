@@ -39,7 +39,36 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight:
 #etiquetas { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .etiqueta { position: absolute; left: 0; top: 0; pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px 6px 8px; border-radius: 4px; background: rgba(243,234,216,.9); border: 1px solid var(--morado); border-bottom: 3px solid var(--c); color: var(--cafe); font: 600 .82rem Cinzel, Georgia, serif; letter-spacing: .04em; white-space: nowrap; box-shadow: 0 6px 18px rgba(40,25,10,.25); backdrop-filter: blur(4px); }
 .etiqueta span { font-size: 1.1rem; }
-.cargando { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; background: var(--fondo); z-index: 5; transition: opacity .6s; color: var(--suave); }
+.cargando { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; background: var(--fondo); z-index: 30; transition: opacity .6s; color: var(--suave); }
+/* pantalla de carga: sello dorado que gira, barra con brillo que corre y chispas que suben */
+.cargando { background: radial-gradient(ellipse at 50% 35%, #4a2c3a 0%, #2a1a22 45%, var(--fondo) 100%); }
+.sello-carga { position: relative; width: 84px; height: 84px; display: grid; place-items: center; }
+.sello-carga::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 20%, #f3dca2 35%, #fff6dc 42%, #c99a45 55%, transparent 70%); -webkit-mask: radial-gradient(circle, transparent 54%, #000 56%); mask: radial-gradient(circle, transparent 54%, #000 56%); animation: gira 1.6s linear infinite; filter: drop-shadow(0 0 10px rgba(243,220,162,.7)); }
+.sello-carga span { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; font: 700 1.9rem Cinzel, Georgia, serif; color: #2b1d0a; background: radial-gradient(circle at 35% 30%, #fff3d0, #e3c27a 45%, #a87a35); box-shadow: 0 0 26px rgba(227,194,122,.55); animation: latido 2.2s ease-in-out infinite; }
+.cargando-logo { font: 700 1.6rem Cinzel, Georgia, serif; color: var(--oro); letter-spacing: .06em; text-align: center; line-height: 1; text-shadow: 0 0 18px rgba(227,194,122,.4); }
+.cargando-logo small { display: block; font: 500 .7rem Jost, sans-serif; letter-spacing: .5em; color: var(--suave); margin-top: 6px; }
+.cargando p { font: italic 500 1.15rem "Cormorant Garamond", Georgia, serif; color: #f3e6cc; min-height: 1.4em; text-align: center; }
+.barra-carga { position: relative; width: min(280px, 70vw); height: 10px; border-radius: 999px; background: rgba(0,0,0,.35); border: 1px solid rgba(227,194,122,.45); box-shadow: inset 0 1px 4px rgba(0,0,0,.5); }
+.barra-carga i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 999px; overflow: hidden; background: linear-gradient(90deg, #b4683f, #e3a9c4 40%, #f3dca2 75%, #fff6dc); box-shadow: 0 0 12px rgba(243,220,162,.8), 0 0 26px rgba(227,169,196,.45); transition: width .8s cubic-bezier(.25,.8,.3,1); }
+.barra-carga i b { position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.85) 50%, transparent 70%); background-size: 200% 100%; animation: brilloBarra 1.4s linear infinite; }
+.barra-carga em { position: absolute; bottom: 4px; left: var(--x); width: 4px; height: 4px; border-radius: 50%; background: #fff6dc; box-shadow: 0 0 6px #f3dca2, 0 0 12px #e3a9c4; opacity: 0; animation: chispa 3.2s ease-out var(--d) infinite; }
+.cargando.lista .sello-carga::before { animation-duration: .5s; }
+.cargando.lista .barra-carga { box-shadow: 0 0 30px rgba(243,220,162,.7); }
+@keyframes brilloBarra { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+@keyframes chispa { 0% { opacity: 0; transform: translate(0, 0) scale(.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(10px, -70px) scale(1.2); } }
+@keyframes latido { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+@media (prefers-reduced-motion: reduce) { .sello-carga::before, .sello-carga span, .barra-carga i b, .barra-carga em { animation: none; } }
+/* perfil */
+.perfil-btn { background: radial-gradient(circle at 35% 30%, #fff3d0, #e3c27a 45%, #a87a35); border-color: #f3dca2; color: #2b1d0a; font: 700 1rem Cinzel, Georgia, serif; }
+.perfil-foto { width: 96px; height: 96px; margin: 4px auto 8px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; font-size: 3rem; background: radial-gradient(circle at 50% 30%, #f6ead0, #c9a26a); border: 2px solid var(--oro); box-shadow: 0 0 22px rgba(227,194,122,.35); }
+.perfil-foto img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; }
+.perfil-menu { display: grid; gap: 8px; margin-top: 14px; }
+.perfil-menu .salir { border-color: #b4683f; color: #f3c3a8; }
+.volver-como { display: grid; gap: 8px; margin: 12px 0 4px; }
+.volver-como div { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.volver-como small { color: var(--suave); }
+/* en celular angosto, sonido y ayuda quedan dentro del menú de perfil para que quepa la barra de arriba */
+@media (max-width: 420px) { #btn-sonido, #btn-ayuda { display: none; } }
 .cargando.fuera { opacity: 0; pointer-events: none; }
 .anillo { width: 54px; height: 54px; border-radius: 50%; border: 4px solid var(--borde); border-top-color: var(--rosa); animation: gira 1s linear infinite; }
 

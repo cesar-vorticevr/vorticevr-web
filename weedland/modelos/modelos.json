@@ -138,6 +138,7 @@
  },
  "templete": {
   "archivo": "templete.glb",
+  "cel": true,
   "tam": [1.292,1.9,1.291],
   "pantallas": [
    {
@@ -151,6 +152,7 @@
  },
  "totem": {
   "archivo": "totem.glb",
+  "cel": true,
   "tam": [0.69,1.9,0.232],
   "pantallas": [
    {
@@ -164,30 +166,37 @@
  },
  "porton": {
   "archivo": "porton.glb",
+  "cel": true,
   "tam": [1.637,1.9,0.413]
  },
  "arcos": {
   "archivo": "arcos.glb",
+  "cel": true,
   "tam": [1.875,1.343,0.411]
  },
  "fuente": {
-  "archivo": "fuente.glb"
+  "archivo": "fuente.glb",
+  "cel": true
  },
  "puesto": {
   "archivo": "puesto.glb",
+  "cel": true,
   "tam": [1.69,1.902,0.954]
  },
  "farol": {
   "archivo": "farol.glb"
  },
  "globo": {
-  "archivo": "globo.glb"
+  "archivo": "globo.glb",
+  "cel": true
  },
  "palapa-camastro": {
-  "archivo": "palapa.glb"
+  "archivo": "palapa.glb",
+  "cel": true
  },
  "dron": {
-  "archivo": "dron.glb"
+  "archivo": "dron.glb",
+  "cel": true
  },
  "coloso": {
   "archivo": "coloso.glb",
@@ -196,46 +205,55 @@
  },
  "esc-semilla": {
   "archivo": "esc-semilla.glb",
+  "cel": true,
   "alto": 5.5,
   "decor": true
  },
  "esc-manos": {
   "archivo": "esc-manos.glb",
+  "cel": true,
   "alto": 5.5,
   "decor": true
  },
  "esc-loto": {
   "archivo": "esc-loto.glb",
+  "cel": true,
   "alto": 5.5,
   "decor": true
  },
  "esc-hoja": {
   "archivo": "esc-hoja.glb",
+  "cel": true,
   "alto": 6,
   "decor": true
  },
  "esc-jaguar": {
   "archivo": "esc-jaguar.glb",
+  "cel": true,
   "alto": 3.6,
   "decor": true
  },
  "esc-regadera": {
   "archivo": "esc-regadera.glb",
+  "cel": true,
   "alto": 4.5,
   "decor": true
  },
  "banca": {
   "archivo": "banca.glb",
+  "cel": true,
   "alto": 1.05,
   "decor": true
  },
  "puente": {
   "archivo": "puente.glb",
+  "cel": true,
   "ancho": 12,
   "decor": true
  },
  "acueducto": {
   "archivo": "acueducto.glb",
+  "cel": true,
   "alto": 9,
   "decor": true
  },
@@ -246,6 +264,7 @@
  },
  "cenote": {
   "archivo": "cenote.glb",
+  "cel": true,
   "ancho": 16,
   "decor": true
  },
@@ -256,6 +275,7 @@
  },
  "cascada": {
   "archivo": "cascada.glb",
+  "cel": true,
   "alto": 8,
   "decor": true,
   "tam": [1.861,1.9,1.662],
@@ -603,6 +623,7 @@
   "archivo": "stand-premium-lejos.glb"
  },
  "casa-marca-lejos": {
-  "archivo": "casa-marca-lejos.glb"
+  "archivo": "casa-marca-lejos.glb",
+  "cel": true
  }
 }

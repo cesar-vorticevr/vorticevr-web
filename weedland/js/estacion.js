@@ -816,11 +816,13 @@ export function crearEstacion(canvas, cfg) {
   // k = metros por unidad del modelo (para pasar las medidas de modelos.json: "tam" y "pantallas"); tam = tamaño final en metros.
   // Si el modelo trae "lejos" en modelos.json, de cerca se ve el detallado y de lejos el ligero (LOD); en celular solo el ligero.
   async function ponerModelo(padre, id, medidas = {}) {
-    let p = await plantilla(id);
+    // en celular ni se pide el detallado (antes se bajaba y abría también, y llenaba la memoria del iPhone)
+    const cfgBase = (await listaModelos())[id];
+    if (!cfgBase) return null;
+    const lejosId = cfgBase.lejos && (await listaModelos())[cfgBase.lejos] ? cfgBase.lejos : null;
+    let p = ligero && lejosId ? await plantilla(lejosId) : await plantilla(id);
     if (!p) return null;
-    const pl = p.cfg.lejos ? await plantilla(p.cfg.lejos) : null;
-    const cfgBase = p.cfg;
-    if (pl && ligero) p = pl;
+    const pl = !ligero && lejosId ? await plantilla(lejosId) : null;
     const c = copia(p, medidas);
     let obj = c.obj;
     if (pl && !ligero) {
@@ -1793,7 +1795,7 @@ export function crearEstacion(canvas, cfg) {
       if (ZONA_OBRA[p.id]) { const [x, z, mx, mz] = junto(p.angulo, 18.5, 8.5); piezas.push({ id: ZONA_OBRA[p.id], x, z, mirar: [mx, mz] }); }
       if (!ligero) { const [x, z, mx, mz] = junto(p.angulo, 19, -7.6); piezas.push({ id: "banca", x, z, mirar: [mx, mz] }); }
     });
-    { const [x, z] = polar(22.5, 78); piezas.push({ id: "coloso", x, z, mirar: [0, 0] }); }
+    if (!ligero) { const [x, z] = polar(22.5, 78); piezas.push({ id: "coloso", x, z, mirar: [0, 0] }); } // en celular no (muy pesado)
     { const [x, z, mx, mz] = junto(270, 70, -8); piezas.push({ id: "esc-regadera", x, z, mirar: [mx, mz] }); }
     if (!ligero) {
       [["cupula", 45, 88], ["anfiteatro", 240, 92], ["acueducto", 330, 92]].forEach(([id, gr, r]) => { const [x, z] = polar(gr, r); piezas.push({ id, x, z, mirar: [0, 0] }); });

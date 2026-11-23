@@ -12,6 +12,11 @@ const draco = new DRACOLoader().setDecoderPath("https://cdn.jsdelivr.net/npm/thr
 const cargador = new GLTFLoader().setDRACOLoader(draco);
 let lista = null;
 const plantillas = {};
+// celular: texturas de 512 px (carpeta modelos/cel/, hecha con tools/celular-glb.py). Con las de 2048 px el iPhone
+// se queda sin memoria (~1.3 GB solo en texturas), Safari cierra la pestaña y sale "Ocurrió un problema varias veces".
+export const ligero = innerWidth < 760 || matchMedia("(pointer: coarse)").matches;
+// avance de carga para la pantalla de "Abriendo la hacienda…"
+let pedidos = 0, listos = 0;
 
 export function listaModelos() {
   if (!lista) lista = fetch(new URL("modelos.json", BASE)).then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
@@ -23,7 +28,9 @@ export async function plantilla(id) {
   const todos = await listaModelos(), cfg = todos[id];
   if (!cfg || !cfg.archivo) return null;
   if (!plantillas[id]) {
-    plantillas[id] = cargador.loadAsync(new URL(cfg.archivo, BASE).href).then((r) => {
+    const archivo = ligero && cfg.cel ? "cel/" + cfg.archivo : cfg.archivo;
+    pedidos++;
+    plantillas[id] = cargador.loadAsync(new URL(archivo, BASE).href).then((r) => {
       // texturas nítidas de lado (filtro anisotrópico) y mipmaps de calidad
       r.scene.traverse((o) => {
         if (!o.isMesh) return;
@@ -31,7 +38,7 @@ export async function plantilla(id) {
         for (const k of ["map", "normalMap", "roughnessMap", "metalnessMap"]) { const t = o.material[k]; if (t) { t.anisotropy = 8; t.needsUpdate = true; } }
       });
       return { escena: r.scene, clips: r.animations || [], cfg };
-    }).catch((e) => { console.warn("No se pudo cargar el modelo", id, e); return null; });
+    }).catch((e) => { console.warn("No se pudo cargar el modelo", id, e); return null; }).finally(() => { listos++; });
   }
   return plantillas[id];
 }
@@ -104,4 +111,20 @@ export function instancias(p, matrices, medidas = {}) {
     g.add(im);
   });
   return g;
+}
+
+// Espera a que terminen los modelos que la escena ya pidió (para no ver las figuras de código y luego el cambio).
+// alAvance(listos, pedidos). Se da por lista si todo lleva un rato sin pedidos pendientes, o al pasar "maximo" ms.
+export function esperaModelos(alAvance = () => {}, maximo = 45000) {
+  const t0 = performance.now();
+  return new Promise((listo) => {
+    let quietos = 0;
+    const revisa = () => {
+      alAvance(listos, pedidos);
+      quietos = pedidos && listos === pedidos ? quietos + 1 : 0;
+      if (quietos >= 3 || performance.now() - t0 > maximo) return listo();
+      setTimeout(revisa, 200);
+    };
+    revisa();
+  });
 }

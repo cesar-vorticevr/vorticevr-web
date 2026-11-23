@@ -24,6 +24,58 @@ const pab = (id) => PABELLONES.find((p) => p.id === id);
 const guardar = () => { guardarJuego(J); contadores(); };
 const vars = (m) => `--c:${m.color};--c2:${m.color2}`;
 
+// ---------- sesiones de este dispositivo (registro temporal, sin correo) ----------
+// Al cerrar sesión el avance (estrellas, sellos, cultivo, favoritos) se guarda con el apodo y el año en "ws-cuentas";
+// quien vuelva a entrar con los mismos datos lo recupera. Nada sale de este navegador.
+const CUENTAS = "ws-cuentas";
+const llaveCuenta = (p) => `${(p.apodo || "").trim().toLowerCase()}|${p.nacimiento}`;
+const leerCuentas = () => { try { return JSON.parse(localStorage.getItem(CUENTAS)) || {}; } catch { return {}; } };
+const guardarCuentas = (c) => { try { localStorage.setItem(CUENTAS, JSON.stringify(c)); } catch {} };
+function guardarSesion() {
+  const p = leerPerfil();
+  if (!p || !p.apodo) return;
+  const c = leerCuentas(); c[llaveCuenta(p)] = { perfil: p, juego: J, fecha: Date.now() }; guardarCuentas(c);
+}
+function cerrarSesion() {
+  const p = leerPerfil() || {};
+  const caja = modal(`
+    <button class="cerrar" data-x>✕</button>
+    <div class="ico-g">👋</div>
+    <h3>¿Cerrar sesión, ${esc(p.apodo || "")}?</h3>
+    <p class="suave">Tu avance (${J.polen} estrellas, sellos, cultivo y favoritos) se queda guardado en este dispositivo. Para recuperarlo, entra otra vez con el mismo apodo y año de nacimiento.</p>
+    <div class="acciones"><button class="btn" data-si>Cerrar sesión</button><button class="btn sec" data-x>Seguir aquí</button></div>`);
+  $$("[data-x]", caja).forEach((b) => (b.onclick = cerrarModal));
+  $("[data-si]", caja).onclick = () => {
+    sonido.tap(); callar();
+    guardarSesion();
+    try { localStorage.removeItem(CLAVES.juego); } catch {}
+    guardarPerfil(null);
+    location.reload();
+  };
+}
+async function abrirPerfil() {
+  const p = leerPerfil() || {};
+  let foto = "";
+  try { const l = await (await fetch("modelos/modelos.json")).json(); foto = l[p.personaje]?.foto || ""; } catch {}
+  const caja = modal(`
+    <button class="cerrar" data-x>✕</button>
+    <div class="perfil-foto">${foto ? `<img src="modelos/${esc(foto)}" alt="">` : "🙂"}</div>
+    <h3>${esc(p.apodo || "Visitante")}</h3>
+    <p class="suave">${esc(nombrePais(p.pais))} · 🌟 ${J.polen} estrellas · 🪪 ${(J.visitados || []).length} sellos</p>
+    <div class="perfil-menu">
+      <button class="btn sec" data-personaje>🧍 Cambiar de personaje</button>
+      <button class="btn sec" data-sonido>${estaMudo() ? "🔇 Sonido apagado" : "🔊 Sonido encendido"}</button>
+      <button class="btn sec" data-ayuda>❓ Cómo se juega</button>
+      <button class="btn sec salir" data-salir>🚪 Cerrar sesión</button>
+    </div>
+    <p class="nota">Registro temporal: se guarda solo en este dispositivo, sin correo.</p>`);
+  $("[data-x]", caja).onclick = cerrarModal;
+  $("[data-personaje]", caja).onclick = () => { sonido.tap(); cerrarModal(); guardarSesion(); elegirPersonaje(p); };
+  $("[data-sonido]", caja).onclick = (e) => { const m = alternarSonido(); $("#btn-sonido").textContent = m ? "🔇" : "🔊"; e.currentTarget.textContent = m ? "🔇 Sonido apagado" : "🔊 Sonido encendido"; sonido.tap(); };
+  $("[data-ayuda]", caja).onclick = () => { sonido.tap(); cerrarModal(); guia(0); };
+  $("[data-salir]", caja).onclick = () => { sonido.tap(); cerrarSesion(); };
+}
+
 // ---------- entrada: país, apodo y año de nacimiento (edad mínima según el país), luego eliges tu personaje ----------
 // Todo se queda en este navegador (localStorage); no se manda a ningún servidor.
 function entrada() {
@@ -36,6 +88,7 @@ function entrada() {
       <div class="entrada-logo">Weedland</div>
       <div class="entrada-sub">HACIENDA</div>
       <p>Una hacienda wellness para el sector cannábico legal. Recorre los claustros de las marcas, mira sus catálogos, juega y gana premios reales.</p>
+      ${volverComo()}
       <form id="form-entrada" class="form-entrada" novalidate>
         <label>¿Desde qué país nos visitas?<select id="pais">${PAISES.map((p) => `<option value="${p.id}">${p.nombre}</option>`).join("")}</select></label>
         <label>Tu nombre o apodo<input id="apodo" maxlength="20" autocomplete="nickname" placeholder="Así te saludará la gente" value="${esc(previo.apodo || "")}"></label>
@@ -46,6 +99,7 @@ function entrada() {
       </form>
       <p class="legal">Solo para mayores de edad. Aquí no se vende nada: cada marca vende en su propia tienda y según la ley de tu país. Demo con marcas de ejemplo.</p>
     </div>`;
+  $$("[data-cuenta]", caja).forEach((b) => (b.onclick = () => { sonido.pop(); const c = leerCuentas()[b.dataset.cuenta]; if (c) entrar(c.perfil); }));
   const sel = $("#pais"), nacio = $("#nacio"), err = $("#error-entrada");
   const idioma = (navigator.language || "").toUpperCase();
   const sug = PAISES.find((p) => idioma.endsWith(p.id));
@@ -74,6 +128,13 @@ function entrada() {
   };
 }
 
+// Quienes ya entraron en este dispositivo y cerraron sesión: un toque para volver
+function volverComo() {
+  const c = Object.entries(leerCuentas()).sort((a, b) => b[1].fecha - a[1].fecha).slice(0, 4);
+  if (!c.length) return "";
+  return `<div class="volver-como"><small>¿Ya habías venido? Entra como</small><div>${c.map(([k, v]) => `<button type="button" class="btn sec chico" data-cuenta="${esc(k)}">${esc(v.perfil.apodo)} · 🌟${v.juego?.polen ?? 0}</button>`).join("")}</div><small>o regístrate:</small></div>`;
+}
+
 // Elegir con qué personaje entras (los de modelos/modelos.json). Ese ya no sale entre la gente de la hacienda.
 async function elegirPersonaje(perfil) {
   const caja = $("#entrada");
@@ -100,8 +161,12 @@ async function elegirPersonaje(perfil) {
   $("#volver-entrada").onclick = () => { guardarPerfil(null); entrada(); };
 }
 function entrar(perfil) {
+  // si ya había venido con ese apodo y año, recupera su avance
+  const c = leerCuentas()[llaveCuenta(perfil)];
+  if (c && c.juego && llaveCuenta(perfil) !== llaveCuenta(leerPerfil() || {})) { guardarJuego(c.juego); J = leerJuego(); }
   guardarPerfil(perfil);
   $("#entrada").hidden = true;
+  if (est) { location.reload(); return; } // cambió de personaje con la hacienda ya armada
   iniciar();
 }
 
@@ -131,6 +196,31 @@ async function iniciar() {
     return;
   }
   if (/[?&]prueba\b/.test(location.search)) window.__ws = est; // solo para probar desde la consola
+  // no se quita la pantalla de carga hasta que llegan los modelos de Meshy: así no se ven primero las figuras de código
+  {
+    const { esperaModelos } = await import("./modelos.js");
+    const txt = $("#cargando p"), barra = document.createElement("div");
+    barra.className = "barra-carga";
+    barra.innerHTML = `<i><b></b></i>${Array.from({ length: 14 }, (_, n) => `<em style="--d:${(n * 0.23).toFixed(2)}s;--x:${(n * 37) % 100}%"></em>`).join("")}`;
+    $("#cargando").append(barra);
+    const frases = ["Abriendo el portón…", "Regando las buganvilias…", "Encendiendo los faroles…", "Llenando las cascadas…", "Despertando a los visitantes…", "Inflando el globo…"];
+    // cuántos modelos pide la escena (se recuerda de la visita anterior; al principio se piden pocos y la barra brincaba a 100%)
+    const { ligero } = await import("./modelos.js");
+    let esperado = ligero ? 26 : 36, total = 0;
+    try { esperado = +localStorage.getItem("ws-nmodelos") || esperado; } catch {}
+    let mostrado = 0;
+    await esperaModelos((listos, pedidos) => {
+      total = pedidos;
+      // la barra solo avanza (nunca se regresa) y va suave
+      mostrado = Math.max(mostrado, Math.min(0.99, listos / Math.max(pedidos, esperado, 1)));
+      barra.firstChild.style.width = Math.round(mostrado * 100) + "%";
+      if (txt) txt.textContent = `${frases[Math.min(frases.length - 1, Math.floor(mostrado * frases.length))]} ${Math.round(mostrado * 100)}%`;
+    });
+    try { if (total) localStorage.setItem("ws-nmodelos", total); } catch {}
+    barra.firstChild.style.width = "100%"; if (txt) txt.textContent = "¡Bienvenido a la hacienda! ✨";
+    $("#cargando").classList.add("lista");
+    await new Promise((r) => setTimeout(r, 500));
+  }
   setTimeout(() => $("#cargando").classList.add("fuera"), 300);
   if (REPLICA) { // réplica del stand dentro del panel de marca: solo la escena, que se actualiza al guardar
     addEventListener("storage", (e) => { if (e.key === CLAVES.marcas) { MARCAS = marcas(); est.actualizarMarcas(MARCAS); } });
@@ -163,6 +253,8 @@ function conectarHud() {
   $("#btn-inicio").onclick = () => { sonido.tap(); irPlaza(); };
   $("#btn-polen").onclick = () => { sonido.tap(); abrirPremios(); };
   $("#btn-ayuda").onclick = () => { sonido.tap(); guia(0); };
+  $("#btn-perfil").onclick = () => { sonido.tap(); abrirPerfil(); };
+  { const p = leerPerfil() || {}; $("#btn-perfil").title = `${p.apodo || "Tu perfil"}: perfil y cerrar sesión`; $("#btn-perfil span").textContent = (p.apodo || "?").trim().charAt(0).toUpperCase(); }
   $("#btn-inv").onclick = () => { sonido.tap(); abrirInventario(); };
   $("#btn-fav").onclick = () => { sonido.tap(); abrirFavoritos(); };
   contadores();
