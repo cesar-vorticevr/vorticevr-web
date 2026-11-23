@@ -83,6 +83,9 @@ export function crearFlora(scene, { ligero = false, modelo = null, instancias = 
         im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true;
         im.computeBoundingSphere(); scene.add(im); mallas.push(im); return im;
       };
+      // árbol de buganvilia de respaldo (si no llega el modelo): tronco y una copa de racimos con foto
+      const troncoFlor = inst(geoTronco, matTronco, L.arbolFlor, ([x, y, z, k]) => m.compose(p.set(x, y, z), q.identity(), s.set(k * 1.2, k * 1.7, k * 1.2)));
+      L.arbolFlor.forEach(([x, y, z, k]) => { for (let i = 0; i < 4; i++) { const a = i * 1.6 + Math.random(); L.racimo.push([x + Math.cos(a) * 0.9 * k, y + (2.9 + Math.random() * 0.7) * k, z + Math.sin(a) * 0.9 * k, (0.9 + Math.random() * 0.3) * k, azar(PALETAS.buganvilia), "buganvilia"]); } });
       const bolas = [
         inst(geoRacimo, matRacimo, L.racimo, ([x, y, z, k]) => m.compose(p.set(x, y, z), q.setFromEuler(e.set(Math.random(), Math.random() * 6, 0)), s.set(k * (0.9 + Math.random() * 0.3), k * (0.7 + Math.random() * 0.2), k * (0.9 + Math.random() * 0.3))), true),
         inst(geoRacimo, matRacimo, L.flor, ([x, y, z, k]) => m.compose(p.set(x, y + 0.18 * k, z), q.setFromEuler(e.set(0, Math.random() * 6, 0)), s.set(0.55 * k, 0.32 * k, 0.55 * k)), true),
@@ -121,7 +124,7 @@ export function crearFlora(scene, { ligero = false, modelo = null, instancias = 
         });
         poner("cipres", L.cipres, (h) => h * 0.95, () => cip && (cip.visible = false));
         poner("limonero", L.limon, (k) => 4.4 * k, () => limon.forEach((x) => x && (x.visible = false)));
-        poner("buganvilia", L.arbolFlor, (k) => 5 * k, () => {});
+        poner("buganvilia", L.arbolFlor, (k) => 5 * k, () => troncoFlor && (troncoFlor.visible = false));
       }
       inst(geoHojaLoto, matHojaLoto, L.loto, ([x, y, z]) => m.compose(p.set(x, y + 0.01, z), q.setFromEuler(e.set(0, Math.random() * 6, 0)), s.setScalar(0.8 + Math.random() * 0.6)));
       inst(geoFlorLoto, matFlorLoto, L.loto.filter((_, i) => i % 2 === 0), ([x, y, z]) => m.compose(p.set(x + 0.1, y + 0.02, z), q.identity(), s.setScalar(1)));
