@@ -453,6 +453,7 @@ export function crearEstacion(canvas, cfg) {
   anim.push((t) => (matAgua.uniforms.t.value = t));
   // flores, árboles y cascadas del jardín de fantasía (se plantan todas juntas al final)
   const flora = crearFlora(scene, { ligero, modelo: plantilla, instancias });
+  anim.push(() => flora.mirar(camera)); // los árboles-foto miran a la cámara
   const matCaida = matCascada();
   anim.push((t) => { if (!quieto) matCaida.uniforms.t.value = t; });
 

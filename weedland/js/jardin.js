@@ -58,7 +58,14 @@ export function crearFlora(scene, { ligero = false, modelo = null, instancias = 
   const matHojaLoto = new THREE.MeshStandardMaterial({ color: "#5f8f4a", roughness: 0.7, side: THREE.DoubleSide });
   const matFlorLoto = new THREE.MeshStandardMaterial({ color: "#f6a6c1", roughness: 0.6, side: THREE.DoubleSide, emissive: "#f28fb4", emissiveIntensity: 0.15 });
 
+  const carteles = [], eje = new THREE.Vector3(0, 1, 0); let camRef = null;
   const api = {
+    // cada cuadro: los árboles-foto giran para verse de frente a la cámara
+    mirar(cam) {
+      if (cam) camRef = cam; if (!camRef || !carteles.length) return;
+      const cx = camRef.position.x, cz = camRef.position.z;
+      carteles.forEach((im) => { im.userData.arboles.forEach(([x, y, z, w, h], i) => im.setMatrixAt(i, m.compose(p.set(x, y, z), q.setFromAxisAngle(eje, Math.atan2(cx - x, cz - z)), s.set(w, h, 1)))); im.instanceMatrix.needsUpdate = true; });
+    },
     // racimo de buganvilia (en techos, arcos y columnas): x, y, z, tamaño, paleta
     racimo(x, y, z, k = 1, paleta = PALETAS.buganvilia) { L.racimo.push([x, y, z, k, azar(paleta), tipoDe(paleta)]); },
     // cama de flores
@@ -115,17 +122,22 @@ export function crearFlora(scene, { ligero = false, modelo = null, instancias = 
         });
         bolas.forEach((b) => b && (b.visible = false));
       });
-      // ---- árboles de Meshy (ciprés, limonero, buganvilia) en lugar de los de código ----
-      if (modelo && instancias) {
-        const poner = (id, lista, escala, alHacer) => lista.length && modelo(id).then((pl) => {
-          if (!pl) return;
-          const ms = lista.map(([x, y, z, k]) => new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.random() * 6.3, 0)), new THREE.Vector3().setScalar(escala(k))));
-          scene.add(instancias(pl, ms, { alto: 1 })); alHacer();
-        });
-        poner("cipres", L.cipres, (h) => h * 0.95, () => cip && (cip.visible = false));
-        poner("limonero", L.limon, (k) => 4.4 * k, () => limon.forEach((x) => x && (x.visible = false)));
-        poner("buganvilia", L.arbolFlor, (k) => 5 * k, () => troncoFlor && (troncoFlor.visible = false));
-      }
+      // ---- árboles de Meshy (ciprés, limonero, buganvilia) como foto del modelo original, siempre de frente a la cámara:
+      // se ve con todo su detalle y cuesta 2 triángulos por árbol. Mientras carga la foto quedan los de código ----
+      const geoCartel = new THREE.PlaneGeometry(1, 1); geoCartel.translate(0, 0.5, 0);
+      { const n = geoCartel.attributes.normal; for (let i = 0; i < n.count; i++) n.setXYZ(i, 0, 1, 0); } // luz como el suelo, mire a donde mire
+      const ponerArbol = (id, lista, alto, alHacer) => lista.length && cargador.loadAsync(new URL(`../texturas/arboles/${id}.webp`, import.meta.url).href).then((tx) => {
+        tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4;
+        const prop = tx.image.width / tx.image.height;
+        const mat = new THREE.MeshStandardMaterial({ map: tx, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 1 });
+        const im = new THREE.InstancedMesh(geoCartel, mat, lista.length);
+        im.castShadow = true; im.frustumCulled = false;
+        im.userData.arboles = lista.map(([x, y, z, k]) => { const h = alto(k); return [x, y, z, h * prop, h]; });
+        carteles.push(im); scene.add(im); alHacer(); api.mirar(null, true);
+      }).catch(() => {});
+      ponerArbol("cipres", L.cipres, (h) => h * 0.95, () => cip && (cip.visible = false));
+      ponerArbol("limonero", L.limon, (k) => 4.4 * k, () => limon.forEach((x) => x && (x.visible = false)));
+      ponerArbol("buganvilia", L.arbolFlor, (k) => 5 * k, () => troncoFlor && (troncoFlor.visible = false));
       inst(geoHojaLoto, matHojaLoto, L.loto, ([x, y, z]) => m.compose(p.set(x, y + 0.01, z), q.setFromEuler(e.set(0, Math.random() * 6, 0)), s.setScalar(0.8 + Math.random() * 0.6)));
       inst(geoFlorLoto, matFlorLoto, L.loto.filter((_, i) => i % 2 === 0), ([x, y, z]) => m.compose(p.set(x + 0.1, y + 0.02, z), q.identity(), s.setScalar(1)));
       return mallas;
