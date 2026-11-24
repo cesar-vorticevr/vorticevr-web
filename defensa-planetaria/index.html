@@ -302,9 +302,18 @@ async function loadModels() {
 
 // ================= Lienzo =================
 let W = 0, H = 0, DPR = 1, crop = { sx: 0, sy: 0, sw: 1, sh: 1 };
+const tintCv = document.createElement("canvas");
 function resize() {
-  DPR = Math.min(1.5, devicePixelRatio || 1);
+  DPR = 1;   // a 1× basta en una pantalla grande y dibuja mucho menos que a 1.5×
   W = cv.width = Math.round(innerWidth * DPR); H = cv.height = Math.round(innerHeight * DPR);
+  // velo de "espacio" sobre la cámara, a media resolución (se estira; es puro degradado)
+  tintCv.width = Math.ceil(W / 2); tintCv.height = Math.ceil(H / 2);
+  const t = tintCv.getContext("2d"), w = tintCv.width, h = tintCv.height;
+  t.fillStyle = "rgba(10,5,34,.5)"; t.fillRect(0, 0, w, h);
+  const n1 = t.createRadialGradient(w * .15, h * .2, 0, w * .15, h * .2, w * .5); n1.addColorStop(0, "rgba(139,63,214,.3)"); n1.addColorStop(1, "rgba(139,63,214,0)");
+  t.fillStyle = n1; t.fillRect(0, 0, w, h);
+  const n2 = t.createRadialGradient(w * .9, h * .85, 0, w * .9, h * .85, w * .45); n2.addColorStop(0, "rgba(255,90,54,.18)"); n2.addColorStop(1, "rgba(255,90,54,0)");
+  t.fillStyle = n2; t.fillRect(0, 0, w, h);
   if (srcW) { const s = Math.max(W / srcW, H / srcH), sw = W / s, sh = H / s; crop = { sx: (srcW - sw) / 2, sy: (srcH - sh) / 2, sw, sh }; }
   initStars();
 }
@@ -315,7 +324,7 @@ function toCanvas(p) {
 }
 
 // ================= La Tierra (dibujada con ruido, sin imágenes) =================
-const TW = 512, TH = 256, ES = 200;
+const TW = 512, TH = 256, ES = 168;
 const hash = (x, y, z) => { let h = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.imul(z, 1440662683); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 function vnoise(x, y, z) {
   const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z), xf = x - xi, yf = y - yi, zf = z - zi;
@@ -398,6 +407,12 @@ function rockSprite(seed) {
   return k;
 }
 const ROCKS = Array.from({ length: 10 }, (_, i) => rockSprite(i + 3));
+const HEAT = (() => {   // resplandor de calor de los asteroides
+  const S = 64, k = document.createElement("canvas"); k.width = k.height = S;
+  const c = k.getContext("2d"), g = c.createRadialGradient(S / 2, S / 2, S * .15, S / 2, S / 2, S / 2);
+  g.addColorStop(0, "rgba(255,120,50,.45)"); g.addColorStop(1, "rgba(255,120,50,0)");
+  c.fillStyle = g; c.fillRect(0, 0, S, S); return k;
+})();
 function starSprite(color) {
   const S = 128, k = document.createElement("canvas"); k.width = k.height = S;
   const c = k.getContext("2d"); c.translate(S / 2, S / 2);
@@ -635,14 +650,8 @@ function drawBackground(now) {
   if (mirror) { ctx.translate(W, 0); ctx.scale(-1, 1); }
   ctx.drawImage(src, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, W, H);
   ctx.restore();
-  // la cámara se vuelve "espacio": se oscurece y se tiñe, con una nebulosa
-  ctx.fillStyle = "rgba(10,5,34,.5)"; ctx.fillRect(0, 0, W, H);
-  ctx.globalCompositeOperation = "screen";
-  const n1 = ctx.createRadialGradient(W * .15, H * .2, 0, W * .15, H * .2, W * .5); n1.addColorStop(0, "rgba(139,63,214,.35)"); n1.addColorStop(1, "rgba(139,63,214,0)");
-  ctx.fillStyle = n1; ctx.fillRect(0, 0, W, H);
-  const n2 = ctx.createRadialGradient(W * .9, H * .85, 0, W * .9, H * .85, W * .45); n2.addColorStop(0, "rgba(255,90,54,.22)"); n2.addColorStop(1, "rgba(255,90,54,0)");
-  ctx.fillStyle = n2; ctx.fillRect(0, 0, W, H);
-  ctx.globalCompositeOperation = "source-over";
+  // la cámara se vuelve "espacio": velo oscuro con nebulosa, hecho una sola vez (tintCv)
+  ctx.drawImage(tintCv, 0, 0, W, H);
   for (const s of bg) {   // estrellitas del fondo que pasan despacio
     s.x -= s.z * .3 * DPR; if (s.x < 0) s.x += W;
     const a = .35 + .65 * Math.abs(Math.sin(now / 900 + s.p));
@@ -677,15 +686,15 @@ function drawHelmet(now) {
     ctx.fillStyle = sh; ctx.beginPath(); ctx.roundRect(-r * .1, -r * .24, r * .2, r * .48, r * .1); ctx.fill();
     ctx.strokeStyle = "#6b6e86"; ctx.lineWidth = r * .012; ctx.stroke();
     const on = Math.sin(now / 220 + sx) > 0;
-    ctx.fillStyle = on ? "#5cffc8" : "#1e5a49"; ctx.shadowColor = "#5cffc8"; ctx.shadowBlur = on ? r * .12 : 0;
-    ctx.beginPath(); ctx.arc(0, -r * .1, r * .04, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+    if (on) { ctx.fillStyle = "rgba(92,255,200,.3)"; ctx.beginPath(); ctx.arc(0, -r * .1, r * .09, 0, 7); ctx.fill(); }
+    ctx.fillStyle = on ? "#5cffc8" : "#1e5a49"; ctx.beginPath(); ctx.arc(0, -r * .1, r * .04, 0, 7); ctx.fill();
     ctx.restore();
   }
   // antena con foco que parpadea
   ctx.strokeStyle = "#d9dbe8"; ctx.lineWidth = r * .025; ctx.beginPath(); ctx.moveTo(r * .45, -r * 1.0); ctx.lineTo(r * .62, -r * 1.38); ctx.stroke();
   const blink = (now / 700) % 1 < .5;
-  ctx.fillStyle = blink ? "#ff5a36" : "#7a2414"; ctx.shadowColor = "#ff5a36"; ctx.shadowBlur = blink ? r * .2 : 0;
-  ctx.beginPath(); ctx.arc(r * .62, -r * 1.4, r * .05, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+  if (blink) { ctx.fillStyle = "rgba(255,90,54,.3)"; ctx.beginPath(); ctx.arc(r * .62, -r * 1.4, r * .12, 0, 7); ctx.fill(); }
+  ctx.fillStyle = blink ? "#ff5a36" : "#7a2414"; ctx.beginPath(); ctx.arc(r * .62, -r * 1.4, r * .05, 0, 7); ctx.fill();
   // placa con el nombre de la misión
   ctx.font = `400 ${r * .11}px Bungee`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
   const tw = ctx.measureText("VVR-01").width + r * .14;
@@ -735,9 +744,7 @@ function drawRocks(dt, now) {
     if (!paused) o.rot += o.vr * dt;
     o.born = Math.min(1, o.born + dt * 3);
     // brillo de calor al frente
-    const hg = ctx.createRadialGradient(o.x, o.y, o.r * .5, o.x, o.y, o.r * 1.7);
-    hg.addColorStop(0, "rgba(255,120,50,.45)"); hg.addColorStop(1, "rgba(255,120,50,0)");
-    ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(o.x, o.y, o.r * 1.7, 0, 7); ctx.fill();
+    ctx.drawImage(HEAT, o.x - o.r * 1.7, o.y - o.r * 1.7, o.r * 3.4, o.r * 3.4);
     ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.rot); const s = o.r * 2.8 * o.born;
     ctx.drawImage(o.sprite, -s / 2, -s / 2, s, s); ctx.restore();
     // marca de blanco que gira (se ve qué pellizcar)
@@ -807,16 +814,21 @@ function drawHands(now) {
   for (const h of hands) {
     const r = unit() * (.09 + h.ring * .14), on = h.pinched;
     ctx.save(); ctx.translate(h.x, h.y); ctx.rotate(now / 600 * (on ? 3 : 1));
-    ctx.strokeStyle = on ? "#ff5a36" : "#5cffc8"; ctx.lineWidth = 3 * DPR; ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 12 * DPR;
-    for (let i = 0; i < 4; i++) { ctx.rotate(Math.PI / 2); ctx.beginPath(); ctx.arc(0, 0, r, -.5, .5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(r + 4 * DPR, 0); ctx.lineTo(r + 14 * DPR, 0); ctx.stroke(); }
-    ctx.shadowBlur = 0; ctx.fillStyle = on ? "#ff5a36" : "#fff4e0"; ctx.beginPath(); ctx.arc(0, 0, 3.5 * DPR, 0, 7); ctx.fill();
+    // brillo: un trazo ancho y tenue abajo (el desenfoque de sombra de canvas es muy lento)
+    const col = on ? "255,90,54" : "92,255,200";
+    for (const [w, a] of [[10, .18], [3, 1]]) {
+      ctx.strokeStyle = `rgba(${col},${a})`; ctx.lineWidth = w * DPR; ctx.beginPath();
+      for (let i = 0; i < 4; i++) { const a0 = i * Math.PI / 2; ctx.moveTo(Math.cos(a0 - .5) * r, Math.sin(a0 - .5) * r); ctx.arc(0, 0, r, a0 - .5, a0 + .5); ctx.moveTo(Math.cos(a0) * (r + 4 * DPR), Math.sin(a0) * (r + 4 * DPR)); ctx.lineTo(Math.cos(a0) * (r + 14 * DPR), Math.sin(a0) * (r + 14 * DPR)); }
+      ctx.stroke();
+    }
+    ctx.fillStyle = on ? "#ff5a36" : "#fff4e0"; ctx.beginPath(); ctx.arc(0, 0, 3.5 * DPR, 0, 7); ctx.fill();
     ctx.restore();
   }
   // el botón se agranda cuando una mano está encima
   for (const id of ["comenzar", "otra"]) {
-    const el = $(id), over = hands.some(h => overButton(el, h.x, h.y));
-    if (over && !el.classList.contains("encima")) SND.hover();
-    el.classList.toggle("encima", over);
+    const el = $(id), over = hands.length > 0 && hands.some(h => overButton(el, h.x, h.y));
+    if (over && !el._cencima) SND.hover();
+    setCls(el, "encima", over);
   }
 }
 
@@ -828,16 +840,19 @@ function loop(now) {
   nextFrame(loop);
   const dt = Math.min(.05, (now - last) / 1000); last = now;
   if (state === "off" || !srcW) return;
-  // detección: manos siempre; cara cada cuadro (o uno sí y uno no si va lento)
+  // detección: un solo modelo por cuadro (dos de manos por uno de cara) y solo si la cámara trae un cuadro nuevo;
+  // así el dibujo nunca espera a los dos modelos juntos
   const ready = src !== vid || vid.readyState >= 2;
+  const t0 = performance.now();
   if (ready && faceLM && handLM && (src !== vid || vid.currentTime !== lastVideoT)) {
     lastVideoT = vid.currentTime;
-    const ts = performance.now();
-    try { updateHands(handLM.detectForVideo(src, ts), now); } catch (e) { console.warn(e); }
-    if (faceTurn++ % (slow ? 2 : 1) === 0) {
-      const t0 = performance.now();
-      try { const fr = faceLM.detectForVideo(src, ts + .5).faceLandmarks || []; dbg.faces = fr.length; dbg.det = (dbg.det || 0) + 1; choosePlayer(fr, now); } catch (e) { console.warn(e); dbg.err = String(e); }
-      slow = performance.now() - t0 > 20;
+    const turn = faceTurn++ % 3;
+    if (turn === 2 || !player && turn === 1) {
+      try { const fr = faceLM.detectForVideo(src, t0).faceLandmarks || []; dbg.faces = fr.length; dbg.det = (dbg.det || 0) + 1; choosePlayer(fr, now); } catch (e) { console.warn(e); dbg.err = String(e); }
+      perf.face = lerp(perf.face, performance.now() - t0, .2);
+    } else {
+      try { updateHands(handLM.detectForVideo(src, t0), now); } catch (e) { console.warn(e); }
+      perf.hand = lerp(perf.hand, performance.now() - t0, .2);
     }
   } else if (mouseHand) updateHands(null, now);
   // pausa si el jugador se va a la mitad
@@ -847,15 +862,15 @@ function loop(now) {
     const p = lostT > .5;
     if (p !== paused) { paused = p; $("pausa").classList.toggle("oculto", !p); }
   } else if (paused) { paused = false; $("pausa").classList.add("oculto"); }
-  $("aviso").classList.toggle("oculto", !gone || state !== "espera");
-  $("comenzar").classList.toggle("apagado", gone);
+  setCls($("aviso"), "oculto", !gone || state !== "espera");
+  setCls($("comenzar"), "apagado", gone);
 
   if (state === "juego" && !paused) {
     const el = (now - gameStart) / 1000;
     tLeft -= dt;
     const k = Math.max(0, tLeft) / DUR;
-    $("seg").textContent = Math.max(0, Math.ceil(tLeft)); $("arco").style.strokeDashoffset = 289 * (1 - k);
-    $("arco").style.stroke = tLeft < 5.5 ? "#ff5a36" : tLeft < 15 ? "#ffc93c" : "#5cffc8";
+    setTxt($("seg"), String(Math.max(0, Math.ceil(tLeft)))); setCss($("arco"), "strokeDashoffset", String(Math.round(289 * (1 - k))));
+    setCss($("arco"), "stroke", tLeft < 5.5 ? "#ff5a36" : tLeft < 15 ? "#ffc93c" : "#5cffc8");
     if (tLeft < 5.5 && !$("reloj").classList.contains("alerta")) $("reloj").classList.add("alerta");
     if (tLeft < 5.5 && Math.ceil(tLeft) !== loop.lastS) { loop.lastS = Math.ceil(tLeft); SND.alarm(); }
     SND.intensity(.4 + (1 - k) * .6);
@@ -875,8 +890,19 @@ function loop(now) {
   drawRocks(dt, now);
   drawFx(dt);
   drawHands(now);
+  // medidor (?fps=1): cuadros por segundo y cuánto tarda cada modelo
+  perf.frames++; perf.draw = lerp(perf.draw, performance.now() - t0, .1);
+  if (now - perf.t > 1000) {
+    perf.fps = perf.frames * 1000 / (now - perf.t); perf.frames = 0; perf.t = now;
+    if (fpsEl) fpsEl.textContent = `${perf.fps.toFixed(0)} fps · cuadro ${perf.draw.toFixed(0)} ms · manos ${perf.hand.toFixed(0)} ms · cara ${perf.face.toFixed(0)} ms · ${W}×${H}`;
+  }
 }
-let slow = false; const dbg = {};
+const dbg = {}, perf = { frames: 0, t: 0, fps: 0, draw: 0, hand: 0, face: 0 };
+const fpsEl = Q.has("fps") ? Object.assign(document.body.appendChild(document.createElement("div")), { style: "position:fixed;left:8px;bottom:6px;z-index:40;font:12px monospace;background:#000a;color:#5cffc8;padding:4px 8px" }) : null;
+// el HUD solo se toca cuando cambia (escribir en la página cada cuadro también cuesta)
+const setTxt = (el, v) => { if (el._v !== v) { el._v = v; el.textContent = v; } };
+const setCss = (el, k, v) => { if (el["_" + k] !== v) { el["_" + k] = v; el.style[k] = v; } };
+const setCls = (el, c, on) => { if (el["_c" + c] !== on) { el["_c" + c] = on; el.classList.toggle(c, on); } };
 
 // ================= Encender =================
 // el título salta letra por letra
