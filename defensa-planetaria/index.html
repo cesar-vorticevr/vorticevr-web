@@ -555,7 +555,8 @@ function pinchFlash(x, y, k = 1) {
 }
 function fire(x, y, now) {
   SND.zap();
-  const u = unit(), tol = u * .2;
+  // un pellizco = un asteroide: la mano casi nunca atina exacto, así que cuenta hasta ~media cara fuera de la roca
+  const u = unit(), tol = u * .5;
   // primero los asteroides (lo que sí hay que destruir), luego satélites y al final la nave
   let target = null, bd = Infinity;
   for (const o of rocks) { const d = Math.hypot(o.x - x, o.y - y) - o.r; if (d < tol && d < bd) { bd = d; target = o; } }
@@ -627,7 +628,8 @@ function spawnRock(elapsed) {
   do { a = rnd(-Math.PI * .95, -Math.PI * .05) + (Math.random() < .2 ? rnd(-.5, .5) : 0); x = e.x + Math.cos(a) * far; y = e.y + Math.sin(a) * far; tries++; }
   while ((x < -u || x > W + u) && tries < 8);
   x = clamp(x, -u * .6, W + u * .6); y = Math.min(y, H * .6);
-  rocks.push({ kind: "roca", x, y, r: u * rnd(.14, .24), sp: u * rnd(1.15, 1.5) * (1 + elapsed / DUR * 1.1), rot: rnd(0, 6), vr: rnd(-2, 2), img: Math.random() < .5 ? "a1" : "a2", born: 0 });
+  rocks.push({ kind: "roca", x, y, r: u * rnd(.14, .24), sp: u * rnd(.9, 1.1) * (1 + elapsed / DUR * .8), rot: rnd(0, 6), vr: rnd(-2, 2), img: Math.random() < .5 ? "a1" : "a2", born: 0 });
+  // velocidad: César dijo que estaba muy difícil (antes 1.15–1.5 caras por segundo y casi el doble al final)
 }
 function spawnSat() {
   const u = unit(), side = Math.random() < .5 ? -1 : 1;
