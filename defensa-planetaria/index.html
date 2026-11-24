@@ -4,185 +4,216 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Defensa planetaria · Vórtice VR</title>
-<meta name="description" content="Una activación con la cámara: la Tierra cuelga de tu barbilla y la defiendes de los asteroides pellizcándolos con láser.">
+<meta name="description" content="Una activación con la cámara: la Tierra cuelga de tu barbilla y la defiendes de los asteroides pellizcándolos en el aire.">
 <meta name="robots" content="noindex">
 <link rel="icon" href="../assets/icono.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Bungee+Shade&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Michroma&family=Saira:ital,wght@0,500;0,700;0,800;0,900;1,800;1,900&display=swap" rel="stylesheet">
 <style>
-  /* Estilo: arcade de misión espacial de los 80 (cinta coral y menta, papel de misión, líneas de TV), no el morado de siempre */
-  :root { --tinta: #07051a; --coral: #ff5a36; --menta: #5cffc8; --oro: #ffc93c; --lila: #b48bff; --hueso: #fff4e0; }
+  /* Estética de la flota de Vórtice VR (las imágenes de César): casco plateado, oro, morado neón */
+  :root { --noche: #0b0418; --morado: #8b3fd6; --neon: #c86bff; --lila: #e3c8ff; --oro: #e6b450; --oro2: #ffd98a; --plata: #ecebf3; --rojo: #ff3b4e; }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--tinta); color: var(--hueso); font-family: "Space Mono", ui-monospace, monospace; user-select: none; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--noche); color: var(--plata); font-family: Saira, system-ui, sans-serif; user-select: none; }
   body.quieto { cursor: none; }
   canvas#cv { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
   video { display: none; }
   button { font: inherit; cursor: pointer; }
-  /* líneas de televisión y viñeta, encima de todo */
-  #tv { position: fixed; inset: 0; z-index: 20; pointer-events: none;
-    background: repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, transparent 55%, rgba(4,2,14,.75) 100%); mix-blend-mode: multiply; }
   .capa { position: fixed; z-index: 5; pointer-events: none; }
   .oculto { opacity: 0 !important; visibility: hidden; }
-  .fade { transition: opacity .5s, visibility .5s; }
+  .fade { transition: opacity .5s, visibility .5s, transform .5s; }
+  .mono { font-family: Michroma, sans-serif; letter-spacing: .18em; text-transform: uppercase; }
 
-  /* marca y cinta de misión */
-  #marca { top: 18px; left: 22px; display: flex; align-items: center; gap: 12px; }
-  #marca img { height: 30px; filter: drop-shadow(0 0 10px rgba(180,139,255,.7)); }
-  #marca .cinta { font: 700 11px "Space Mono"; letter-spacing: .25em; text-transform: uppercase; color: var(--tinta); background: var(--menta);
-    padding: 4px 10px 4px 14px; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
+  /* catástrofe: la imagen falla y se pone roja · vamos bien: brillo dorado en las orillas */
+  body.falla canvas#cv { animation: falla .5s steps(2) 2; }
+  @keyframes falla { 0% { transform: translate(8px, -4px) skewX(2deg); filter: hue-rotate(-40deg) saturate(2) contrast(1.3); } 50% { transform: translate(-10px, 3px); filter: hue-rotate(60deg) saturate(1.6); } 100% { transform: none; filter: none; } }
+  #alerta { position: fixed; inset: 0; z-index: 9; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(255,40,60,.65) 100%); }
+  #alerta.on { animation: alerta 1.4s ease-out; }
+  @keyframes alerta { 0%, 30%, 60% { opacity: 1; } 15%, 45% { opacity: .2; } 100% { opacity: 0; } }
+  #bien { position: fixed; inset: 0; z-index: 9; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(230,180,80,.42) 92%, rgba(200,107,255,.5) 100%); }
+  #bien.on { animation: bien .9s ease-out; }
+  @keyframes bien { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* marca */
+  #marca { top: 18px; left: 22px; display: flex; align-items: center; gap: 14px; }
+  #marca img { height: 30px; filter: drop-shadow(0 0 12px rgba(200,107,255,.8)); }
+  .placa { background: linear-gradient(180deg, #f6f5fb, #c9c7d6); color: #2a1144; border: 1.5px solid var(--oro);
+    clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%); }
+  #marca .placa { font: 400 10px Michroma; letter-spacing: .2em; padding: 6px 16px; }
+
+  /* nave con las instrucciones (pantalla de espera) */
+  #flota { left: 2vw; top: 66px; width: min(400px, 32vw); }
+  #flota .nave { width: 100%; display: block; animation: flota 4s ease-in-out infinite; filter: drop-shadow(0 10px 30px rgba(200,107,255,.45)); position: relative; z-index: 2; }
+  @keyframes flota { 50% { transform: translateY(-10px) rotate(-1deg); } }
+  #flota .haz { height: 26px; margin: -10px 12% 0; background: linear-gradient(180deg, rgba(200,107,255,.55), rgba(200,107,255,.08));
+    clip-path: polygon(38% 0, 62% 0, 100% 100%, 0 100%); animation: haz 2s ease-in-out infinite; }
+  @keyframes haz { 50% { opacity: .55; } }
+  #holo { position: relative; padding: 14px 16px 12px; background: linear-gradient(180deg, rgba(60,20,110,.62), rgba(20,8,40,.72));
+    border: 1px solid rgba(200,107,255,.55); box-shadow: 0 0 30px rgba(139,63,214,.35), inset 0 0 30px rgba(200,107,255,.12); backdrop-filter: blur(3px);
+    clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px); }
+  #holo::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(227,200,255,.06) 0 1px, transparent 1px 4px); }
+  #holo::after { content: ""; position: absolute; left: 0; right: 0; height: 30%; top: -30%; background: linear-gradient(180deg, transparent, rgba(227,200,255,.14), transparent); animation: barre 3.5s linear infinite; }
+  @keyframes barre { to { top: 100%; } }
+  #holo h1 { margin: 0 0 2px; font: italic 900 clamp(22px, 2.5vw, 38px)/1 Saira; letter-spacing: .01em;
+    background: linear-gradient(180deg, #fff 10%, var(--oro2) 55%, var(--oro) 90%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 0 #5a2a00) drop-shadow(0 0 18px rgba(230,180,80,.45)); }
+  #holo .k { font: 400 9px Michroma; letter-spacing: .3em; color: var(--neon); margin-bottom: 8px; }
+  .fila { display: grid; grid-template-columns: 52px 1fr; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid rgba(227,200,255,.14); animation: llega .6s both; }
+  .fila:nth-of-type(2) { animation-delay: .1s; } .fila:nth-of-type(3) { animation-delay: .2s; } .fila:nth-of-type(4) { animation-delay: .3s; } .fila:nth-of-type(5) { animation-delay: .4s; }
+  @keyframes llega { from { opacity: 0; transform: translateX(-24px); } }
+  .fila .ic { width: 52px; height: 40px; display: grid; place-items: center; }
+  .fila .ic img, .fila .ic svg { max-width: 52px; max-height: 40px; filter: drop-shadow(0 0 8px rgba(200,107,255,.5)); }
+  .fila b { display: block; font: 800 16px/1.1 Saira; }
+  .fila small { display: block; font-size: 12.5px; line-height: 1.25; color: var(--lila); }
+  .mas { color: #7dffb5; } .menos { color: #ff8090; }
+
+  /* buscando al astronauta */
+  #busca { left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; }
+  #busca .t { font: 400 clamp(14px, 1.4vw, 20px) Michroma; letter-spacing: .3em; color: var(--lila); text-shadow: 0 0 14px var(--neon); }
+  #busca .t i { animation: parpadea 1s steps(2) infinite; font-style: normal; }
+  @keyframes parpadea { 50% { opacity: 0; } }
+  #busca .s { margin-top: 10px; font-size: 15px; color: var(--plata); opacity: .85; }
+  #hallado { left: 50%; top: 14px; transform: translateX(-50%); font: 400 13px Michroma; letter-spacing: .25em; color: #7dffb5; text-shadow: 0 0 12px #2dff8a;
+    background: rgba(11,4,24,.6); border: 1px solid rgba(125,255,181,.5); padding: 8px 18px; }
+
+  /* botón que se pellizca (también con clic) */
+  .boton { position: fixed; z-index: 6; width: 200px; height: 200px; margin: -100px 0 0 -100px; border: 0; border-radius: 50%; display: grid; place-items: center; text-align: center;
+    background: radial-gradient(circle at 50% 30%, #fff, #d9d6e6 45%, #9a96b0 100%); color: #2a1144;
+    box-shadow: 0 0 0 5px var(--oro), 0 0 0 9px #3a1660, 0 0 0 11px var(--neon), 0 0 70px rgba(200,107,255,.85), inset 0 -12px 24px rgba(60,20,110,.35);
+    font: italic 900 30px/1 Saira; pointer-events: auto; transition: transform .25s, opacity .4s, visibility .4s; }
+  .boton small { display: block; font: 400 9px Michroma; letter-spacing: .2em; margin-top: 8px; color: var(--morado); }
+  .boton::before { content: ""; position: absolute; inset: -30px; border-radius: 50%; border: 2px dashed var(--oro); animation: gira 10s linear infinite; }
+  .boton::after { content: ""; position: absolute; inset: -46px; border-radius: 50%; border: 2px solid rgba(200,107,255,.6); animation: onda 1.6s ease-out infinite; }
+  .boton.encima { transform: scale(1.12); box-shadow: 0 0 0 5px #7dffb5, 0 0 0 9px #3a1660, 0 0 0 11px #7dffb5, 0 0 100px rgba(125,255,181,.9); }
+  .boton.oculto { transform: scale(.3); }
+  @keyframes gira { to { transform: rotate(360deg); } }
+  @keyframes onda { from { transform: scale(.8); opacity: 1; } to { transform: scale(1.25); opacity: 0; } }
 
   /* HUD */
-  #hud { top: 14px; left: 0; right: 0; display: flex; justify-content: center; }
-  #reloj { position: relative; width: 108px; height: 108px; }
-  #reloj svg { position: absolute; inset: 0; transform: rotate(-90deg); }
-  #reloj .num { position: absolute; inset: 0; display: grid; place-items: center; font: 400 40px "Bungee"; color: var(--hueso); text-shadow: 3px 3px 0 var(--coral); }
-  #reloj.alerta .num { color: var(--coral); text-shadow: 3px 3px 0 var(--hueso); animation: late .5s infinite alternate; }
+  #hud { top: 12px; left: 50%; transform: translateX(-50%); }
+  #reloj { position: relative; width: 112px; height: 112px; }
+  #reloj svg { position: absolute; inset: 0; transform: rotate(-90deg); filter: drop-shadow(0 0 8px rgba(200,107,255,.8)); }
+  #reloj .num { position: absolute; inset: 0; display: grid; place-items: center; font: italic 900 44px Saira; color: #fff; text-shadow: 0 0 16px var(--neon); }
+  #reloj.alerta .num { color: var(--rojo); text-shadow: 0 0 18px var(--rojo); animation: late .5s infinite alternate; }
   @keyframes late { to { transform: scale(1.15); } }
-  #puntos { position: fixed; top: 22px; right: 26px; z-index: 5; text-align: right; pointer-events: none; }
-  #puntos .k { font: 700 11px "Space Mono"; letter-spacing: .3em; color: var(--menta); }
-  #puntos .v { font: 400 54px/1 "Bungee"; color: var(--oro); text-shadow: 4px 4px 0 var(--coral), 0 0 30px rgba(255,201,60,.4); }
-  #puntos .v.salta { animation: salta .35s; }
-  @keyframes salta { 40% { transform: scale(1.25) rotate(-4deg); } }
-  #vidas { position: fixed; top: 100px; right: 26px; z-index: 5; display: flex; gap: 8px; pointer-events: none; }
-  #vidas i { width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #9ef0ff, #1d7fd6 55%, #0b2a6b); box-shadow: 0 0 12px #3fb6ff; display: block; position: relative; }
-  #vidas i::after { content: ""; position: absolute; inset: 7px 5px 9px 9px; border-radius: 45% 55% 40% 60%; background: #5ce08a; opacity: .9; }
-  #vidas i.perdida { background: #2a1830; box-shadow: none; filter: grayscale(1); opacity: .45; }
-  #vidas i.perdida::after { background: #ff5a36; inset: 6px; clip-path: polygon(0 10%, 10% 0, 50% 40%, 90% 0, 100% 10%, 60% 50%, 100% 90%, 90% 100%, 50% 60%, 10% 100%, 0 90%, 40% 50%); }
+  #marcador { top: 16px; right: 22px; text-align: right; }
+  #marcador .k { font: 400 9px Michroma; letter-spacing: .3em; color: var(--lila); }
+  #marcador .v { font: italic 900 58px/1 Saira; background: linear-gradient(180deg, #fff 10%, var(--oro2) 50%, var(--oro)); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 2px 0 #5a2a00) drop-shadow(0 0 16px rgba(230,180,80,.5)); }
+  #marcador .v.salta { animation: salta .35s; }
+  #marcador .v.baja { animation: baja .5s; }
+  @keyframes salta { 40% { transform: scale(1.25) rotate(-3deg); } }
+  @keyframes baja { 20%, 60% { transform: translateX(-8px); filter: drop-shadow(0 0 20px var(--rojo)); } 40%, 80% { transform: translateX(8px); } }
+  #vidas { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+  #vidas i { width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #9ef0ff, #1d7fd6 55%, #0b2a6b); box-shadow: 0 0 12px #3fb6ff; display: block; position: relative; }
+  #vidas i::after { content: ""; position: absolute; inset: 6px 4px 8px 8px; border-radius: 45% 55% 40% 60%; background: #5ce08a; }
+  #vidas i.perdida { background: #2a1830; box-shadow: 0 0 10px var(--rojo); opacity: .6; }
+  #vidas i.perdida::after { background: var(--rojo); inset: 5px; clip-path: polygon(0 10%, 10% 0, 50% 40%, 90% 0, 100% 10%, 60% 50%, 100% 90%, 90% 100%, 50% 60%, 10% 100%, 0 90%, 40% 50%); }
   #vidas i.cae { animation: cae .6s; }
-  @keyframes cae { 30% { transform: scale(1.6); } }
+  @keyframes cae { 30% { transform: scale(1.8); } }
 
-  /* pantalla de inicio */
-  /* columna izquierda: título y misión; el centro queda libre para el jugador */
-  #izq { left: 22px; top: 70px; bottom: 24px; width: min(360px, 30vw); display: flex; flex-direction: column; gap: 14px; }
-  #titulo .pre { font: 700 11px "Space Mono"; letter-spacing: .4em; color: var(--menta); text-transform: uppercase; }
-  #titulo h1 { margin: 6px 0 0; font: 400 clamp(26px, 3.1vw, 58px)/.95 "Bungee Shade", "Bungee"; color: var(--oro); letter-spacing: .02em;
-    text-shadow: 0 0 40px rgba(255,90,54,.55); }
-  #titulo h1 span { display: inline-block; animation: letra 2.8s ease-in-out infinite; }
-  @keyframes letra { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-  #titulo .sub { margin-top: 10px; display: inline-block; font: 700 clamp(12px, 1.05vw, 16px) "Space Mono"; background: var(--coral); color: var(--hueso); padding: 6px 14px; transform: rotate(-1.5deg); }
-  #mision { display: grid; gap: 9px; margin-top: auto; }
-  .ticket { display: flex; gap: 12px; align-items: center; padding: 10px 14px 10px 12px; background: rgba(7,5,26,.55); backdrop-filter: blur(3px);
-    border: 1.5px dashed rgba(255,244,224,.35); clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); animation: llega .7s both; }
-  .ticket:nth-child(2) { animation-delay: .1s; } .ticket:nth-child(3) { animation-delay: .2s; } .ticket:nth-child(4) { animation-delay: .3s; }
-  @keyframes llega { from { opacity: 0; transform: translateX(-40px); } }
-  .ticket svg { flex: none; width: 42px; height: 42px; }
-  .ticket b { display: block; font: 400 15px "Bungee"; letter-spacing: .02em; }
-  .ticket small { display: block; font-size: 12px; line-height: 1.3; opacity: .85; }
-  .ticket .mas { color: var(--menta); } .ticket .menos { color: var(--coral); }
-  #record { right: 26px; bottom: 26px; text-align: right; font: 700 12px "Space Mono"; letter-spacing: .2em; color: var(--menta); }
-  #record b { display: block; font: 400 30px "Bungee"; color: var(--oro); letter-spacing: 0; }
-  #aviso { left: 50%; bottom: 30px; transform: translateX(-50%); font: 700 15px "Space Mono"; background: rgba(7,5,26,.7); border: 1.5px solid var(--menta); padding: 10px 20px; white-space: nowrap; color: var(--menta); }
-
-  /* botón que se pellizca (también sirve con clic) */
-  .boton { position: fixed; z-index: 6; width: 190px; height: 190px; margin: -95px 0 0 -95px; border-radius: 50%; display: grid; place-items: center; text-align: center;
-    background: radial-gradient(circle at 40% 35%, #ff8b5e, var(--coral) 55%, #b8261a); color: var(--hueso); border: 0; box-shadow: 0 0 0 6px var(--tinta), 0 0 0 9px var(--oro), 0 0 60px rgba(255,90,54,.7);
-    font: 400 24px/1.05 "Bungee"; animation: late2 1.2s ease-in-out infinite; pointer-events: auto; }
-  .boton small { display: block; font: 700 11px "Space Mono"; letter-spacing: .15em; margin-top: 6px; }
-  .boton::before { content: ""; position: absolute; inset: -26px; border-radius: 50%; border: 3px dashed var(--oro); animation: gira 9s linear infinite; }
-  .boton.encima { transform: scale(1.12); box-shadow: 0 0 0 6px var(--tinta), 0 0 0 9px var(--menta), 0 0 90px rgba(92,255,200,.8); }
-  .boton.apagado { filter: grayscale(.8) brightness(.7); animation: none; }
-  @keyframes late2 { 50% { box-shadow: 0 0 0 6px var(--tinta), 0 0 0 9px var(--oro), 0 0 100px rgba(255,90,54,.95); } }
-  @keyframes gira { to { transform: rotate(360deg); } }
-
-  /* cuenta regresiva y letreros */
+  /* letreros, cuenta y pausa */
   #cuenta { inset: 0; display: grid; place-items: center; z-index: 8; }
-  #cuenta div { font: 400 30vh "Bungee"; color: var(--oro); text-shadow: 10px 10px 0 var(--coral); opacity: 0; }
+  #cuenta div { font: italic 900 32vh Saira; opacity: 0; background: linear-gradient(180deg, #fff 10%, var(--oro2) 50%, var(--oro)); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 6px 0 #5a2a00) drop-shadow(0 0 40px rgba(200,107,255,.9)); }
   #cuenta div.on { animation: num .95s cubic-bezier(.2,1.6,.4,1) both; }
-  @keyframes num { 0% { opacity: 0; transform: scale(3) rotate(-12deg); } 30% { opacity: 1; transform: scale(1) rotate(0); } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(.6); } }
-  #letrero { left: 50%; top: 30%; transform: translate(-50%, -50%); z-index: 8; font: 400 clamp(26px, 4vw, 60px) "Bungee"; white-space: nowrap; opacity: 0; }
-  #letrero.on { animation: letrero 1.3s both; }
-  @keyframes letrero { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.3) rotate(8deg); } 20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1) rotate(-2deg); } 75% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -80%) scale(1); } }
-  #pausa { inset: 0; display: grid; place-items: center; z-index: 7; background: rgba(7,5,26,.55); }
-  #pausa div { font: 400 clamp(24px, 3.4vw, 48px) "Bungee"; color: var(--menta); text-align: center; animation: late .7s infinite alternate; }
-  #pausa small { display: block; font: 700 15px "Space Mono"; color: var(--hueso); margin-top: 10px; letter-spacing: .1em; }
-  #flash { position: fixed; inset: 0; z-index: 9; pointer-events: none; background: var(--coral); opacity: 0; mix-blend-mode: screen; }
-  #flash.on { animation: flash .45s ease-out; }
-  @keyframes flash { 0% { opacity: .7; } 100% { opacity: 0; } }
+  @keyframes num { 0% { opacity: 0; transform: scale(3) rotate(-10deg); } 30% { opacity: 1; transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(.6); } }
+  #letrero { left: 50%; top: 26%; transform: translate(-50%, -50%); z-index: 8; font: italic 900 clamp(30px, 4.6vw, 72px) Saira; white-space: nowrap; opacity: 0; text-align: center; }
+  #letrero small { display: block; font: 400 clamp(11px, 1vw, 15px) Michroma; letter-spacing: .25em; margin-top: 4px; }
+  #letrero.bueno { background: linear-gradient(180deg, #fff 10%, var(--oro2) 50%, var(--oro)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 3px 0 #5a2a00) drop-shadow(0 0 24px rgba(200,107,255,.9)); }
+  #letrero.malo { color: var(--rojo); text-shadow: 3px 0 0 #00e5ff, -3px 0 0 #ff00c8, 0 0 30px var(--rojo); }
+  #letrero.on { animation: letrero 1.5s both; }
+  #letrero.malo.on { animation: letrero 1.8s both, tiembla .08s 8; }
+  @keyframes letrero { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.3); } 18% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); } 30% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -75%); } }
+  @keyframes tiembla { 50% { margin-left: 6px; } }
+  #pausa { inset: 0; display: grid; place-items: center; z-index: 7; background: rgba(11,4,24,.55); text-align: center; }
+  #pausa div { font: italic 900 clamp(26px, 3.6vw, 52px) Saira; color: var(--lila); text-shadow: 0 0 20px var(--neon); animation: late .7s infinite alternate; }
+  #pausa small { display: block; font: 400 12px Michroma; letter-spacing: .2em; color: var(--plata); margin-top: 10px; }
 
-  /* resultados */
-  #fin { inset: 0; z-index: 10; display: grid; place-items: center; background: radial-gradient(ellipse at center, rgba(7,5,26,.55), rgba(7,5,26,.9)); }
-  #fin .hoja { text-align: center; padding: 30px 46px 34px; background: var(--hueso); color: var(--tinta); position: relative; transform: rotate(-1.5deg);
-    clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 26px 100%, 0 calc(100% - 26px)); animation: hoja .8s cubic-bezier(.2,1.5,.4,1) both; min-width: min(560px, 90vw); }
-  @keyframes hoja { from { transform: rotate(-12deg) scale(.4); opacity: 0; } }
-  #fin .sello { font: 700 12px "Space Mono"; letter-spacing: .35em; color: var(--coral); }
-  #fin h2 { margin: 6px 0 4px; font: 400 clamp(30px, 4vw, 56px)/1 "Bungee"; }
-  #fin .rango { display: inline-block; margin: 8px 0 14px; font: 400 18px "Bungee"; background: var(--tinta); color: var(--oro); padding: 6px 14px; transform: rotate(2deg); }
-  #fin .gran { font: 400 clamp(64px, 9vw, 130px)/1 "Bungee"; color: var(--coral); text-shadow: 5px 5px 0 var(--tinta); }
-  #fin .datos { display: flex; gap: 22px; justify-content: center; margin-top: 12px; font: 700 13px "Space Mono"; }
-  #fin .datos b { display: block; font: 400 26px "Bungee"; }
-  #fin .nuevo { margin-top: 10px; font: 400 18px "Bungee"; color: var(--coral); animation: late .4s infinite alternate; }
-  #fin .vuelve { margin-top: 16px; font: 700 12px "Space Mono"; opacity: .7; }
+  /* reporte de misión */
+  #fin { inset: 0; z-index: 10; display: grid; place-items: center; background: radial-gradient(ellipse at center, rgba(11,4,24,.45), rgba(11,4,24,.88)); }
+  #fin .hoja { position: relative; text-align: center; padding: 26px 48px 30px; min-width: min(580px, 90vw); color: #2a1144;
+    background: linear-gradient(180deg, #fbfaff, #d8d5e5); border: 3px solid var(--oro); box-shadow: 0 0 0 6px #3a1660, 0 0 0 8px var(--neon), 0 0 90px rgba(200,107,255,.7);
+    clip-path: polygon(28px 0, calc(100% - 28px) 0, 100% 28px, 100% calc(100% - 28px), calc(100% - 28px) 100%, 28px 100%, 0 calc(100% - 28px), 0 28px); animation: hoja .8s cubic-bezier(.2,1.5,.4,1) both; }
+  @keyframes hoja { from { transform: scale(.4) rotate(-8deg); opacity: 0; } }
+  #fin .sello { font: 400 10px Michroma; letter-spacing: .35em; color: var(--morado); }
+  #fin h2 { margin: 6px 0 2px; font: italic 900 clamp(30px, 4vw, 54px)/1 Saira; }
+  #fin h2.malo { color: #c0182a; }
+  #fin .rango { display: inline-block; margin: 8px 0 8px; font: 800 17px Saira; background: #2a1144; color: var(--oro2); padding: 5px 16px; clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%); }
+  #fin .gran { font: italic 900 clamp(70px, 10vw, 140px)/1 Saira; color: var(--morado); text-shadow: 0 4px 0 #2a1144; }
+  #fin .datos { display: flex; gap: 26px; justify-content: center; margin-top: 10px; font: 700 13px Saira; color: #4b3a66; }
+  #fin .datos b { display: block; font: italic 900 28px Saira; color: #2a1144; }
+  #fin .nuevo { margin-top: 10px; font: 400 14px Michroma; letter-spacing: .2em; color: #c0182a; animation: late .4s infinite alternate; }
+  #fin .vuelve { margin-top: 14px; font: 400 10px Michroma; letter-spacing: .15em; opacity: .6; }
 
-  /* encender (solo quien instala la activación, una vez) */
-  #encender { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; text-align: center; padding: 24px; background: var(--tinta); }
-  #encender h1 { font: 400 clamp(34px, 6vw, 84px)/.95 "Bungee Shade", "Bungee"; color: var(--oro); margin: 10px 0; }
-  #encender p { max-width: 560px; margin: 0 auto 26px; line-height: 1.6; font-size: 15px; }
-  #encender button { font: 400 22px "Bungee"; background: var(--menta); color: var(--tinta); border: 0; padding: 18px 34px; clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%); }
-  #encender .err { color: var(--coral); margin-top: 16px; min-height: 1em; font-weight: 700; }
-  #encender img { height: 34px; }
-  select#cam { margin-top: 18px; font: inherit; background: transparent; color: var(--hueso); border: 1.5px dashed rgba(255,244,224,.4); padding: 8px; display: none; }
+  /* encender (quien instala, una vez) */
+  #encender { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; text-align: center; padding: 24px;
+    background: radial-gradient(ellipse at 50% 40%, #2a1050, var(--noche) 70%); }
+  #encender .nave { width: min(520px, 70vw); animation: flota 4s ease-in-out infinite; filter: drop-shadow(0 10px 40px rgba(200,107,255,.6)); }
+  #encender h1 { margin: 8px 0 6px; font: italic 900 clamp(36px, 6vw, 84px)/1 Saira; background: linear-gradient(180deg, #fff 10%, var(--oro2) 55%, var(--oro)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 3px 0 #5a2a00); }
+  #encender p { max-width: 560px; margin: 0 auto 22px; line-height: 1.55; font-size: 15px; color: var(--lila); }
+  #encender button.go { font: italic 900 22px Saira; color: #2a1144; background: linear-gradient(180deg, #fff, #cfcbe0); border: 2px solid var(--oro); padding: 14px 34px;
+    box-shadow: 0 0 0 4px #3a1660, 0 0 40px rgba(200,107,255,.7); clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%); }
+  #encender .err { color: #ff8090; margin-top: 16px; min-height: 1em; font-weight: 700; }
+  select#cam { margin-top: 16px; font: inherit; background: transparent; color: var(--plata); border: 1px solid rgba(227,200,255,.4); padding: 8px; display: none; }
   select#cam option { color: #000; }
 </style>
 </head>
 <body>
 <canvas id="cv"></canvas>
 <video id="vid" playsinline muted autoplay></video>
-<div id="tv"></div>
-<div id="flash"></div>
+<div id="alerta"></div><div id="bien"></div>
 
-<div id="marca" class="capa"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span class="cinta">Misión 30 s</span></div>
+<div id="marca" class="capa"><img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR"><span class="placa">Flota Vórtice · Misión 30 s</span></div>
 
-<!-- en juego -->
-<div id="hud" class="capa fade oculto">
-  <div id="reloj"><svg viewBox="0 0 108 108"><circle cx="54" cy="54" r="46" fill="rgba(7,5,26,.6)" stroke="rgba(255,244,224,.15)" stroke-width="8"/>
-    <circle id="arco" cx="54" cy="54" r="46" fill="none" stroke="#5cffc8" stroke-width="8" stroke-dasharray="289" stroke-dashoffset="0" stroke-linecap="butt"/></svg><div class="num" id="seg">30</div></div>
-</div>
-<div id="puntos" class="fade oculto"><div class="k">PUNTOS</div><div class="v" id="pts">0</div></div>
-<div id="vidas" class="fade oculto"><i></i><i></i><i></i></div>
-
-<!-- inicio -->
-<div id="inicio">
-  <div id="izq" class="capa">
-  <div id="titulo"><div class="pre">✦ Vórtice VR presenta ✦</div><h1 id="h1">DEFENSA PLANETARIA</h1><div class="sub">La Tierra cuelga de tu barbilla. ¡Defiéndela!</div></div>
-  <div id="mision">
-    <div class="ticket"><svg viewBox="0 0 48 48"><path d="M10 38c4-10 6-18 6-26" stroke="#fff4e0" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M36 30c-6 0-12-4-16-12" stroke="#fff4e0" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="18" cy="14" r="5" fill="#5cffc8"/><path d="M18 14l12-8M18 14l14 2M18 14l10 10" stroke="#5cffc8" stroke-width="2"/></svg>
-      <div><b>Pellizca</b><small>Junta el pulgar y el índice sobre algo y sale el láser</small></div></div>
-    <div class="ticket"><svg viewBox="0 0 48 48"><path d="M24 6l9 4 7 9-1 11-8 9-11 2-9-6-4-10 3-11z" fill="#8a7466" stroke="#3b2c27" stroke-width="2"/><circle cx="19" cy="19" r="4" fill="#5f4d44"/><circle cx="29" cy="29" r="5" fill="#5f4d44"/></svg>
-      <div><b class="mas">Asteroide +10</b><small>Destrúyelos antes de que choquen</small></div></div>
-    <div class="ticket"><svg viewBox="0 0 48 48"><path d="M24 4l4 16 16 4-16 4-4 16-4-16-16-4 16-4z" fill="#fff6b0"/><circle cx="24" cy="24" r="4" fill="#fff"/></svg>
-      <div><b class="menos">Estrella −15</b><small>Las estrellas no se tocan</small></div></div>
-    <div class="ticket"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="18" fill="#1d7fd6"/><path d="M14 18c4-6 10-4 12 0s-2 8 2 10-2 8-8 6-10-10-6-16z" fill="#5ce08a"/><path d="M34 6l8 8M42 6l-8 8" stroke="#ff5a36" stroke-width="4"/></svg>
-      <div><b>3 choques y pierdes</b><small>Aguanta 30 segundos</small></div></div>
+<!-- espera: la nave proyecta la misión -->
+<div id="flota" class="capa fade">
+  <img class="nave" src="img/nave.webp" alt="">
+  <div class="haz"></div>
+  <div id="holo">
+    <div class="k">Transmisión de la nave nodriza</div>
+    <h1>DEFENSA PLANETARIA</h1>
+    <div class="fila"><div class="ic"><svg viewBox="0 0 52 40"><circle cx="26" cy="20" r="15" fill="none" stroke="#c86bff" stroke-width="2" stroke-dasharray="4 4"/><path d="M14 34c3-8 5-14 6-22M38 28c-6 0-11-3-14-10" stroke="#ecebf3" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="21" cy="14" r="4" fill="#ffd98a"/></svg></div>
+      <div><b>Pellizca para disparar</b><small>Junta pulgar e índice sobre el objetivo</small></div></div>
+    <div class="fila"><div class="ic"><img src="img/asteroide-1.webp" alt=""></div><div><b class="mas">+10 · Asteroides</b><small>Destrúyelos antes de que choquen</small></div></div>
+    <div class="fila"><div class="ic"><img src="img/satelite.webp" alt=""></div><div><b class="menos">−25 · Satélites</b><small>Son de la flota: ¡cuídalos!</small></div></div>
+    <div class="fila"><div class="ic"><img src="img/nave.webp" alt=""></div><div><b class="menos">−50 · Nave nodriza</b><small>Cuando pase, déjala pasar</small></div></div>
+    <div class="fila"><div class="ic"><svg viewBox="0 0 52 40"><circle cx="26" cy="20" r="15" fill="#1d7fd6"/><path d="M17 15c4-5 9-3 10 0s-2 7 2 9-2 7-7 5-9-9-5-14z" fill="#5ce08a"/><path d="M37 4l9 9M46 4l-9 9" stroke="#ff3b4e" stroke-width="3.5"/></svg></div>
+      <div><b>3 impactos y pierdes</b><small>Resiste 30 segundos</small></div></div>
   </div>
-  </div>
-  <div id="record" class="capa">Récord de hoy<b id="rec">0</b></div>
-  <div id="aviso" class="capa fade">Párate frente a la cámara</div>
 </div>
-<button id="comenzar" class="boton" style="left:82%;top:50%">COMENZAR<small>PELLÍZCAME</small></button>
+<div id="busca" class="capa fade"><div class="t">Buscando astronauta<i>_</i></div><div class="s">Párate frente a la cámara</div></div>
+<div id="hallado" class="capa fade oculto">✓ Astronauta detectado</div>
+<button id="comenzar" class="boton oculto" style="left:83%;top:52%">COMENZAR<small>Pellízcame</small></button>
 
+<!-- juego -->
+<div id="hud" class="capa fade oculto"><div id="reloj"><svg viewBox="0 0 112 112"><circle cx="56" cy="56" r="47" fill="rgba(11,4,24,.65)" stroke="rgba(227,200,255,.15)" stroke-width="7"/>
+  <circle cx="56" cy="56" r="52" fill="none" stroke="#e6b450" stroke-width="1.5"/>
+  <circle id="arco" cx="56" cy="56" r="47" fill="none" stroke="#c86bff" stroke-width="7" stroke-dasharray="295" stroke-dashoffset="0"/></svg><div class="num" id="seg">30</div></div></div>
+<div id="marcador" class="capa fade oculto"><div class="k">Puntos</div><div class="v" id="pts">0</div><div id="vidas"><i></i><i></i><i></i></div></div>
 <div id="cuenta" class="capa"><div id="cuentaN"></div></div>
 <div id="letrero" class="capa"></div>
-<div id="pausa" class="capa fade oculto"><div>¡Regresa a la nave!<small>No te vemos en la cámara</small></div></div>
+<div id="pausa" class="capa fade oculto"><div>¡Regresa a la nave!<small>Perdimos contacto con el astronauta</small></div></div>
 
 <div id="fin" class="capa fade oculto">
   <div class="hoja">
-    <div class="sello">REPORTE DE MISIÓN</div>
+    <div class="sello">Reporte de misión · Flota Vórtice</div>
     <h2 id="finT">¡Tierra a salvo!</h2>
     <div class="rango" id="finR">Piloto estelar</div>
     <div class="gran" id="finP">0</div>
-    <div class="datos"><div><b id="finA">0</b>asteroides</div><div><b id="finE">0</b>estrellas tocadas</div><div><b id="finV">3</b>Tierras</div></div>
-    <div class="nuevo oculto" id="finN">¡NUEVO RÉCORD!</div>
-    <div class="vuelve">Pellizca «Otra vez» para jugar de nuevo</div>
+    <div class="datos"><div><b id="finA">0</b>asteroides</div><div><b id="finS">0</b>satélites perdidos</div><div><b id="finN2">0</b>naves derribadas</div><div><b id="finV">3</b>Tierras</div></div>
+    <div class="nuevo oculto" id="finN">¡Nuevo récord del día!</div>
+    <div class="vuelve">Récord de hoy: <span id="rec">0</span> · Pellizca «Otra vez»</div>
   </div>
 </div>
-<button id="otra" class="boton oculto" style="left:84%;top:66%">OTRA VEZ<small>PELLÍZCAME</small></button>
+<button id="otra" class="boton oculto" style="left:85%;top:68%">OTRA VEZ<small>Pellízcame</small></button>
 
 <section id="encender">
   <div>
-    <img src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR">
-    <h1>DEFENSA<br>PLANETARIA</h1>
-    <p>Activación con cámara: una persona a la vez, de 1 a 2 metros de la pantalla. Después de encenderla ya no se usa ni el teclado ni el mouse: todo se hace pellizcando en el aire.</p>
-    <button id="go">Encender la activación</button>
+    <img class="nave" src="img/nave.webp" alt="">
+    <h1>DEFENSA PLANETARIA</h1>
+    <p>Activación con cámara para una persona, a 1–2 metros de la pantalla. Después de encenderla ya no se usa el teclado ni el mouse: todo se hace pellizcando en el aire.</p>
+    <button class="go" id="go">Encender la activación</button>
     <div><select id="cam" aria-label="Cámara"></select></div>
     <div class="err" id="err"></div>
   </div>
@@ -195,9 +226,19 @@ const HAND_MODEL = "https://storage.googleapis.com/mediapipe-models/hand_landmar
 const Q = new URLSearchParams(location.search);
 const $ = id => document.getElementById(id);
 const DUR = 30, VIDAS = 3;
+const PTS = { roca: 10, combo: 20, satelite: -25, nave: -50 };
 const rnd = (a, b) => a + Math.random() * (b - a);
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const pick = a => a[(Math.random() * a.length) | 0];
+
+// ================= Imágenes =================
+const IMG = {};
+const loadImg = (k, s) => new Promise(r => { const i = new Image(); i.onload = () => { IMG[k] = i; r(); }; i.onerror = r; i.src = s; });
+const ART = Promise.all([loadImg("casco", "img/casco.webp"), loadImg("sat", "img/satelite.webp"), loadImg("nave", "img/nave.webp"),
+  loadImg("a1", "img/asteroide-1.webp"), loadImg("a2", "img/asteroide-2.webp")]);
+// el visor del casco dentro de la imagen (900 × 810): centro y alto del hueco
+const VISOR = { cx: 450 / 900, cy: 441 / 810, h: 498 / 810 };
 
 // ================= Sonido (sintetizado, sin archivos) =================
 const SND = (() => {
@@ -207,7 +248,7 @@ const SND = (() => {
     c = new (window.AudioContext || window.webkitAudioContext)();
     const comp = c.createDynamicsCompressor(); out = c.createGain(); out.gain.value = .55; out.connect(comp); comp.connect(c.destination);
     mus = c.createGain(); mus.gain.value = 0; mus.connect(out);
-    nb = c.createBuffer(1, c.sampleRate, c.sampleRate); const d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    nb = c.createBuffer(1, c.sampleRate * 2, c.sampleRate); const d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   }
   const ok = () => c && c.state === "running";
   function tone(f, { t = 0, dur = .15, type = "sine", vol = .2, to = 0, dest = out, q = 0, attack = .005 } = {}) {
@@ -221,21 +262,21 @@ const SND = (() => {
     const t0 = c.currentTime + t, s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
     s.buffer = nb; fl.type = type; fl.Q.value = Q; fl.frequency.setValueAtTime(f, t0); if (to) fl.frequency.exponentialRampToValueAtTime(to, t0 + dur);
     g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol, t0 + .01); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
-    s.connect(fl); fl.connect(g); g.connect(dest); s.start(t0, Math.random() * .5); s.stop(t0 + dur + .05);
+    s.connect(fl); fl.connect(g); g.connect(dest); s.start(t0, Math.random()); s.stop(t0 + dur + .05);
   }
-  // música: bajo que late, arpegio y platillos; "intensidad" sube durante la partida
+  // música: bajo que late, arpegio y percusión; la intensidad sube durante la partida
   let step = 0, next = 0, timer = 0, level = 0, inten = 0;
-  const BPM = 124, S16 = 60 / BPM / 4;
-  const ROOT = [55, 55, 49, 41.2];                       // La, La, Sol, Mi (bajo)
-  const ARP = [440, 523.3, 659.3, 784, 880, 784, 659.3, 523.3];
+  const S16 = 60 / 120 / 4, ROOT = [55, 55, 43.65, 49];                 // La, La, Fa, Sol
+  const ARP = [440, 523.3, 659.3, 880, 659.3, 523.3, 784, 659.3];
   function sched() {
     while (next < c.currentTime + .12) {
-      const t = next - c.currentTime, bar = Math.floor(step / 16) % 4, s = step % 16;
-      if (s % 4 === 0) tone(ROOT[bar], { t, dur: .28, type: "sawtooth", vol: .32, q: 380 + inten * 500, dest: mus });
-      if (s % 2 === 1 && inten > .2) tone(ROOT[bar] * 2, { t, dur: .12, type: "square", vol: .07, q: 900, dest: mus });
-      if (inten > .05) tone(ARP[(step + bar * 2) % 8] * (bar === 2 ? .89 : 1), { t, dur: .1, type: "triangle", vol: .05 + inten * .05, dest: mus });
-      if (inten > .3 && s % 4 === 2) noise({ t, dur: .05, vol: .12, type: "highpass", f: 6000, dest: mus });
-      if (inten > .3 && (s === 4 || s === 12)) noise({ t, dur: .14, vol: .18, type: "bandpass", f: 1800, Q: .8, dest: mus });
+      const t = next - c.currentTime, bar = Math.floor(step / 16) % 4, s = step % 16, r = ROOT[bar];
+      if (s % 4 === 0) tone(r, { t, dur: .3, type: "sawtooth", vol: .3, q: 360 + inten * 600, dest: mus });
+      if (s % 2 === 1 && inten > .2) tone(r * 2, { t, dur: .12, type: "square", vol: .06, q: 900, dest: mus });
+      if (inten > .05) tone(ARP[step % 8] * r / 55, { t, dur: .12, type: "triangle", vol: .04 + inten * .05, dest: mus });
+      if (inten > .3 && s % 4 === 2) noise({ t, dur: .05, vol: .1, type: "highpass", f: 7000, dest: mus });
+      if (inten > .3 && (s === 4 || s === 12)) noise({ t, dur: .16, vol: .16, type: "bandpass", f: 1600, Q: .8, dest: mus });
+      if (inten > .5 && s === 0) tone(60, { t, dur: .25, to: 35, vol: .35, dest: mus });
       step++; next += S16;
     }
   }
@@ -248,19 +289,26 @@ const SND = (() => {
       if (on && !timer) { next = c.currentTime + .05; timer = setInterval(sched, 40); }
     },
     intensity(v) { inten = v; },
-    laser() { if (!ok()) return; tone(1800, { dur: .22, to: 180, type: "sawtooth", vol: .13, q: 4000 }); tone(2400, { dur: .16, to: 300, type: "square", vol: .05 }); noise({ dur: .08, vol: .08, type: "highpass", f: 4000 }); },
-    boom(big = 1) { if (!ok()) return; noise({ dur: .6 * big, vol: .45, f: 2200, to: 90, Q: .6 }); tone(120, { dur: .45 * big, to: 38, vol: .4 }); noise({ t: .02, dur: .25, vol: .15, type: "highpass", f: 3000 }); },
-    coin(n = 0) { if (!ok()) return; const b = 880 * Math.pow(1.06, Math.min(n, 8)); tone(b, { dur: .08, type: "square", vol: .06 }); tone(b * 1.5, { t: .06, dur: .22, type: "square", vol: .06 }); },
-    star() { if (!ok()) return; [880, 698, 523, 392].forEach((f, i) => tone(f, { t: i * .07, dur: .18, type: "triangle", vol: .12 })); },
+    zap() { if (!ok()) return; tone(2600, { dur: .14, to: 700, type: "square", vol: .06, q: 5000 }); tone(1300, { dur: .18, to: 400, type: "sawtooth", vol: .07, q: 3000 }); noise({ dur: .07, vol: .08, type: "highpass", f: 5000 }); },
+    boom(big = 1) { if (!ok()) return; noise({ dur: .6 * big, vol: .45, f: 2200, to: 80, Q: .6 }); tone(110, { dur: .45 * big, to: 36, vol: .4 }); noise({ t: .02, dur: .25, vol: .14, type: "highpass", f: 3000 }); },
+    coin(n = 0) { if (!ok()) return; const b = 880 * Math.pow(1.06, Math.min(n, 10)); tone(b, { dur: .08, type: "square", vol: .05 }); tone(b * 1.5, { t: .06, dur: .22, type: "square", vol: .05 }); },
+    bien() { if (!ok()) return; [659, 784, 988, 1319, 1568].forEach((f, i) => tone(f, { t: i * .055, dur: .3, type: "triangle", vol: .09 })); },
+    catastrofe(big = 1) {
+      if (!ok()) return;
+      noise({ dur: 1.3 * big, vol: .55, f: 1400, to: 50, Q: .5 }); tone(80, { dur: 1 * big, to: 28, vol: .5 });
+      for (let i = 0; i < 3; i++) { tone(880, { t: .1 + i * .32, dur: .14, type: "square", vol: .07 }); tone(587, { t: .26 + i * .32, dur: .14, type: "square", vol: .07 }); }
+      for (let i = 0; i < 8; i++) noise({ t: i * .05, dur: .03, vol: .12, type: "bandpass", f: 3000 + Math.random() * 4000, Q: 4 });   // chisporroteo
+    },
     hit() { if (!ok()) return; noise({ dur: 1.1, vol: .6, f: 900, to: 50, Q: .5 }); tone(70, { dur: .9, to: 30, vol: .5 }); [300, 290].forEach(f => tone(f, { dur: .5, type: "sawtooth", vol: .08, q: 900 })); },
-    alarm() { if (!ok()) return; tone(880, { dur: .12, type: "square", vol: .07 }); tone(660, { t: .14, dur: .12, type: "square", vol: .07 }); },
-    count() { if (!ok()) return; tone(523, { dur: .18, type: "square", vol: .1, q: 2000 }); },
-    go() { if (!ok()) return; [523, 659, 784, 1047].forEach((f, i) => tone(f, { t: i * .06, dur: .3, type: "square", vol: .09, q: 3000 })); },
-    win() { if (!ok()) return; [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone(f, { t: i * .11, dur: .35, type: "square", vol: .09, q: 3500 })); },
-    lose() { if (!ok()) return; [392, 370, 349, 330, 262].forEach((f, i) => tone(f, { t: i * .2, dur: .3, type: "sawtooth", vol: .1, q: 1200 })); },
-    hover() { if (!ok()) return; tone(1200, { dur: .05, vol: .06, type: "triangle" }); },
-    pinch() { if (!ok()) return; tone(300, { dur: .06, to: 600, vol: .08, type: "triangle" }); },
-    whoosh() { if (!ok()) return; noise({ dur: .5, vol: .2, type: "bandpass", f: 300, to: 3000, Q: .7 }); },
+    alarm() { if (!ok()) return; tone(880, { dur: .12, type: "square", vol: .06 }); tone(660, { t: .14, dur: .12, type: "square", vol: .06 }); },
+    count() { if (!ok()) return; tone(523, { dur: .2, type: "triangle", vol: .14 }); },
+    go() { if (!ok()) return; [523, 659, 784, 1047].forEach((f, i) => tone(f, { t: i * .06, dur: .35, type: "triangle", vol: .12 })); },
+    win() { if (!ok()) return; [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone(f, { t: i * .11, dur: .4, type: "triangle", vol: .12 })); },
+    lose() { if (!ok()) return; [392, 370, 349, 330, 262].forEach((f, i) => tone(f, { t: i * .2, dur: .3, type: "sawtooth", vol: .09, q: 1200 })); },
+    hover() { if (!ok()) return; tone(1400, { dur: .05, vol: .05, type: "triangle" }); },
+    scan() { if (!ok()) return; tone(1800, { dur: .08, vol: .025, type: "sine" }); },
+    lock() { if (!ok()) return; [880, 1175, 1760].forEach((f, i) => tone(f, { t: i * .08, dur: .14, type: "square", vol: .05, q: 4000 })); },
+    nave() { if (!ok()) return; noise({ dur: 4, vol: .12, type: "lowpass", f: 200, to: 600, Q: 3 }); tone(55, { dur: 4, vol: .08, type: "sawtooth", q: 200 }); },
   };
 })();
 
@@ -304,16 +352,18 @@ async function loadModels() {
 let W = 0, H = 0, DPR = 1, crop = { sx: 0, sy: 0, sw: 1, sh: 1 };
 const tintCv = document.createElement("canvas");
 function resize() {
-  DPR = 1;   // a 1× basta en una pantalla grande y dibuja mucho menos que a 1.5×
-  W = cv.width = Math.round(innerWidth * DPR); H = cv.height = Math.round(innerHeight * DPR);
-  // velo de "espacio" sobre la cámara, a media resolución (se estira; es puro degradado)
+  DPR = 1;   // a 1× basta en una pantalla grande y dibuja mucho menos
+  W = cv.width = Math.round(innerWidth); H = cv.height = Math.round(innerHeight);
+  // velo de espacio sobre la cámara (morado con nebulosa dorada), hecho una sola vez a media resolución
   tintCv.width = Math.ceil(W / 2); tintCv.height = Math.ceil(H / 2);
   const t = tintCv.getContext("2d"), w = tintCv.width, h = tintCv.height;
-  t.fillStyle = "rgba(10,5,34,.5)"; t.fillRect(0, 0, w, h);
-  const n1 = t.createRadialGradient(w * .15, h * .2, 0, w * .15, h * .2, w * .5); n1.addColorStop(0, "rgba(139,63,214,.3)"); n1.addColorStop(1, "rgba(139,63,214,0)");
+  t.fillStyle = "rgba(14,4,32,.52)"; t.fillRect(0, 0, w, h);
+  const n1 = t.createRadialGradient(w * .2, h * .25, 0, w * .2, h * .25, w * .55); n1.addColorStop(0, "rgba(139,63,214,.32)"); n1.addColorStop(1, "rgba(139,63,214,0)");
   t.fillStyle = n1; t.fillRect(0, 0, w, h);
-  const n2 = t.createRadialGradient(w * .9, h * .85, 0, w * .9, h * .85, w * .45); n2.addColorStop(0, "rgba(255,90,54,.18)"); n2.addColorStop(1, "rgba(255,90,54,0)");
+  const n2 = t.createRadialGradient(w * .88, h * .8, 0, w * .88, h * .8, w * .45); n2.addColorStop(0, "rgba(230,180,80,.16)"); n2.addColorStop(1, "rgba(230,180,80,0)");
   t.fillStyle = n2; t.fillRect(0, 0, w, h);
+  const v = t.createRadialGradient(w / 2, h / 2, Math.min(w, h) * .4, w / 2, h / 2, Math.max(w, h) * .75); v.addColorStop(0, "rgba(5,0,15,0)"); v.addColorStop(1, "rgba(5,0,15,.6)");
+  t.fillStyle = v; t.fillRect(0, 0, w, h);
   if (srcW) { const s = Math.max(W / srcW, H / srcH), sw = W / s, sh = H / s; crop = { sx: (srcW - sw) / 2, sy: (srcH - sh) / 2, sw, sh }; }
   initStars();
 }
@@ -323,7 +373,7 @@ function toCanvas(p) {
   return { x: mirror ? W - x : x, y };
 }
 
-// ================= La Tierra (dibujada con ruido, sin imágenes) =================
+// ================= La Tierra (dibujada con ruido en el navegador) =================
 const TW = 512, TH = 256, ES = 168;
 const hash = (x, y, z) => { let h = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.imul(z, 1440662683); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 function vnoise(x, y, z) {
@@ -386,62 +436,43 @@ function renderEarth(rot, crot, dmg) {
   ectx.putImageData(eimg, 0, 0);
 }
 
-// ================= Asteroides (dibujados una vez cada uno) =================
-function rockSprite(seed) {
-  const S = 128, k = document.createElement("canvas"); k.width = k.height = S;
-  const c = k.getContext("2d"), n = 13, pts = [];
-  for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, r = S * .36 * (.72 + hash(seed, i, 1) * .38); pts.push([S / 2 + Math.cos(a) * r, S / 2 + Math.sin(a) * r]); }
-  c.beginPath(); pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath();
-  const tint = hash(seed, 2, 2);
-  const g = c.createRadialGradient(S * .38, S * .36, S * .05, S / 2, S / 2, S * .48);
-  g.addColorStop(0, tint > .5 ? "#c7ab93" : "#b3a8b8"); g.addColorStop(.6, tint > .5 ? "#7a5f50" : "#6c6178"); g.addColorStop(1, "#2a1d22");
-  c.fillStyle = g; c.fill(); c.lineWidth = 3; c.strokeStyle = "#1c1218"; c.stroke();
-  c.save(); c.clip();
-  for (let i = 0; i < 6; i++) {   // cráteres
-    const x = S * (.3 + hash(seed, i, 3) * .4), y = S * (.3 + hash(seed, i, 4) * .4), r = S * (.04 + hash(seed, i, 5) * .07);
-    c.fillStyle = "rgba(30,18,24,.45)"; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill();
-    c.fillStyle = "rgba(255,240,220,.18)"; c.beginPath(); c.arc(x - r * .3, y - r * .3, r * .55, 0, 7); c.fill();
+// ================= Destellos y fuego (dibujados una vez, luego solo se copian) =================
+function sprite(S, draw) { const k = document.createElement("canvas"); k.width = k.height = S; draw(k.getContext("2d"), S); return k; }
+const glow = (c, S, stops) => { const g = c.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2); stops.forEach(([o, col]) => g.addColorStop(o, col)); c.fillStyle = g; c.fillRect(0, 0, S, S); };
+// destello del pellizco: núcleo blanco, 8 rayos y una raya horizontal (como un lente)
+const FLASH = sprite(256, (c, S) => {
+  glow(c, S, [[0, "rgba(255,255,255,1)"], [.12, "rgba(240,215,255,.9)"], [.35, "rgba(200,107,255,.35)"], [1, "rgba(200,107,255,0)"]]);
+  c.translate(S / 2, S / 2);
+  for (let i = 0; i < 8; i++) {
+    c.save(); c.rotate(i * Math.PI / 4); const L = i % 2 ? S * .32 : S * .48, g = c.createLinearGradient(0, 0, L, 0);
+    g.addColorStop(0, "rgba(255,255,255,.95)"); g.addColorStop(1, "rgba(255,217,138,0)"); c.fillStyle = g;
+    c.beginPath(); c.moveTo(0, -S * .012); c.lineTo(L, 0); c.lineTo(0, S * .012); c.fill(); c.restore();
   }
-  const sh = c.createLinearGradient(S * .2, S * .2, S * .85, S * .9); sh.addColorStop(0, "rgba(255,255,255,0)"); sh.addColorStop(1, "rgba(10,4,20,.55)");
-  c.fillStyle = sh; c.fillRect(0, 0, S, S); c.restore();
-  return k;
-}
-const ROCKS = Array.from({ length: 10 }, (_, i) => rockSprite(i + 3));
-const HEAT = (() => {   // resplandor de calor de los asteroides
-  const S = 64, k = document.createElement("canvas"); k.width = k.height = S;
-  const c = k.getContext("2d"), g = c.createRadialGradient(S / 2, S / 2, S * .15, S / 2, S / 2, S / 2);
-  g.addColorStop(0, "rgba(255,120,50,.45)"); g.addColorStop(1, "rgba(255,120,50,0)");
-  c.fillStyle = g; c.fillRect(0, 0, S, S); return k;
-})();
-function starSprite(color) {
-  const S = 128, k = document.createElement("canvas"); k.width = k.height = S;
-  const c = k.getContext("2d"); c.translate(S / 2, S / 2);
-  const g = c.createRadialGradient(0, 0, 0, 0, 0, S / 2); g.addColorStop(0, color + "aa"); g.addColorStop(.3, color + "33"); g.addColorStop(1, color + "00");
-  c.fillStyle = g; c.fillRect(-S / 2, -S / 2, S, S);
-  c.fillStyle = color; c.beginPath();
-  for (let i = 0; i < 8; i++) { const r = i % 2 ? S * .07 : S * .34, a = i * Math.PI / 4 - Math.PI / 2; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
-  c.closePath(); c.fill(); c.fillStyle = "#ffffff"; c.beginPath(); c.arc(0, 0, S * .06, 0, 7); c.fill();
-  return k;
-}
-const STARS = { oro: starSprite("#fff3a8"), menta: starSprite("#b8fff0"), rosa: starSprite("#ffc0f0"), blanca: starSprite("#ffffff") };
+  c.scale(1, .07); const g = c.createRadialGradient(0, 0, 0, 0, 0, S / 2); g.addColorStop(0, "rgba(255,255,255,.9)"); g.addColorStop(1, "rgba(200,107,255,0)");
+  c.fillStyle = g; c.beginPath(); c.arc(0, 0, S / 2, 0, 7); c.fill();
+});
+const FUEGO = sprite(128, (c, S) => glow(c, S, [[0, "rgba(255,255,240,1)"], [.2, "rgba(255,224,138,.95)"], [.5, "rgba(255,120,40,.6)"], [1, "rgba(160,30,20,0)"]]));
+const PLASMA = sprite(128, (c, S) => glow(c, S, [[0, "rgba(255,255,255,1)"], [.2, "rgba(240,200,255,.95)"], [.5, "rgba(200,107,255,.6)"], [1, "rgba(90,20,160,0)"]]));
+const CALOR = sprite(64, (c, S) => glow(c, S, [[.25, "rgba(255,120,50,.45)"], [1, "rgba(255,120,50,0)"]]));
+const LUZ = sprite(64, (c, S) => glow(c, S, [[0, "rgba(255,255,255,1)"], [.3, "rgba(200,107,255,.7)"], [1, "rgba(200,107,255,0)"]]));
 
 // ================= Estado =================
 let state = "off";          // off · espera · cuenta · juego · fin
-let player = null, lostT = 0, hands = [], mouseHand = null;
-let rocks = [], twinkles = [], parts = [], beams = [], pops = [], rings = [], scorch = [];
-let score = 0, lives = VIDAS, tLeft = DUR, combo = 0, lastHit = 0, killed = 0, starsHit = 0, spawnT = 0, starT = 0;
-let shake = 0, earthRot = 0, cloudRot = 0, earthGone = false, earthDmg = 0, finT = 0;
+let player = null, lostT = 0, hands = [], mouseHand = null, lockT = 0;
+let rocks = [], sats = [], ships = [], parts = [], flashes = [], pops = [], rings = [], scorch = [], arcs = [];
+let score = 0, lives = VIDAS, tLeft = DUR, combo = 0, lastHit = 0, killed = 0, satsLost = 0, shipsLost = 0;
+let spawnT = 0, satT = 0, shipPlan = [], shake = 0, earthRot = 0, cloudRot = 0, earthGone = false, earthDmg = 0, shield = 0, finT = 0;
 let bg = [];
-function initStars() { bg = Array.from({ length: 140 }, () => ({ x: Math.random() * W, y: Math.random() * H, z: rnd(.2, 1), p: Math.random() * 6 })); }
-const best = () => { try { const o = JSON.parse(localStorage.getItem("vvr-defensa-record") || "{}"); return o.d === hoy() ? o.p : 0; } catch { return 0; } };
+function initStars() { bg = Array.from({ length: 130 }, () => ({ x: Math.random() * W, y: Math.random() * H, z: rnd(.2, 1), p: Math.random() * 6 })); }
 const hoy = () => new Date().toLocaleDateString("es-MX", { timeZone: "America/Mexico_City" });
+const best = () => { try { const o = JSON.parse(localStorage.getItem("vvr-defensa-record") || "{}"); return o.d === hoy() ? o.p : 0; } catch { return 0; } };
 $("rec").textContent = best();
 
 // ================= Cara: un solo jugador =================
 function faceGeom(lm) {
   const P = i => toCanvas(lm[i]), top = P(10), chin = P(152), l = P(234), r = P(454);
   let ux = top.x - chin.x, uy = top.y - chin.y; const h = Math.hypot(ux, uy) || 1; ux /= h; uy /= h;
-  return { top, chin, ux, uy, h, w: Math.hypot(r.x - l.x, r.y - l.y), c: { x: (top.x + chin.x) / 2, y: (top.y + chin.y) / 2 }, eyeL: P(33), eyeR: P(263) };
+  return { top, chin, ux, uy, h, w: Math.hypot(r.x - l.x, r.y - l.y), c: { x: (top.x + chin.x) / 2, y: (top.y + chin.y) / 2 } };
 }
 // con varias caras: en la espera gana la más grande (la más cerca); en la partida, la que está donde estaba el jugador
 function choosePlayer(faces, now) {
@@ -453,112 +484,141 @@ function choosePlayer(faces, now) {
     if (state === "espera") { const big = G.slice().sort((a, b) => b.h - a.h)[0]; if (big && (!pick || big.h > pick.h * 1.35)) pick = big; }
   } else pick = G.slice().sort((a, b) => b.h - a.h)[0] || null;
   if (pick) {
-    if (!player || Math.hypot(pick.c.x - player.c.x, pick.c.y - player.c.y) > pick.h * 1.6) player = { ...pick, born: now };
-    else for (const k of ["h", "w", "ux", "uy"]) player[k] = lerp(player[k], pick[k], .55), ["top", "chin", "c", "eyeL", "eyeR"].forEach(p => { player[p].x = lerp(player[p].x, pick[p].x, .55); player[p].y = lerp(player[p].y, pick[p].y, .55); });
+    if (!player || Math.hypot(pick.c.x - player.c.x, pick.c.y - player.c.y) > pick.h * 1.6) { player = { ...pick, born: now }; onFound(now); }
+    else {
+      for (const k of ["h", "w", "ux", "uy"]) player[k] = lerp(player[k], pick[k], .55);
+      for (const p of ["top", "chin", "c"]) { player[p].x = lerp(player[p].x, pick[p].x, .55); player[p].y = lerp(player[p].y, pick[p].y, .55); }
+    }
     const n = Math.hypot(player.ux, player.uy); player.ux /= n; player.uy /= n;
     player.seen = now; player.miss = 0;
   } else if (player) player.miss = (player.miss || 0) + 1;
-  // se pierde tras ~1 s y al menos 4 revisiones sin verlo (si la compu va lenta, no lo suelta por un cuadro tardado)
+  // se pierde tras ~1 s y al menos 4 revisiones sin verlo
   if (player && now - player.seen > 900 && player.miss >= 4) player = null;
 }
+function onFound(now) { if (state === "espera") { lockT = now; SND.lock(); } }
 function earthPos() {
   if (!player) return null;
-  const R = player.h * .46, d = R * 1.12;
-  let x = player.chin.x - player.ux * d, y = player.chin.y - player.uy * d;
-  y = Math.min(y, H - R * .8);
+  const R = player.h * .43;
+  const x = player.chin.x - player.ux * player.h * .6, y = Math.min(player.chin.y - player.uy * player.h * .6, H - R * .75);
   return { x, y, R };
 }
 
 // ================= Manos: pellizcar =================
-function handInfo(lm, i) {
+function handInfo(lm) {
   const P = k => toCanvas(lm[k]), th = P(4), ix = P(8), wr = P(0), mid = P(9);
-  const palm = Math.hypot(mid.x - wr.x, mid.y - wr.y) || 1, d = Math.hypot(th.x - ix.x, th.y - ix.y) / palm;
-  return { x: (th.x + ix.x) / 2, y: (th.y + ix.y) / 2, d, wr, palm, th, ix };
+  const palm = Math.hypot(mid.x - wr.x, mid.y - wr.y) || 1;
+  return { x: (th.x + ix.x) / 2, y: (th.y + ix.y) / 2, d: Math.hypot(th.x - ix.x, th.y - ix.y) / palm, wr, palm };
 }
 function updateHands(res, now) {
   let list = (res?.landmarks || []).map(handInfo);
-  // solo las manos del jugador (cerca de su cara), máximo dos
   if (player) list = list.filter(h => Math.hypot(h.wr.x - player.c.x, h.wr.y - player.c.y) < player.h * 4.2)
     .sort((a, b) => Math.hypot(a.wr.x - player.c.x, a.wr.y - player.c.y) - Math.hypot(b.wr.x - player.c.x, b.wr.y - player.c.y)).slice(0, 2);
   else list = list.slice(0, 2);
   const next = [];
   for (const h of list) {
-    let o = hands.find(p => !next.includes(p) && Math.hypot(p.x - h.x, p.y - h.y) < h.palm * 2.5);
-    if (!o) o = { x: h.x, y: h.y, pinched: false, ring: 1, id: Math.random() };
-    o.x = lerp(o.x, h.x, .6); o.y = lerp(o.y, h.y, .6); o.th = h.th; o.ix = h.ix;
+    let o = hands.find(p => !p.mouse && !next.includes(p) && Math.hypot(p.x - h.x, p.y - h.y) < h.palm * 2.5);
+    if (!o) o = { x: h.x, y: h.y, pinched: false, ring: 1 };
+    o.x = lerp(o.x, h.x, .6); o.y = lerp(o.y, h.y, .6);
     o.ring = lerp(o.ring, clamp((h.d - .2) / .6, 0, 1), .5);
     const was = o.pinched;
     if (!was && h.d < .3) o.pinched = true; else if (was && h.d > .45) o.pinched = false;
     if (o.pinched && !was) onPinch(o.x, o.y, now);
-    o.seen = now; next.push(o);
+    next.push(o);
   }
   if (mouseHand && now - mouseHand.seen < 4000) next.push(mouseHand);
   hands = next;
 }
-// el mouse hace de mano (para probar o si el operador quiere)
-addEventListener("mousemove", e => { mouseHand = mouseHand || { pinched: false, ring: 1, mouse: true }; mouseHand.x = e.clientX * DPR; mouseHand.y = e.clientY * DPR; mouseHand.seen = performance.now();
+addEventListener("mousemove", e => { mouseHand = mouseHand || { pinched: false, ring: 1, mouse: true }; mouseHand.x = e.clientX; mouseHand.y = e.clientY; mouseHand.seen = performance.now();
   document.body.classList.remove("quieto"); clearTimeout(mouseHand.t); mouseHand.t = setTimeout(() => document.body.classList.add("quieto"), 2500); });
 addEventListener("mousedown", e => { if (!mouseHand || state === "off") return; mouseHand.pinched = true; mouseHand.ring = 0; onPinch(mouseHand.x, mouseHand.y, performance.now()); });
 addEventListener("mouseup", () => { if (mouseHand) { mouseHand.pinched = false; mouseHand.ring = 1; } });
 
 function overButton(el, x, y) {
   if (el.classList.contains("oculto")) return false;
-  const r = el.getBoundingClientRect(), cx = (r.left + r.width / 2) * DPR, cy = (r.top + r.height / 2) * DPR;
-  return Math.hypot(x - cx, y - cy) < r.width / 2 * DPR * 1.15;
+  const r = el.getBoundingClientRect();
+  return Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2)) < r.width / 2 * 1.2;
 }
 function onPinch(x, y, now) {
-  SND.pinch();
-  if (state === "espera" && overButton($("comenzar"), x, y)) { if (player) startCountdown(); else banner("Primero párate frente a la cámara", "#5cffc8"); return; }
+  pinchFlash(x, y, .6);
+  if (state === "espera" && overButton($("comenzar"), x, y)) { startCountdown(); return; }
   if (state === "fin" && now - finT > 1500 && overButton($("otra"), x, y)) { startCountdown(); return; }
-  if (state !== "juego" || paused) { sparkAt(x, y, "#5cffc8", 6); return; }
+  if (state !== "juego" || paused) return;
   fire(x, y, now);
 }
 
 // ================= Juego =================
 const unit = () => player ? player.h : H * .25;
+function pinchFlash(x, y, k = 1) {
+  flashes.push({ x, y, t: 0, rot: rnd(0, 1), s: unit() * (.9 + k * .5) });
+  rings.push({ x, y, r: 0, max: unit() * .42 * k, t: 0, color: "#e3c8ff", w: 3 });
+  for (let i = 0; i < 10 * k; i++) { const a = rnd(0, 7), s = rnd(.4, 1.4) * unit(); parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0, max: rnd(.2, .45), size: rnd(.012, .028) * unit(), color: pick(["#ffffff", "#e3c8ff", "#ffd98a"]), kind: "spark" }); }
+}
 function fire(x, y, now) {
-  SND.laser();
-  // dos rayos salen de los lados del casco y se juntan donde pellizcaste
-  if (player) {
-    const r = player.h * .82, rx = -player.uy, ry = player.ux;
-    for (const s of [-1, 1]) beams.push({ x0: player.c.x + rx * r * s, y0: player.c.y + ry * r * s, x, y, t: 0 });
-  }
-  rings.push({ x, y, r: 0, max: unit() * .35, t: 0, color: "#5cffc8", w: 3 });
-  // lo más cercano dentro del alcance: asteroide o estrella
-  let best = null, bd = Infinity;
-  const tol = unit() * .22;
-  for (const o of rocks) { const d = Math.hypot(o.x - x, o.y - y) - o.r; if (d < tol && d < bd) { bd = d; best = o; } }
-  for (const s of twinkles) { const d = Math.hypot(s.x - x, s.y - y) - s.r * .6; if (d < tol * .7 && d < bd) { bd = d; best = s; } }
-  if (!best) { sparkAt(x, y, "#5cffc8", 8); combo = 0; return; }
-  if (best.rock) {
-    rocks.splice(rocks.indexOf(best), 1);
+  SND.zap();
+  const u = unit(), tol = u * .2;
+  // primero los asteroides (lo que sí hay que destruir), luego satélites y al final la nave
+  let target = null, bd = Infinity;
+  for (const o of rocks) { const d = Math.hypot(o.x - x, o.y - y) - o.r; if (d < tol && d < bd) { bd = d; target = o; } }
+  if (!target) for (const s of sats) { if (Math.hypot(s.x - x, s.y - y) < s.r * .8) { target = s; break; } }
+  if (!target) for (const s of ships) { if (!s.dead && Math.hypot((s.x - x) / (s.w * .46), (s.y - y) / (s.h * .36)) < 1) { target = s; break; } }
+  if (!target) { combo = 0; return; }
+  if (target.kind === "roca") {
+    rocks.splice(rocks.indexOf(target), 1);
     combo = now - lastHit < 1800 ? combo + 1 : 1; lastHit = now; killed++;
-    const pts = combo >= 3 ? 20 : 10;
-    addScore(pts); explode(best.x, best.y, best.r, 1);
-    pops.push({ x: best.x, y: best.y - best.r, text: "+" + pts, color: combo >= 3 ? "#ffc93c" : "#5cffc8", t: 0, size: combo >= 3 ? 1.3 : 1 });
-    if (combo === 3) banner("¡COMBO ×2!", "#ffc93c"); else if (combo > 3 && combo % 3 === 0) banner(`¡${combo} SEGUIDOS!`, "#ffc93c");
-    SND.coin(combo); SND.boom(best.r / unit() * 3);
-    shake = Math.max(shake, unit() * .04);
+    const pts = combo >= 3 ? PTS.combo : PTS.roca;
+    addScore(pts); boomRock(target);
+    pops.push({ x: target.x, y: target.y - target.r, text: "+" + pts, color: combo >= 3 ? "#ffd98a" : "#7dffb5", t: 0, size: combo >= 3 ? 1.3 : 1 });
+    SND.coin(combo); SND.boom(target.r / u * 3);
+    shake = Math.max(shake, u * .035);
+    const hitos = { 3: ["¡BIEN!", "Combo ×2"], 5: ["¡EXCELENTE!", "Sigue así"], 8: ["¡IMPARABLE!", "La flota te aplaude"], 12: ["¡LEYENDA!", "Defensor estelar"] };
+    if (hitos[combo]) goodNews(...hitos[combo]);
+  } else if (target.kind === "sat") {
+    sats.splice(sats.indexOf(target), 1); satsLost++; combo = 0;
+    addScore(PTS.satelite); boomSat(target);
+    pops.push({ x: target.x, y: target.y, text: String(PTS.satelite), color: "#ff3b4e", t: 0, size: 1.4 });
+    badNews("¡SATÉLITE DESTRUIDO!", "Era de la flota · −25"); SND.catastrofe(1);
   } else {
-    twinkles.splice(twinkles.indexOf(best), 1);
-    starsHit++; combo = 0; addScore(-15);
-    for (let i = 0; i < 24; i++) parts.push({ x: best.x, y: best.y, vx: rnd(-1, 1) * unit() * 1.6, vy: rnd(-1, 1) * unit() * 1.6, life: 0, max: rnd(.5, 1), size: rnd(.03, .07) * unit(), color: "#fff3a8", kind: "spark" });
-    pops.push({ x: best.x, y: best.y, text: "−15", color: "#ff5a36", t: 0, size: 1.2 });
-    banner("¡ERA UNA ESTRELLA!", "#ff5a36"); SND.star();
+    target.dead = true; target.deadT = 0; shipsLost++; combo = 0;
+    addScore(PTS.nave);
+    pops.push({ x: target.x, y: target.y - target.h * .3, text: String(PTS.nave), color: "#ff3b4e", t: 0, size: 1.8 });
+    badNews("¡DERRIBASTE LA NAVE NODRIZA!", "Venía de nuestro lado · −50", 1.6); SND.catastrofe(1.6);
+    shake = u * .3;
   }
 }
 function addScore(n) {
   score = Math.max(0, score + n);
-  const el = $("pts"); el.textContent = score; el.classList.remove("salta"); void el.offsetWidth; el.classList.add("salta");
+  const el = $("pts"), c = n > 0 ? "salta" : "baja"; el.textContent = score; el.classList.remove("salta", "baja"); void el.offsetWidth; el.classList.add(c);
 }
-function sparkAt(x, y, color, n) { for (let i = 0; i < n; i++) parts.push({ x, y, vx: rnd(-1, 1) * unit() * .9, vy: rnd(-1, 1) * unit() * .9, life: 0, max: rnd(.2, .45), size: rnd(.015, .035) * unit(), color, kind: "spark" }); }
-function explode(x, y, r, big) {
-  rings.push({ x, y, r: r * .5, max: r * 3.2 * big, t: 0, color: "#ffc93c", w: 6 });
-  rings.push({ x, y, r: r * .3, max: r * 2 * big, t: -.06, color: "#ff5a36", w: 4 });
-  parts.push({ x, y, vx: 0, vy: 0, life: 0, max: .25, size: r * 2.4 * big, color: "#fff4e0", kind: "flash" });
-  for (let i = 0; i < 16 * big; i++) { const a = rnd(0, 7), s = rnd(.6, 2.4) * unit(); parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0, max: rnd(.4, .9), size: rnd(.03, .07) * unit(), color: Math.random() < .5 ? "#ffc93c" : "#ff5a36", kind: "spark" }); }
-  for (let i = 0; i < 9 * big; i++) { const a = rnd(0, 7), s = rnd(.3, 1.2) * unit(); parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0, max: rnd(.7, 1.3), size: r * rnd(.18, .34), rot: rnd(0, 6), vr: rnd(-6, 6), kind: "rock", sprite: ROCKS[(Math.random() * ROCKS.length) | 0] }); }
-  for (let i = 0; i < 6 * big; i++) parts.push({ x: x + rnd(-r, r) * .5, y: y + rnd(-r, r) * .5, vx: rnd(-.2, .2) * unit(), vy: rnd(-.4, -.1) * unit(), life: 0, max: rnd(.8, 1.4), size: r * rnd(.6, 1.1), kind: "smoke" });
+function goodNews(t, sub) {
+  banner(t, sub, "bueno"); SND.bien(); shield = 1;
+  const b = $("bien"); b.classList.remove("on"); void b.offsetWidth; b.classList.add("on");
+  const e = earthPos(); if (e) for (let i = 0; i < 28; i++) { const a = rnd(0, 7); parts.push({ x: e.x + Math.cos(a) * e.R * 1.3, y: e.y + Math.sin(a) * e.R * 1.3, vx: Math.cos(a) * unit() * .6, vy: Math.sin(a) * unit() * .6 - unit() * .3, life: 0, max: rnd(.6, 1.1), size: rnd(.015, .03) * unit(), color: pick(["#ffd98a", "#e3c8ff"]), kind: "spark" }); }
+}
+function badNews(t, sub, big = 1) {
+  banner(t, sub, "malo");
+  const a = $("alerta"); a.classList.remove("on"); void a.offsetWidth; a.classList.add("on");
+  document.body.classList.remove("falla"); void document.body.offsetWidth; document.body.classList.add("falla");
+  clearTimeout(badNews.t); badNews.t = setTimeout(() => document.body.classList.remove("falla"), 1100 * big);
+}
+// explosiones
+function fireball(x, y, r, n, spr = FUEGO) { for (let i = 0; i < n; i++) { const a = rnd(0, 7), s = rnd(.1, .6) * r * 2; parts.push({ x: x + Math.cos(a) * r * .2, y: y + Math.sin(a) * r * .2, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0, max: rnd(.35, .7), size: r * rnd(.7, 1.3), kind: "bola", spr, grow: rnd(1.4, 2.2) }); } }
+function sparks(x, y, n, sp, cols) { for (let i = 0; i < n; i++) { const a = rnd(0, 7), s = rnd(.5, 1) * sp; parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0, max: rnd(.4, .9), size: rnd(.012, .03) * unit(), color: pick(cols), kind: "spark", g: true }); } }
+function smoke(x, y, r, n) { for (let i = 0; i < n; i++) parts.push({ x: x + rnd(-r, r) * .5, y: y + rnd(-r, r) * .5, vx: rnd(-.2, .2) * unit(), vy: rnd(-.4, -.1) * unit(), life: 0, max: rnd(.9, 1.6), size: r * rnd(.6, 1.1), kind: "humo" }); }
+function boomRock(o) {
+  const { x, y, r } = o;
+  rings.push({ x, y, r: r * .4, max: r * 3.4, t: 0, color: "#ffd98a", w: 6 });
+  fireball(x, y, r, 7); sparks(x, y, 22, unit() * 2, ["#ffd98a", "#ff8a3d", "#ffffff"]); smoke(x, y, r, 5);
+  for (let i = 0; i < 8; i++) { const a = rnd(0, 7), s = rnd(.4, 1.4) * unit(); parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0, max: rnd(.7, 1.2), size: r * rnd(.2, .38), rot: rnd(0, 6), vr: rnd(-7, 7), kind: "roca", img: o.img }); }
+  parts.push({ x, y, life: 0, max: .18, size: r * 3, kind: "luz" });
+}
+function boomSat(s) {
+  const { x, y, r } = s;
+  rings.push({ x, y, r: r * .3, max: r * 4, t: 0, color: "#c86bff", w: 7 }, { x, y, r: r * .2, max: r * 2.6, t: -.08, color: "#ff3b4e", w: 4 });
+  fireball(x, y, r * .8, 9, PLASMA); fireball(x, y, r * .5, 4); sparks(x, y, 34, unit() * 2.4, ["#e3c8ff", "#c86bff", "#ffd98a", "#ffffff"]); smoke(x, y, r, 6);
+  for (let i = 0; i < 12; i++) { const a = rnd(0, 7), sp = rnd(.4, 1.6) * unit(); parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: rnd(.8, 1.4), size: r * rnd(.08, .2), rot: rnd(0, 6), vr: rnd(-9, 9), kind: "pieza", color: pick(["#e6b450", "#ecebf3", "#5b2a9e"]) }); }
+  arcs.push({ x, y, r: r * 1.6, t: 0, max: .7 });
+  parts.push({ x, y, life: 0, max: .25, size: r * 4, kind: "luz" });
+  shake = Math.max(shake, unit() * .2);
 }
 function spawnRock(elapsed) {
   const e = earthPos(); if (!e) return;
@@ -567,42 +627,45 @@ function spawnRock(elapsed) {
   do { a = rnd(-Math.PI * .95, -Math.PI * .05) + (Math.random() < .2 ? rnd(-.5, .5) : 0); x = e.x + Math.cos(a) * far; y = e.y + Math.sin(a) * far; tries++; }
   while ((x < -u || x > W + u) && tries < 8);
   x = clamp(x, -u * .6, W + u * .6); y = Math.min(y, H * .6);
-  const k = elapsed / DUR;
-  rocks.push({ rock: true, x, y, r: u * rnd(.13, .24), sp: u * rnd(1.15, 1.5) * (1 + k * 1.1), rot: rnd(0, 6), vr: rnd(-2, 2), sprite: ROCKS[(Math.random() * ROCKS.length) | 0], born: 0 });
+  rocks.push({ kind: "roca", x, y, r: u * rnd(.14, .24), sp: u * rnd(1.15, 1.5) * (1 + elapsed / DUR * 1.1), rot: rnd(0, 6), vr: rnd(-2, 2), img: Math.random() < .5 ? "a1" : "a2", born: 0 });
 }
-function spawnTwinkle() {
-  const u = unit(), side = Math.random() < .5 ? -1 : 1, keys = Object.keys(STARS);
-  twinkles.push({ x: side < 0 ? -u * .3 : W + u * .3, y: rnd(H * .12, H * .62), vx: -side * u * rnd(.35, .7), vy: rnd(-.1, .1) * u, r: u * .2, t: 0, sprite: STARS[keys[(Math.random() * keys.length) | 0]], wob: rnd(0, 6) });
+function spawnSat() {
+  const u = unit(), side = Math.random() < .5 ? -1 : 1;
+  sats.push({ kind: "sat", x: side < 0 ? -u * .5 : W + u * .5, y: rnd(H * .14, H * .58), vx: -side * u * rnd(.3, .5), r: u * .34, t: 0, rot: rnd(-.3, .3), vr: rnd(-.25, .25), wob: rnd(0, 6) });
 }
-let paused = false, countT = 0, gameStart = 0;
+function spawnShip() {
+  const w = clamp(W * .3, 260, 560), h = w * 501 / 900, dir = 1;   // siempre a la derecha: volteada, su letrero se leería al revés
+  ships.push({ kind: "nave", w, h, dir, x: dir > 0 ? -w * .6 : W + w * .6, y: rnd(H * .14, H * .3), vx: dir * (W + w * 1.2) / 6.5, t: 0 });
+  SND.nave();
+}
+let paused = false;
 function startCountdown() {
-  state = "cuenta"; SND.whoosh();
-  rocks = []; twinkles = []; beams = []; pops = []; scorch = [];
-  score = 0; lives = VIDAS; tLeft = DUR; combo = 0; killed = 0; starsHit = 0; spawnT = .8; starT = 2.5; earthGone = false; earthDmg = 0;
+  state = "cuenta"; SND.lock();
+  rocks = []; sats = []; ships = []; flashes = []; pops = []; scorch = []; arcs = [];
+  score = 0; lives = VIDAS; tLeft = DUR; combo = 0; killed = 0; satsLost = 0; shipsLost = 0; spawnT = .8; satT = 2; earthGone = false; earthDmg = 0;
+  shipPlan = [rnd(6, 9), rnd(17, 21)];
   $("pts").textContent = 0; [...$("vidas").children].forEach(i => i.className = "");
-  $("inicio").classList.add("oculto"); $("comenzar").classList.add("oculto"); $("otra").classList.add("oculto"); $("fin").classList.add("oculto");
-  ["hud", "puntos", "vidas"].forEach(id => $(id).classList.remove("oculto"));
+  ["flota", "busca", "hallado", "comenzar", "otra", "fin"].forEach(id => $(id).classList.add("oculto"));
+  ["hud", "marcador"].forEach(id => $(id).classList.remove("oculto"));
   $("seg").textContent = DUR; $("arco").style.strokeDashoffset = 0; $("reloj").classList.remove("alerta");
   let n = 3; const el = $("cuentaN");
   const tick = () => {
     el.textContent = n > 0 ? n : "¡YA!"; el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
     n > 0 ? SND.count() : SND.go();
-    if (n-- > 0) countT = setTimeout(tick, 850); else { state = "juego"; gameStart = performance.now(); SND.music(true, .4); }
+    if (n-- > 0) setTimeout(tick, 850); else { state = "juego"; SND.music(true, .4); }
   };
-  SND.music(true, .15);
-  tick();
+  SND.music(true, .15); tick();
 }
 function loseLife(o) {
   if (state !== "juego" || lives <= 0) return;
-  lives--; earthDmg = 1 - lives / VIDAS;
-  const e = earthPos();
-  const ang = Math.atan2(o.y - e.y, o.x - e.x);
+  lives--; earthDmg = 1 - lives / VIDAS; combo = 0;
+  const e = earthPos(), ang = Math.atan2(o.y - e.y, o.x - e.x);
   scorch.push({ ang, t: 0 });
-  explode(e.x + Math.cos(ang) * e.R * .85, e.y + Math.sin(ang) * e.R * .85, o.r * 1.4, 1.6);
-  shake = unit() * .18; SND.hit();
-  const fl = $("flash"); fl.classList.remove("on"); void fl.offsetWidth; fl.classList.add("on");
-  const ic = $("vidas").children[VIDAS - lives - 1]; if (ic) { ic.className = "perdida cae"; }
-  if (lives > 0) banner(lives === 1 ? "¡ÚLTIMA TIERRA!" : "¡IMPACTO!", "#ff5a36");
+  const ix = e.x + Math.cos(ang) * e.R * .85, iy = e.y + Math.sin(ang) * e.R * .85;
+  boomRock({ x: ix, y: iy, r: o.r * 1.6, img: o.img }); fireball(ix, iy, o.r * 1.4, 6);
+  shake = unit() * .2; SND.hit();
+  const ic = $("vidas").children[VIDAS - lives - 1]; if (ic) ic.className = "perdida cae";
+  if (lives > 0) badNews(lives === 1 ? "¡ÚLTIMA TIERRA!" : "¡IMPACTO!", lives === 1 ? "Un choque más y se acaba" : `Quedan ${lives}`);
   else endGame(false);
 }
 function endGame(won) {
@@ -611,37 +674,35 @@ function endGame(won) {
   SND.music(true, .1);
   if (!won) {   // la Tierra estalla
     const e = earthPos();
-    if (e) { explode(e.x, e.y, e.R, 3); earthGone = true; }
-    SND.boom(3); setTimeout(() => SND.lose(), 500);
-  } else { SND.win(); banner("¡TIERRA A SALVO!", "#5cffc8"); }
-  // lo que seguía en camino estalla y ya no cuenta
-  for (const o of rocks) explode(o.x, o.y, o.r, .6);
-  rocks = []; twinkles = [];
+    if (e) { fireball(e.x, e.y, e.R, 16); fireball(e.x, e.y, e.R * .8, 8, PLASMA); sparks(e.x, e.y, 60, unit() * 3, ["#ffd98a", "#ff8a3d", "#9ef0ff", "#ffffff"]); smoke(e.x, e.y, e.R, 10);
+      rings.push({ x: e.x, y: e.y, r: e.R, max: e.R * 5, t: 0, color: "#ffd98a", w: 10 }); parts.push({ x: e.x, y: e.y, life: 0, max: .4, size: e.R * 6, kind: "luz" }); earthGone = true; }
+    shake = unit() * .35; SND.boom(3); setTimeout(() => SND.lose(), 600); badNews("¡LA TIERRA CAYÓ!", "Misión fallida", 1.5);
+  } else { SND.win(); goodNews("¡TIERRA A SALVO!", "Misión cumplida"); }
+  for (const o of rocks) boomRock(o);
+  rocks = []; sats = [];
   const rec = best(), nuevo = score > rec && score > 0;
   if (nuevo) try { localStorage.setItem("vvr-defensa-record", JSON.stringify({ d: hoy(), p: score })); } catch {}
   setTimeout(() => {
-    $("finT").textContent = won ? "¡Tierra a salvo!" : "¡La Tierra cayó!";
-    $("finR").textContent = score >= 250 ? "Leyenda galáctica" : score >= 160 ? "Comandante" : score >= 80 ? "Piloto estelar" : "Cadete espacial";
-    $("finA").textContent = killed; $("finE").textContent = starsHit; $("finV").textContent = lives;
+    $("finT").textContent = won ? "¡Tierra a salvo!" : "¡La Tierra cayó!"; $("finT").className = won ? "" : "malo";
+    $("finR").textContent = score >= 250 ? "Leyenda galáctica" : score >= 160 ? "Comandante de la flota" : score >= 80 ? "Piloto estelar" : "Cadete espacial";
+    $("finA").textContent = killed; $("finS").textContent = satsLost; $("finN2").textContent = shipsLost; $("finV").textContent = lives;
     $("finN").classList.toggle("oculto", !nuevo); $("rec").textContent = best();
     countUp($("finP"), score);
-    ["hud", "puntos", "vidas"].forEach(id => $(id).classList.add("oculto"));
+    ["hud", "marcador"].forEach(id => $(id).classList.add("oculto"));
     $("fin").classList.remove("oculto"); $("otra").classList.remove("oculto");
-  }, won ? 1400 : 2200);
+  }, won ? 1500 : 2300);
   clearTimeout(endGame.t); endGame.t = setTimeout(() => { if (state === "fin") toAttract(); }, 16000);
 }
 function countUp(el, n) { const t0 = performance.now(); const f = () => { const k = Math.min(1, (performance.now() - t0) / 1100); el.textContent = Math.round(n * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(f); }; f(); }
 function toAttract() {
-  state = "espera"; earthGone = false; earthDmg = 0; scorch = []; rocks = []; twinkles = [];
-  $("fin").classList.add("oculto"); $("otra").classList.add("oculto");
-  ["hud", "puntos", "vidas"].forEach(id => $(id).classList.add("oculto"));
-  $("inicio").classList.remove("oculto"); $("comenzar").classList.remove("oculto");
+  state = "espera"; earthGone = false; earthDmg = 0; scorch = []; rocks = []; sats = []; ships = [];
+  ["fin", "otra", "hud", "marcador"].forEach(id => $(id).classList.add("oculto"));
+  $("flota").classList.remove("oculto"); lockT = performance.now();
   SND.music(true, .08);
 }
-let bannerT = 0;
-function banner(text, color) {
-  const el = $("letrero"); el.textContent = text; el.style.color = color; el.style.textShadow = `4px 4px 0 ${color === "#ff5a36" ? "#07051a" : "#ff5a36"}`;
-  el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
+function banner(text, sub, kind) {
+  const el = $("letrero"); el.innerHTML = ""; el.append(text); if (sub) { const s = document.createElement("small"); s.textContent = sub; el.append(s); }
+  el.className = "capa " + kind; void el.offsetWidth; el.classList.add("on");
 }
 
 // ================= Dibujo =================
@@ -650,56 +711,54 @@ function drawBackground(now) {
   if (mirror) { ctx.translate(W, 0); ctx.scale(-1, 1); }
   ctx.drawImage(src, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, W, H);
   ctx.restore();
-  // la cámara se vuelve "espacio": velo oscuro con nebulosa, hecho una sola vez (tintCv)
   ctx.drawImage(tintCv, 0, 0, W, H);
-  for (const s of bg) {   // estrellitas del fondo que pasan despacio
-    s.x -= s.z * .3 * DPR; if (s.x < 0) s.x += W;
-    const a = .35 + .65 * Math.abs(Math.sin(now / 900 + s.p));
-    ctx.fillStyle = `rgba(255,244,224,${a * s.z})`; ctx.fillRect(s.x, s.y, s.z * 2.2 * DPR, s.z * 2.2 * DPR);
+  for (const s of bg) {
+    s.x -= s.z * .3; if (s.x < 0) s.x += W;
+    const a = .3 + .7 * Math.abs(Math.sin(now / 900 + s.p));
+    ctx.fillStyle = `rgba(236,235,243,${a * s.z})`; ctx.fillRect(s.x, s.y, s.z * 2.2, s.z * 2.2);
   }
 }
-function drawHelmet(now) {
-  if (!player) return;
-  const p = player, r = p.h * .82, cx = p.c.x + p.ux * p.h * .06, cy = p.c.y + p.uy * p.h * .06;
-  const ang = Math.atan2(p.ux, -p.uy), pop = clamp((now - p.born) / 500, 0, 1), s = pop < 1 ? 1 + Math.sin(pop * Math.PI) * .15 : 1;
-  ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.scale(s, s);
-  // cristal: transparente al centro, un poco de reflejo en la orilla
-  const gl = ctx.createRadialGradient(0, 0, r * .55, 0, 0, r);
-  gl.addColorStop(0, "rgba(120,220,255,0)"); gl.addColorStop(.8, "rgba(120,220,255,.1)"); gl.addColorStop(1, "rgba(180,240,255,.35)");
-  ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
-  // reflejos del cristal
-  ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineCap = "round";
-  ctx.lineWidth = r * .045; ctx.beginPath(); ctx.arc(0, 0, r * .86, Math.PI * 1.12, Math.PI * 1.42); ctx.stroke();
-  ctx.lineWidth = r * .022; ctx.beginPath(); ctx.arc(0, 0, r * .86, Math.PI * 1.48, Math.PI * 1.56); ctx.stroke();
-  const sweep = (now / 2600) % 1;   // brillo que recorre el cristal
-  ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.clip();
-  ctx.globalAlpha = .18; ctx.fillStyle = "#fff"; ctx.translate(-r * 1.6 + sweep * r * 3.2, 0); ctx.rotate(.5); ctx.fillRect(-r * .06, -r * 1.5, r * .12, r * 3); ctx.restore();
-  // casco: aro blanco con remaches y un filo dorado
-  const sh = ctx.createLinearGradient(-r, -r, r, r); sh.addColorStop(0, "#ffffff"); sh.addColorStop(.5, "#d9dbe8"); sh.addColorStop(1, "#8d90a8");
-  ctx.lineWidth = r * .13; ctx.strokeStyle = sh; ctx.beginPath(); ctx.arc(0, 0, r * 1.065, 0, 7); ctx.stroke();
-  ctx.lineWidth = r * .022; ctx.strokeStyle = "#ffc93c"; ctx.beginPath(); ctx.arc(0, 0, r * 1.0, 0, 7); ctx.stroke();
-  ctx.fillStyle = "#6b6e86";
-  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; ctx.beginPath(); ctx.arc(Math.cos(a) * r * 1.065, Math.sin(a) * r * 1.065, r * .018, 0, 7); ctx.fill(); }
-  // cápsulas a los lados (de ahí salen los láseres) con luz
-  for (const sx of [-1, 1]) {
-    ctx.save(); ctx.translate(sx * r * 1.1, r * .05);
-    ctx.fillStyle = sh; ctx.beginPath(); ctx.roundRect(-r * .1, -r * .24, r * .2, r * .48, r * .1); ctx.fill();
-    ctx.strokeStyle = "#6b6e86"; ctx.lineWidth = r * .012; ctx.stroke();
-    const on = Math.sin(now / 220 + sx) > 0;
-    if (on) { ctx.fillStyle = "rgba(92,255,200,.3)"; ctx.beginPath(); ctx.arc(0, -r * .1, r * .09, 0, 7); ctx.fill(); }
-    ctx.fillStyle = on ? "#5cffc8" : "#1e5a49"; ctx.beginPath(); ctx.arc(0, -r * .1, r * .04, 0, 7); ctx.fill();
+// buscando: radar que barre; al encontrar, unas esquinas se cierran sobre la cara
+function drawScanner(now) {
+  if (state !== "espera") return;
+  if (!player) {
+    const cx = W / 2, cy = H * .48, R = Math.min(W, H) * .3, a = now / 700;
+    ctx.save(); ctx.translate(cx, cy);
+    ctx.strokeStyle = "rgba(200,107,255,.28)"; ctx.lineWidth = 1.5;
+    for (const k of [.35, .7, 1]) { ctx.beginPath(); ctx.arc(0, 0, R * k, 0, 7); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(-R, 0); ctx.lineTo(R, 0); ctx.moveTo(0, -R); ctx.lineTo(0, R); ctx.stroke();
+    const g = ctx.createConicGradient(a, 0, 0); g.addColorStop(0, "rgba(200,107,255,.45)"); g.addColorStop(.12, "rgba(200,107,255,0)"); g.addColorStop(1, "rgba(200,107,255,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.fill();
+    ctx.strokeStyle = "rgba(227,200,255,.8)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * R, Math.sin(a) * R); ctx.stroke();
     ctx.restore();
+    if (Math.floor(now / 700) !== drawScanner.b) { drawScanner.b = Math.floor(now / 700); SND.scan(); }
+    return;
   }
-  // antena con foco que parpadea
-  ctx.strokeStyle = "#d9dbe8"; ctx.lineWidth = r * .025; ctx.beginPath(); ctx.moveTo(r * .45, -r * 1.0); ctx.lineTo(r * .62, -r * 1.38); ctx.stroke();
-  const blink = (now / 700) % 1 < .5;
-  if (blink) { ctx.fillStyle = "rgba(255,90,54,.3)"; ctx.beginPath(); ctx.arc(r * .62, -r * 1.4, r * .12, 0, 7); ctx.fill(); }
-  ctx.fillStyle = blink ? "#ff5a36" : "#7a2414"; ctx.beginPath(); ctx.arc(r * .62, -r * 1.4, r * .05, 0, 7); ctx.fill();
-  // placa con el nombre de la misión
-  ctx.font = `400 ${r * .11}px Bungee`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  const tw = ctx.measureText("VVR-01").width + r * .14;
-  ctx.fillStyle = "#07051a"; ctx.beginPath(); ctx.roundRect(-tw / 2, -r * 1.14 - r * .08, tw, r * .16, r * .03); ctx.fill();
-  ctx.fillStyle = "#ffc93c"; ctx.fillText("VVR-01", 0, -r * 1.14 + r * .005);
+  const k = clamp((now - lockT) / 650, 0, 1), e = 1 - Math.pow(1 - k, 3), p = player;
+  const bw = p.h * 1.5, bh = p.h * 1.7, x0 = p.c.x - bw / 2, y0 = p.c.y - bh / 2;
+  const corners = [[x0, y0, 1, 1, 0, 0], [x0 + bw, y0, -1, 1, W, 0], [x0, y0 + bh, 1, -1, 0, H], [x0 + bw, y0 + bh, -1, -1, W, H]];
+  const L = p.h * .3, ok = k >= 1;
+  ctx.strokeStyle = ok ? "#7dffb5" : "#e3c8ff"; ctx.lineWidth = 4; ctx.lineCap = "square";
+  ctx.globalAlpha = ok ? .55 + Math.sin(now / 150) * .25 : 1;
+  for (const [x, y, sx, sy, fx, fy] of corners) {
+    const X = lerp(fx, x, e), Y = lerp(fy, y, e);
+    ctx.beginPath(); ctx.moveTo(X, Y + sy * L); ctx.lineTo(X, Y); ctx.lineTo(X + sx * L, Y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+function drawHelmet(now) {
+  if (!player || !IMG.casco) return;
+  const p = player, im = IMG.casco;
+  const pop = clamp((now - p.born) / 600, 0, 1), s = pop < 1 ? .6 + .4 * (1 - Math.pow(1 - pop, 3)) + Math.sin(pop * Math.PI) * .08 : 1;
+  const hh = p.h * 1.32 / VISOR.h * s, ww = hh * im.width / im.height;   // el visor mide 1.32 caras de alto
+  const cx = p.c.x + p.ux * p.h * .1, cy = p.c.y + p.uy * p.h * .1, ang = Math.atan2(p.ux, -p.uy);
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.globalAlpha = pop;
+  ctx.drawImage(im, -ww * VISOR.cx, -hh * VISOR.cy, ww, hh);
+  // reflejo que recorre el cristal
+  const sweep = (now / 3000) % 1, vr = hh * VISOR.h / 2;
+  ctx.save(); ctx.beginPath(); ctx.ellipse(0, 0, vr * 1.28, vr, 0, 0, 7); ctx.clip();
+  ctx.globalAlpha = .14 * pop; ctx.fillStyle = "#fff"; ctx.translate(-vr * 2 + sweep * vr * 4, 0); ctx.rotate(.45); ctx.fillRect(-vr * .07, -vr * 2, vr * .14, vr * 4);
+  ctx.restore();
   ctx.restore();
 }
 function drawEarth(now, dt) {
@@ -707,124 +766,148 @@ function drawEarth(now, dt) {
   earthRot += dt * 14; cloudRot += dt * 22;
   renderEarth(earthRot, cloudRot, earthDmg);
   const { x, y, R } = e;
-  // halo de la atmósfera (rojo cuando está dañada)
-  const hue = earthDmg > .5 ? "255,90,54" : earthDmg > 0 ? "255,180,90" : "92,200,255";
+  const hue = earthDmg > .5 ? "255,59,78" : earthDmg > 0 ? "255,160,90" : "120,190,255";
   const pulse = 1 + Math.sin(now / 400) * .04 * (1 + earthDmg * 3);
   const g = ctx.createRadialGradient(x, y, R * .9, x, y, R * 1.45 * pulse);
   g.addColorStop(0, `rgba(${hue},.55)`); g.addColorStop(1, `rgba(${hue},0)`);
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, R * 1.5, 0, 7); ctx.fill();
   ctx.drawImage(earthCv, x - R, y - R, R * 2, R * 2);
-  // golpes: quemadura que brilla y humea
   for (const s of scorch) {
     s.t += dt;
     const sx = x + Math.cos(s.ang) * R * .72, sy = y + Math.sin(s.ang) * R * .72;
     const gg = ctx.createRadialGradient(sx, sy, 0, sx, sy, R * .35);
-    gg.addColorStop(0, `rgba(255,${200 - Math.min(150, s.t * 80)},80,${.9})`); gg.addColorStop(.5, "rgba(120,20,10,.6)"); gg.addColorStop(1, "rgba(40,10,10,0)");
+    gg.addColorStop(0, `rgba(255,${200 - Math.min(150, s.t * 80)},80,.9)`); gg.addColorStop(.5, "rgba(120,20,10,.6)"); gg.addColorStop(1, "rgba(40,10,10,0)");
     ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(sx, sy, R * .35, 0, 7); ctx.fill();
-    if (Math.random() < dt * 8) parts.push({ x: sx, y: sy, vx: rnd(-.1, .1) * R, vy: -rnd(.3, .6) * R, life: 0, max: rnd(1, 1.6), size: R * rnd(.18, .3), kind: "smoke" });
+    if (Math.random() < dt * 8) parts.push({ x: sx, y: sy, vx: rnd(-.1, .1) * R, vy: -rnd(.3, .6) * R, life: 0, max: rnd(1, 1.6), size: R * rnd(.18, .3), kind: "humo" });
   }
-  // aro de órbita con lucecita
-  ctx.save(); ctx.translate(x, y); ctx.scale(1, .28);
-  ctx.strokeStyle = "rgba(92,255,200,.35)"; ctx.lineWidth = 2 * DPR; ctx.setLineDash([6 * DPR, 8 * DPR]); ctx.lineDashOffset = -now / 40;
-  ctx.beginPath(); ctx.arc(0, 0, R * 1.45, Math.PI * 1.0, Math.PI * 2); ctx.stroke(); ctx.restore();
-  const oa = now / 1200;
-  ctx.fillStyle = "#5cffc8"; ctx.beginPath(); ctx.arc(x + Math.cos(oa) * R * 1.45, y + Math.sin(oa) * R * 1.45 * .28, 3 * DPR, 0, 7); ctx.fill();
+  // escudo cuando vas bien: burbuja hexagonal dorada y morada
+  if (shield > 0) {
+    shield = Math.max(0, shield - dt * 1.2);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(now / 900); ctx.globalAlpha = shield;
+    for (const [rr, col, w] of [[1.32, "#ffd98a", 4], [1.45, "#c86bff", 2]]) {
+      ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath();
+      for (let i = 0; i <= 6; i++) { const a = i * Math.PI / 3; ctx.lineTo(Math.cos(a) * R * rr, Math.sin(a) * R * rr); }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+function drawSats(dt, now) {
+  if (!IMG.sat) return;
+  for (const s of sats) {
+    if (!paused) { s.x += s.vx * dt; s.rot += s.vr * dt * .3; s.t += dt; }
+    const y = s.y + Math.sin(now / 700 + s.wob) * s.r * .12, w = s.r * 2.3, h = w * IMG.sat.height / IMG.sat.width;
+    ctx.drawImage(LUZ, s.x - s.r * 1.6, y - s.r * 1.6, s.r * 3.2, s.r * 3.2);
+    ctx.save(); ctx.translate(s.x, y); ctx.rotate(Math.sin(now / 1500 + s.wob) * .15 + s.rot);
+    ctx.drawImage(IMG.sat, -w / 2, -h / 2, w, h); ctx.restore();
+    // aro verde de "es de los nuestros"
+    ctx.strokeStyle = `rgba(125,255,181,${.35 + Math.sin(now / 250) * .15})`; ctx.lineWidth = 2; ctx.setLineDash([6, 6]);
+    ctx.beginPath(); ctx.arc(s.x, y, s.r * 1.15, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    s.drawY = y;
+  }
+  sats = sats.filter(s => s.x > -unit() && s.x < W + unit());
+}
+function drawShips(dt, now) {
+  if (!IMG.nave) return;
+  for (const s of ships) {
+    s.t += dt;
+    if (!s.dead) {
+      if (!paused) s.x += s.vx * dt;
+      // estela de los motores (morada)
+      const ex = s.x - s.dir * s.w * .47, ey = s.y + s.h * .03;
+      if (!paused && Math.random() < dt * 60) parts.push({ x: ex, y: ey + rnd(-.08, .08) * s.h, vx: -s.dir * rnd(.6, 1.2) * unit(), vy: rnd(-.05, .05) * unit(), life: 0, max: rnd(.3, .6), size: s.h * rnd(.06, .12), kind: "bola", spr: PLASMA, grow: .4 });
+    } else {
+      s.deadT += dt;
+      s.vy = (s.vy || 0) + unit() * 1.3 * dt; s.y += s.vy * dt; s.x += s.vx * .3 * dt; s.spin = (s.spin || 0) + dt * .6 * s.dir;
+      if (Math.random() < dt * 14) { const px = s.x + rnd(-.45, .45) * s.w, py = s.y + rnd(-.25, .25) * s.h; fireball(px, py, s.h * .3, 3); sparks(px, py, 8, unit() * 1.5, ["#ffd98a", "#c86bff", "#fff"]); SND.boom(.7); }
+    }
+    const a = s.dead ? Math.max(0, 1 - s.deadT / 2.2) : 1;
+    ctx.save(); ctx.globalAlpha = a; ctx.translate(s.x, s.y); ctx.rotate(s.spin || 0); ctx.scale(s.dir, 1);
+    ctx.drawImage(IMG.nave, -s.w / 2, -s.h / 2, s.w, s.h); ctx.restore();
+  }
+  ships = ships.filter(s => (s.dead ? s.deadT < 2.2 : s.x > -s.w && s.x < W + s.w));
 }
 function drawRocks(dt, now) {
   const e = earthPos();
   for (const o of rocks) {
-    // fuego detrás (va hacia la Tierra)
     if (e) {
       const dx = e.x - o.x, dy = e.y - o.y, d = Math.hypot(dx, dy) || 1;
       if (!paused) { o.x += dx / d * o.sp * dt; o.y += dy / d * o.sp * dt; }
-      o.dir = Math.atan2(dy, dx);
-      if (!paused && Math.random() < dt * 40) parts.push({ x: o.x - dx / d * o.r * .7, y: o.y - dy / d * o.r * .7, vx: -dx / d * o.sp * .3 + rnd(-.1, .1) * unit(), vy: -dy / d * o.sp * .3 + rnd(-.1, .1) * unit(), life: 0, max: rnd(.25, .5), size: o.r * rnd(.5, .9), color: Math.random() < .6 ? "#ff8a3d" : "#ffc93c", kind: "fire" });
+      if (!paused && Math.random() < dt * 40) parts.push({ x: o.x - dx / d * o.r * .7, y: o.y - dy / d * o.r * .7, vx: -dx / d * o.sp * .3 + rnd(-.1, .1) * unit(), vy: -dy / d * o.sp * .3 + rnd(-.1, .1) * unit(), life: 0, max: rnd(.25, .5), size: o.r * rnd(.5, .9), kind: "bola", spr: FUEGO, grow: .3 });
       if (!paused && state === "juego" && d < e.R * .95 + o.r * .3) { o.dead = true; loseLife(o); continue; }
     }
     if (!paused) o.rot += o.vr * dt;
     o.born = Math.min(1, o.born + dt * 3);
-    // brillo de calor al frente
-    ctx.drawImage(HEAT, o.x - o.r * 1.7, o.y - o.r * 1.7, o.r * 3.4, o.r * 3.4);
-    ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.rot); const s = o.r * 2.8 * o.born;
-    ctx.drawImage(o.sprite, -s / 2, -s / 2, s, s); ctx.restore();
-    // marca de blanco que gira (se ve qué pellizcar)
-    ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(-now / 500);
-    ctx.strokeStyle = "rgba(255,90,54,.7)"; ctx.lineWidth = 2 * DPR;
+    ctx.drawImage(CALOR, o.x - o.r * 1.8, o.y - o.r * 1.8, o.r * 3.6, o.r * 3.6);
+    const im = IMG[o.img];
+    if (im) { const s = o.r * 2.3 * o.born; ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.rot); ctx.drawImage(im, -s / 2, -s / 2, s, s * im.height / im.width); ctx.restore(); }
+    // mira roja que gira: esto sí se destruye
+    ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(-now / 500); ctx.strokeStyle = "rgba(255,90,80,.75)"; ctx.lineWidth = 2;
     for (let i = 0; i < 4; i++) { ctx.rotate(Math.PI / 2); ctx.beginPath(); ctx.arc(0, 0, o.r * 1.35, -.35, .35); ctx.stroke(); }
     ctx.restore();
   }
   rocks = rocks.filter(o => !o.dead);
 }
-function drawTwinkles(dt, now) {
-  for (const s of twinkles) {
-    if (!paused) { s.x += s.vx * dt; s.y += s.vy * dt + Math.sin(now / 500 + s.wob) * .3 * DPR; s.t += dt; }
-    const k = .85 + Math.sin(now / 160 + s.wob) * .2, sz = s.r * 2.6 * k;
-    ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(Math.sin(now / 700 + s.wob) * .3);
-    ctx.drawImage(s.sprite, -sz / 2, -sz / 2, sz, sz); ctx.restore();
-  }
-  twinkles = twinkles.filter(s => s.x > -unit() && s.x < W + unit());
-}
 function drawFx(dt) {
-  // rayos láser
-  for (const b of beams) {
-    b.t += dt; const a = 1 - b.t / .2; if (a <= 0) continue;
-    ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round";
-    ctx.strokeStyle = `rgba(255,90,54,${a * .6})`; ctx.lineWidth = unit() * .07 * a; ctx.beginPath(); ctx.moveTo(b.x0, b.y0); ctx.lineTo(b.x, b.y); ctx.stroke();
-    ctx.strokeStyle = `rgba(255,240,220,${a})`; ctx.lineWidth = unit() * .02; ctx.beginPath(); ctx.moveTo(b.x0, b.y0); ctx.lineTo(b.x, b.y); ctx.stroke();
-    ctx.restore();
+  ctx.globalCompositeOperation = "lighter";
+  for (const f of flashes) {
+    f.t += dt; const k = f.t / .32; if (k >= 1) continue;
+    const s = f.s * (.5 + k * .9); ctx.globalAlpha = 1 - k;
+    ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.rot + k * .6); ctx.drawImage(FLASH, -s / 2, -s / 2, s, s); ctx.restore();
   }
-  beams = beams.filter(b => b.t < .2);
+  flashes = flashes.filter(f => f.t < .32);
+  ctx.globalAlpha = 1;
+  // arcos eléctricos (satélite roto)
+  for (const a of arcs) {
+    a.t += dt; if (a.t > a.max) continue;
+    ctx.strokeStyle = `rgba(227,200,255,${1 - a.t / a.max})`; ctx.lineWidth = 2;
+    for (let n = 0; n < 4; n++) { ctx.beginPath(); let x = a.x, y = a.y; ctx.moveTo(x, y); const ang = rnd(0, 7); for (let i = 1; i <= 6; i++) { x = a.x + Math.cos(ang) * a.r * i / 6 + rnd(-1, 1) * a.r * .15; y = a.y + Math.sin(ang) * a.r * i / 6 + rnd(-1, 1) * a.r * .15; ctx.lineTo(x, y); } ctx.stroke(); }
+  }
+  arcs = arcs.filter(a => a.t < a.max);
   for (const r of rings) {
-    r.t += dt; if (r.t < 0) continue; const k = r.t / .45; if (k >= 1) continue;
-    ctx.strokeStyle = r.color; ctx.globalAlpha = 1 - k; ctx.lineWidth = r.w * DPR * (1 - k) + 1;
-    ctx.beginPath(); ctx.arc(r.x, r.y, lerp(r.r, r.max, 1 - Math.pow(1 - k, 3)), 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
+    r.t += dt; if (r.t < 0) continue; const k = r.t / .5; if (k >= 1) continue;
+    ctx.strokeStyle = r.color; ctx.globalAlpha = 1 - k; ctx.lineWidth = r.w * (1 - k) + 1;
+    ctx.beginPath(); ctx.arc(r.x, r.y, lerp(r.r, r.max, 1 - Math.pow(1 - k, 3)), 0, 7); ctx.stroke();
   }
-  rings = rings.filter(r => r.t < .45);
+  rings = rings.filter(r => r.t < .5);
+  ctx.globalAlpha = 1;
   for (const p of parts) {
     p.life += dt; const k = p.life / p.max; if (k >= 1) continue;
-    p.x += p.vx * dt; p.y += p.vy * dt;
-    if (p.kind === "smoke") {
-      p.vx *= .98; p.vy *= .98;
-      ctx.fillStyle = `rgba(60,40,70,${.35 * (1 - k)})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (.6 + k), 0, 7); ctx.fill();
-    } else if (p.kind === "rock") {
-      p.vy += unit() * 1.2 * dt; p.rot += p.vr * dt;
-      ctx.globalAlpha = 1 - k; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.drawImage(p.sprite, -p.size, -p.size, p.size * 2, p.size * 2); ctx.restore(); ctx.globalAlpha = 1;
-    } else if (p.kind === "flash") {
-      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size); g.addColorStop(0, `rgba(255,244,224,${1 - k})`); g.addColorStop(1, "rgba(255,200,120,0)");
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 7); ctx.fill();
-    } else {
-      p.vx *= .96; p.vy *= .96;
-      ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = p.color; ctx.globalAlpha = 1 - k;
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (p.kind === "fire" ? (1 - k * .5) : 1), 0, 7); ctx.fill();
-      ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
-    }
+    if (p.vx !== undefined) { p.x += p.vx * dt; p.y += p.vy * dt; }
+    if (p.kind === "bola") { p.vx *= .95; p.vy *= .95; const s = p.size * (1 + k * p.grow); ctx.globalAlpha = (1 - k) * .9; ctx.drawImage(p.spr, p.x - s / 2, p.y - s / 2, s, s); }
+    else if (p.kind === "luz") { const s = p.size * (.6 + k); ctx.globalAlpha = 1 - k; ctx.drawImage(FUEGO, p.x - s / 2, p.y - s / 2, s, s); }
+    else if (p.kind === "spark") { p.vx *= .95; p.vy = p.vy * .95 + (p.g ? unit() * .6 * dt : 0); ctx.fillStyle = p.color; ctx.globalAlpha = 1 - k; ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size); }
+  }
+  ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+  for (const p of parts) {
+    const k = p.life / p.max; if (k >= 1) continue;
+    if (p.kind === "humo") { p.vx *= .98; p.vy *= .98; ctx.fillStyle = `rgba(50,30,70,${.32 * (1 - k)})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (.6 + k), 0, 7); ctx.fill(); }
+    else if (p.kind === "roca" && IMG[p.img]) { p.vy += unit() * 1.2 * dt; p.rot += p.vr * dt; ctx.globalAlpha = 1 - k; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.drawImage(IMG[p.img], -p.size, -p.size, p.size * 2, p.size * 2); ctx.restore(); ctx.globalAlpha = 1; }
+    else if (p.kind === "pieza") { p.vy += unit() * 1.2 * dt; p.rot += p.vr * dt; ctx.globalAlpha = 1 - k; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.color; ctx.fillRect(-p.size, -p.size * .5, p.size * 2, p.size); ctx.restore(); ctx.globalAlpha = 1; }
   }
   parts = parts.filter(p => p.life < p.max);
-  if (parts.length > 900) parts.splice(0, parts.length - 900);
+  if (parts.length > 1000) parts.splice(0, parts.length - 1000);
   for (const p of pops) {
-    p.t += dt; const k = p.t / 1; if (k >= 1) continue;
-    const fs = unit() * .2 * p.size * (k < .15 ? k / .15 * 1.3 : 1);
-    ctx.font = `400 ${fs}px Bungee`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.globalAlpha = 1 - Math.max(0, k - .6) / .4;
-    ctx.fillStyle = "#07051a"; ctx.fillText(p.text, p.x + fs * .08, p.y - k * unit() * .4 + fs * .08);
+    p.t += dt; const k = p.t; if (k >= 1) continue;
+    const fs = unit() * .22 * p.size * (k < .15 ? k / .15 * 1.3 : 1);
+    ctx.font = `italic 900 ${fs}px Saira`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.globalAlpha = 1 - Math.max(0, k - .6) / .4;
+    ctx.fillStyle = "#1a0830"; ctx.fillText(p.text, p.x + fs * .06, p.y - k * unit() * .4 + fs * .06);
     ctx.fillStyle = p.color; ctx.fillText(p.text, p.x, p.y - k * unit() * .4); ctx.globalAlpha = 1;
   }
   pops = pops.filter(p => p.t < 1);
 }
 function drawHands(now) {
   for (const h of hands) {
-    const r = unit() * (.09 + h.ring * .14), on = h.pinched;
-    ctx.save(); ctx.translate(h.x, h.y); ctx.rotate(now / 600 * (on ? 3 : 1));
-    // brillo: un trazo ancho y tenue abajo (el desenfoque de sombra de canvas es muy lento)
-    const col = on ? "255,90,54" : "92,255,200";
-    for (const [w, a] of [[10, .18], [3, 1]]) {
-      ctx.strokeStyle = `rgba(${col},${a})`; ctx.lineWidth = w * DPR; ctx.beginPath();
-      for (let i = 0; i < 4; i++) { const a0 = i * Math.PI / 2; ctx.moveTo(Math.cos(a0 - .5) * r, Math.sin(a0 - .5) * r); ctx.arc(0, 0, r, a0 - .5, a0 + .5); ctx.moveTo(Math.cos(a0) * (r + 4 * DPR), Math.sin(a0) * (r + 4 * DPR)); ctx.lineTo(Math.cos(a0) * (r + 14 * DPR), Math.sin(a0) * (r + 14 * DPR)); }
+    const r = unit() * (.08 + h.ring * .13), on = h.pinched, col = on ? "255,217,138" : "227,200,255";
+    ctx.save(); ctx.translate(h.x, h.y); ctx.rotate(now / 700);
+    for (const [w, a] of [[9, .2], [2.5, 1]]) {
+      ctx.strokeStyle = `rgba(${col},${a})`; ctx.lineWidth = w; ctx.beginPath();
+      for (let i = 0; i < 3; i++) { const a0 = i * Math.PI * 2 / 3; ctx.moveTo(Math.cos(a0) * r, Math.sin(a0) * r); ctx.arc(0, 0, r, a0, a0 + 1.4); }
       ctx.stroke();
     }
-    ctx.fillStyle = on ? "#ff5a36" : "#fff4e0"; ctx.beginPath(); ctx.arc(0, 0, 3.5 * DPR, 0, 7); ctx.fill();
+    ctx.fillStyle = `rgb(${col})`; ctx.beginPath(); ctx.arc(0, 0, 3.5, 0, 7); ctx.fill();
     ctx.restore();
   }
-  // el botón se agranda cuando una mano está encima
   for (const id of ["comenzar", "otra"]) {
     const el = $(id), over = hands.length > 0 && hands.some(h => overButton(el, h.x, h.y));
     if (over && !el._cencima) SND.hover();
@@ -836,14 +919,17 @@ function drawHands(now) {
 // en modo prueba va con temporizador: el navegador de pruebas, oculto, no da cuadros
 const nextFrame = Q.has("prueba") ? f => setTimeout(() => f(performance.now()), 33) : f => requestAnimationFrame(f);
 let last = performance.now(), lastVideoT = -1, faceTurn = 0;
+const dbg = {}, perf = { frames: 0, t: 0, fps: 0, draw: 0, hand: 0, face: 0 };
+const fpsEl = Q.has("fps") ? Object.assign(document.body.appendChild(document.createElement("div")), { style: "position:fixed;left:8px;bottom:6px;z-index:40;font:12px monospace;background:#000a;color:#7dffb5;padding:4px 8px" }) : null;
+const setTxt = (el, v) => { if (el._v !== v) { el._v = v; el.textContent = v; } };
+const setCss = (el, k, v) => { if (el["_" + k] !== v) { el["_" + k] = v; el.style[k] = v; } };
+const setCls = (el, c, on) => { if (el["_c" + c] !== on) { el["_c" + c] = on; el.classList.toggle(c, on); } };
 function loop(now) {
   nextFrame(loop);
   const dt = Math.min(.05, (now - last) / 1000); last = now;
   if (state === "off" || !srcW) return;
-  // detección: un solo modelo por cuadro (dos de manos por uno de cara) y solo si la cámara trae un cuadro nuevo;
-  // así el dibujo nunca espera a los dos modelos juntos
-  const ready = src !== vid || vid.readyState >= 2;
-  const t0 = performance.now();
+  // un solo modelo por cuadro (dos de manos por uno de cara), solo con un cuadro nuevo de la cámara
+  const ready = src !== vid || vid.readyState >= 2, t0 = performance.now();
   if (ready && faceLM && handLM && (src !== vid || vid.currentTime !== lastVideoT)) {
     lastVideoT = vid.currentTime;
     const turn = faceTurn++ % 3;
@@ -855,58 +941,52 @@ function loop(now) {
       perf.hand = lerp(perf.hand, performance.now() - t0, .2);
     }
   } else if (mouseHand) updateHands(null, now);
-  // pausa si el jugador se va a la mitad
   const gone = !player;
   if (state === "juego") {
-    if (gone) { lostT += dt; } else lostT = 0;
+    lostT = gone ? lostT + dt : 0;
     const p = lostT > .5;
     if (p !== paused) { paused = p; $("pausa").classList.toggle("oculto", !p); }
   } else if (paused) { paused = false; $("pausa").classList.add("oculto"); }
-  setCls($("aviso"), "oculto", !gone || state !== "espera");
-  setCls($("comenzar"), "apagado", gone);
-
+  // espera: buscando → detectado → aparece el botón
+  if (state === "espera") {
+    const locked = !gone && now - lockT > 650;
+    setCls($("busca"), "oculto", !gone);
+    setCls($("hallado"), "oculto", !locked);
+    setCls($("comenzar"), "oculto", !(locked && now - lockT > 1100));
+  }
   if (state === "juego" && !paused) {
-    const el = (now - gameStart) / 1000;
     tLeft -= dt;
-    const k = Math.max(0, tLeft) / DUR;
-    setTxt($("seg"), String(Math.max(0, Math.ceil(tLeft)))); setCss($("arco"), "strokeDashoffset", String(Math.round(289 * (1 - k))));
-    setCss($("arco"), "stroke", tLeft < 5.5 ? "#ff5a36" : tLeft < 15 ? "#ffc93c" : "#5cffc8");
-    if (tLeft < 5.5 && !$("reloj").classList.contains("alerta")) $("reloj").classList.add("alerta");
+    const k = Math.max(0, tLeft) / DUR, elapsed = DUR - tLeft;
+    setTxt($("seg"), String(Math.max(0, Math.ceil(tLeft)))); setCss($("arco"), "strokeDashoffset", String(Math.round(295 * (1 - k))));
+    setCss($("arco"), "stroke", tLeft < 5.5 ? "#ff3b4e" : tLeft < 15 ? "#e6b450" : "#c86bff");
+    setCls($("reloj"), "alerta", tLeft < 5.5);
     if (tLeft < 5.5 && Math.ceil(tLeft) !== loop.lastS) { loop.lastS = Math.ceil(tLeft); SND.alarm(); }
     SND.intensity(.4 + (1 - k) * .6);
-    spawnT -= dt; starT -= dt;
-    const elapsed = DUR - tLeft;
+    spawnT -= dt; satT -= dt;
     if (spawnT <= 0) { spawnRock(elapsed); if (elapsed > 18 && Math.random() < .35) spawnRock(elapsed); spawnT = lerp(1.3, .6, elapsed / DUR); }
-    if (starT <= 0) { spawnTwinkle(); starT = rnd(2.2, 3.6); }
+    if (satT <= 0) { spawnSat(); satT = rnd(3.2, 4.8); }
+    if (shipPlan.length && elapsed >= shipPlan[0]) { shipPlan.shift(); spawnShip(); }
     if (tLeft <= 0) endGame(true);
   }
-  // dibujo
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   if (shake > .5) { ctx.translate(rnd(-shake, shake), rnd(-shake, shake)); shake *= Math.pow(.02, dt); } else shake = 0;
   drawBackground(now);
+  drawScanner(now);
+  drawShips(dt, now);
   drawHelmet(now);
   drawEarth(now, dt);
-  drawTwinkles(dt, now);
+  drawSats(dt, now);
   drawRocks(dt, now);
   drawFx(dt);
   drawHands(now);
-  // medidor (?fps=1): cuadros por segundo y cuánto tarda cada modelo
   perf.frames++; perf.draw = lerp(perf.draw, performance.now() - t0, .1);
   if (now - perf.t > 1000) {
     perf.fps = perf.frames * 1000 / (now - perf.t); perf.frames = 0; perf.t = now;
     if (fpsEl) fpsEl.textContent = `${perf.fps.toFixed(0)} fps · cuadro ${perf.draw.toFixed(0)} ms · manos ${perf.hand.toFixed(0)} ms · cara ${perf.face.toFixed(0)} ms · ${W}×${H}`;
   }
 }
-const dbg = {}, perf = { frames: 0, t: 0, fps: 0, draw: 0, hand: 0, face: 0 };
-const fpsEl = Q.has("fps") ? Object.assign(document.body.appendChild(document.createElement("div")), { style: "position:fixed;left:8px;bottom:6px;z-index:40;font:12px monospace;background:#000a;color:#5cffc8;padding:4px 8px" }) : null;
-// el HUD solo se toca cuando cambia (escribir en la página cada cuadro también cuesta)
-const setTxt = (el, v) => { if (el._v !== v) { el._v = v; el.textContent = v; } };
-const setCss = (el, k, v) => { if (el["_" + k] !== v) { el["_" + k] = v; el.style[k] = v; } };
-const setCls = (el, c, on) => { if (el["_c" + c] !== on) { el["_c" + c] = on; el.classList.toggle(c, on); } };
 
 // ================= Encender =================
-// el título salta letra por letra
-$("h1").innerHTML = [...$("h1").textContent].map((ch, i) => ch === " " ? "<br>" : `<span style="animation-delay:${i * .07}s">${ch}</span>`).join("");
 listCams();
 $("go").onclick = async () => {
   $("err").textContent = ""; $("go").disabled = true; $("go").textContent = "Encendiendo…";
@@ -914,24 +994,23 @@ $("go").onclick = async () => {
   try {
     const models = loadModels();
     if (Q.get("prueba")) await startTest(Q.get("prueba")); else await startCam();
-    await document.fonts.ready;
+    await Promise.all([document.fonts.ready, ART]);
     resize();
     await models;
     $("encender").style.display = "none";
-    state = "espera"; SND.music(true, .08);
+    toAttract();
   } catch (e) {
     console.error(e);
     $("err").textContent = e.name === "NotAllowedError" ? "Necesitamos permiso para usar la cámara." : "No se pudo encender: " + (e.message || e);
     $("go").disabled = false; $("go").textContent = "Intentar otra vez";
   }
 };
-// los botones también responden al clic (por si el operador usa el mouse)
 $("comenzar").addEventListener("click", e => e.stopPropagation());
 $("otra").addEventListener("click", e => e.stopPropagation());
 if (Q.get("auto")) $("go").click();
-window.__juego = { dbg, st: () => ({ state, score, lives, tLeft, rocks: rocks.length, twinkles: twinkles.length, player: player && { h: player.h, c: player.c }, hands: hands.length, paused }),
-  pinch: (x, y) => onPinch(x * DPR, y * DPR, performance.now()),
-  terminar: w => { if (state === "espera") { state = "juego"; } endGame(w); }, rocks: () => rocks, earth: () => earthPos(), dpr: () => DPR };
+window.__juego = { dbg, st: () => ({ state, score, lives, tLeft, rocks: rocks.length, sats: sats.length, ships: ships.length, player: player && { h: player.h, c: player.c }, hands: hands.length, paused }),
+  pinch: (x, y) => onPinch(x, y, performance.now()), terminar: w => { if (state === "espera") state = "juego"; endGame(w); },
+  rocks: () => rocks, sats: () => sats, ships: () => ships, nave: () => spawnShip(), sat: () => spawnSat() };
 nextFrame(loop);
 </script>
 </body>
