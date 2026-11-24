@@ -47,6 +47,7 @@
   @property --a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
   @keyframes gira { to { --a: 360deg; } }
   #qr canvas { width: 100%; height: auto; display: block; border-radius: 16px; background: #fff; }
+  #qr p { margin: 0; }
   #qr .t { margin: .75em 0 .2em; font-weight: 800; font-size: clamp(14px, 1.15vw, 24px); line-height: 1.15; }
   #qr .s { font-size: clamp(11px, .8vw, 16px); color: var(--lila); }
   #qr .c { margin-top: .5em; font: 500 clamp(11px, .8vw, 16px) "IBM Plex Mono", monospace; letter-spacing: .25em; color: var(--oro); }
@@ -104,7 +105,7 @@
 <canvas id="gl"></canvas>
 <div class="ui" id="titulo"><h1 id="h1"></h1></div>
 <img class="ui" id="logo" src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR">
-<div class="ui" id="qr"><canvas id="qrc" width="600" height="600"></canvas></div>
+<div class="ui" id="qr"><canvas id="qrc" width="600" height="600"></canvas><p class="t">Escanea y pinta el tuyo</p><p class="s">Suéltalo aquí y compártelo en vivo ✦</p></div>
 <div class="ui" id="ayuda"><kbd>F</kbd> pantalla completa · <kbd>Q</kbd> mostrar u ocultar el QR · <kbd>D</kbd> mostrar u ocultar los deseos · doble clic en una figura para quitarla<br>Mundo: <span id="mundos"></span><br>Para un iPad en el evento (pintan una persona tras otra): <a id="kiosco" target="_blank" style="color:#ffbe55;pointer-events:auto"></a></div>
 <div class="ui" id="pmundos"></div>
 <a class="ui" id="pintar" href="#">✦ Pinta la tuya</a>
