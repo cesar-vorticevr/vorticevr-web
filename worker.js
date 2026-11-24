@@ -11,6 +11,7 @@
 import { cursosApi, cursosStripeEvent, cursosTick, cursosReady } from "./_cursos/api.js";
 import { mensajesApi } from "./_mensajes/api.js";
 import { pantallaApi, pantallaLimpieza } from "./_pantalla/api.js";
+import { cabinaApi, cabinaLimpieza } from "./_cabina/api.js";
 import { librosApi, librosWebhook, cleanLibro, publicLibro, lockedMediaOk, newBookId, LIBRO } from "./_libros/api.js";
 
 const ROOT_DEFAULT = "vorticevr.mx";
@@ -95,6 +96,7 @@ export default {
     await env.DB.prepare("DELETE FROM ratelimit WHERE reset < ?").bind(Date.now()).run();
     await reminders(env).catch(e => console.error("avisos", e.message));
     await pantallaLimpieza(env).catch(e => console.error("pantalla", e.message));
+    await cabinaLimpieza(env).catch(e => console.error("cabina", e.message));
   },
 };
 
@@ -270,6 +272,7 @@ async function api(request, env, ctx, url) {
   if (path.startsWith("/api/cursos/")) return cursosApi(request, env, ctx, url, path, cursosH());
   if (path === "/api/biblioteca" || path.startsWith("/api/libro/")) { const r = await librosApi(request, env, ctx, url, path, librosH()); if (r) return r; }
   if (path.startsWith("/api/pantalla/")) { const r = await pantallaApi(request, env, ctx, url, path, ip, { json, limit, auth, isAdmin }); if (r) return r; }   // pantalla mágica (_pantalla/api.js)
+  if (path.startsWith("/api/cabina/")) { const r = await cabinaApi(request, env, ctx, url, path, ip, { json, limit }); if (r) return r; }   // cabina mágica (_cabina/api.js)
 
   // public: one experience's settings
   let m = path.match(/^\/api\/exp\/([a-z0-9-]+)$/);

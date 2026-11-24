@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tu foto · Cabina mágica · Vórtice VR</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../../assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #05020b; --lila: #d2b8ff; --morado: #8b3fd6; --oro: #ffbe55; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: radial-gradient(ellipse at 50% 0%, rgba(139,63,214,.45), transparent 60%), var(--bg); color: #fff; font-family: Sora, system-ui, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 22px 16px 40px; text-align: center; }
+  .logo { height: 28px; margin: 4px auto 14px; display: block; }
+  .k { font: 500 12px "IBM Plex Mono", monospace; letter-spacing: .3em; text-transform: uppercase; color: var(--oro); }
+  h1 { margin: .3em 0 .5em; font-weight: 800; font-size: 30px; letter-spacing: -.02em;
+    background: linear-gradient(100deg, #fff 0%, var(--lila) 40%, #ffd9a0 60%, #fff 80%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: brillo 7s linear infinite; }
+  @keyframes brillo { to { background-position: -250% 0; } }
+  #foto { width: 100%; border-radius: 14px; display: block; box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 0 60px rgba(139,63,214,.4); animation: entra .8s cubic-bezier(.2,1.4,.4,1); background: rgba(255,255,255,.05); min-height: 180px; }
+  @keyframes entra { from { transform: rotate(-5deg) scale(.7) translateY(40px); opacity: 0; } }
+  .btns { display: grid; gap: 10px; margin: 20px 0 8px; }
+  a.b, button.b { display: block; font: inherit; font-weight: 800; font-size: 18px; text-decoration: none; border: 0; cursor: pointer; border-radius: 999px; padding: 16px 20px; }
+  .gold { background: linear-gradient(135deg, #ffd37e, var(--oro) 45%, #ff9d3d); color: #2a1300; box-shadow: 0 10px 30px rgba(255,190,85,.3); }
+  .ghost { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.25) !important; font-weight: 600 !important; }
+  .tip { font-size: 13px; color: var(--lila); opacity: .85; line-height: 1.5; margin: 6px 0 0; }
+  .cta { margin-top: 30px; padding: 20px; border-radius: 18px; background: rgba(255,255,255,.05); border: 1px solid rgba(210,184,255,.2); }
+  .cta p { margin: 0 0 12px; color: #e9dcff; line-height: 1.5; }
+  .cta a { color: var(--oro); font-weight: 800; text-decoration: none; }
+  #err { display: none; padding: 40px 10px; color: #e9dcff; line-height: 1.6; }
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="../../assets/logo-vorticevr-blanco.png" alt="Vórtice VR">
+  <div class="k">✦ Cabina mágica ✦</div>
+  <h1>¡Aquí está tu foto!</h1>
+  <div id="ok">
+    <img id="foto" alt="Tu foto de la cabina mágica">
+    <div class="btns">
+      <button class="b gold" id="guardar">Guardar mi foto</button>
+      <a class="b ghost" id="bajar" download="cabina-magica-vorticevr.jpg">⬇ Descargar</a>
+    </div>
+    <p class="tip" id="tip">Si no se guarda, mantén el dedo sobre la foto y elige «Guardar imagen».<br>La foto se borra en 3 días.</p>
+  </div>
+  <div id="err">Esta foto ya no está disponible.<br>Las fotos de la cabina se guardan solo 3 días.</div>
+  <div class="cta">
+    <p>¿Te gustó? Crea tus propios filtros, juegos y experiencias de realidad aumentada, sin programar.</p>
+    <a href="/?utm_source=cabina&utm_medium=foto&utm_campaign=cabina-magica">Conoce Vórtice VR →</a>
+  </div>
+</main>
+<script>
+  const id = new URLSearchParams(location.search).get("id") || "";
+  const src = "/api/cabina/foto/" + encodeURIComponent(id);
+  const img = document.getElementById("foto");
+  const fail = () => { document.getElementById("ok").style.display = "none"; document.getElementById("err").style.display = "block"; };
+  if (!/^[a-z0-9]{20}$/.test(id)) fail();
+  else {
+    img.onerror = fail; img.src = src;
+    document.getElementById("bajar").href = src + "?bajar=1";
+    let file = null;
+    fetch(src).then(r => r.ok ? r.blob() : null).then(b => { if (b) file = new File([b], "cabina-magica-vorticevr.jpg", { type: "image/jpeg" }); });
+    document.getElementById("guardar").onclick = async () => {
+      // en iPhone y Android, compartir el archivo deja «Guardar imagen» en la galería
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === "AbortError") return; }
+      }
+      location.href = src + "?bajar=1";
+    };
+  }
+</script>
+</body>
+</html>
