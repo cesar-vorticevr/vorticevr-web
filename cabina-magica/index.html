@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Cabina mágica · Vórtice VR</title>
+<meta name="description" content="Júntense frente a la cámara: cada cara recibe un personaje mágico y se llevan su foto grupal.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="../assets/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #05020b; --lila: #d2b8ff; --morado: #8b3fd6; --oro: #ffbe55; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: #fff; font-family: Sora, system-ui, sans-serif; }
+  body.quieto { cursor: none; }
+  canvas#cv { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  video, #srcImg { display: none; }
+  button { font: inherit; cursor: pointer; border: 0; }
+
+  /* intro */
+  #intro { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 24px; text-align: center;
+    background: radial-gradient(ellipse at 50% 35%, rgba(139,63,214,.45), transparent 60%), var(--bg); }
+  #intro .k { font: 500 clamp(11px, 1vw, 16px) "IBM Plex Mono", monospace; letter-spacing: .35em; text-transform: uppercase; color: var(--oro); }
+  #intro h1 { margin: .3em 0 .25em; font-weight: 800; font-size: clamp(44px, 8vw, 128px); line-height: .95; letter-spacing: -.03em;
+    background: linear-gradient(100deg, #fff 0%, var(--lila) 40%, #ffd9a0 60%, #fff 80%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: brillo 7s linear infinite; filter: drop-shadow(0 0 30px rgba(139,63,214,.6)); }
+  @keyframes brillo { to { background-position: -250% 0; } }
+  #intro p { margin: 0 auto; max-width: 640px; font-size: clamp(16px, 1.6vw, 22px); line-height: 1.5; color: #e9dcff; }
+  #intro .pasos { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin: 28px 0 32px; }
+  #intro .paso { background: rgba(255,255,255,.06); border: 1px solid rgba(210,184,255,.25); border-radius: 18px; padding: 14px 18px; min-width: 170px; font-size: 15px; }
+  #intro .paso b { display: block; font-size: 26px; color: var(--oro); }
+  .gold { background: linear-gradient(135deg, #ffd37e, var(--oro) 45%, #ff9d3d); color: #2a1300; font-weight: 800; border-radius: 999px; padding: 18px 40px; font-size: 20px;
+    box-shadow: 0 10px 40px rgba(255,190,85,.35), inset 0 1px 0 rgba(255,255,255,.6); transition: transform .15s; }
+  .gold:hover { transform: translateY(-2px) scale(1.03); }
+  .ghost { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 12px 22px; font-weight: 600; backdrop-filter: blur(8px); }
+  #camSel { margin-top: 16px; background: rgba(255,255,255,.08); color: #fff; border: 1px solid rgba(255,255,255,.2); border-radius: 10px; padding: 8px 12px; font: inherit; font-size: 14px; display: none; }
+  #camSel option { color: #000; }
+  #err { margin-top: 18px; color: #ff9b9b; font-size: 15px; min-height: 1em; }
+  #intro .logo { position: absolute; top: 28px; left: 50%; transform: translateX(-50%); height: 34px; opacity: .95; }
+
+  /* en vivo */
+  .ui { position: fixed; z-index: 3; transition: opacity .4s; }
+  body.foto .ui, body.resultado .ui { opacity: 0; pointer-events: none; }
+  #top { top: 22px; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; }
+  #top img { height: 30px; display: block; margin: 0 auto 8px; filter: drop-shadow(0 2px 8px rgba(0,0,0,.5)); }
+  #top .t { font-weight: 800; font-size: clamp(22px, 2.6vw, 42px); text-shadow: 0 2px 18px rgba(0,0,0,.6), 0 0 30px rgba(139,63,214,.7); }
+  #top .s { margin-top: 4px; font-size: clamp(13px, 1.2vw, 18px); color: #f2e8ff; text-shadow: 0 1px 8px rgba(0,0,0,.8); }
+  #bar { bottom: 26px; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; align-items: center; }
+  #bar .gold { padding: 20px 46px; font-size: 22px; }
+  #gente { position: fixed; top: 24px; right: 26px; z-index: 3; pointer-events: none; font: 500 14px "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase;
+    background: rgba(5,2,11,.55); border: 1px solid rgba(210,184,255,.3); padding: 8px 14px; border-radius: 999px; }
+  #gente b { color: var(--oro); }
+  #pista { position: fixed; left: 50%; bottom: 118px; transform: translateX(-50%); z-index: 3; pointer-events: none; font-size: clamp(15px, 1.4vw, 20px); font-weight: 600;
+    background: rgba(5,2,11,.6); border: 1px solid rgba(255,190,85,.4); padding: 10px 20px; border-radius: 999px; white-space: nowrap; transition: opacity .5s; }
+  #cargando { position: fixed; inset: 0; z-index: 4; display: none; place-items: center; font-size: 18px; color: var(--lila); background: rgba(5,2,11,.75); }
+  body.cargando #cargando { display: grid; }
+
+  /* cuenta regresiva y flash */
+  #num { position: fixed; inset: 0; z-index: 6; display: grid; place-items: center; pointer-events: none; font-weight: 800; font-size: 32vh; color: #fff;
+    text-shadow: 0 0 60px rgba(255,190,85,.9), 0 0 120px rgba(139,63,214,.8); opacity: 0; }
+  #num.on { animation: num .9s ease-out; }
+  @keyframes num { 0% { opacity: 0; transform: scale(2.2); } 25% { opacity: 1; transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(.8); } }
+  #flash { position: fixed; inset: 0; z-index: 7; background: #fff; opacity: 0; pointer-events: none; }
+  #flash.on { animation: flash .7s ease-out; }
+  @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* resultado */
+  #res { position: fixed; inset: 0; z-index: 8; display: none; place-items: center; padding: 3vh 3vw; background: rgba(5,2,11,.82); backdrop-filter: blur(10px); }
+  body.resultado #res { display: grid; }
+  #res .box { display: flex; flex-direction: column; align-items: center; gap: 18px; max-height: 100%; }
+  #res img { max-width: min(92vw, 1100px); max-height: 74vh; border-radius: 14px; box-shadow: 0 30px 90px rgba(0,0,0,.6), 0 0 80px rgba(139,63,214,.45);
+    animation: entra .8s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes entra { from { transform: rotate(-6deg) scale(.6) translateY(60px); opacity: 0; } }
+  #res .acc { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  #res .acc .gold { padding: 15px 32px; font-size: 18px; }
+  #res .cierra { font-size: 13px; color: var(--lila); opacity: .8; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<video id="vid" playsinline muted autoplay></video>
+
+<section id="intro">
+  <img class="logo" src="../assets/logo-vorticevr-blanco.png" alt="Vórtice VR">
+  <div>
+    <div class="k">✦ Vórtice VR ✦</div>
+    <h1>Cabina mágica</h1>
+    <p>Júntense frente a la cámara: cada cara recibe su propio personaje mágico.</p>
+    <div class="pasos">
+      <div class="paso"><b>1</b>Párate con tus amigos</div>
+      <div class="paso"><b>2</b>Abre la boca y lanza magia</div>
+      <div class="paso"><b>3</b>¡Foto grupal!</div>
+    </div>
+    <button class="gold" id="go">Encender la cabina</button>
+    <div><select id="camSel" aria-label="Cámara"></select></div>
+    <div id="err"></div>
+  </div>
+</section>
+
+<div id="top" class="ui"><img src="../assets/logo-vorticevr-blanco.png" alt=""><div class="t">Cabina mágica</div><div class="s">¿Qué personaje te tocó?</div></div>
+<div id="gente" class="ui"><b>0</b> caras</div>
+<div id="pista" class="ui">Júntense: caben hasta 6 personas</div>
+<div id="bar" class="ui">
+  <button class="ghost" id="mezcla" title="C">🔀 Cambiar</button>
+  <button class="gold" id="snap" title="Espacio">📸 ¡Foto!</button>
+  <button class="ghost" id="full" title="F">⛶</button>
+</div>
+<div id="cargando">Preparando la magia…</div>
+<div id="num"></div>
+<div id="flash"></div>
+
+<section id="res">
+  <div class="box">
+    <img id="foto" alt="Tu foto de la cabina mágica">
+    <div class="acc">
+      <button class="gold" id="bajar">⬇ Descargar</button>
+      <button class="ghost" id="compartir" hidden>Compartir</button>
+      <button class="ghost" id="otra">📸 Otra foto</button>
+    </div>
+    <div class="cierra" id="cierra"></div>
+  </div>
+</section>
+
+<script type="module">
+import { sfx } from "../assets/sonidos.js";
+
+const MP = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+const MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+const ART = "../assets/filtros/";
+const Q = new URLSearchParams(location.search);
+const MAX_FACES = 6;
+
+// ---------- Personajes (arte de los filtros; medidas en cm sobre una cara de ~15 cm, como en assets/filtro.js) ----------
+// [imagen, punto, ancho cm, {y | dy, x, r}]; ratio = alto/ancho de cada WebP
+const RATIO = {"corona-flores":504/768,"lentes-catrina":378/768,"sombrero-copa":509/768,"lentes-catrin":303/768,"bigote-catrin":218/768,"mono-catrin":462/768,
+  "gorro-santa":507/768,"diadema-reno":505/768,"nariz-reno":371/384,"lentes-navidad":339/768,"gorro-fiesta":768/515,"lentes-fiesta":348/768,"orejas-gato":335/768,
+  "nariz-gato":225/768,"lentes-gato":273/768,"lentes-corazon":308/768,"diadema-corazones":412/768,"corazon-mejilla":317/384,"lentes-vortice":362/768,
+  "particula-cempasuchil":250/256,"particula-calaverita":256/204,"particula-copo":256/237,"particula-esfera":256/210,"particula-estrella":255/256,
+  "particula-serpentina":256/97,"particula-corazon":210/256,"particula-huella":214/256,"particula-petalo":256/255};
+const PERSONAJES = [
+  { id: "catrina", name: "La Catrina", tema: "muertos", color: "#ff7a3d", fx: ["particula-cempasuchil", "particula-petalo"],
+    acc: [["corona-flores", "cabeza", 19, { dy: -0.6 }], ["lentes-catrina", "ojos", 16.5, { y: -0.6 }]] },
+  { id: "catrin", name: "El Catrín", tema: "muertos", color: "#ffbe55", fx: ["particula-calaverita", "particula-cempasuchil"],
+    acc: [["sombrero-copa", "cabeza", 19.5, { dy: -0.2 }], ["lentes-catrin", "ojos", 16, { y: -0.6 }], ["bigote-catrin", "boca", 9.5, { y: 0.5 }], ["mono-catrin", "barbilla", 8.5, { dy: 0.8 }]] },
+  { id: "santa", name: "Santa Claus", tema: "navidad", color: "#ff4d5e", fx: ["particula-copo", "particula-esfera"],
+    acc: [["gorro-santa", "cabeza", 19, { dy: -0.2 }], ["lentes-navidad", "ojos", 16.5, { y: -0.6 }]] },
+  { id: "reno", name: "El Reno", tema: "navidad", color: "#c98a4b", fx: ["particula-copo", "particula-estrella"],
+    acc: [["diadema-reno", "cabeza", 21, { dy: -0.5 }], ["nariz-reno", "nariz", 3.4, { y: 0.1 }]] },
+  { id: "fiesta", name: "Rey de la fiesta", tema: "fiesta", color: "#3fd6c1", fx: ["particula-serpentina", "particula-estrella"],
+    acc: [["gorro-fiesta", "cabeza", 8, { dy: 1, x: 1.5, r: -12 }], ["lentes-fiesta", "ojos", 17, { y: -0.6 }]] },
+  { id: "gatito", name: "Gatito", tema: "gatito", color: "#ff9ad5", fx: ["particula-huella", "particula-corazon"],
+    acc: [["orejas-gato", "cabeza", 19, { dy: -0.4 }], ["nariz-gato", "nariz", 13, { y: -0.7 }], ["lentes-gato", "ojos", 16.5, { y: -0.6 }]] },
+  { id: "amor", name: "Cupido", tema: "amor", color: "#ff5b9a", fx: ["particula-corazon"],
+    acc: [["diadema-corazones", "cabeza", 19, { dy: -0.4 }], ["lentes-corazon", "ojos", 16.5, { y: -0.6 }], ["corazon-mejilla", "mejillaI", 2.8, { y: 0 }], ["corazon-mejilla", "mejillaD", 2.8, { y: 0 }]] },
+  { id: "vortice", name: "Viajero del vórtice", tema: "vortice", color: "#b48bff", fx: ["particula-estrella"],
+    acc: [["lentes-vortice", "ojos", 17, { y: -0.4 }]] },
+];
+const TEMA = Q.get("tema");
+const POOL = TEMA ? PERSONAJES.filter(p => TEMA.split(",").includes(p.tema)) : PERSONAJES;
+const LM = { cabeza: 10, ojos: 168, nariz: 4, boca: 0, barbilla: 152, mejillaI: 205, mejillaD: 425 };
+for (const p of PERSONAJES) {
+  p.items = p.acc.map(([key, at, s, o]) => {
+    const h = s * RATIO[key];
+    const y = o.y != null ? o.y : at === "barbilla" ? -((o.dy || 0) + h / 2) : (o.dy || 0) + h / 2;
+    return { key, at, s, h, x: o.x || 0, y, r: (o.r || 0) * Math.PI / 180 };
+  });
+  // hasta dónde llega lo de la cabeza (para poner el nombre arriba)
+  p.top = Math.max(4, ...p.items.filter(i => i.at === "cabeza").map(i => i.y + i.h / 2));
+}
+
+const IMG = {};
+function loadImg(src) { return new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; }); }
+const LOGO = loadImg("../assets/logo-vorticevr-blanco.png");
+async function loadArt() {
+  const keys = new Set(Object.keys(RATIO));
+  await Promise.all([...keys].map(async k => { IMG[k] = await loadImg(ART + k + ".webp"); }));
+}
+
+// ---------- Cámara / fuente ----------
+const $ = id => document.getElementById(id);
+const cv = $("cv"), ctx = cv.getContext("2d"), vid = $("vid");
+let src = vid, srcW = 0, srcH = 0, mirror = true;
+let landmarker = null;
+
+async function listCams() {
+  try {
+    const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "videoinput");
+    if (devs.length > 1) {
+      const sel = $("camSel"); sel.innerHTML = devs.map((d, i) => `<option value="${d.deviceId}">${d.label || "Cámara " + (i + 1)}</option>`).join("");
+      const saved = localStorage.getItem("vvr-cabina-cam"); if (saved && devs.some(d => d.deviceId === saved)) sel.value = saved;
+      sel.style.display = "inline-block";
+    }
+  } catch {}
+}
+async function startCam() {
+  const sel = $("camSel"), id = sel.style.display !== "none" && sel.value;
+  if (id) try { localStorage.setItem("vvr-cabina-cam", id); } catch {}
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: false,
+    video: id ? { deviceId: { exact: id }, width: { ideal: 1920 }, height: { ideal: 1080 } } : { facingMode: "user", width: { ideal: 1920 }, height: { ideal: 1080 } } });
+  vid.srcObject = stream; await vid.play();
+  srcW = vid.videoWidth; srcH = vid.videoHeight;
+}
+async function startTest(url) {   // ?prueba=<imagen> : para probar sin cámara
+  const img = new Image(); img.crossOrigin = "anonymous"; img.id = "srcImg";
+  await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error("No cargó la imagen de prueba")); img.src = url; });
+  src = img; srcW = img.naturalWidth; srcH = img.naturalHeight; mirror = false;
+}
+async function loadModel() {
+  const { FaceLandmarker, FilesetResolver } = await import(MP + "/vision_bundle.mjs");
+  const files = await FilesetResolver.forVisionTasks(MP + "/wasm");
+  const opts = d => ({ baseOptions: { modelAssetPath: MODEL, delegate: d }, runningMode: "IMAGE", numFaces: MAX_FACES,
+    outputFaceBlendshapes: true, minFaceDetectionConfidence: 0.45, minFacePresenceConfidence: 0.45, minTrackingConfidence: 0.45 });
+  try { landmarker = await FaceLandmarker.createFromOptions(files, opts("GPU")); }
+  catch { landmarker = await FaceLandmarker.createFromOptions(files, opts("CPU")); }
+}
+
+// ---------- Lienzo ----------
+let W = 0, H = 0, DPR = 1, crop = { sx: 0, sy: 0, sw: 1, sh: 1 };
+function resize() {
+  DPR = Math.min(2, devicePixelRatio || 1);
+  W = cv.width = Math.round(innerWidth * DPR); H = cv.height = Math.round(innerHeight * DPR);
+  fitCrop();
+}
+function fitCrop() {   // la cámara cubre toda la pantalla (se recorta lo que sobra)
+  if (!srcW) return;
+  const s = Math.max(W / srcW, H / srcH), sw = W / s, sh = H / s;
+  crop = { sx: (srcW - sw) / 2, sy: (srcH - sh) / 2, sw, sh };
+}
+addEventListener("resize", resize);
+// punto normalizado de la cámara → pixel del lienzo (en espejo, como un espejo de verdad)
+function toCanvas(p) {
+  const x = ((p.x * srcW) - crop.sx) * W / crop.sw, y = ((p.y * srcH) - crop.sy) * H / crop.sh;
+  return { x: mirror ? W - x : x, y };
+}
+
+// ---------- Detección en mosaico ----------
+// El detector de MediaPipe solo ve caras grandes (de cerca). En una expo la gente está a 1.5–2 m, así que además de la
+// imagen completa se revisan franjas que se enciman (?mosaico=N, 0 = sin franjas): ahí cada cara sale más grande.
+const TILES = Math.max(0, Math.min(5, +(Q.get("mosaico") ?? 3)));
+const tileCv = document.createElement("canvas"), tileCtx = tileCv.getContext("2d", { willReadFrequently: false });
+function detectRect(rx, ry, rw, rh, maxSide) {
+  const s = Math.min(1, maxSide / Math.max(rw, rh));
+  tileCv.width = Math.round(rw * s); tileCv.height = Math.round(rh * s);
+  tileCtx.drawImage(src, rx, ry, rw, rh, 0, 0, tileCv.width, tileCv.height);
+  const r = landmarker.detect(tileCv);
+  return (r.faceLandmarks || []).map((lm, i) => ({
+    lm: lm.map(p => ({ x: (rx + p.x * rw) / srcW, y: (ry + p.y * rh) / srcH, z: p.z })),
+    bs: r.faceBlendshapes?.[i]?.categories,
+    // qué tan centrada quedó la cara en su recorte (las de la orilla pueden salir cortadas)
+    edge: Math.min(lm[4].x, 1 - lm[4].x, lm[4].y, 1 - lm[4].y),
+  }));
+}
+// Cada recorte se revisa por turnos (uno o más por cuadro, según alcance el tiempo) y se guarda su último resultado:
+// así la animación va siempre fluida aunque la computadora sea lenta.
+let regionRes = [], turn = 0;
+function regions() {
+  const { sx, sy, sw, sh } = crop, out = [[sx, sy, sw, sh, 640]];
+  if (TILES > 1) {
+    const tw = Math.min(sw, Math.max(sh * .85, sw / TILES * 1.6)), step = (sw - tw) / (TILES - 1);
+    for (let i = 0; i < TILES; i++) out.push([sx + i * step, sy, tw, sh, 480]);
+  }
+  return out;
+}
+function detectAll(budget) {
+  const R = regions(), t0 = performance.now();
+  do {
+    turn = (turn + 1) % R.length;
+    regionRes[turn] = { faces: detectRect(...R[turn]), t: performance.now() };
+  } while (performance.now() - t0 < budget && turn !== R.length - 1);
+  const now = performance.now();
+  let found = [];
+  for (let i = 0; i < R.length; i++) if (regionRes[i]) found = found.concat(regionRes[i].faces);
+  // la misma cara vista en varios recortes: se queda la más centrada
+  const out = [];
+  for (const f of found.sort((a, b) => b.edge - a.edge)) {
+    const n = f.lm[4], w = Math.abs(f.lm[454].x - f.lm[234].x);
+    if (out.some(o => Math.hypot(o.lm[4].x - n.x, (o.lm[4].y - n.y) * srcH / srcW) < Math.max(w, Math.abs(o.lm[454].x - o.lm[234].x)) * .6)) continue;
+    out.push(f);
+    if (out.length >= MAX_FACES) break;
+  }
+  return { faceLandmarks: out.map(f => f.lm), faceBlendshapes: out.map(f => ({ categories: f.bs })) };
+}
+
+// ---------- Seguimiento de caras ----------
+let tracks = [], nextId = 1, lastTs = -1;
+const sparks = [], parts = [];
+function pickPersonaje(exclude) {
+  const free = POOL.filter(p => !exclude.has(p.id));
+  const list = free.length ? free : POOL;
+  return list[Math.floor(Math.random() * list.length)];
+}
+function geom(lm) {
+  const P = i => toCanvas(lm[i]);
+  const top = P(10), chin = P(152), l = P(234), r = P(454);
+  let ux = top.x - chin.x, uy = top.y - chin.y; const hLen = Math.hypot(ux, uy) || 1; ux /= hLen; uy /= hLen;
+  const wLen = Math.hypot(r.x - l.x, r.y - l.y);
+  const k = Math.max(wLen / 14.5, hLen / 17.5);   // pixeles por cm
+  const pts = {}; for (const [n, i] of Object.entries(LM)) pts[n] = P(i);
+  const m1 = P(13), m2 = P(14);
+  pts.bocaC = { x: (m1.x + m2.x) / 2, y: (m1.y + m2.y) / 2 };
+  return { ux, uy, k, pts, c: P(4) };
+}
+function lerp(a, b, t) { return a + (b - a) * t; }
+function smoothInto(t, g) {
+  if (!t.g) { t.g = JSON.parse(JSON.stringify(g)); return; }
+  const a = 0.5;
+  t.g.ux = lerp(t.g.ux, g.ux, a); t.g.uy = lerp(t.g.uy, g.uy, a); t.g.k = lerp(t.g.k, g.k, a);
+  const n = Math.hypot(t.g.ux, t.g.uy); t.g.ux /= n; t.g.uy /= n;
+  for (const key in g.pts) { t.g.pts[key].x = lerp(t.g.pts[key].x, g.pts[key].x, a); t.g.pts[key].y = lerp(t.g.pts[key].y, g.pts[key].y, a); }
+  t.g.c = g.c;
+}
+function update(res, now) {
+  const faces = (res?.faceLandmarks || []).map((lm, i) => {
+    const g = geom(lm);
+    const bs = res.faceBlendshapes?.[i]?.categories;
+    const jaw = Q.has("boca") ? 1 : bs ? (bs.find(c => c.categoryName === "jawOpen")?.score || 0) : 0;
+    return { g, jaw };
+  });
+  const used = new Set();
+  for (const f of faces) {   // la pista más cercana que no se haya usado
+    let best = null, bd = Infinity;
+    for (const t of tracks) {
+      if (used.has(t)) continue;
+      const d = Math.hypot(t.g.c.x - f.g.c.x, t.g.c.y - f.g.c.y);
+      if (d < bd && d < f.g.k * 14) { bd = d; best = t; }
+    }
+    if (best) { used.add(best); smoothInto(best, f.g); best.seen = now; best.jaw = f.jaw; }
+    else {
+      const t = { id: nextId++, p: pickPersonaje(new Set(tracks.map(t => t.p.id))), born: now, seen: now, jaw: f.jaw, fxT: 0 };
+      smoothInto(t, f.g); tracks.push(t); used.add(t); welcome(t);
+    }
+  }
+  tracks = tracks.filter(t => now - t.seen < 1200);
+  $("gente").innerHTML = `<b>${tracks.length}</b> ${tracks.length === 1 ? "cara" : "caras"}`;
+  hint(tracks.length);
+}
+function welcome(t) {
+  t.born = performance.now();
+  sfx.appear();
+  for (let i = 0; i < 26; i++) burstSpark(t, true);
+}
+let lastHint = "";
+function hint(n) {
+  const txt = n === 0 ? "Párate frente a la cámara" : n === 1 ? "¿Y tus amigos? Caben hasta 6" : n < 4 ? "¡Abran la boca para lanzar magia!" : "¡Qué grupazo! Tómense la foto 📸";
+  if (txt !== lastHint) { lastHint = txt; $("pista").textContent = txt; }
+}
+
+// ---------- Efectos ----------
+function burstSpark(t, big) {
+  const g = t.g, a = Math.random() * Math.PI * 2, rr = g.k * (big ? 6 + Math.random() * 10 : 9 + Math.random() * 5);
+  const cx = g.pts.ojos.x, cy = g.pts.ojos.y;
+  sparks.push({ x: cx + Math.cos(a) * rr, y: cy + Math.sin(a) * rr * 1.2, vx: big ? Math.cos(a) * g.k * 8 : 0, vy: big ? Math.sin(a) * g.k * 8 : -g.k * .6,
+    s: g.k * (big ? .9 + Math.random() * .9 : .5 + Math.random() * .6), life: 0, max: big ? .9 + Math.random() * .5 : 1 + Math.random() * .8, color: Math.random() < .5 ? "#ffffff" : t.p.color });
+}
+// cada destello se dibuja una vez por color (con su resplandor) y luego solo se copia: el resplandor en vivo es lento
+const STAR = {};
+function starSprite(color) {
+  if (STAR[color]) return STAR[color];
+  const S = 96, k = document.createElement("canvas"); k.width = k.height = S;
+  const c = k.getContext("2d"), s = S * .22;
+  c.translate(S / 2, S / 2);
+  const g = c.createRadialGradient(0, 0, 0, 0, 0, S / 2); g.addColorStop(0, color + "88"); g.addColorStop(.35, color + "22"); g.addColorStop(1, color + "00");
+  c.fillStyle = g; c.fillRect(-S / 2, -S / 2, S, S);
+  c.fillStyle = color; c.beginPath();
+  for (let i = 0; i < 8; i++) { const r = i % 2 ? s * .22 : s; const a = i * Math.PI / 4; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+  c.closePath(); c.fill();
+  c.fillStyle = "#fff"; c.beginPath(); c.arc(0, 0, s * .18, 0, 7); c.fill();
+  return STAR[color] = k;
+}
+function star(c, x, y, s, rot, color, alpha) {
+  if (alpha <= 0) return;
+  const k = starSprite(color), d = s / .22;   // tamaño del dibujo para que la estrella mida s
+  c.save(); c.translate(x, y); c.rotate(rot); c.globalAlpha = alpha;
+  c.drawImage(k, -d / 2, -d / 2, d, d); c.restore();
+}
+function mouthFx(t, dt) {
+  if (t.jaw < 0.42) return;
+  t.fxT -= dt; if (t.fxT > 0) return;
+  t.fxT = 0.05;
+  const g = t.g, m = g.pts.bocaC, key = t.p.fx[Math.floor(Math.random() * t.p.fx.length)];
+  // hacia afuera de la cara (para abajo y a los lados)
+  const ang = Math.atan2(-g.uy, -g.ux) + (Math.random() - .5) * 1.8, sp = g.k * (14 + Math.random() * 14);
+  parts.push({ key, x: m.x, y: m.y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, rot: Math.random() * 6, vr: (Math.random() - .5) * 5,
+    s: g.k * (2.2 + Math.random() * 1.8), life: 0, max: 1.4 + Math.random() * .6 });
+  if (Math.random() < .25) sfx.sparkle(2);
+}
+function stepFx(dt) {
+  for (const s of sparks) { s.life += dt; s.x += s.vx * dt; s.y += s.vy * dt; s.vx *= .92; s.vy *= .92; }
+  for (const p of parts) { p.life += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .97; p.vy = p.vy * .97 + 40 * DPR * dt; p.rot += p.vr * dt; }
+  for (let i = sparks.length; i--;) if (sparks[i].life > sparks[i].max) sparks.splice(i, 1);
+  for (let i = parts.length; i--;) if (parts[i].life > parts[i].max) parts.splice(i, 1);
+}
+
+// ---------- Dibujo ----------
+function drawSource(c) {
+  c.save();
+  if (mirror) { c.translate(W, 0); c.scale(-1, 1); }
+  c.drawImage(src, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, W, H);
+  c.restore();
+}
+function pop(t, now) {   // entrada con rebote
+  const x = Math.max(0, Math.min(1, (now - t.born) / 550));
+  return x >= 1 ? 1 : 1 + 2.2 * Math.pow(x - 1, 3) + 1.2 * Math.pow(x - 1, 2);
+}
+function drawFace(c, t, now) {
+  const g = t.g, p = t.p, sc = pop(t, now);
+  const ang = Math.atan2(g.ux, -g.uy);   // giro de la cabeza (0 = derecha)
+  const rx = -g.uy, ry = g.ux;           // vector "derecha" en pantalla
+  for (const it of p.items) {
+    const im = IMG[it.key]; if (!im) continue;
+    const a = g.pts[it.at];
+    const x = a.x + (g.ux * it.y + rx * it.x) * g.k, y = a.y + (g.uy * it.y + ry * it.x) * g.k;
+    const w = it.s * g.k * sc, h = it.h * g.k * sc;
+    c.save(); c.translate(x, y); c.rotate(ang + it.r);
+    c.drawImage(im, -w / 2, -h / 2, w, h); c.restore();
+  }
+}
+// nombres arriba de cada cabeza, sin encimarse ni salirse de la pantalla
+function drawLabels(c, now) {
+  const L = tracks.map(t => {
+    const g = t.g, sc = pop(t, now), hd = g.pts.cabeza, off = (t.p.top + 2.6) * g.k;
+    const fs = Math.max(14 * DPR, Math.min(40 * DPR, g.k * 1.9)) * sc;
+    c.font = `800 ${fs}px Sora, sans-serif`;
+    const pw = c.measureText(t.p.name).width + fs * 1.6, ph = fs * 1.7;
+    return { p: t.p, fs, pw, ph, x: hd.x + g.ux * off, y: hd.y + g.uy * off };
+  }).sort((a, b) => b.ph - a.ph);
+  const top = 30 * DPR;
+  const placed = [];
+  for (const l of L) {
+    l.x = Math.max(l.pw / 2 + 8 * DPR, Math.min(W - l.pw / 2 - 8 * DPR, l.x));
+    l.y = Math.max(top + l.ph / 2, l.y);
+    for (let tries = 0; tries < 6; tries++) {
+      const hit = placed.find(o => Math.abs(o.x - l.x) < (o.pw + l.pw) / 2 && Math.abs(o.y - l.y) < (o.ph + l.ph) / 2);
+      if (!hit) break;
+      const up = hit.y - (hit.ph + l.ph) / 2 - 4 * DPR;
+      l.y = up - l.ph / 2 > top ? up : hit.y + (hit.ph + l.ph) / 2 + 4 * DPR;
+    }
+    placed.push(l);
+    c.save(); try { drawLabel(c, l, now); } finally { c.restore(); }
+  }
+}
+function drawLabel(c, l, now) {
+  const { p, fs, pw, ph } = l;
+  if (fs < 1) return;
+  c.translate(l.x, l.y);
+  c.font = `800 ${fs}px Sora, sans-serif`; c.textAlign = "center"; c.textBaseline = "middle";
+  const grd = c.createLinearGradient(-pw / 2, 0, pw / 2, 0); grd.addColorStop(0, p.color); grd.addColorStop(1, "#8b3fd6");
+  c.shadowColor = p.color; c.shadowBlur = fs * .9;
+  c.fillStyle = grd; c.beginPath(); c.roundRect(-pw / 2, -ph / 2, pw, ph, Math.max(0, ph / 2)); c.fill();
+  c.shadowBlur = 0; c.lineWidth = Math.max(1.5, fs * .07); c.strokeStyle = "rgba(255,255,255,.7)"; c.stroke();
+  c.fillStyle = "#fff"; c.shadowColor = "rgba(0,0,0,.35)"; c.shadowBlur = fs * .2; c.fillText(p.name, 0, fs * .04);
+  star(c, -pw / 2 + fs * .2, -ph / 2 + fs * .15, fs * .45, now / 600, "#ffe7a8", .95);
+}
+function drawFx(c, now) {
+  for (const s of sparks) { const a = Math.sin(Math.PI * s.life / s.max); star(c, s.x, s.y, s.s, s.life * 2, s.color, a); }
+  for (const p of parts) {
+    const im = IMG[p.key]; if (!im) continue;
+    const a = Math.min(1, (p.max - p.life) * 2.5), w = p.s, h = w * RATIO[p.key];
+    c.save(); c.globalAlpha = a; c.translate(p.x, p.y); c.rotate(p.rot); c.drawImage(im, -w / 2, -h / 2, w, h); c.restore();
+  }
+}
+function drawScene(c, now) {
+  drawSource(c);
+  // velo suave en las orillas
+  const v = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .35, W / 2, H / 2, Math.max(W, H) * .75);
+  v.addColorStop(0, "rgba(5,2,11,0)"); v.addColorStop(1, "rgba(40,10,70,.55)");
+  c.fillStyle = v; c.fillRect(0, 0, W, H);
+  for (const t of tracks) { c.save(); try { drawFace(c, t, now); } catch (e) { console.warn(e); } c.restore(); }
+  drawFx(c, now);
+  drawLabels(c, now);
+}
+
+let last = performance.now(), sparkT = 0, frozen = false, detMs = 0;
+function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  if (frozen) return;
+  if (landmarker && srcW) {
+    if (src !== vid || vid.readyState >= 2) {
+      const t0 = performance.now();
+      try { update(detectAll(12), now); } catch (e) { console.warn(e); }
+      detMs = lerp(detMs, performance.now() - t0, .1);
+    }
+  }
+  sparkT -= dt;
+  if (sparkT <= 0) { sparkT = .09; for (const t of tracks) if (Math.random() < .6) burstSpark(t, false); }
+  for (const t of tracks) mouthFx(t, dt);
+  stepFx(dt);
+  if (srcW) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; drawScene(ctx, performance.now()); }
+}
+
+// ---------- Foto ----------
+const wait = ms => new Promise(r => setTimeout(r, ms));
+let busy = false, photoBlob = null, closeTimer = null;
+async function takePhoto() {
+  if (busy || !srcW) return; busy = true;
+  document.body.classList.add("foto");
+  const num = $("num");
+  for (const n of [3, 2, 1]) {
+    num.textContent = n; num.classList.remove("on"); void num.offsetWidth; num.classList.add("on");
+    sfx.count(); await wait(1000);
+  }
+  num.classList.remove("on"); num.textContent = "";
+  sfx.shutter();
+  const shot = await compose();
+  frozen = true;
+  $("flash").classList.remove("on"); void $("flash").offsetWidth; $("flash").classList.add("on");
+  photoBlob = await new Promise(r => shot.toBlob(r, "image/jpeg", .92));
+  $("foto").src = URL.createObjectURL(photoBlob);
+  await wait(450);
+  document.body.classList.remove("foto"); document.body.classList.add("resultado");
+  sfx.win();
+  $("compartir").hidden = !(navigator.canShare && navigator.canShare({ files: [new File([photoBlob], "cabina.jpg", { type: "image/jpeg" })] }));
+  let left = 30; const tick = () => { $("cierra").textContent = `Se cierra sola en ${left} s`; if (left-- <= 0) back(); };
+  tick(); closeTimer = setInterval(tick, 1000);
+  busy = false;
+}
+async function compose() {
+  // la foto es la escena del momento + un marco con el logo
+  const out = document.createElement("canvas"); out.width = W; out.height = H;
+  const c = out.getContext("2d");
+  c.drawImage(cv, 0, 0);
+  const m = Math.round(Math.min(W, H) * .028), r = m * 1.6;
+  // marco: orilla oscura con borde dorado-morado
+  c.save();
+  c.fillStyle = "#05020b"; c.beginPath(); c.rect(0, 0, W, H); c.roundRect(m, m, W - 2 * m, H - 2 * m, r); c.fill("evenodd");
+  const g = c.createLinearGradient(0, 0, W, H); g.addColorStop(0, "#ffbe55"); g.addColorStop(.5, "#d2b8ff"); g.addColorStop(1, "#8b3fd6");
+  c.strokeStyle = g; c.lineWidth = m * .22; c.beginPath(); c.roundRect(m, m, W - 2 * m, H - 2 * m, r); c.stroke();
+  c.restore();
+  // franja de abajo
+  const bh = Math.round(H * .11), by = H - m - bh;
+  const bg = c.createLinearGradient(0, by, 0, H - m); bg.addColorStop(0, "rgba(5,2,11,0)"); bg.addColorStop(1, "rgba(5,2,11,.85)");
+  c.fillStyle = bg; c.fillRect(m, by, W - 2 * m, bh);
+  const logo = await LOGO;
+  const fs = Math.round(bh * .3);
+  c.font = `800 ${fs}px Sora, sans-serif`; c.textBaseline = "middle"; c.fillStyle = "#fff"; c.shadowColor = "rgba(139,63,214,.9)"; c.shadowBlur = fs * .6;
+  c.textAlign = "left"; c.fillText("✦ Cabina mágica", m * 2.2, by + bh * .55);
+  c.shadowBlur = 0;
+  if (logo) { const lh = bh * .36, lw = lh * logo.width / logo.height; c.drawImage(logo, W - m * 2.2 - lw, by + bh * .55 - lh / 2, lw, lh); }
+  const d = new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
+  c.font = `500 ${Math.round(fs * .5)}px "IBM Plex Mono", monospace`; c.fillStyle = "#d2b8ff"; c.textAlign = "left";
+  c.fillText(d.toUpperCase() + "  ·  VORTICEVR.MX", m * 2.2, by + bh * .55 + fs * .95);
+  return out;
+}
+function back() {
+  clearInterval(closeTimer);
+  document.body.classList.remove("resultado"); frozen = false;
+}
+$("snap").onclick = takePhoto;
+$("otra").onclick = () => { back(); setTimeout(takePhoto, 300); };
+$("bajar").onclick = () => {
+  const a = document.createElement("a"); a.href = $("foto").src; a.download = "cabina-magica-vorticevr.jpg"; a.click(); sfx.coin();
+};
+$("compartir").onclick = async () => {
+  try { await navigator.share({ files: [new File([photoBlob], "cabina-magica-vorticevr.jpg", { type: "image/jpeg" })], title: "Cabina mágica · Vórtice VR" }); } catch {}
+};
+function shuffle() {
+  const taken = new Set();
+  for (const t of tracks) { const p = pickPersonaje(new Set([...taken, t.p.id])); t.p = p; taken.add(p.id); welcome(t); }
+  sfx.whoosh();
+}
+$("mezcla").onclick = shuffle;
+$("full").onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
+addEventListener("keydown", e => {
+  if ($("intro").style.display !== "none") return;
+  if (e.code === "Space") { e.preventDefault(); document.body.classList.contains("resultado") ? back() : takePhoto(); }
+  else if (e.key === "c" || e.key === "C") shuffle();
+  else if (e.key === "f" || e.key === "F") $("full").onclick();
+  else if (e.key === "Escape" && document.body.classList.contains("resultado")) back();
+});
+// el cursor se esconde si no se mueve
+let idle; addEventListener("mousemove", () => { document.body.classList.remove("quieto"); clearTimeout(idle); idle = setTimeout(() => document.body.classList.add("quieto"), 2500); });
+
+// ---------- Inicio ----------
+listCams();
+$("go").onclick = async () => {
+  $("err").textContent = "";
+  $("go").disabled = true; $("go").textContent = "Encendiendo…";
+  try {
+    sfx.tap();
+    const model = loadModel(), art = loadArt();
+    if (Q.get("prueba")) await startTest(Q.get("prueba")); else await startCam();
+    $("intro").style.display = "none";
+    document.body.classList.add("cargando");
+    resize();
+    await Promise.all([model, art]);
+    document.body.classList.remove("cargando");
+    listCams();
+  } catch (e) {
+    console.error(e);
+    $("err").textContent = e.name === "NotAllowedError" ? "Necesitamos permiso para usar la cámara." : "No se pudo encender: " + (e.message || e);
+    $("go").disabled = false; $("go").textContent = "Intentar otra vez";
+    $("intro").style.display = ""; document.body.classList.remove("cargando");
+  }
+};
+if (Q.get("auto")) $("go").click();
+window.__cabina = { tracks: () => tracks, parts: () => parts, crop: () => crop, ms: () => detMs };   // para pruebas
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
