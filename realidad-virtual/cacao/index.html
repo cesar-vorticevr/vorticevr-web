@@ -27,6 +27,7 @@
     background:linear-gradient(160deg,rgba(45,26,20,.92),rgba(18,12,36,.95));border:1px solid rgba(139,92,246,.5);
     box-shadow:0 0 60px rgba(139,92,246,.35)}
   .logo{display:block;margin:0 auto 16px;width:min(300px,70%);filter:drop-shadow(0 0 14px rgba(139,92,246,.9))}
+  h1 .titulo{display:block;width:min(560px,100%);margin:0 auto -6px;filter:drop-shadow(0 6px 18px rgba(0,0,0,.45))}
   h1{font-size:clamp(30px,6vw,50px);line-height:1.05;font-weight:900;margin-bottom:8px;
     background:linear-gradient(90deg,#fbbf24,#f97316,#c2410c);-webkit-background-clip:text;background-clip:text;color:transparent}
   p{color:#d8cfe8;font-size:16px;margin-bottom:8px}
@@ -43,7 +44,7 @@
 <body>
 <div id="menu"><div class="card">
   <img class="logo" id="logoImg" alt="Vórtice VR">
-  <h1>Del Cacao al Chocolate</h1>
+  <h1><img class="titulo" src="letreros/titulo.webp" alt="Del Cacao al Chocolate"></h1>
   <p>Vive con tus manos el proceso tradicional del chocolate tabasqueño.</p>
   <div class="steps">Cosecha · Desgrane · Fermentado · Secado · Tostado · Molido en metate · Chocolate</div>
   <button id="bAR" disabled>🥽 Entrar en Realidad Mixta</button>
@@ -135,12 +136,16 @@ const FILES={arbol:'cacao-tree',mazorca:'cacao-pod',abierta:'open-cacao-pod',cas
   fogon:'emberstone-hearth',cuchara:'rustic-wooden-spoon',metate:'rustic-stone-seat',mano:'rusted-relic',mesa:'rustic-wooden-workben',
   molinillo:'wooden-back-scratcher',jarra:'terracotta-pitcher',jicara:'carved-earthen-vessel',titulo:'del-cacao-al-chocolat'};
 const MOD={};
+const SIGNS=['cosecha','desgrane','fermentado','secado','tostado','molido','titulo'];   // el letrero de cada fase (en la final, el del título)
+const SIGN={};
 const envTex=new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment()).texture;
 function loadModels(onProgress){
-  const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder), keys=Object.keys(FILES); let n=0;
-  return Promise.all(keys.map(k=>loader.loadAsync('modelos/'+FILES[k]+'.glb').then(g=>{
+  const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder), keys=Object.keys(FILES), tl=new THREE.TextureLoader(); let n=0;
+  const total=keys.length+SIGNS.length, step=()=>onProgress(++n/total);
+  return Promise.all([...keys.map(k=>loader.loadAsync('modelos/'+FILES[k]+'.glb').then(g=>{
     g.scene.traverse(o=>{ if(o.isMesh){ o.material.envMap=envTex; o.material.envMapIntensity=.7; } });
-    MOD[k]=g.scene; }).catch(e=>console.warn('modelo',k,e)).finally(()=>onProgress(++n/keys.length))));
+    MOD[k]=g.scene; }).catch(e=>console.warn('modelo',k,e)).finally(step)),
+    ...SIGNS.map(k=>tl.loadAsync('letreros/'+k+'.webp').then(t=>{ t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=4; SIGN[k]=t; }).catch(e=>console.warn('letrero',k,e)).finally(step))]);
 }
 const _box=new THREE.Box3(), _sz=new THREE.Vector3(), _ct=new THREE.Vector3();
 /* copia del modelo con su lado mayor (o el eje pedido: 'x' | 'y' | 'z') igual a size, apoyada en y=0 y centrada en x/z */
@@ -432,22 +437,26 @@ function mkCosecha(g){
 
 /* ---- 2 · DESGRANE ---- */
 function mkDesgrane(g){
-  M(new THREE.BoxGeometry(.32,.02,.22),std(0x9a6b3e),-.05,.01,.05,g);
-  const pc0=V(-.05,.085,.05);
+  // la mesa de trabajo (si no carga, una tabla)
+  const bench=model('mesa',.38,'x'); let ty=.02;
+  if(bench){ bench.position.set(-.06,0,.05); g.add(bench); ty=floorAt(bench,g,-.05,.05,.6)??bench.userData.size.y; }
+  else M(new THREE.BoxGeometry(.32,.02,.22),std(0x9a6b3e),-.05,.01,.05,g);
+  const pc0=V(-.05,ty+.045,.05);
   const pod=mkPod(0xf2b632,1.6), ps=pod.isGroup?1:1.55; pod.rotation.z=Math.PI/2; pod.position.copy(pc0); g.add(pod);
   // al partirla: las dos mitades con su pulpa blanca
-  const half=()=>{ const m=model('cascara',.16,'z'); if(m) return m; const s=new THREE.Mesh(new THREE.SphereGeometry(.062,18,10,0,Math.PI*2,Math.PI/2,Math.PI/2),std(0xf2b632,{side:THREE.DoubleSide})); s.scale.set(2,1,1); return s; };
-  const hA=half(), hB=half(); hA.position.set(-.13,.02,.03); hA.rotation.y=Math.PI/2+.2; hB.position.set(.07,.02,.11); hB.rotation.y=Math.PI/2-.4; hA.visible=hB.visible=false; g.add(hA,hB);
+  const half=k=>{ const m=model(k,.16,k==='abierta'?'x':'z'); if(m) return m; const s=new THREE.Mesh(new THREE.SphereGeometry(.062,18,10,0,Math.PI*2,Math.PI/2,Math.PI/2),std(0xf2b632,{side:THREE.DoubleSide})); s.scale.set(2,1,1); return s; };
+  // una mitad con las semillas a la vista y la otra con su pulpa
+  const hA=half('abierta'), hB=half('cascara'); hA.position.set(-.13,ty,.04); hA.rotation.y=.2; hB.position.set(.03,ty,.07); hB.rotation.y=Math.PI/2-.4; hA.visible=hB.visible=false; g.add(hA,hB);
   const bb=beanGeo('baba',.03), sg=bb?bb.geo:new THREE.SphereGeometry(.013,8,6), sm=bb?bb.mat:std(0xf7f1e3,{roughness:.35}); if(!bb) sg.scale(1,.7,.8);
   const seeds=[];
-  for(let i=0;i<15;i++){ const s=M(sg,sm,-.13+rnd(-.05,.05),.05+rnd(0,.02),.03+rnd(-.025,.025),g); s.rotation.set(rnd(0,3),rnd(0,3),0); s.visible=false; seeds.push(s); }
+  for(let i=0;i<15;i++){ const s=M(sg,sm,-.13+rnd(-.05,.05),ty+.03+rnd(0,.02),.04+rnd(-.02,.02),g); s.rotation.set(rnd(0,3),rnd(0,3),0); s.visible=false; seeds.push(s); }
   const crate=model('cajon',.22,'x'); let boxY=.03;
   if(crate){ crate.position.set(.28,0,.02); g.add(crate); boxY=(floorAt(crate,g,.28,.02,.5)??.06)+.012; }
   else mkCrate(.17,.07,.15,0xa9793f,g,.28,.02);
   label('Cajón',g,.28,(crate?crate.userData.size.y:.07)+.09,.02,.12);
-  const boxC=V(.28,boxY,.02), seedC=V(-.13,.07,.03);
+  const boxC=V(.28,boxY,.02), seedC=V(-.13,ty+.05,.04);
   let hits=0,cool=0,open=false,got=0,left=5,squash=0; const held=[null,null];
-  return {update(dt){
+  return {desk:['h',ty+.07],update(dt){
     cool-=dt; squash=Math.max(0,squash-dt*5);
     if(!open){
       pod.scale.set(ps*(1+squash*.25),ps*(1-squash*.15),ps);
@@ -721,11 +730,29 @@ function buildDecor(){
     for(let i=0;i<9;i++){ const a=i/9*6.283+rnd(-.2,.2), r=rnd(2.6,5), t=model('arbol',rnd(2.2,3.2),'x'); t.position.set(Math.cos(a)*r,0,Math.sin(a)*r); t.rotation.y=rnd(0,6.28); env.add(t); } }
 }
 
+/* el letrero de la fase: entra grande frente a ti con chispas y luego se acomoda arriba del panel */
+const signMat=new THREE.MeshBasicMaterial({transparent:true,depthWrite:false,toneMapped:false,side:THREE.DoubleSide});
+const sign=new THREE.Mesh(new THREE.PlaneGeometry(1,1),signMat); sign.visible=false; sign.renderOrder=2; stage.add(sign);
+const SIGN_IN={p:V(0,.4,.06),ry:0,w:.62}, SIGN_SLOT={p:V(-.6,.7,-.2),ry:.72,w:.5};
+let signT=99, signAsp=.34;
+function showSign(i){
+  const tex=SIGN[SIGNS[i]]; if(!tex){ sign.visible=false; return; }
+  signMat.map=tex; signMat.needsUpdate=true; signAsp=tex.image.height/tex.image.width; signT=0; sign.visible=true;
+  burst(SIGN_IN.p,[0xfbbf24,0xf97316,0xa855f7,0xffffff],30,{spd:.7,g:-.4,life:1.2,size:1.3,spread:.2});
+}
+function updSign(dt,t){
+  if(!sign.visible) return; signT+=dt;
+  const k=signT<.5?backOut(signT/.5):1, m=clamp((signT-2.4)/.8,0,1), e=m*m*(3-2*m), w=Math.max(.001,lerp(SIGN_IN.w,SIGN_SLOT.w,e)*k);
+  sign.position.lerpVectors(SIGN_IN.p,SIGN_SLOT.p,e); sign.position.y+=Math.sin(t*1.3)*.008;
+  sign.rotation.y=lerp(SIGN_IN.ry,SIGN_SLOT.ry,e); sign.scale.set(w,w*signAsp,1);
+}
+
 function gotoPhase(i){
   if(pg) stage.remove(pg);
   tweens.length=0; cur=i; pg=new THREE.Group(); pg.scale.setScalar(.001); stage.add(pg);
   ui={progress:0,instr:'',warn:false,done:false}; phase=PHASES[i].make(pg); pop=0; btn.visible=false; finaleT=0; panelSig='';
-  setBtn(i===PHASES.length-1?'OTRA VEZ ↻':'SIGUIENTE ▶'); sfx.phase();
+  setBtn(i===PHASES.length-1?'OTRA VEZ ↻':'SIGUIENTE ▶'); sfx.phase(); showSign(i);
+  if(titulo) titulo.visible=SIGNS[i]!=='titulo';   // en la final el letrero ya es el título
 }
 
 /* ============================================================
@@ -754,6 +781,7 @@ renderer.setAnimationLoop(ms=>{
       if(finaleT>0){ finaleT-=dt; if(Math.random()<dt*7) burst(V(rnd(-.3,.3),.45,rnd(-.25,.2)),[0xfbbf24,0xf97316,0xa855f7,0x22d3ee,0xf472b6],10,{spd:.5,g:-.6,up:0,life:1.6,size:1.5}); }
     }
     if(titulo) titulo.position.y=.4+Math.sin(t*1.2)*.012;
+    updSign(dt,t);
     ring.material.color.setHSL(.76+Math.sin(t)*.04,.9,.55+Math.sin(t*2)*.1);
     drawPanel();
   }
@@ -775,7 +803,7 @@ async function enterXR(mode){
 function enterDesk(){
   initAudio(); MODE='desk'; env.visible=true; $('menu').classList.add('hide'); $('hint').style.display='block';
   camera.position.set(-.12,1.62,.5); stage.position.set(0,1.05,-.5); stage.rotation.y=0; stage.updateMatrixWorld(true);
-  camera.lookAt(-.2,1.2,-.55); stage.visible=true; placed=true; gotoPhase(0);
+  camera.lookAt(-.2,1.28,-.55); stage.visible=true; placed=true; gotoPhase(0);
 }
 $('bAR').onclick=()=>enterXR('ar'); $('bVR').onclick=()=>enterXR('vr'); $('bDesk').onclick=enterDesk;
 (async()=>{
