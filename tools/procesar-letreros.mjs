@@ -5,7 +5,8 @@
 //   node tools/procesar-letreros.mjs <carpeta-con-las-originales>
 //
 // Originales esperadas: 1.webp título, 2.webp desgranado, 3.webp cosecha, 4.webp fermentado, 5.webp secado,
-// 6.webp molido y 7.webp tostado. Usa Chrome sin ventana; no necesita npm install.
+// 6.webp molido, 7.webp tostado y 8.webp el botón Siguiente. 9.webp y 10.webp son humo claro sobre blanco: su transparencia
+// sale de qué tan oscuro es cada pixel (humo-1, humo-2). Usa Chrome sin ventana; no necesita npm install.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -27,6 +28,9 @@ const JOBS = [
   { out: "secado", src: "5.webp", max: 1024 },
   { out: "molido", src: "6.webp", max: 1024 },
   { out: "tostado", src: "7.webp", max: 1024 },
+  { out: "siguiente", src: "8.webp", max: 1024 },
+  { out: "humo-1", src: "9.webp", max: 512, humo: true },
+  { out: "humo-2", src: "10.webp", max: 512, humo: true },
 ];
 
 const PAGE = `<!doctype html><meta charset="utf-8"><script>
@@ -40,7 +44,11 @@ async function one(j) {
   const a = i => d[i * 4 + 3];
   const hasAlpha = [0, w - 1, (h - 1) * w, h * w - 1].some(i => a(i) < 200);
   const white = i => { const r = d[i*4], g = d[i*4+1], b = d[i*4+2]; return Math.min(r, g, b) > 205 && Math.max(r, g, b) - Math.min(r, g, b) < 30; };   // blanco y la sombra gris clara de abajo
-  if (!hasAlpha) {
+  if (j.humo && !hasAlpha) {   // humo sobre blanco: se transparenta según lo oscuro (el fondo queda invisible)
+    for (let i = 0; i < w * h; i++) { const l = (d[i*4] + d[i*4+1] + d[i*4+2]) / 3, al = Math.max(0, Math.min(1, (250 - l) / 45));
+      d[i*4] = 244; d[i*4+1] = 240; d[i*4+2] = 236; d[i*4+3] = Math.round(255 * Math.pow(al, .85)); }
+    x.putImageData(id, 0, 0);
+  } else if (!hasAlpha) {
     const seen = new Uint8Array(w * h), st = [];
     const push = i => { if (!seen[i] && white(i)) { seen[i] = 1; st.push(i); } };
     for (let X = 0; X < w; X++) { push(X); push((h - 1) * w + X); }
