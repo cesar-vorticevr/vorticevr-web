@@ -60,6 +60,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
 
 /* ============================================================
    UTILIDADES
@@ -138,14 +139,15 @@ const FILES={arbol:'cacao-tree',mazorca:'cacao-pod',abierta:'open-cacao-pod',cas
 const MOD={};
 const SIGNS=['cosecha','desgrane','fermentado','secado','tostado','molido','titulo'];   // el letrero de cada fase (en la final, el del título)
 const SIGN={};
+const IMGS=['siguiente','humo-1','humo-2'];   // el botón Siguiente y el humo (de César)
 const envTex=new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment()).texture;
 function loadModels(onProgress){
   const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder), keys=Object.keys(FILES), tl=new THREE.TextureLoader(); let n=0;
-  const total=keys.length+SIGNS.length, step=()=>onProgress(++n/total);
+  const total=keys.length+SIGNS.length+IMGS.length, step=()=>onProgress(++n/total);
   return Promise.all([...keys.map(k=>loader.loadAsync('modelos/'+FILES[k]+'.glb').then(g=>{
     g.scene.traverse(o=>{ if(o.isMesh){ o.material.envMap=envTex; o.material.envMapIntensity=.7; } });
     MOD[k]=g.scene; }).catch(e=>console.warn('modelo',k,e)).finally(step)),
-    ...SIGNS.map(k=>tl.loadAsync('letreros/'+k+'.webp').then(t=>{ t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=4; SIGN[k]=t; }).catch(e=>console.warn('letrero',k,e)).finally(step))]);
+    ...[...SIGNS,...IMGS].map(k=>tl.loadAsync('letreros/'+k+'.webp').then(t=>{ t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=4; SIGN[k]=t; }).catch(e=>console.warn('letrero',k,e)).finally(step))]);
 }
 const _box=new THREE.Box3(), _sz=new THREE.Vector3(), _ct=new THREE.Vector3();
 /* copia del modelo con su lado mayor (o el eje pedido: 'x' | 'y' | 'z') igual a size, apoyada en y=0 y centrada en x/z */
@@ -202,7 +204,10 @@ const envTrees = new THREE.Group(); env.add(envTrees);   // los árboles hechos 
 }
 
 /* ---------- escenario: todo vive aquí, en coordenadas locales ----------
-   origen = centro de la mesa · +z hacia el usuario · +x derecha · +y arriba */
+   origen = en el piso, al centro · +z hacia el usuario · +x derecha · +y arriba.
+   Las fases se diseñaron como maqueta; el escenario se escala ×K para que todo quede a tamaño real sobre el piso
+   (árbol de ~2 m, mesas, cajón, fogón y canasta en el suelo). Las manos se miden en estas mismas unidades. */
+const K=2.2;
 const stage = new THREE.Group(); stage.visible=false; scene.add(stage);
 {
   M(new THREE.CylinderGeometry(.46,.46,.025,56),std(0x7a4f2c,{roughness:.7}),0,-.0125,0,stage);
@@ -232,6 +237,24 @@ function updParts(dt){
   }
 }
 
+/* ---------- humo (las imágenes de César): sube, crece, gira poquito y se desvanece ---------- */
+const smokes=[]; let smokeI=0;
+for(let i=0;i<40;i++){ const sp=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,depthWrite:false,opacity:0})); sp.visible=false; stage.add(sp); smokes.push({sp,life:0,max:1,v:V(),s0:.05,s1:.1,a:.5,asp:1}); }
+function smoke(p,o={}){
+  const tex=SIGN[Math.random()<.5?'humo-1':'humo-2']; if(!tex) return false;
+  const {color=0xffffff,size=.06,grow=2.4,life=2.4,rise=.05,alpha=.45}=o, q=smokes[smokeI=(smokeI+1)%smokes.length], m=q.sp.material;
+  if(m.map!==tex){ const first=!m.map; m.map=tex; if(first) m.needsUpdate=true; }
+  m.color.set(color); m.rotation=rnd(-.5,.5);
+  q.sp.position.set(p.x+rnd(-.01,.01),p.y,p.z+rnd(-.01,.01)); q.v.set(rnd(-.008,.008),rise*rnd(.8,1.2),rnd(-.008,.008));
+  q.life=q.max=life*rnd(.8,1.2); q.s0=size; q.s1=size*grow; q.a=alpha; q.asp=tex.image.height/tex.image.width; q.sp.visible=true; return true;
+}
+function updSmoke(dt){
+  for(const q of smokes){ if(q.life<=0) continue; q.life-=dt; if(q.life<=0){ q.sp.visible=false; continue; }
+    q.sp.position.addScaledVector(q.v,dt); const k=1-q.life/q.max, sz=lerp(q.s0,q.s1,k);
+    q.sp.scale.set(sz,sz*q.asp,1);
+    q.sp.material.opacity=q.a*Math.min(1,k*4)*(1-k); q.sp.material.rotation+=dt*.12; }
+}
+
 /* ---------- animaciones de vuelo ---------- */
 const tweens=[];
 function fly(obj,to,dur=.5,arc=.12,onEnd){ tweens.push({obj,from:obj.position.clone(),to:to.clone(),t:0,dur,arc,onEnd}); }
@@ -255,7 +278,7 @@ function label(text,parent,x,y,z,w=.15){
 /* ---------- panel de información ---------- */
 const pc=document.createElement('canvas'); pc.width=1024; pc.height=640; const px=pc.getContext('2d');
 const ptex=new THREE.CanvasTexture(pc); ptex.colorSpace=THREE.SRGBColorSpace;
-const panel=M(new THREE.PlaneGeometry(.66,.4125),basic(0xffffff,{map:ptex,transparent:true}),-.6,.36,-.2,stage); panel.rotation.y=.72;
+const panel=M(new THREE.PlaneGeometry(.66,.4125),basic(0xffffff,{map:ptex,transparent:true}),-.5,.6,.05,stage); panel.rotation.y=.9; panel.scale.setScalar(.55);
 let panelSig='';
 function drawPanel(){
   const ph=PHASES[cur]; if(!ph) return;
@@ -284,11 +307,17 @@ function drawPanel(){
 LOGO.onload=()=>{ panelSig=''; };
 
 /* ---------- botón SIGUIENTE ---------- */
-const btn=new THREE.Group(); btn.position.set(.36,.17,.27); btn.rotation.x=-.55; btn.visible=false; stage.add(btn);
+const BTN_Y=.42;
+const btn=new THREE.Group(); btn.position.set(.28,BTN_Y,.32); btn.rotation.set(-.2,-.35,0); btn.visible=false; stage.add(btn);
 const btnBody=M(new THREE.BoxGeometry(.19,.07,.03),std(0x7c3aed,{emissive:0x6d28d9,emissiveIntensity:.9,roughness:.4}),0,0,0,btn);
 const bc=document.createElement('canvas'); bc.width=512; bc.height=188; const btex=new THREE.CanvasTexture(bc); btex.colorSpace=THREE.SRGBColorSpace;
-M(new THREE.PlaneGeometry(.185,.068),basic(0xffffff,{map:btex,transparent:true}),0,0,.0155,btn);
-function setBtn(text){ const k=bc.getContext('2d'); k.clearRect(0,0,512,188); k.font='900 70px "Trebuchet MS",sans-serif'; k.fillStyle='#fff'; k.textAlign='center'; k.textBaseline='middle'; k.fillText(text,256,98); btex.needsUpdate=true; }
+const btnTxt=M(new THREE.PlaneGeometry(.185,.068),basic(0xffffff,{map:btex,transparent:true}),0,0,.0155,btn);
+const btnImg=M(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({transparent:true,toneMapped:false}),0,0,.02,btn); btnImg.visible=false;
+function setBtn(text){
+  const img=/SIGUIENTE/.test(text)&&SIGN.siguiente;   // el letrero de César; en la final, el botón de siempre (OTRA VEZ)
+  btnImg.visible=!!img; btnBody.visible=btnTxt.visible=!img;
+  if(img){ btnImg.material.map=img; btnImg.material.needsUpdate=true; btnImg.scale.set(.26,.26*img.image.height/img.image.width,1); }
+  const k=bc.getContext('2d'); k.clearRect(0,0,512,188); k.font='900 70px "Trebuchet MS",sans-serif'; k.fillStyle='#fff'; k.textAlign='center'; k.textBaseline='middle'; k.fillText(text,256,98); btex.needsUpdate=true; }
 
 /* ============================================================
    MANOS  (seguimiento de manos · controles · ratón)
@@ -302,7 +331,12 @@ const H=[0,1].map(i=>{
   h.mk=M(new THREE.SphereGeometry(.008,10,8),basic(i?0xf472b6:0x22d3ee,{transparent:true,opacity:.9}),0,0,0,stage); h.mk.visible=false;
   return h;
 });
-const jointGeo=new THREE.SphereGeometry(.0075,8,6), jointMat=std(0xc4b5fd,{emissive:0x7c3aed,emissiveIntensity:.5});
+/* manos de vidrio lila, sin puntitos (el modelo generic-hand de webxr-input-profiles, como en assets/superficie-mr.js) */
+const handMat=new THREE.MeshPhysicalMaterial({color:0xe6dcff,transparent:true,opacity:.32,roughness:.35,metalness:0,depthWrite:false,emissive:0x6b3fb0,emissiveIntensity:.25});
+{ const hf=new XRHandModelFactory(); hf.setPath('https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/generic-hand/');
+  for(const h of H){ const hm=hf.createHandModel(h.hand,'mesh'); h.hand.add(hm);
+    // el modelo trae su propia piel al cargarse: cuando llega, se vuelve vidrio
+    h.glass=()=>hm.traverse(o=>{ if(o.isMesh&&o.material!==handMat){ o.material=handMat; o.renderOrder=3; } }); } }
 const mouse={ndc:new THREE.Vector2(),on:false,down:false}, ray=new THREE.Raycaster(), plane=new THREE.Plane();
 const _a=V(),_b=V(),_c=V(),_n=V();
 function ptr(e){ mouse.ndc.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1); mouse.on=true; }
@@ -327,7 +361,7 @@ function updateHands(dt){
         const d=it.position.distanceTo(tt.position);
         if(!pin&&d<.022) pin=true; else if(pin&&d>.045) pin=false;
         _a.copy(it.position).add(tt.position).multiplyScalar(.5); _b.copy(it.position); active=true;
-        if(MODE==='vr') for(const k in J){ const j=J[k]; if(!j.userData.dot){ j.userData.dot=true; j.add(new THREE.Mesh(jointGeo,jointMat)); } }
+        h.glass();
       } else if(h.ctrl.visible){ h.ctrl.getWorldPosition(_a); _b.copy(_a); pin=h.sel; active=true; }
     }
     if(active){
@@ -338,7 +372,7 @@ function updateHands(dt){
     }
     const p=active&&pin;
     h.start=p&&!h.pinch; h.end=h.pinch&&!p; h.pinch=p; h.active=active;
-    h.mk.visible=active; if(active){ h.mk.position.copy(h.pos); h.mk.scale.setScalar(p?2.2:1); }
+    h.mk.visible=active&&MODE==='desk'; if(active){ h.mk.position.copy(h.pos); h.mk.scale.setScalar(p?2.2:1); }
   }
 }
 const xzDist=(a,x,z)=>Math.hypot(a.x-x,a.z-z);
@@ -390,9 +424,9 @@ function finish(){ if(ui.done) return; ui.done=true; ui.progress=1; doneT=0;
 /* ---- 1 · COSECHA ---- */
 function mkCosecha(g){
   let tx=.03, tz=-.25, podZ=-.19, trunkX=.03;
-  const tree=model('arbol',1.0,'x');
+  const tree=model('arbol',.86,'x');
   if(tree){
-    tree.position.set(.02,0,-.33); g.add(tree);
+    tree.position.set(.04,0,-.12); g.add(tree);
     // el tronco: rayos de frente a la altura de las mazorcas; el punto más cercano es su cara frontal
     g.updateMatrixWorld(true); let xs=[], zf=-1;
     for(let x=-.2;x<=.24;x+=.01){ _ray.set(g.localToWorld(V(x,.14,.6)),g.localToWorld(V(x,.14,-.6)).sub(g.localToWorld(V(x,.14,.6))).normalize());
@@ -438,7 +472,7 @@ function mkCosecha(g){
 /* ---- 2 · DESGRANE ---- */
 function mkDesgrane(g){
   // la mesa de trabajo (si no carga, una tabla)
-  const bench=model('mesa',.38,'x'); let ty=.02;
+  const bench=model('mesa',.46,'x'); let ty=.02;
   if(bench){ bench.position.set(-.06,0,.05); g.add(bench); ty=floorAt(bench,g,-.05,.05,.6)??bench.userData.size.y; }
   else M(new THREE.BoxGeometry(.32,.02,.22),std(0x9a6b3e),-.05,.01,.05,g);
   const pc0=V(-.05,ty+.045,.05);
@@ -461,7 +495,7 @@ function mkDesgrane(g){
     if(!open){
       pod.scale.set(ps*(1+squash*.25),ps*(1-squash*.15),ps);
       for(const h of H){ if(!h.active||cool>0) continue;
-        if(h.pos.distanceTo(pc0)<.13&&(h.vel.y<-.45||(MODE==='desk'&&h.start))){
+        if(h.pos.distanceTo(pc0)<.13&&(h.vel.y<-.22||(MODE==='desk'&&h.start))){
           hits++; cool=.35; squash=1; sfx.thud(); burst(pc0,[0xf2b632,0xfde68a],10,{spd:.6});
           if(hits>=3){ open=true; pod.visible=false; hA.visible=hB.visible=true; seeds.forEach(s=>s.visible=true); sfx.crack(); burst(pc0,[0xffffff,0xf2b632],26,{spd:.8}); }
         } }
@@ -505,8 +539,8 @@ function mkFermentado(g){
       } }
     if(pala){ pala.update(inH,dt); if(inH) pm.position.y=Math.max(pm.position.y,fy+.01); }
     if(moved){ B.sync(); if(Math.random()<dt*9) noise(.05,rnd(500,900),.06,1.5); }
-    const pr=Math.min(1,path/2.6); B.mat.color.copy(c0).lerp(c1,pr);
-    st-=dt; if(pr>.15&&st<=0){ st=.22; burst(V(rnd(-.12,.12),fy+.09,cz+rnd(-.08,.08)),0xfff3d6,1,{spd:.08,g:.25,up:1,life:1.4,size:1.8}); }
+    const pr=Math.min(1,path/1.3); B.mat.color.copy(c0).lerp(c1,pr);
+    st-=dt; if(pr>.15&&st<=0){ st=.3; const sp=V(rnd(-.12,.12),fy+.07,cz+rnd(-.08,.08)); smoke(sp,{size:.05,alpha:.3,life:2.6,rise:.04})||burst(sp,0xfff3d6,1,{spd:.08,g:.25,up:1,life:1.4,size:1.8}); }
     const day=Math.min(6,1+Math.floor(pr*6));
     ui.progress=pr; ui.instr='Toma la pala: mete tu mano al cajón y remueve los granos · Día '+day+' de 6';
     if(pr>=1) finish();
@@ -576,7 +610,7 @@ function mkTostado(g){
     let stir=false, sh=null;
     for(const h of H){ if(!h.active) continue;
       if(xzDist(h.pos,0,0)<.25&&h.pos.y>by-.05&&h.pos.y<by+.26){ sh=h;
-        if(speedXZ(h)>.12){ stir=true;
+        if(speedXZ(h)>.06){ stir=true;
           for(let i=0;i<B.n;i++){ const p=B.p[i], d=xzDist(p,h.pos.x,h.pos.z); if(d<.085){ p.x+=h.vel.x*dt*.7+rnd(-.006,.006); p.z+=h.vel.z*dt*.7+rnd(-.006,.006);
             const r=Math.hypot(p.x,p.z); if(r>.16){ p.x*=.16/r; p.z*=.16/r; } if(p.y<=by+.001) vy[i]=rnd(.25,.6); } } } } }
     if(spoon){ spoon.update(sh,dt); if(sh) cm.position.y=Math.max(cm.position.y,by-.005); }
@@ -584,7 +618,8 @@ function mkTostado(g){
     B.sync();
     if(stir){ started=true; idle=0; toast=Math.min(1,toast+dt/10); burn=Math.max(0,burn-dt*.8); if(Math.random()<dt*10) sfx.crackle(); }
     else if(started&&!ui.done){ idle+=dt; if(idle>2){ burn+=dt/3.5; if(burn>=1){ burn=0; idle=1; toast=Math.max(0,toast-.12); sfx.sizzle(); sfx.bad(); burst(V(0,by+.03,0),0x222222,18,{spd:.3,g:.4,up:1,life:1.2,size:2}); } } }
-    sm-=dt; if(sm<=0){ sm=burn>.2?.08:.3; burst(V(rnd(-.12,.12),by+.02,rnd(-.12,.12)),burn>.2?0x333333:0xdddddd,1,{spd:.06,g:.3,up:1,life:1.3,size:burn>.2?2.4:1.5}); }
+    sm-=dt; if(sm<=0){ sm=burn>.2?.12:.35; const sp=V(rnd(-.12,.12),by+.02,rnd(-.12,.12));
+      smoke(sp,burn>.2?{color:0x4a4440,size:.07,alpha:.6,life:2.2,rise:.07}:{size:.06,alpha:.35,life:2.6,rise:.05})||burst(sp,burn>.2?0x333333:0xdddddd,1,{spd:.06,g:.3,up:1,life:1.3,size:burn>.2?2.4:1.5}); }
     B.mat.color.copy(c0).lerp(c1,toast).lerp(cb,burn*.6);
     ui.warn=burn>.15&&!ui.done; ui.progress=toast;
     ui.instr=ui.warn?'¡Muévelos, que se queman!':'Con la cuchara, mueve los granos sobre el comal sin parar para que se tuesten parejo';
@@ -629,7 +664,7 @@ function mkMolido(g){
         if(dz>.004&&scr<=0){ scr=.07; sfx.scrape(); if(Math.random()<.4) burst(V(mx+rnd(-.08,.08),my+.02,mano.position.z),0x5a3a2a,1,{spd:.2,life:.4}); }
       }
     }
-    const gr=Math.min(1,travel/3.2);
+    const gr=Math.min(1,travel/1.6);
     B.s=1-gr*.9; B.sync(); paste.scale.set(.02+gr*.075,.004+gr*.008,.03+gr*.12);
     ui.progress=nAdd/3*.25+gr*.75;
     const miss=sp.filter(s=>!s.added).map(s=>s.n.toLowerCase());
@@ -641,33 +676,36 @@ function mkMolido(g){
 /* ---- 7 · CHOCOLATE: la pasta va a la jarra, se bate con el molinillo y se sirve en la jícara ---- */
 function mkChocolate(g){
   const choc=std(0x3b1d10,{roughness:.3});
-  const px=-.26, pz=.1;
-  const pl=model('comal',.2,'x'); if(pl){ pl.position.set(px,0,pz); g.add(pl); } else M(new THREE.CylinderGeometry(.095,.08,.014,28),std(0xa0522d),px,.007,pz,g);
-  const mound=M(new THREE.SphereGeometry(.065,18,12),choc,px,pl?.016:.02,pz,g); mound.scale.set(1,.5,1); const mC=V(px,.05,pz);
-  label('Pasta de cacao',g,px,.15,pz,.17);
+  // todo va sobre la mesa de trabajo (si no carga, en el piso)
+  const bench=model('mesa',.66,'x'); let T=0;
+  if(bench){ g.add(bench); T=floorAt(bench,g,0,0,.8)??bench.userData.size.y; }
+  const px=-.22, pz=.06;
+  const pl=model('comal',.2,'x'); if(pl){ pl.position.set(px,T,pz); g.add(pl); } else M(new THREE.CylinderGeometry(.095,.08,.014,28),std(0xa0522d),px,T+.007,pz,g);
+  const mound=M(new THREE.SphereGeometry(.065,18,12),choc,px,T+(pl?.016:.02),pz,g); mound.scale.set(1,.5,1); const mC=V(px,T+.05,pz);
+  label('Pasta de cacao',g,px,T+.15,pz,.17);
   // la jarra con agua caliente
-  const jx=-.02, jz=-.08, home=V(jx,0,jz);
+  const jx=-.02, jz=-.06, home=V(jx,T,jz);
   const jarra=model('jarra',.21,'y')||(()=>{ const j=new THREE.Group(); M(new THREE.CylinderGeometry(.06,.075,.2,20),std(0xa0522d),0,.1,0,j); j.userData.size=V(.15,.2,.15); return j; })();
   if(MOD.jarra) jarra.rotation.y=Math.PI;   // el pico hacia la jícara
   const jug=new THREE.Group(); jug.position.copy(home); jug.add(jarra); g.add(jug);
-  const jH=jarra.userData.size.y, jTop=V(jx,jH,jz);
-  label('Jarra',g,jx,jH+.07,jz,.1);
-  const steam=()=>burst(V(jug.position.x+rnd(-.02,.02),jug.position.y+jH,jug.position.z+rnd(-.02,.02)),0xffffff,1,{spd:.05,g:.25,up:1,life:1.5,size:1.6});
+  const jH=jarra.userData.size.y, jTop=V(jx,T+jH,jz);
+  label('Jarra',g,jx,T+jH+.07,jz,.1);
+  const steam=()=>{ const sp=V(jug.position.x+rnd(-.02,.02),jug.position.y+jH,jug.position.z+rnd(-.02,.02)); smoke(sp,{size:.035,alpha:.4,life:2.2,rise:.05})||burst(sp,0xffffff,1,{spd:.05,g:.25,up:1,life:1.5,size:1.6}); };
   // el molinillo (batidor de madera): aparece en la jarra cuando ya tiene la pasta
   const mol=centered('molinillo',.3,'y')||(()=>{ const m=new THREE.Group(); M(new THREE.CylinderGeometry(.006,.006,.26,8),std(0xc8a06a),0,0,0,m); M(new THREE.CylinderGeometry(.024,.018,.04,10),std(0xb98952),0,-.12,0,m); return m; })();
   if(MOD.molinillo) mol.rotation.x=Math.PI;   // los dedos van abajo, dentro de la jarra
-  const molG=new THREE.Group(); molG.add(mol); molG.position.set(jx,jH+.1,jz); molG.visible=false; g.add(molG);
+  const molG=new THREE.Group(); molG.add(mol); molG.position.set(jx,T+jH+.1,jz); molG.visible=false; g.add(molG);
   // la jícara
-  const kx=.27, kz=.08;
+  const kx=.22, kz=.06;
   const jic=model('jicara',.16,'x'); let kBot=.012, kTop=.08, kR=.075;
-  if(jic){ jic.position.set(kx,0,kz); g.add(jic); kTop=jic.userData.size.y*.9; kBot=(floorAt(jic,g,kx,kz,.5)??.02)+.004; kR=jic.userData.size.x*.42; }
-  else mkBowl(.09,0x6b2f1a,g,kx,0,kz);
+  if(jic){ jic.position.set(kx,T,kz); g.add(jic); kTop=T+jic.userData.size.y*.9; kBot=(floorAt(jic,g,kx,kz,T+.5)??T+.02)+.004; kR=jic.userData.size.x*.42; }
+  else { mkBowl(.09,0x6b2f1a,g,kx,T,kz); kTop+=T; kBot+=T; }
   label('Jícara',g,kx,kTop+.1,kz,.11);
   const liq=M(new THREE.CircleGeometry(1,28),std(0x4a2414,{roughness:.2}),kx,kBot,kz,g); liq.rotation.x=-Math.PI/2; liq.visible=false;
   const foam=M(new THREE.CircleGeometry(1,28),std(0xb98a63,{roughness:.6}),kx,kBot+.0015,kz,g); foam.rotation.x=-Math.PI/2; foam.visible=false;
   const stream=M(new THREE.CylinderGeometry(.006,.004,1,8),std(0x4a2414,{roughness:.2}),0,0,0,g); stream.visible=false;
   const held=[null,null]; let balls=0, taken=0, froth=0, fill=0, st=0, jugHand=null, pour=0;
-  return {desk:['h',.12],update(dt,t){
+  return {desk:['h',T+.12],update(dt,t){
     const stage1=balls<3, stage2=!stage1&&froth<1, stage3=!stage1&&!stage2;
     for(const h of H){
       // 1) la pasta a la jarra
@@ -675,20 +713,20 @@ function mkChocolate(g){
       const o=held[h.i];
       if(o){ if(h.active) o.position.lerp(h.pos,.6);
         if(!h.active||!h.pinch){ held[h.i]=null;
-          if(xzDist(o.position,jx,jz)<.14){ fly(o,V(jx,jH-.02,jz),.35,.1,()=>{ g.remove(o); balls++; sfx.plop(); burst(jTop,0x6b3a22,12,{spd:.5}); if(balls===3){ molG.visible=true; sfx.good(5); } }); }
+          if(xzDist(o.position,jx,jz)<.14){ fly(o,V(jx,T+jH-.02,jz),.35,.1,()=>{ g.remove(o); balls++; sfx.plop(); burst(jTop,0x6b3a22,12,{spd:.5}); if(balls===3){ molG.visible=true; sfx.good(5); } }); }
           else { taken--; fly(o,mC,.3,.08,()=>g.remove(o)); } }
         continue; }
       // 2) batir con el molinillo
-      if(stage2&&h.active&&xzDist(h.pos,jx,jz)<.16&&h.pos.y<jH+.3&&h.pos.y>-.02){ const s=speedXZ(h);
+      if(stage2&&h.active&&xzDist(h.pos,jx,jz)<.16&&h.pos.y<T+jH+.3&&h.pos.y>T-.02){ const s=speedXZ(h);
         molG.position.x=lerp(molG.position.x,jx+clamp(h.pos.x-jx,-.015,.015),.3); molG.position.z=lerp(molG.position.z,jz+clamp(h.pos.z-jz,-.015,.015),.3);
-        if(s>.12){ froth=Math.min(1,froth+s*dt/1.4); mol.rotation.y+=s*dt*60; if(Math.random()<dt*8) noise(.05,rnd(700,1200),.07,1.5); if(Math.random()<dt*10) burst(V(jx,jH,jz),0xd9b38c,2,{spd:.25,life:.6}); } }
+        if(s>.06){ froth=Math.min(1,froth+s*dt/.7); mol.rotation.y+=s*dt*60; if(Math.random()<dt*8) noise(.05,rnd(700,1200),.07,1.5); if(Math.random()<dt*10) burst(V(jx,T+jH,jz),0xd9b38c,2,{spd:.25,life:.6}); } }
       // 3) tomar la jarra y servir en la jícara
       if(stage3){
         if(h.active&&h.start&&!jugHand&&h.pos.distanceTo(V(jug.position.x,jug.position.y+jH*.55,jug.position.z))<.16){ jugHand=h; sfx.pick(); }
         if(jugHand===h&&(!h.active||!h.pinch)){ jugHand=null; if(fill<1){ fly(jug,home,.45,.06); } }
       }
     }
-    if(stage3&&molG.visible){ molG.visible=false; burst(V(jx,jH+.05,jz),[0xfbbf24,0xffffff],16,{spd:.5}); sfx.good(6); }
+    if(stage3&&molG.visible){ molG.visible=false; burst(V(jx,T+jH+.05,jz),[0xfbbf24,0xffffff],16,{spd:.5}); sfx.good(6); }
     // sirve sola cuando la jarra está junto a la jícara: se levanta un poco y se inclina
     const over=stage3&&xzDist(jug.position,kx-.07,kz)<.11&&fill<1;
     if(jugHand){ jug.position.lerp(V(jugHand.pos.x,Math.max(kTop+.02,jugHand.pos.y-jH*.55)+pour*.06,jugHand.pos.z),.5); }
@@ -724,16 +762,17 @@ const PHASES=[
 /* decoración que depende de los modelos: el título del juego y, en VR y en pantalla, un cacaotal de verdad */
 let titulo=null;
 function buildDecor(){
-  titulo=model('titulo',.42,'x');
-  if(titulo){ titulo.position.set(.42,.4,-.36); titulo.rotation.y=-.5; stage.add(titulo); }
+  titulo=model('titulo',.32,'x');
+  if(titulo){ titulo.position.set(.52,.7,-.02); titulo.rotation.y=-.7; stage.add(titulo); }
   if(MOD.arbol){ envTrees.visible=false;
-    for(let i=0;i<9;i++){ const a=i/9*6.283+rnd(-.2,.2), r=rnd(2.6,5), t=model('arbol',rnd(2.2,3.2),'x'); t.position.set(Math.cos(a)*r,0,Math.sin(a)*r); t.rotation.y=rnd(0,6.28); env.add(t); } }
+    // detrás y a los lados del escenario (nunca del lado de donde llegas)
+    for(let i=0;i<9;i++){ const a=Math.PI*(1.05+i/8*.9)+rnd(-.08,.08), r=rnd(3.2,5.5), t=model('arbol',rnd(2.4,3.4),'x'); t.position.set(Math.cos(a)*r,0,Math.sin(a)*r); t.rotation.y=rnd(0,6.28); env.add(t); } }
 }
 
 /* el letrero de la fase: entra grande frente a ti con chispas y luego se acomoda arriba del panel */
 const signMat=new THREE.MeshBasicMaterial({transparent:true,depthWrite:false,toneMapped:false,side:THREE.DoubleSide});
 const sign=new THREE.Mesh(new THREE.PlaneGeometry(1,1),signMat); sign.visible=false; sign.renderOrder=2; stage.add(sign);
-const SIGN_IN={p:V(0,.4,.06),ry:0,w:.62}, SIGN_SLOT={p:V(-.6,.7,-.2),ry:.72,w:.5};
+const SIGN_IN={p:V(0,.62,.14),ry:0,w:.36}, SIGN_SLOT={p:V(-.5,.79,.05),ry:.9,w:.34};
 let signT=99, signAsp=.34;
 function showSign(i){
   const tex=SIGN[SIGNS[i]]; if(!tex){ sign.visible=false; return; }
@@ -762,7 +801,7 @@ let placed=false, placeT=0, bothT=0, btnCool=0, last=0;
 function placeStage(){
   const f=V(); camera.getWorldDirection(f); f.y=0; if(f.lengthSq()<.001) f.set(0,0,-1); f.normalize();
   const hp=camera.position;
-  stage.position.set(hp.x+f.x*.55,Math.max(.35,hp.y-.45),hp.z+f.z*.55);
+  stage.position.set(hp.x+f.x*.9,0,hp.z+f.z*.9); stage.scale.setScalar(K);
   stage.rotation.y=Math.atan2(-f.x,-f.z); stage.updateMatrixWorld(true);
   stage.visible=true; placed=true; burst(V(0,.1,0),[0xa855f7,0x22d3ee],24,{spd:.8});
 }
@@ -775,17 +814,19 @@ renderer.setAnimationLoop(ms=>{
     if(phase){ pop=Math.min(1,pop+dt*2.2); pg.scale.setScalar(Math.max(.001,backOut(pop))); phase.update(dt,t); }
     if(ui.done){ doneT+=dt; btnCool-=dt;
       if(!btn.visible&&doneT>.9){ btn.visible=true; btnCool=.4; }
-      if(btn.visible){ btn.position.y=.17+Math.sin(t*3)*.008; btnBody.material.emissiveIntensity=.7+Math.sin(t*6)*.4;
+      if(btn.visible){ btn.position.y=BTN_Y+Math.sin(t*3)*.008; btnImg.scale.x=.26*(1+Math.sin(t*4)*.03); btnBody.material.emissiveIntensity=.7+Math.sin(t*6)*.4;
         for(const h of H){ if(!h.active||btnCool>0) continue; const d=h.tip.distanceTo(btn.position);
-          if(d<.07||(h.start&&d<.13)){ btnCool=1; burst(btn.position,[0xa855f7,0xffffff],16); tone(700,1100,.12,'triangle',.15); gotoPhase((cur+1)%PHASES.length); break; } } }
+          // con el ratón basta un clic encima del botón (el plano de la fase puede quedar lejos de él)
+          const deskHit=MODE==='desk'&&h.start&&ray.intersectObject(btn,true).length>0;
+          if(deskHit||d<.07||(h.start&&d<.13)){ btnCool=1; burst(btn.position,[0xa855f7,0xffffff],16); tone(700,1100,.12,'triangle',.15); gotoPhase((cur+1)%PHASES.length); break; } } }
       if(finaleT>0){ finaleT-=dt; if(Math.random()<dt*7) burst(V(rnd(-.3,.3),.45,rnd(-.25,.2)),[0xfbbf24,0xf97316,0xa855f7,0x22d3ee,0xf472b6],10,{spd:.5,g:-.6,up:0,life:1.6,size:1.5}); }
     }
-    if(titulo) titulo.position.y=.4+Math.sin(t*1.2)*.012;
+    if(titulo) titulo.position.y=.7+Math.sin(t*1.2)*.012;
     updSign(dt,t);
     ring.material.color.setHSL(.76+Math.sin(t)*.04,.9,.55+Math.sin(t*2)*.1);
     drawPanel();
   }
-  updTweens(dt); updParts(dt);
+  updTweens(dt); updParts(dt); updSmoke(dt);
   renderer.render(scene,camera);
 });
 
@@ -802,8 +843,8 @@ async function enterXR(mode){
 }
 function enterDesk(){
   initAudio(); MODE='desk'; env.visible=true; $('menu').classList.add('hide'); $('hint').style.display='block';
-  camera.position.set(-.12,1.62,.5); stage.position.set(0,1.05,-.5); stage.rotation.y=0; stage.updateMatrixWorld(true);
-  camera.lookAt(-.2,1.28,-.55); stage.visible=true; placed=true; gotoPhase(0);
+  camera.position.set(0,1.6,1.9); stage.position.set(0,0,0); stage.scale.setScalar(K); stage.rotation.y=0; stage.updateMatrixWorld(true);
+  camera.lookAt(-.1,.8,-.1); stage.visible=true; placed=true; gotoPhase(0);
 }
 $('bAR').onclick=()=>enterXR('ar'); $('bVR').onclick=()=>enterXR('vr'); $('bDesk').onclick=enterDesk;
 (async()=>{
@@ -816,7 +857,7 @@ $('bAR').onclick=()=>enterXR('ar'); $('bVR').onclick=()=>enterXR('vr'); $('bDesk
   $('msg').textContent=ar||vr?'Activa el seguimiento de manos en tu visor y deja los controles a un lado.'
     :(isSecureContext?'Este dispositivo no tiene modo inmersivo: ábrelo en el navegador del visor, o pruébalo aquí con ratón.':'WebXR necesita HTTPS: sube este archivo a tu sitio y ábrelo desde el navegador del visor.');
 })();
-window.__cacao={gotoPhase,H,MOD,get ui(){return ui;},get cur(){return cur;},get phase(){return phase;},finish};
+window.__cacao={gotoPhase,H,MOD,camera,stage,get ui(){return ui;},get cur(){return cur;},get phase(){return phase;},finish};
 </script>
 </body>
 </html>
