@@ -302,6 +302,10 @@ const stage = new THREE.Group(); stage.visible=false; scene.add(stage);
   const edge=std(0x6e4a22,{roughness:1});
   for(const [w,h,x,z] of [[2.62,.035,0,-1.0],[2.62,.035,0,.9],[.035,1.93,-1.3,-.05],[.035,1.93,1.3,-.05]]) M(new THREE.BoxGeometry(w,.012,h),edge,x,.006,z,stage); }
 
+/* la luz del fogón vive siempre en el escenario (apagada fuera del tostado): si se agregara y quitara una luz,
+   el visor tendría que recompilar todos los materiales y el juego se trababa al cambiar de fase */
+const fireLight=new THREE.PointLight(0xff8a2a,0,2); stage.add(fireLight);
+
 /* ---------- partículas: destellos dorados, pétalos de flor de cacao, hojas, astillas, polvo, gotas ---------- */
 const PK={ spark:{add:true,size:.03,g:-.4,spd:.6,life:.9,drag:1.5},
   glow:{add:true,size:.08,g:0,spd:.05,life:.8,drag:2},
@@ -326,7 +330,7 @@ function burst(p,kind='spark',n=12,o={}){
     q.sp.position.set(p.x+rnd(-spread,spread),p.y+rnd(-spread,spread),p.z+rnd(-spread,spread));
     q.v.set(rnd(-1,1),rnd(-.3,1)+up,rnd(-1,1)).multiplyScalar(spd*rnd(.4,1));
     if(o.vel) q.v.add(o.vel);
-    q.life=q.max=life*rnd(.7,1.15); q.k=K; q.g=g; q.s=K.size*size*rnd(.7,1.3); q.rot=rnd(-1,1)*(K.spin||0); q.sp.visible=true;
+    q.life=q.max=life*rnd(.7,1.15); q.k=K; q.g=g; q.s=K.size*size*rnd(.7,1.3); q.rot=rnd(-1,1)*(K.spin||0); q.sp.scale.setScalar(q.s*.3); q.sp.material.opacity=0; q.sp.visible=true;   // sin esto, el primer cuadro salía a 1 m
   }
 }
 function updParts(dt,t){
@@ -459,7 +463,7 @@ function drawPanel(){
   x.fillStyle=done?'rgba(92,120,40,.18)':warn?'rgba(160,40,20,.2)':'rgba(120,60,20,.12)'; rr(x,44,384,936,148,18); x.fill();
   x.setLineDash([14,8]); x.strokeStyle=done?'#4d6b1e':warn?'#9b2a14':'#6b3416'; x.lineWidth=3; x.stroke(); x.setLineDash([]);
   x.font=`700 33px ${FONT}`; x.fillStyle=done?'#33480f':warn?'#8a1f0c':'#2b1407';
-  wrap(x,done?(cur===PHASES.length-1?'¡Hiciste chocolate tabasqueño! Puedes seguir jugando o tocar OTRA VEZ.':'¡Listo! Toca el letrero SIGUIENTE con tu mano.'):ui.instr,70,428,890,40);
+  wrap(x,done?(cur===PHASES.length-1?'¡Hiciste chocolate tabasqueño! Puedes seguir jugando o tocar OTRA VEZ.':'¡Listo! Toca el letrero SIGUIENTE que apareció aquí abajo.'):ui.instr,70,428,890,40);
   // avance: diez granos que se van llenando
   for(let i=0;i<10;i++) bean(x,96+i*92,568,20,clamp(ui.progress*10-i,0,1));
   ptex.needsUpdate=true;
@@ -467,17 +471,18 @@ function drawPanel(){
 LOGO.onload=()=>{ panelSig=''; };
 
 /* ---------- botón SIGUIENTE (el letrero de César) y OTRA VEZ (tabla tallada) ---------- */
-const BTN={p:V(.78,1.22,.38),ry:-.55};
-const btn=new THREE.Group(); btn.position.copy(BTN.p); btn.rotation.set(-.15,BTN.ry,0); btn.visible=false; stage.add(btn);
+const BTN={p:V(PANEL.p.x+.02,1.06,PANEL.p.z+.04),ry:PANEL.ry};   // abajo de las instrucciones
+const btn=new THREE.Group(); btn.position.copy(BTN.p); btn.rotation.set(-.1,BTN.ry,0); btn.visible=false; stage.add(btn);
 const btnGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:TEX.p.glow,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:.6})); btnGlow.scale.set(.5,.3,1); btn.add(btnGlow);
 const bc=document.createElement('canvas'); bc.width=512; bc.height=188; const btex=new THREE.CanvasTexture(bc); btex.colorSpace=THREE.SRGBColorSpace;
 const btnTxt=M(new THREE.PlaneGeometry(.3,.11),basic(0xffffff,{map:btex,transparent:true}),0,0,.01,btn);
 const btnImg=M(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({transparent:true,toneMapped:false}),0,0,.02,btn); btnImg.visible=false;
+for(const o of [btnGlow,btnTxt,btnImg]){ o.material.depthTest=false; o.renderOrder=10; }   // el letrero Siguiente nunca queda tapado por hojas o mesas
 let btnText='';
 function setBtn(text){ btnText=text;
   const img=/SIGUIENTE/.test(text)&&SIGN.siguiente;
   btnImg.visible=!!img; btnTxt.visible=!img;
-  if(img){ btnImg.material.map=img; btnImg.material.needsUpdate=true; btnImg.scale.set(.34,.34*img.image.height/img.image.width,1); }
+  if(img){ btnImg.material.map=img; btnImg.material.needsUpdate=true; btnImg.scale.set(.4,.4*img.image.height/img.image.width,1); }
   const k=bc.getContext('2d'); k.clearRect(0,0,512,188); plank(k,10,14,492,160); burnText(k,text,256,96,72); btex.needsUpdate=true; }
 
 /* ============================================================
@@ -888,11 +893,11 @@ function mkTostado(g){
   // llamas que asoman bajo el comal
   const flames=[]; for(let i=0;i<9;i++){ const a=i/9*6.283, f=new THREE.Sprite(new THREE.SpriteMaterial({map:TEX.p.flame,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
     f.position.set(Math.cos(a)*.21,cy-.05,tz+Math.sin(a)*.21); g.add(f); flames.push(f); }
-  const fl=new THREE.PointLight(0xff8a2a,1.2,2); fl.position.set(0,cy-.05,tz+.1); g.add(fl);
+  const fl=fireLight; fl.position.set(0,cy-.05,tz+.1); fl.intensity=1.2;
   const n=110, B=mkBeans(n,0x4d2a1a,g,'granoB',.024), vy=new Float32Array(n);
   for(const p of B.p){ const a=rnd(0,6.283), r=Math.sqrt(Math.random())*.17; p.set(Math.cos(a)*r,by,tz+Math.sin(a)*r); } B.sync();
-  const cm=fit('cuchara',{x:.42}); let S=null;
-  if(cm){ cm.position.set(.42,tableY+.012,tz+.16); cm.rotation.y=-.35; g.add(cm);
+  const cm=fit('cuchara',{x:.3}); let S=null;
+  if(cm){ cm.position.set(.4,tableY+.012,tz+.16); cm.rotation.y=-.35; g.add(cm);
     S=grabbable(cm,{tip:true,pad:.04,tipFloor:(x,z)=>xzDist(V(x,0,z),0,tz)<.2?by-.004:supportAt(x,z)}); }
   const c0=C(0xffffff), c1=C(0x7a5a4c), cb=C(0x050505); let toast=0, burn=0, idle=0, started=false, sm=0;
   return {desk:['h',by+.04],update(dt,t){
@@ -936,7 +941,7 @@ function mkMolido(g){
     constrain(G,dt){ if(!G.held&&G.sleep) return; const p=mano.position, oz=p.z;
       p.x=clamp(p.x,mx-.05,mx+.05); p.z=clamp(p.z,tz-.2,tz+.2); p.y=sy(p.x,p.z)+mr; const dz=Math.abs(p.z-(G.lastZ??p.z)); G.lastZ=p.z;
       roll+=(p.z-(G.lz??p.z))*18; G.lz=p.z; mano.rotation.set(roll,0,0); G.sleep=!G.held; if(G.held&&dz>.0015){ travel+=dz; G.grind=true; } else G.grind=false; mano.updateMatrix(); }});
-  const B=mkBeans(40,0x2a140c,g,'semillaB',.024); if(B.tex) B.mat.color.setHex(0x8a5a40);   // granos ya tostados const base=B.p.map(()=>V(mx+rnd(-.08,.08),0,tz+rnd(-.15,.15)));
+  const B=mkBeans(40,0x2a140c,g,'semillaB',.024); if(B.tex) B.mat.color.setHex(0x8a5a40);   /* granos ya tostados */ const base=B.p.map(()=>V(mx+rnd(-.08,.08),0,tz+rnd(-.15,.15)));
   B.p.forEach((p,i)=>p.set(base[i].x,sy(base[i].x,base[i].z)+.008,base[i].z)); B.sync();
   const paste=M(blob(1,3,.25,2.5),std(0x3b1d10,{roughness:.3}),mx,sy(mx,tz)+.002,tz,g); paste.scale.set(.02,.004,.03);
   // las especias en tazones de barro: canela en raja, azúcar en polvo, pimienta en grano
@@ -1086,7 +1091,7 @@ function buildDecor(){
 /* el letrero de la fase: entra grande frente a ti con destellos y luego se acomoda arriba del panel */
 const signMat=new THREE.MeshBasicMaterial({transparent:true,depthWrite:false,toneMapped:false,side:THREE.DoubleSide});
 const sign=new THREE.Mesh(new THREE.PlaneGeometry(1,1),signMat); sign.visible=false; sign.renderOrder=2; stage.add(sign);
-const SIGN_IN={p:V(0,1.55,.05),ry:0,w:.62}, SIGN_SLOT={p:V(PANEL.p.x,1.83,PANEL.p.z),ry:PANEL.ry,w:.5};
+const SIGN_IN={p:V(0,1.55,.05),ry:0,w:.62}, SIGN_INTRO_W=.95, SIGN_SLOT={p:V(PANEL.p.x,1.83,PANEL.p.z),ry:PANEL.ry,w:.5};
 let signT=99, signAsp=.34;
 function showSign(i){
   const tex=SIGN[SIGNS[i]]; if(!tex){ sign.visible=false; return; }
@@ -1094,9 +1099,16 @@ function showSign(i){
   for(let k=0;k<30;k++){ const a=k/30*6.283; burst(V(SIGN_IN.p.x+Math.cos(a)*.35,SIGN_IN.p.y+Math.sin(a)*.18,SIGN_IN.p.z),'spark',1,{spd:.1,life:1.2,vel:V(Math.cos(a)*.3,Math.sin(a)*.3,0)}); }
   burst(SIGN_IN.p,'petal',10,{spd:.5,up:.6,spread:.2});
 }
+/* la entrada: el letrero del título solo, grande frente a ti; luego se va y aparece la primera fase */
+let introT=-1;
+function startIntro(){ if(pg){ stage.remove(pg); pg=null; phase=null; } grabs=[]; introT=0; cur=-1; ui={progress:0,instr:'',warn:false,done:false,hint:null}; panel.visible=false; btn.visible=false; if(titulo) titulo.visible=false; showSign(SIGNS.indexOf('titulo')); sfx.fanfare(); }
+function updIntro(dt){ if(introT<0) return; introT+=dt;
+  if(Math.random()<dt*8) burst(V(rnd(-.4,.4),SIGN_IN.p.y+rnd(-.2,.2),SIGN_IN.p.z),'petal',1,{spd:.15,up:.2,life:2.5});
+  if(introT>4.6){ introT=-1; gotoPhase(0); } }
 function updSign(dt,t){
   if(!sign.visible) return; signT+=dt;
-  const k=signT<.5?backOut(signT/.5):1, m=clamp((signT-2.6)/.9,0,1), e=m*m*(3-2*m), w=Math.max(.001,lerp(SIGN_IN.w,SIGN_SLOT.w,e)*k);
+  const out=introT>3.9?clamp((introT-3.9)/.6,0,1):0;
+  const k=(signT<.5?backOut(signT/.5):1)*(1-out*out), m=introT>=0?0:clamp((signT-2.6)/.9,0,1), e=m*m*(3-2*m), w=Math.max(.001,lerp(introT>=0?SIGN_INTRO_W:SIGN_IN.w,SIGN_SLOT.w,e)*k);
   sign.position.lerpVectors(SIGN_IN.p,SIGN_SLOT.p,e); sign.position.y+=Math.sin(e*Math.PI)*.12+Math.sin(t*1.3)*.008;
   sign.rotation.y=lerp(SIGN_IN.ry,SIGN_SLOT.ry,e); sign.rotation.z=signT<.5?(1-k)*.3:Math.sin(t*1.1)*.012; sign.scale.set(w,w*signAsp,1);
   if(m>0&&m<1&&Math.random()<dt*30) burst(sign.position,'spark',1,{spd:.1,life:.6,size:.6,spread:.1});
@@ -1109,7 +1121,7 @@ function gotoPhase(i){
   ui={progress:0,instr:'',warn:false,done:false,hint:null}; phase=PHASES[i].make(pg); pop=0; btn.visible=false; finaleT=0; panelSig='';
   setBtn(i===PHASES.length-1?'OTRA VEZ':'SIGUIENTE'); sfx.phase(); showSign(i);
   burst(V(0,.05,0),'dust',14,{color:0xd9c4a0,spd:.6,up:.2,size:1.4}); burst(V(0,.3,0),'leaf',8,{spd:.8,up:1});
-  sunLight.intensity=2.4;
+  sunLight.intensity=2.4; fireLight.intensity=0; panel.visible=true;
   if(titulo) titulo.visible=SIGNS[i]!=='titulo';   // en la final el letrero ya es el título
 }
 
@@ -1127,7 +1139,7 @@ function placeStage(){
 renderer.setAnimationLoop(ms=>{
   const t=ms/1000, dt=clamp(t-last,.001,.05); last=t;
   // se coloca cuando el visor ya sabe dónde estás, y nunca más se vuelve a acomodar
-  if((MODE==='ar'||MODE==='vr')&&!placed){ placeT+=dt; if(placeT>.8&&(camera.position.y>.4||placeT>2.5)){ placeStage(); if(cur<0) gotoPhase(0); } }
+  if((MODE==='ar'||MODE==='vr')&&!placed){ placeT+=dt; if(placeT>.8&&(camera.position.y>.4||placeT>2.5)){ placeStage(); if(cur<0) startIntro(); } }
   if(MODE&&placed){
     updateHands(dt);
     updateGrabs(dt,t);
@@ -1135,7 +1147,7 @@ renderer.setAnimationLoop(ms=>{
     for(const s of pg?pg.children:[]) if(s.isSprite&&s.userData.y0!==undefined) s.position.y=s.userData.y0+Math.sin(t*1.5+s.userData.ph)*.006;
     if(ui.done){ doneT+=dt; btnCool-=dt;
       if(!btn.visible&&doneT>.9){ btn.visible=true; btnCool=.4; btn.scale.setScalar(.01); burst(btn.position,'spark',14); }
-      if(btn.visible){ btn.scale.setScalar(Math.min(1,btn.scale.x+dt*4)); btn.position.y=BTN.p.y+Math.sin(t*3)*.01; btnImg.scale.x=.34*(1+Math.sin(t*4)*.03);
+      if(btn.visible){ btn.scale.setScalar(Math.min(1,btn.scale.x+dt*4)); btn.position.y=BTN.p.y+Math.sin(t*3)*.01; btnImg.scale.x=.4*(1+Math.sin(t*4)*.03); if(Math.random()<dt*6) burst(btn.position,'spark',1,{spd:.15,spread:.12,life:.8});
         btnGlow.material.opacity=.4+Math.sin(t*5)*.2;
         for(const h of H){ if(!h.active||btnCool>0||h.held) continue; const d=Math.min(h.tip.distanceTo(btn.position),near(h,btn.position));
           // con el ratón basta un clic encima del letrero (el plano de la fase puede quedar lejos de él)
@@ -1144,7 +1156,7 @@ renderer.setAnimationLoop(ms=>{
       if(finaleT>0){ finaleT-=dt; if(Math.random()<dt*6) burst(V(rnd(-.7,.7),rnd(1.7,2.1),rnd(-.6,.3)),'petal',2,{spd:.1,up:0,life:3}); if(Math.random()<dt*5) burst(V(rnd(-.5,.5),rnd(1,1.6),rnd(-.4,.2)),'spark',4,{spd:.3}); }
     }
     if(titulo){ titulo.position.y=TITLE.p.y+Math.sin(t*1.2)*.015; titulo.rotation.y=TITLE.ry+Math.sin(t*.6)*.06; }
-    updSign(dt,t); updHint(dt,t);
+    updIntro(dt); updSign(dt,t); updHint(dt,t);
     drawPanel();
   }
   updTweens(dt); updParts(dt,t); updSmoke(dt); updShock(dt);
@@ -1157,7 +1169,7 @@ async function enterXR(mode){
     const session=await navigator.xr.requestSession(mode==='ar'?'immersive-ar':'immersive-vr',{requiredFeatures:['local-floor'],optionalFeatures:['hand-tracking']});
     renderer.xr.setReferenceSpaceType('local-floor');
     await renderer.xr.setSession(session);
-    MODE=mode; env.visible=mode==='vr'; placed=false; placeT=0; stage.visible=false; cur=-1; if(pg){ stage.remove(pg); pg=null; phase=null; }
+    MODE=mode; env.visible=mode==='vr'; introT=-1; placed=false; placeT=0; stage.visible=false; cur=-1; if(pg){ stage.remove(pg); pg=null; phase=null; }
     $('menu').classList.add('hide'); $('hint').style.display='none';
     session.addEventListener('end',()=>{ MODE=null; stage.visible=false; env.visible=false; $('menu').classList.remove('hide'); });
   }catch(e){ console.warn(e); $('msg').textContent='No se pudo iniciar: '+(e&&e.message||e); }
@@ -1165,7 +1177,7 @@ async function enterXR(mode){
 function enterDesk(){
   initAudio(); MODE='desk'; env.visible=true; $('menu').classList.add('hide'); $('hint').style.display='block';
   camera.position.set(0,1.62,1.75); stage.position.set(0,0,0); stage.scale.setScalar(1); stage.rotation.y=0; stage.updateMatrixWorld(true);
-  camera.lookAt(0,1.05,-.1); stage.visible=true; placed=true; gotoPhase(0);
+  camera.lookAt(0,1.05,-.1); stage.visible=true; placed=true; startIntro();
 }
 $('bAR').onclick=()=>enterXR('ar'); $('bVR').onclick=()=>enterXR('vr'); $('bDesk').onclick=enterDesk;
 (async()=>{
@@ -1178,7 +1190,7 @@ $('bAR').onclick=()=>enterXR('ar'); $('bVR').onclick=()=>enterXR('vr'); $('bDesk
   $('msg').textContent=ar||vr?'Activa el seguimiento de manos en tu visor y deja los controles a un lado.'
     :(isSecureContext?'Este dispositivo no tiene modo inmersivo: ábrelo en el navegador del visor, o pruébalo aquí con ratón.':'WebXR necesita HTTPS: sube este archivo a tu sitio y ábrelo desde el navegador del visor.');
 })();
-window.__cacao={gotoPhase,H,MOD,camera,stage,renderer,scene,get grabs(){return grabs;},get pg(){return pg;},get ui(){return ui;},get cur(){return cur;},get phase(){return phase;},finish};
+window.__cacao={gotoPhase,startIntro,H,MOD,camera,stage,renderer,scene,get grabs(){return grabs;},get pg(){return pg;},get ui(){return ui;},get cur(){return cur;},get phase(){return phase;},finish};
 </script>
 </body>
 </html>
