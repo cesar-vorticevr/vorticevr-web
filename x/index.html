@@ -150,6 +150,10 @@ body.k-libro #byx{top:auto;bottom:calc(10px + env(safe-area-inset-bottom,0px))}
 #tvHint:empty{display:none}
 #intro .thumb.tall{width:min(42vw,170px);max-height:none;height:min(75vw,302px,34dvh);aspect-ratio:auto;object-fit:cover;border-radius:18px}
 #tvAgain{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(160px + env(safe-area-inset-bottom,0px));z-index:30;font-family:var(--fd);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:.95rem;border:1px solid #fff3d6;border-radius:999px;padding:15px 28px;color:#2b1300;background:linear-gradient(135deg,#ffd27f,#ff9f3a);box-shadow:0 0 30px rgba(255,190,85,.6);animation:tvPop .5s cubic-bezier(.3,1.6,.5,1)}
+/* until the experience's kind is known: no RA texts nor logo, just a spinner (a links page used to flash "Esta imagen tiene un video") */
+body.wait #intro>*,body.wait #brand{visibility:hidden}
+body.wait #intro::after{content:"";position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;border:3px solid rgba(210,184,255,.18);border-top-color:#d2b8ff;animation:wspin .8s linear infinite}
+@keyframes wspin{to{transform:rotate(360deg)}}
 @keyframes tvPop{from{transform:translateX(-50%) scale(.4);opacity:0}}
 @media (prefers-reduced-motion:reduce){#vbox,#guide{transition:none}}
 </style>
@@ -162,7 +166,7 @@ body.k-libro #byx{top:auto;bottom:calc(10px + env(safe-area-inset-bottom,0px))}
 }}
 </script>
 </head>
-<body>
+<body class="wait">
 <div id="ar"></div>
 <header id="brand"><a href="https://vorticevr.mx/" aria-label="Vórtice VR"><img src="/assets/logo-vorticevr-blanco.png" alt="Vórtice VR"></a></header>
 <nav id="byx" aria-label="Quién la hizo" hidden></nav>
@@ -242,7 +246,8 @@ const AUDS=new Map(); let quiet=false, sceneNow=0;
 const primaryHere=()=>!!PRIMARY&&(PRIMARY.scene||0)===sceneNow;
 const audioHere=()=>CFG&&CFG.items.some(i=>i.type==="audio"&&(i.scene||0)===sceneNow);
 const isMuted=()=>primaryHere()?vid.muted:quiet;
-function message(t,p){ $("intro").hidden=true; $("msgT").textContent=t; $("msgP").textContent=p; $("msg").hidden=false; }
+function ready(){ document.body.classList.remove("wait"); }   // the intro already says the right thing
+function message(t,p){ ready(); $("intro").hidden=true; $("msgT").textContent=t; $("msgP").textContent=p; $("msg").hidden=false; }
 
 const ICONS={
   whatsapp:'<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 2.9 2.9 0 0 0-.9 2.2 5 5 0 0 0 1 2.6 11.4 11.4 0 0 0 4.4 3.9c1.6.7 2.3.8 3.1.6a2.6 2.6 0 0 0 1.7-1.2 2.1 2.1 0 0 0 .2-1.2c-.1-.1-.3-.2-.5-.3z"/>',
@@ -285,6 +290,7 @@ async function load(){
   CFG=await r.json(); CFG.base=base;
   if(CFG.brand==="none") $("brand").hidden=true;   // Premium: no logo at all
   document.body.classList.add("k-"+(CFG.kind||"ra")); credit();
+  if(CFG.kind!=="libro") ready();   // each kind below fills or hides the intro in this same tick (a book may redirect first)
   if(CFG.brand==="own"){   // the brand's logo instead of Vórtice VR's (also on photos, videos and the coloring)
     const a=$("brand").querySelector("a"), im=a.querySelector("img");
     im.src=`${base}/m/${CFG.slug}/logo`; im.alt=CFG.title||""; a.removeAttribute("href"); a.removeAttribute("aria-label"); $("brand").classList.add("own");
@@ -527,7 +533,7 @@ async function startGaleria(){
 async function startLibro(){
   // a book lives at vorticevr.mx/biblioteca/<slug>/ (the account's session is there, to buy it): the name.vorticevr.mx link goes there
   if(!/\/biblioteca\//.test(location.pathname)&&/(^|\.)vorticevr\.mx$/.test(location.hostname)&&location.hostname!=="vorticevr.mx"){ location.replace(`https://vorticevr.mx/biblioteca/${CFG.slug}/${location.search}`); return; }
-  document.title=((CFG.libro&&CFG.libro.name)||CFG.title||"Libro")+" · Biblioteca Vórtice VR"; $("intro").hidden=true; $("brand").hidden=true;
+  document.title=((CFG.libro&&CFG.libro.name)||CFG.title||"Libro")+" · Biblioteca Vórtice VR"; $("intro").hidden=true; $("brand").hidden=true; ready();
   document.querySelector('meta[name="theme-color"]').content="#1b0e2e";
   const vp=document.querySelector('meta[name="viewport"]'); if(vp) vp.content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover";
   const base=CFG.base||location.origin, Q=new URLSearchParams(location.search);
