@@ -267,6 +267,7 @@ function socialButtons(){
 function credit(){
   const el=$("byx"), by=CFG.by, white=CFG.brand==="own"||CFG.brand==="none", esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const cam=["ra","filtro","trivia","colorear","superficie"].includes(CFG.kind||"ra");   // the logo is already on top there
+  if(CFG.kind==="links") return;   // client cards (NFC): never the author; the logo already goes at the bottom of the page
   if(!by&&(white||cam)) return;
   const av=by&&(by.avatar?`<img class="av" src="${esc((CFG.base||"")+by.avatar)}" alt="">`:`<span class="av" aria-hidden="true">${esc((by.name||by.handle||"?").trim().charAt(0).toUpperCase())}</span>`);
   const site="https://vorticevr.mx/?utm_source=experiencia&utm_medium=credito&utm_campaign="+encodeURIComponent(CFG.slug||"");
